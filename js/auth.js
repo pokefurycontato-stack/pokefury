@@ -184,6 +184,14 @@ async function handleRegister() {
         return;
     }
 
+    if (data.user) {
+        await window.db.from('game_saves').insert({
+            user_id: data.user.id,
+            player_name: username,
+            starter_pokemon: null
+        });
+    }
+
     const userData = {
         username,
         email: authEmail,
