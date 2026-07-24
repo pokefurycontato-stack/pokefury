@@ -28,3 +28,8 @@ download-3d-retry.js
 models-3d-report.json
 download-models-3d.js
 assets/models-3d/
+generate-shiny-models.js
+tmp-shiny/
+node_modules/
+package.json
+package-lock.json
