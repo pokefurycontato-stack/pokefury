@@ -212,11 +212,18 @@ async function handleRegister() {
     console.log('[PokeFury] Registro sucesso:', data);
 
     if (data.user) {
-        const { error: saveError } = await window.db.from('game_saves').insert({
+        const { error: profileError } = await window.db.from('profiles').upsert({
+            id: data.user.id,
+            username: username,
+            display_email: email
+        }, { onConflict: 'id' });
+        if (profileError) console.error('[PokeFury] Erro ao criar perfil:', profileError);
+
+        const { error: saveError } = await window.db.from('game_saves').upsert({
             user_id: data.user.id,
             player_name: username,
             starter_pokemon: null
-        });
+        }, { onConflict: 'user_id' });
         if (saveError) console.error('[PokeFury] Erro ao criar save:', saveError);
     }
 
