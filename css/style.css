@@ -91,7 +91,7 @@ body {
 }
 
 .auth-logo {
-    width: 120px;
+    width: 320px;
     height: auto;
     margin-bottom: 12px;
     filter: drop-shadow(0 0 30px rgba(233, 69, 96, 0.4));
@@ -475,7 +475,7 @@ body {
 }
 
 .game-logo {
-    width: 180px;
+    width: 480px;
     height: auto;
     margin-bottom: 8px;
     filter: drop-shadow(0 4px 20px rgba(233, 69, 96, 0.3));
