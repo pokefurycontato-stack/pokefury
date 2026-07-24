@@ -1,9 +1,22 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const { data: { session } } = await window.db.auth.getSession();
-    if (session) {
-        window.GameData.setUserId(session.user.id);
-        showGame(session.user);
+    if (!window.db) {
+        console.error('[PokeFury] Supabase não está disponível');
+        showError('login', 'Erro de conexão. Verifique o console (F12).');
+        showError('register', 'Erro de conexão. Verifique o console (F12).');
+        createParticles();
+        initAuth();
         return;
+    }
+
+    try {
+        const { data: { session } } = await window.db.auth.getSession();
+        if (session) {
+            window.GameData.setUserId(session.user.id);
+            showGame(session.user);
+            return;
+        }
+    } catch (err) {
+        console.error('[PokeFury] Erro ao verificar sessão:', err);
     }
 
     createParticles();
@@ -93,12 +106,18 @@ function updatePasswordStrength(password) {
 
 function showError(formId, message) {
     const errorEl = document.getElementById(formId + '-error');
+    if (!errorEl) return;
     errorEl.textContent = message;
     errorEl.classList.remove('hidden');
-    setTimeout(() => errorEl.classList.add('hidden'), 4000);
+    setTimeout(() => errorEl.classList.add('hidden'), 6000);
 }
 
 async function handleLogin() {
+    if (!window.db) {
+        showError('login', 'Supabase não conectado.');
+        return;
+    }
+
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
 
@@ -108,6 +127,7 @@ async function handleLogin() {
     }
 
     const email = username.toLowerCase().replace(/\s/g, '') + '@pokefury.app';
+    console.log('[PokeFury] Tentando login com:', email);
 
     const { data, error } = await window.db.auth.signInWithPassword({
         email: email,
@@ -115,25 +135,26 @@ async function handleLogin() {
     });
 
     if (error) {
-        if (error.message.includes('Invalid login')) {
+        console.error('[PokeFury] Erro no login:', error.message);
+        if (error.message.includes('Invalid login') || error.message.includes('invalid')) {
             showError('login', 'Conta não encontrada ou senha incorreta.');
         } else {
-            showError('login', 'Erro ao fazer login. Tente novamente.');
+            showError('login', 'Erro: ' + error.message);
         }
         return;
     }
 
-    const userData = {
-        username,
-        email: data.user.email,
-        id: data.user.id
-    };
-
+    console.log('[PokeFury] Login sucesso:', data.user.id);
     window.GameData.setUserId(data.user.id);
-    showGame(userData);
+    showGame({ username, email: data.user.email, id: data.user.id });
 }
 
 async function handleRegister() {
+    if (!window.db) {
+        showError('register', 'Supabase não conectado.');
+        return;
+    }
+
     const username = document.getElementById('reg-username').value.trim();
     const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
@@ -165,6 +186,7 @@ async function handleRegister() {
     }
 
     const authEmail = username.toLowerCase().replace(/\s/g, '') + '@pokefury.app';
+    console.log('[PokeFury] Tentando registrar:', authEmail);
 
     const { data, error } = await window.db.auth.signUp({
         email: authEmail,
@@ -178,30 +200,28 @@ async function handleRegister() {
     });
 
     if (error) {
-        if (error.message.includes('already registered')) {
+        console.error('[PokeFury] Erro no registro:', error.message);
+        if (error.message.includes('already') || error.message.includes('registered')) {
             showError('register', 'Este nome de treinador já existe.');
         } else {
-            showError('register', 'Erro ao criar conta. Tente novamente.');
+            showError('register', 'Erro: ' + error.message);
         }
         return;
     }
 
+    console.log('[PokeFury] Registro sucesso:', data);
+
     if (data.user) {
-        await window.db.from('game_saves').insert({
+        const { error: saveError } = await window.db.from('game_saves').insert({
             user_id: data.user.id,
             player_name: username,
             starter_pokemon: null
         });
+        if (saveError) console.error('[PokeFury] Erro ao criar save:', saveError);
     }
 
-    const userData = {
-        username,
-        email: authEmail,
-        id: data.user.id
-    };
-
     window.GameData.setUserId(data.user.id);
-    showGame(userData);
+    showGame({ username, email: authEmail, id: data.user.id });
 }
 
 function showGame(userData) {
