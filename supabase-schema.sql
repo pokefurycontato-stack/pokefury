@@ -152,6 +152,33 @@ ALTER TABLE pokemon_egg_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE egg_moves ENABLE ROW LEVEL SECURITY;
 ALTER TABLE player_inventory ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies before recreating
+DO $$ BEGIN
+    DROP POLICY IF EXISTS "pokemon_select" ON pokemon;
+    DROP POLICY IF EXISTS "moves_select" ON moves;
+    DROP POLICY IF EXISTS "pokemon_moves_select" ON pokemon_moves;
+    DROP POLICY IF EXISTS "type_effectiveness_select" ON type_effectiveness;
+    DROP POLICY IF EXISTS "items_select" ON items;
+    DROP POLICY IF EXISTS "natures_select" ON natures;
+    DROP POLICY IF EXISTS "egg_groups_select" ON egg_groups;
+    DROP POLICY IF EXISTS "pokemon_egg_groups_select" ON pokemon_egg_groups;
+    DROP POLICY IF EXISTS "egg_moves_select" ON egg_moves;
+    DROP POLICY IF EXISTS "inventory_select" ON player_inventory;
+    DROP POLICY IF EXISTS "inventory_insert" ON player_inventory;
+    DROP POLICY IF EXISTS "inventory_update" ON player_inventory;
+    DROP POLICY IF EXISTS "inventory_delete" ON player_inventory;
+    DROP POLICY IF EXISTS "pokemon_insert" ON pokemon;
+    DROP POLICY IF EXISTS "moves_insert" ON moves;
+    DROP POLICY IF EXISTS "pokemon_moves_insert" ON pokemon_moves;
+    DROP POLICY IF EXISTS "type_effectiveness_insert" ON type_effectiveness;
+    DROP POLICY IF EXISTS "items_insert" ON items;
+    DROP POLICY IF EXISTS "natures_insert" ON natures;
+    DROP POLICY IF EXISTS "egg_groups_insert" ON egg_groups;
+    DROP POLICY IF EXISTS "pokemon_egg_groups_insert" ON pokemon_egg_groups;
+    DROP POLICY IF EXISTS "egg_moves_insert" ON egg_moves;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 -- Leitura pública (game data)
 CREATE POLICY "pokemon_select" ON pokemon FOR SELECT USING (true);
 CREATE POLICY "moves_select" ON moves FOR SELECT USING (true);
