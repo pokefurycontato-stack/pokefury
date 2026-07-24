@@ -10,6 +10,10 @@ download-variant-sprites.js
 download-back-sprites.js
 download-missing-gen9.js
 download-home-fallback.js
+upload-sprites-storage.js
+update-db-urls.js
+retry-upload-shiny.js
+setup-storage.js
 audit-sprites.js
 sprite-audit.json
 download-*-report*.json

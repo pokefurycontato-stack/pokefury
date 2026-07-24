@@ -49,18 +49,6 @@ const PokeAPI = {
     },
 
     transformPokemon(row) {
-        const hasAnimated = (row.id >= 1 && row.id <= 1025) || (row.id >= 10001 && row.id <= 10046) || (row.id >= 11001 && row.id <= 11026) || (row.id >= 12001 && row.id <= 12037);
-        const animBase = 'assets/sprites/pokemon-animated/';
-        const animShinyBase = 'assets/sprites/pokemon-animated-shiny/';
-        const animBackBase = 'assets/sprites/pokemon-animated-back/';
-        const animBackShinyBase = 'assets/sprites/pokemon-animated-back-shiny/';
-        const homeBase = 'assets/sprites/pokemon-home/';
-        const homeShinyBase = 'assets/sprites/pokemon-home-shiny/';
-        
-        // 21 Pokemon missing animated sprites - use HOME static artwork
-        const homeFallbackIds = [990,991,992,993,994,995,1001,1002,1003,1004,1006,1008,1010,1014,1015,1016,1017,1022,1023,1024,1025];
-        const useHomeFallback = hasAnimated && homeFallbackIds.includes(row.id);
-        
         return {
             id: row.id,
             name: row.name,
@@ -75,21 +63,20 @@ const PokeAPI = {
                 speed: row.speed
             },
             spriteUrls: {
-                front: useHomeFallback ? (homeBase + row.id + '.png') : hasAnimated ? (animBase + row.id + '.gif') : row.sprite_front,
-                back: useHomeFallback ? (row.sprite_back || row.sprite_official) : hasAnimated ? (animBackBase + row.id + '.gif') : row.sprite_back,
+                front: row.sprite_front,
+                back: row.sprite_back,
                 official: row.sprite_official,
                 home: row.sprite_home
             },
             shinySpriteUrls: {
-                front: useHomeFallback ? (homeShinyBase + row.id + '.png') : hasAnimated ? (animShinyBase + row.id + '.gif') : row.sprite_front_shiny,
-                back: useHomeFallback ? (row.sprite_back_shiny || row.sprite_official_shiny) : hasAnimated ? (animBackShinyBase + row.id + '.gif') : row.sprite_back_shiny,
+                front: row.sprite_front_shiny,
+                back: row.sprite_back_shiny,
                 official: row.sprite_official_shiny,
                 home: row.sprite_home_shiny
             },
             variant: row.variant || 'normal',
             basePokemonId: row.base_pokemon_id || null,
             megaStone: row.mega_stone || null,
-            hasAnimated,
             moveNames: []
         };
     },
