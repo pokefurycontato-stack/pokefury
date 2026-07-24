@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await window.db.auth.getSession();
     if (session) {
+        window.GameData.setUserId(session.user.id);
         showGame(session.user);
         return;
     }
@@ -128,6 +129,7 @@ async function handleLogin() {
         id: data.user.id
     };
 
+    window.GameData.setUserId(data.user.id);
     showGame(userData);
 }
 
@@ -198,6 +200,7 @@ async function handleRegister() {
         id: data.user.id
     };
 
+    window.GameData.setUserId(data.user.id);
     showGame(userData);
 }
 

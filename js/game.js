@@ -1,5 +1,5 @@
 import { POKEMON_DATA, STARTER_OPTIONS } from './data.js';
-import { calculateDamage, getEffectiveness, randomInt } from './utils.js';
+import { randomInt } from './utils.js';
 import { createPokemon, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive } from './battle.js';
 import {
     showScreen, updateBattleUI, showBattleMessage, showMoveSelection,
@@ -17,15 +17,23 @@ class PokeFuryGame {
         this.playerName = 'Treinador';
         this.playerTeam = [];
         this.enemyTeam = [];
-        this.currentBattle = null;
+        this.battleStartTime = null;
 
         this.init();
     }
 
-    init() {
+    async init() {
         document.getElementById('btn-new-game').addEventListener('click', () => {
             this.startNewGame();
         });
+
+        const save = await window.GameData.getSave();
+        if (save && save.starter_pokemon) {
+            document.getElementById('btn-continue').disabled = false;
+            document.getElementById('btn-continue').addEventListener('click', () => {
+                this.loadGame();
+            });
+        }
 
         this.render();
     }
@@ -163,6 +171,41 @@ class PokeFuryGame {
         await this.selectStarter();
     }
 
+    async loadGame() {
+        const team = await window.GameData.getTeam();
+        if (team.length > 0) {
+            this.playerTeam = team.map(t => {
+                const pokemon = createPokemon(t.species, t.level);
+                pokemon.currentHp = t.current_hp;
+                if (t.moves && t.moves.length > 0) {
+                    t.moves.forEach(savedMove => {
+                        const move = pokemon.moves.find(m => m.id === savedMove.id);
+                        if (move) move.currentPp = savedMove.pp;
+                    });
+                }
+                if (pokemon.currentHp <= 0) pokemon.fainted = true;
+                return pokemon;
+            });
+        } else {
+            const save = await window.GameData.getSave();
+            if (save && save.starter_pokemon) {
+                this.playerTeam = [createPokemon(save.starter_pokemon, 5)];
+            }
+        }
+
+        this.playerName = 'Treinador';
+        const { data } = await window.db.auth.getUser();
+        if (data && data.user && data.user.user_metadata && data.user.user_metadata.username) {
+            this.playerName = data.user.user_metadata.username;
+        }
+
+        this.state = 'overworld';
+        showScreen('hud');
+        document.getElementById('player-name-hud').textContent = this.playerName;
+        document.getElementById('location-name').textContent = 'Área Selvagem';
+        this.render();
+    }
+
     selectStarter() {
         return new Promise(resolve => {
             this.canvas.onclick = (e) => {
@@ -180,6 +223,9 @@ class PokeFuryGame {
                         this.canvas.onclick = null;
                         resolve(species);
                         this.state = 'overworld';
+                        showScreen('hud');
+                        document.getElementById('location-name').textContent = 'Área Selvagem';
+                        this.saveTeam();
                         this.render();
                     }
                 });
@@ -191,11 +237,9 @@ class PokeFuryGame {
         const wildSpecies = Object.keys(POKEMON_DATA)[randomInt(0, Object.keys(POKEMON_DATA).length - 1)];
         const wildLevel = randomInt(3, 7);
         this.enemyTeam = [createPokemon(wildSpecies, wildLevel)];
-        this.playerTeam.forEach(p => {
-            if (!p.fainted) return;
-        });
 
         this.state = 'battle';
+        this.battleStartTime = Date.now();
         showScreen('battle-screen');
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
@@ -207,7 +251,6 @@ class PokeFuryGame {
         );
 
         await showBattleMessage(`Um ${getFirstAlive(this.enemyTeam).name} selvagem apareceu!`);
-        this.battleLoop();
     }
 
     async onFight() {
@@ -223,7 +266,7 @@ class PokeFuryGame {
         const escaped = Math.random() < 0.5;
         if (escaped) {
             await showBattleMessage('Escapou com sucesso!');
-            this.endBattle();
+            this.endBattle(null);
         } else {
             await showBattleMessage('Não conseguiu escapar!');
             await this.enemyTurn();
@@ -273,12 +316,12 @@ class PokeFuryGame {
 
                 if (isTeamFainted(this.enemyTeam)) {
                     await showBattleMessage('Você venceu a batalha!');
-                    this.endBattle();
+                    this.endBattle('win');
                     return;
                 }
                 if (isTeamFainted(this.playerTeam)) {
                     await showBattleMessage('Todos seus Pokémon desmaiaram...');
-                    this.endBattle();
+                    this.endBattle('lose');
                     return;
                 }
             }
@@ -311,20 +354,39 @@ class PokeFuryGame {
                 await showBattleMessage(`${playerPokemon.name} desmaiou!`);
                 if (isTeamFainted(this.playerTeam)) {
                     await showBattleMessage('Todos seus Pokémon desmaiaram...');
-                    this.endBattle();
+                    this.endBattle('lose');
                 }
             }
         }
     }
 
-    endBattle() {
+    async endBattle(result) {
+        if (result) {
+            const duration = Math.floor((Date.now() - this.battleStartTime) / 1000);
+            const enemy = this.enemyTeam[0];
+            await window.GameData.recordBattle({
+                opponentName: enemy.name,
+                opponentTeam: [{ species: enemy.species, level: enemy.level }],
+                result: result,
+                xpGained: result === 'win' ? enemy.level * 10 : 0,
+                duration: duration
+            });
+        }
+
+        this.saveTeam();
+
         this.state = 'overworld';
         showScreen('hud');
+        document.getElementById('location-name').textContent = 'Área Selvagem';
         this.canvas.onclick = () => {
             this.canvas.onclick = null;
             this.startWildBattle();
         };
         this.render();
+    }
+
+    async saveTeam() {
+        await window.GameData.saveTeam(this.playerTeam);
     }
 
     battleLoop() {}
