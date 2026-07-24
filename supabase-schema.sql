@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS pokemon (
     variant TEXT DEFAULT 'normal',
     base_pokemon_id INTEGER,
     mega_stone TEXT,
+    model_3d TEXT,
+    model_3d_shiny TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -261,3 +263,9 @@ CREATE POLICY "inventory_select" ON player_inventory FOR SELECT USING (auth.uid(
 CREATE POLICY "inventory_insert" ON player_inventory FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "inventory_update" ON player_inventory FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "inventory_delete" ON player_inventory FOR DELETE USING (auth.uid() = user_id);
+
+-- =============================================
+-- 3D MODEL COLUMNS (execute if upgrading)
+-- =============================================
+ALTER TABLE pokemon ADD COLUMN IF NOT EXISTS model_3d TEXT;
+ALTER TABLE pokemon ADD COLUMN IF NOT EXISTS model_3d_shiny TEXT;

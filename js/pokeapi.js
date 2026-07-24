@@ -74,6 +74,8 @@ const PokeAPI = {
                 official: row.sprite_official_shiny,
                 home: row.sprite_home_shiny
             },
+            model3d: row.model_3d || null,
+            model3dShiny: row.model_3d_shiny || null,
             variant: row.variant || 'normal',
             basePokemonId: row.base_pokemon_id || null,
             megaStone: row.mega_stone || null,
@@ -240,6 +242,8 @@ const PokeAPI = {
             baseStats: megaData.baseStats,
             spriteUrls: megaData.spriteUrls,
             shinySpriteUrls: megaData.shinySpriteUrls,
+            model3d: megaData.model3d,
+            model3dShiny: megaData.model3dShiny,
             variant: 'mega',
             isMega: true
         };
@@ -279,6 +283,11 @@ const PokeAPI = {
         return urls?.front || urls?.home || urls?.official || null;
     },
 
+    getModel3dUrl(pokemon, shiny = false) {
+        if (shiny) return pokemon.model3dShiny || pokemon.model3d || null;
+        return pokemon.model3d || null;
+    },
+
     getFallbackPokemon(idOrName) {
         return {
             id: typeof idOrName === 'number' ? idOrName : 0,
@@ -288,6 +297,8 @@ const PokeAPI = {
             baseStats: { hp: 50, attack: 50, defense: 50, spAtk: 50, spDef: 50, speed: 50 },
             spriteUrls: { front: null, official: null, home: null },
             shinySpriteUrls: { front: null, official: null, home: null },
+            model3d: null,
+            model3dShiny: null,
             variant: 'normal',
             basePokemonId: null,
             megaStone: null,

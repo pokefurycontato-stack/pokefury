@@ -20,3 +20,11 @@ download-*-report*.json
 report.*.json
 variant-sprite-report.json
 sprite-audit-report.json
+upload-3d-models.js
+upload-3d-retry.js
+update-3d-urls.js
+download-3d-models.js
+download-3d-retry.js
+models-3d-report.json
+download-models-3d.js
+assets/models-3d/
