@@ -49,6 +49,8 @@ const PokeAPI = {
     },
 
     transformPokemon(row) {
+        const hasAnimated = row.id >= 1 && row.id <= 649;
+        const animBase = 'assets/sprites/pokemon-animated/';
         return {
             id: row.id,
             name: row.name,
@@ -63,7 +65,7 @@ const PokeAPI = {
                 speed: row.speed
             },
             spriteUrls: {
-                front: row.sprite_front,
+                front: hasAnimated ? (animBase + row.id + '.gif') : row.sprite_front,
                 official: row.sprite_official,
                 home: row.sprite_home
             },
@@ -75,6 +77,7 @@ const PokeAPI = {
             variant: row.variant || 'normal',
             basePokemonId: row.base_pokemon_id || null,
             megaStone: row.mega_stone || null,
+            hasAnimated,
             moveNames: []
         };
     },
