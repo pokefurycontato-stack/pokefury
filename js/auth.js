@@ -1,7 +1,7 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const currentUser = localStorage.getItem('pokefury_user');
-    if (currentUser) {
-        showGame(JSON.parse(currentUser));
+document.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await window.db.auth.getSession();
+    if (session) {
+        showGame(session.user);
         return;
     }
 
@@ -90,14 +90,6 @@ function updatePasswordStrength(password) {
     text.textContent = level.label;
 }
 
-function getUsers() {
-    return JSON.parse(localStorage.getItem('pokefury_users') || '{}');
-}
-
-function saveUsers(users) {
-    localStorage.setItem('pokefury_users', JSON.stringify(users));
-}
-
 function showError(formId, message) {
     const errorEl = document.getElementById(formId + '-error');
     errorEl.textContent = message;
@@ -105,7 +97,7 @@ function showError(formId, message) {
     setTimeout(() => errorEl.classList.add('hidden'), 4000);
 }
 
-function handleLogin() {
+async function handleLogin() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
 
@@ -114,26 +106,32 @@ function handleLogin() {
         return;
     }
 
-    const users = getUsers();
-    const user = users[username.toLowerCase()];
+    const email = username.toLowerCase().replace(/\s/g, '') + '@pokefury.app';
 
-    if (!user) {
-        showError('login', 'Conta não encontrada.');
+    const { data, error } = await window.db.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    if (error) {
+        if (error.message.includes('Invalid login')) {
+            showError('login', 'Conta não encontrada ou senha incorreta.');
+        } else {
+            showError('login', 'Erro ao fazer login. Tente novamente.');
+        }
         return;
     }
 
-    if (user.password !== btoa(password)) {
-        showError('login', 'Senha incorreta.');
-        return;
-    }
-
-    const userData = { username: user.username, email: user.email };
-    localStorage.setItem('pokefury_user', JSON.stringify(userData));
+    const userData = {
+        username,
+        email: data.user.email,
+        id: data.user.id
+    };
 
     showGame(userData);
 }
 
-function handleRegister() {
+async function handleRegister() {
     const username = document.getElementById('reg-username').value.trim();
     const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
@@ -164,22 +162,33 @@ function handleRegister() {
         return;
     }
 
-    const users = getUsers();
-    if (users[username.toLowerCase()]) {
-        showError('register', 'Este nome de treinador já existe.');
+    const authEmail = username.toLowerCase().replace(/\s/g, '') + '@pokefury.app';
+
+    const { data, error } = await window.db.auth.signUp({
+        email: authEmail,
+        password: password,
+        options: {
+            data: {
+                username: username,
+                display_email: email
+            }
+        }
+    });
+
+    if (error) {
+        if (error.message.includes('already registered')) {
+            showError('register', 'Este nome de treinador já existe.');
+        } else {
+            showError('register', 'Erro ao criar conta. Tente novamente.');
+        }
         return;
     }
 
-    users[username.toLowerCase()] = {
+    const userData = {
         username,
-        email,
-        password: btoa(password),
-        createdAt: new Date().toISOString()
+        email: authEmail,
+        id: data.user.id
     };
-    saveUsers(users);
-
-    const userData = { username, email };
-    localStorage.setItem('pokefury_user', JSON.stringify(userData));
 
     showGame(userData);
 }
@@ -197,8 +206,8 @@ function showGame(userData) {
 
         const logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                localStorage.removeItem('pokefury_user');
+            logoutBtn.addEventListener('click', async () => {
+                await window.db.auth.signOut();
                 location.reload();
             });
         }
