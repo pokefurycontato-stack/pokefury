@@ -15,10 +15,10 @@ export function showScreen(screenId) {
 
 export async function preloadBattleSprites(playerPokemon, enemyPokemon) {
     const urls = [];
-    if (playerPokemon.spriteUrls) urls.push(playerPokemon.spriteUrls.home || playerPokemon.spriteUrls.official);
-    if (enemyPokemon.spriteUrls) urls.push(enemyPokemon.spriteUrls.home || enemyPokemon.spriteUrls.official);
-    if (playerPokemon.shinySpriteUrls) urls.push(playerPokemon.shinySpriteUrls.home || playerPokemon.shinySpriteUrls.official);
-    if (enemyPokemon.shinySpriteUrls) urls.push(enemyPokemon.shinySpriteUrls.home || enemyPokemon.shinySpriteUrls.official);
+    if (playerPokemon.spriteUrls) urls.push(playerPokemon.spriteUrls.front || playerPokemon.spriteUrls.home || playerPokemon.spriteUrls.official);
+    if (enemyPokemon.spriteUrls) urls.push(enemyPokemon.spriteUrls.front || enemyPokemon.spriteUrls.home || enemyPokemon.spriteUrls.official);
+    if (playerPokemon.shinySpriteUrls) urls.push(playerPokemon.shinySpriteUrls.front || playerPokemon.shinySpriteUrls.home || playerPokemon.shinySpriteUrls.official);
+    if (enemyPokemon.shinySpriteUrls) urls.push(enemyPokemon.shinySpriteUrls.front || enemyPokemon.shinySpriteUrls.home || enemyPokemon.shinySpriteUrls.official);
     await PokeAPI.preloadSprites(urls);
 }
 
@@ -150,10 +150,10 @@ function drawPokemonSprite(ctx, x, y, pokemon) {
 
     let spriteUrl;
     if (isShiny && shinyUrls) {
-        spriteUrl = shinyUrls.home || shinyUrls.official || shinyUrls.front;
+        spriteUrl = shinyUrls.front || shinyUrls.home || shinyUrls.official;
     }
     if (!spriteUrl) {
-        spriteUrl = spriteUrls?.home || spriteUrls?.official || spriteUrls?.front;
+        spriteUrl = spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
     }
     const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
     const typeColor = TYPE_COLORS[pokemon.type] || '#686868';

@@ -49,8 +49,9 @@ const PokeAPI = {
     },
 
     transformPokemon(row) {
-        const hasAnimated = row.id >= 1 && row.id <= 649;
+        const hasAnimated = row.id >= 1 && row.id <= 1025;
         const animBase = 'assets/sprites/pokemon-animated/';
+        const animShinyBase = 'assets/sprites/pokemon-animated-shiny/';
         return {
             id: row.id,
             name: row.name,
@@ -70,7 +71,7 @@ const PokeAPI = {
                 home: row.sprite_home
             },
             shinySpriteUrls: {
-                front: row.sprite_front_shiny,
+                front: hasAnimated ? (animShinyBase + row.id + '.gif') : row.sprite_front_shiny,
                 official: row.sprite_official_shiny,
                 home: row.sprite_home_shiny
             },
@@ -277,7 +278,7 @@ const PokeAPI = {
 
     getSpriteUrl(pokemon, shiny = false) {
         const urls = shiny ? (pokemon.shinySpriteUrls || pokemon.spriteUrls) : pokemon.spriteUrls;
-        return urls?.home || urls?.official || urls?.front || null;
+        return urls?.front || urls?.home || urls?.official || null;
     },
 
     getFallbackPokemon(idOrName) {

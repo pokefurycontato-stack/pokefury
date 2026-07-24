@@ -53,7 +53,7 @@ class PokeFuryGame {
     async preloadStarters() {
         const starterPromises = STARTER_IDS.map(id => PokeAPI.ensurePokemon(id));
         this.starterDataCache = await Promise.all(starterPromises);
-        await PokeAPI.preloadSprites(this.starterDataCache.map(s => s.spriteUrls.home || s.spriteUrls.official));
+        await PokeAPI.preloadSprites(this.starterDataCache.map(s => s.spriteUrls.front || s.spriteUrls.home || s.spriteUrls.official));
     }
 
     showCharScreen() {
@@ -89,7 +89,7 @@ class PokeFuryGame {
             if (save.starter_pokemon) {
                 try {
                     const pokeData = await PokeAPI.ensurePokemon(save.starter_pokemon);
-                    const spriteUrl = pokeData.spriteUrls?.home || pokeData.spriteUrls?.official || pokeData.spriteUrls?.front;
+                    const spriteUrl = pokeData.spriteUrls?.front || pokeData.spriteUrls?.home || pokeData.spriteUrls?.official;
                     await PokeAPI.preloadSprite(spriteUrl);
                     const img = PokeAPI.imageCache[spriteUrl];
                     if (img && img.complete) {
@@ -147,7 +147,7 @@ class PokeFuryGame {
             card.className = 'starter-card';
             card.dataset.species = poke.species;
 
-            const spriteUrl = poke.spriteUrls?.home || poke.spriteUrls?.official || poke.spriteUrls?.front;
+            const spriteUrl = poke.spriteUrls?.front || poke.spriteUrls?.home || poke.spriteUrls?.official;
             const typeBadges = poke.types.map(t =>
                 `<span class="type-badge type-${t}" style="background:${TYPE_COLORS[t] || '#686868'}">${t}</span>`
             ).join('');
@@ -263,10 +263,10 @@ class PokeFuryGame {
         if (activePokemon) {
             let spriteUrl = null;
             if (activePokemon.isShiny && activePokemon.shinySpriteUrls) {
-                spriteUrl = activePokemon.shinySpriteUrls.home || activePokemon.shinySpriteUrls.official || activePokemon.shinySpriteUrls.front;
+                spriteUrl = activePokemon.shinySpriteUrls.front || activePokemon.shinySpriteUrls.home || activePokemon.shinySpriteUrls.official;
             }
             if (!spriteUrl) {
-                spriteUrl = activePokemon.spriteUrls?.home || activePokemon.spriteUrls?.official || activePokemon.spriteUrls?.front;
+                spriteUrl = activePokemon.spriteUrls?.front || activePokemon.spriteUrls?.home || activePokemon.spriteUrls?.official;
             }
             const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
 
