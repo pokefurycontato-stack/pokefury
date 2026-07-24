@@ -207,7 +207,16 @@ class PokeFuryGame {
         const pokemonData = await PokeAPI.ensurePokemon(starterSpecies);
         this.playerTeam = [await createPokemon(pokemonData, 5)];
 
+        const save = await window.GameData.getSave();
+        const isNew = !save || !save.starter_pokemon || save.starter_pokemon !== starterSpecies;
+
         await this.saveTeam();
+
+        if (isNew) {
+            await window.GameData.addItem(1, 5);
+            await window.GameData.addItem(10, 10);
+            console.log('[PokeFury] Starter items given: 5x Potion, 10x Poké Ball');
+        }
 
         document.getElementById('character-screen').classList.add('hidden');
         this.state = 'overworld';

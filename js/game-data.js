@@ -59,7 +59,21 @@ const GameData = {
             moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
             is_active: i === 0,
             slot: i + 1,
-            pokemon_id: pokemon.id || null
+            pokemon_id: pokemon.id || null,
+            iv_hp: pokemon.ivs?.hp ?? 15,
+            iv_attack: pokemon.ivs?.attack ?? 15,
+            iv_defense: pokemon.ivs?.defense ?? 15,
+            iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
+            iv_sp_def: pokemon.ivs?.spDef ?? 15,
+            iv_speed: pokemon.ivs?.speed ?? 15,
+            ev_hp: pokemon.evs?.hp ?? 0,
+            ev_attack: pokemon.evs?.attack ?? 0,
+            ev_defense: pokemon.evs?.defense ?? 0,
+            ev_sp_atk: pokemon.evs?.spAtk ?? 0,
+            ev_sp_def: pokemon.evs?.spDef ?? 0,
+            ev_speed: pokemon.evs?.speed ?? 0,
+            nature: pokemon.nature || 'hardy',
+            happiness: pokemon.happiness ?? 70
         }));
 
         const { error } = await window.db
@@ -83,7 +97,22 @@ const GameData = {
                 max_hp: pokemon.stats.hp,
                 moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
                 is_active: false,
-                slot: team.length + 1
+                slot: team.length + 1,
+                pokemon_id: pokemon.id || null,
+                iv_hp: pokemon.ivs?.hp ?? 15,
+                iv_attack: pokemon.ivs?.attack ?? 15,
+                iv_defense: pokemon.ivs?.defense ?? 15,
+                iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
+                iv_sp_def: pokemon.ivs?.spDef ?? 15,
+                iv_speed: pokemon.ivs?.speed ?? 15,
+                ev_hp: pokemon.evs?.hp ?? 0,
+                ev_attack: pokemon.evs?.attack ?? 0,
+                ev_defense: pokemon.evs?.defense ?? 0,
+                ev_sp_atk: pokemon.evs?.spAtk ?? 0,
+                ev_sp_def: pokemon.evs?.spDef ?? 0,
+                ev_speed: pokemon.evs?.speed ?? 0,
+                nature: pokemon.nature || 'hardy',
+                happiness: pokemon.happiness ?? 70
             });
         return !error;
     },
@@ -129,6 +158,81 @@ const GameData = {
         const total = battles.length;
 
         return { wins, losses, total, winRate: total > 0 ? ((wins / total) * 100).toFixed(1) : 0 };
+    },
+
+    async getInventory() {
+        if (!this.userId) return [];
+        const { data, error } = await window.db
+            .from('player_inventory')
+            .select('item_id, quantity, items(*)')
+            .eq('user_id', this.userId);
+        if (error) return [];
+        return data || [];
+    },
+
+    async addItem(itemId, quantity = 1) {
+        if (!this.userId) return false;
+        const { data: existing } = await window.db
+            .from('player_inventory')
+            .select('quantity')
+            .eq('user_id', this.userId)
+            .eq('item_id', itemId)
+            .single();
+
+        if (existing) {
+            const { error } = await window.db
+                .from('player_inventory')
+                .update({ quantity: existing.quantity + quantity })
+                .eq('user_id', this.userId)
+                .eq('item_id', itemId);
+            return !error;
+        } else {
+            const { error } = await window.db
+                .from('player_inventory')
+                .insert({ user_id: this.userId, item_id: itemId, quantity });
+            return !error;
+        }
+    },
+
+    async removeItem(itemId, quantity = 1) {
+        if (!this.userId) return false;
+        const { data: existing } = await window.db
+            .from('player_inventory')
+            .select('quantity')
+            .eq('user_id', this.userId)
+            .eq('item_id', itemId)
+            .single();
+
+        if (!existing) return false;
+
+        const newQty = existing.quantity - quantity;
+        if (newQty <= 0) {
+            const { error } = await window.db
+                .from('player_inventory')
+                .delete()
+                .eq('user_id', this.userId)
+                .eq('item_id', itemId);
+            return !error;
+        } else {
+            const { error } = await window.db
+                .from('player_inventory')
+                .update({ quantity: newQty })
+                .eq('user_id', this.userId)
+                .eq('item_id', itemId);
+            return !error;
+        }
+    },
+
+    async getItem(itemId) {
+        if (!this.userId) return null;
+        const { data, error } = await window.db
+            .from('player_inventory')
+            .select('quantity')
+            .eq('user_id', this.userId)
+            .eq('item_id', itemId)
+            .single();
+        if (error) return null;
+        return data;
     }
 };
 

@@ -1,8 +1,23 @@
-import { calculateDamage, calculateStat, randomInt } from './utils.js';
+import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs } from './utils.js';
 
-export async function createPokemon(apiData, level) {
+const NATURE_NAMES = [
+    'hardy','lonely','brave','adamant','naughty',
+    'bold','docile','relaxed','impish','lax',
+    'timid','hasty','serious','jolly','naive',
+    'modest','mild','quiet','bashful','rash',
+    'calm','gentle','sassy','careful','quirky'
+];
+
+export function randomNature() {
+    return NATURE_NAMES[randomInt(0, NATURE_NAMES.length - 1)];
+}
+
+export async function createPokemon(apiData, level, savedIvs = null, savedEvs = null, savedNature = null) {
+    const ivs = savedIvs || generateIVs();
+    const evs = savedEvs || generateEVs();
+    const nature = savedNature || randomNature();
+
     const allMoves = await PokeAPI.ensurePokemonMoves(apiData.id);
-
     const learnedMoves = allMoves.filter(m => m.power > 0);
     const levelMoves = learnedMoves.slice(0, 4);
 
@@ -13,7 +28,7 @@ export async function createPokemon(apiData, level) {
         });
     }
 
-    const hp = calculateStat(apiData.baseStats.hp, level, 20);
+    const stats = calculateAllStats(apiData.baseStats, level, ivs, evs, nature);
 
     return {
         species: apiData.species,
@@ -21,15 +36,11 @@ export async function createPokemon(apiData, level) {
         id: apiData.id,
         types: apiData.types,
         level,
-        currentHp: hp,
-        stats: {
-            hp,
-            attack: calculateStat(apiData.baseStats.attack, level),
-            defense: calculateStat(apiData.baseStats.defense, level),
-            spAtk: calculateStat(apiData.baseStats.spAtk, level),
-            spDef: calculateStat(apiData.baseStats.spDef, level),
-            speed: calculateStat(apiData.baseStats.speed, level)
-        },
+        currentHp: stats.hp,
+        stats,
+        ivs,
+        evs,
+        nature,
         moves: levelMoves.map(move => ({
             ...move,
             id: move.id || move.name.toLowerCase().replace(/\s+/g, '-'),
@@ -39,6 +50,14 @@ export async function createPokemon(apiData, level) {
         type: apiData.types[0],
         fainted: false
     };
+}
+
+export function recalculateStats(pokemon, baseStats) {
+    const newStats = calculateAllStats(baseStats, pokemon.level, pokemon.ivs, pokemon.evs, pokemon.nature);
+    const hpDiff = newStats.hp - pokemon.stats.hp;
+    pokemon.stats = newStats;
+    pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
+    if (pokemon.currentHp <= 0) pokemon.fainted = false;
 }
 
 export async function createTeam(apiDataList) {

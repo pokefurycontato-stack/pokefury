@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokeFury Seed v2 - Itens, Natures, Eggs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; padding: 40px; min-height: 100vh; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: #e94560; margin-bottom: 8px; }
+        .subtitle { color: rgba(255,255,255,0.4); margin-bottom: 32px; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 24px; margin-bottom: 16px; }
+        .status { padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 12px; font-family: monospace; }
+        .status.info { background: rgba(33,150,243,0.1); border: 1px solid rgba(33,150,243,0.2); color: #64b5f6; }
+        .status.success { background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.2); color: #81c784; }
+        .status.error { background: rgba(244,67,54,0.1); border: 1px solid rgba(244,67,54,0.2); color: #e57373; }
+        .status.loading { background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2); color: #ffd54f; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #e94560, #c0392b); border-radius: 3px; transition: width 0.3s; }
+        .btn { padding: 14px 28px; border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-right: 8px; margin-bottom: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #e94560, #c0392b); color: #fff; box-shadow: 0 4px 15px rgba(233,69,96,0.4); }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+        .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .log { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.6; }
+        .log-entry { color: rgba(255,255,255,0.5); }
+        .log-entry.ok { color: #81c784; }
+        .log-entry.err { color: #e57373; }
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-box { text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.03); border-radius: 12px; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #e94560; }
+        .stat-label { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; }
+        .warning { background: rgba(255,152,0,0.1); border: 1px solid rgba(255,152,0,0.2); color: #ffb74d; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; }
+        input[type="password"] { width: 100%; padding: 14px; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 12px; color: #fff; font-family: monospace; font-size: 12px; outline: none; }
+        label { color: rgba(255,255,255,0.5); font-size: 12px; display: block; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PokeFury Seed v2</h1>
+        <p class="subtitle">Popule Itens, Natures e Egg Groups no Supabase</p>
+
+        <div class="warning">⚠️ Execute apenas UMA VEZ. Delete depois.</div>
+
+        <div class="card">
+            <label>Service Role Key</label>
+            <input type="password" id="service-key" placeholder="eyJhbGciOiJIUzI1NiIs...">
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box"><div class="stat-value" id="stat-items">0</div><div class="stat-label">Itens</div></div>
+            <div class="stat-box"><div class="stat-value" id="stat-natures">0</div><div class="stat-label">Natures</div></div>
+            <div class="stat-box"><div class="stat-value" id="stat-groups">0</div><div class="stat-label">Egg Groups</div></div>
+            <div class="stat-box"><div class="stat-value" id="stat-egg-pokemon">0</div><div class="stat-label">Pokemon→Egg</div></div>
+            <div class="stat-box"><div class="stat-value" id="stat-egg-moves">0</div><div class="stat-label">Egg Moves</div></div>
+        </div>
+
+        <div class="card">
+            <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+            <div id="status" class="status info">Aguardando...</div>
+            <div style="margin-top:16px">
+                <button class="btn btn-primary" id="btn-seed" onclick="startSeed()">Seed Completo</button>
+                <button class="btn btn-secondary" id="btn-natures" onclick="seedNatures()">Só Natures</button>
+                <button class="btn btn-secondary" id="btn-items" onclick="seedItems()">Só Itens</button>
+                <button class="btn btn-secondary" id="btn-eggs" onclick="seedEggs()">Só Eggs</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom:12px; font-size:14px;">Log</h3>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const POKEAPI = 'https://pokeapi.co/api/v2';
+        let sb = null;
+
+        let stats = { items: 0, natures: 0, groups: 0, eggPokemon: 0, eggMoves: 0 };
+
+        function connect() {
+            const key = document.getElementById('service-key').value.trim();
+            if (!key) { log('Cole a service_role key!', 'err'); return false; }
+            sb = supabase.createClient('https://odevwnnpzsoltbrrjdts.supabase.co', key);
+            log('✓ Conectado ao Supabase', 'ok');
+            return true;
+        }
+
+        function log(msg, cls = '') {
+            const el = document.getElementById('log');
+            el.innerHTML += `<div class="log-entry ${cls}">${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+        function setProgress(p) { document.getElementById('progress').style.width = p + '%'; }
+        function setStatus(m, c) { const el = document.getElementById('status'); el.textContent = m; el.className = 'status ' + c; }
+        function updateStats() {
+            document.getElementById('stat-items').textContent = stats.items;
+            document.getElementById('stat-natures').textContent = stats.natures;
+            document.getElementById('stat-groups').textContent = stats.groups;
+            document.getElementById('stat-egg-pokemon').textContent = stats.eggPokemon;
+            document.getElementById('stat-egg-moves').textContent = stats.eggMoves;
+        }
+        async function fetchJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
+
+        const NATURES_DATA = [
+            { name: 'Hardy', inc: null, dec: null },
+            { name: 'Lonely', inc: 'attack', dec: 'defense' },
+            { name: 'Brave', inc: 'attack', dec: 'speed' },
+            { name: 'Adamant', inc: 'attack', dec: 'sp_atk' },
+            { name: 'Naughty', inc: 'attack', dec: 'sp_def' },
+            { name: 'Bold', inc: 'defense', dec: 'attack' },
+            { name: 'Docile', inc: null, dec: null },
+            { name: 'Relaxed', inc: 'defense', dec: 'speed' },
+            { name: 'Impish', inc: 'defense', dec: 'sp_atk' },
+            { name: 'Lax', inc: 'defense', dec: 'sp_def' },
+            { name: 'Timid', inc: 'speed', dec: 'attack' },
+            { name: 'Hasty', inc: 'speed', dec: 'defense' },
+            { name: 'Serious', inc: null, dec: null },
+            { name: 'Jolly', inc: 'speed', dec: 'sp_atk' },
+            { name: 'Naive', inc: 'speed', dec: 'sp_def' },
+            { name: 'Modest', inc: 'sp_atk', dec: 'attack' },
+            { name: 'Mild', inc: 'sp_atk', dec: 'defense' },
+            { name: 'Quiet', inc: 'sp_atk', dec: 'speed' },
+            { name: 'Bashful', inc: null, dec: null },
+            { name: 'Rash', inc: 'sp_atk', dec: 'sp_def' },
+            { name: 'Calm', inc: 'sp_def', dec: 'attack' },
+            { name: 'Gentle', inc: 'sp_def', dec: 'defense' },
+            { name: 'Sassy', inc: 'sp_def', dec: 'speed' },
+            { name: 'Careful', inc: 'sp_def', dec: 'sp_atk' },
+            { name: 'Quirky', inc: null, dec: null }
+        ];
+
+        const ITEMS_SEED = [
+            { id: 1, name: 'Potion', category: 'medicine', effect: 'heal_20', description: 'Cura 20 HP de um Pokémon.', price: 300, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png' },
+            { id: 2, name: 'Super Potion', category: 'medicine', effect: 'heal_50', description: 'Cura 50 HP de um Pokémon.', price: 700, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/super-potion.png' },
+            { id: 3, name: 'Hyper Potion', category: 'medicine', effect: 'heal_200', description: 'Cura 200 HP de um Pokémon.', price: 1200, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/hyper-potion.png' },
+            { id: 4, name: 'Max Potion', category: 'medicine', effect: 'heal_full', description: 'Cura todo o HP de um Pokémon.', price: 2500, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-potion.png' },
+            { id: 5, name: 'Full Restore', category: 'medicine', effect: 'heal_full_status', description: 'Cura todo HP e status.', price: 3000, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/full-restore.png' },
+            { id: 10, name: 'Poké Ball', category: 'pokeball', effect: 'catch_1x', description: 'Pokébola básica.', price: 200, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png' },
+            { id: 11, name: 'Great Ball', category: 'pokeball', effect: 'catch_1_5x', description: 'Pokébola com chance maior.', price: 600, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png' },
+            { id: 12, name: 'Ultra Ball', category: 'pokeball', effect: 'catch_2x', description: 'Pokébola com chance alta.', price: 1200, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png' },
+            { id: 20, name: 'Revive', category: 'medicine', effect: 'revive_half', description: 'Revive com metade do HP.', price: 1500, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/revive.png' },
+            { id: 21, name: 'Max Revive', category: 'medicine', effect: 'revive_full', description: 'Revive com HP total.', price: 3000, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-revive.png' },
+            { id: 30, name: 'Antidote', category: 'medicine', effect: 'cure_poison', description: 'Cura envenenamento.', price: 100, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/antidote.png' },
+            { id: 31, name: 'Paralyze Heal', category: 'medicine', effect: 'cure_paralyze', description: 'Cura paralisia.', price: 200, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/paralyze-heal.png' },
+            { id: 32, name: 'Awakening', category: 'medicine', effect: 'cure_sleep', description: 'Acorda um Pokémon dormindo.', price: 200, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/awakening.png' },
+            { id: 33, name: 'Burn Heal', category: 'medicine', effect: 'cure_burn', description: 'Cura queimadura.', price: 200, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/burn-heal.png' },
+            { id: 34, name: 'Ice Heal', category: 'medicine', effect: 'cure_freeze', description: 'Descongela um Pokémon.', price: 200, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ice-heal.png' },
+            { id: 35, name: 'Full Heal', category: 'medicine', effect: 'cure_all_status', description: 'Cura qualquer problema de status.', price: 400, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/full-heal.png' },
+            { id: 40, name: 'Rare Candy', category: 'medicine', effect: 'level_up', description: 'Aumenta o nível em 1.', price: 10000, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/rare-candy.png' },
+            { id: 50, name: 'X Attack', category: 'battle', effect: 'boost_attack', description: 'Aumenta ataque na batalha.', price: 500, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/x-attack.png' },
+            { id: 51, name: 'X Defense', category: 'battle', effect: 'boost_defense', description: 'Aumenta defesa na batalha.', price: 550, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/x-defense.png' },
+            { id: 52, name: 'X Speed', category: 'battle', effect: 'boost_speed', description: 'Aumenta velocidade na batalha.', price: 350, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/x-speed.png' },
+            { id: 60, name: 'Escape Rope', category: 'field', effect: 'escape', description: 'Sai de cavernas.', price: 550, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/escape-rope.png' },
+            { id: 70, name: 'Exp. Candy S', category: 'medicine', effect: 'exp_100', description: 'Dá 100 EXP a um Pokémon.', price: 0, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/rare-candy.png' },
+            { id: 71, name: 'Exp. Candy M', category: 'medicine', effect: 'exp_800', description: 'Dá 800 EXP a um Pokémon.', price: 0, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/rare-candy.png' },
+            { id: 72, name: 'Exp. Candy L', category: 'medicine', effect: 'exp_3000', description: 'Dá 3000 EXP a um Pokémon.', price: 0, sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/rare-candy.png' }
+        ];
+
+        async function seedNatures() {
+            if (!connect()) return;
+            setStatus('Inserindo natures...', 'loading');
+            log('Iniciando seed de natures...');
+
+            const rows = NATURES_DATA.map((n, i) => ({
+                id: i,
+                name: n.name,
+                increased_stat: n.inc,
+                decreased_stat: n.dec
+            }));
+
+            const { error } = await sb.from('natures').upsert(rows, { onConflict: 'name' });
+            if (error) { log('Erro: ' + error.message, 'err'); setStatus('Erro', 'error'); return; }
+            stats.natures = rows.length;
+            updateStats();
+            log(`✓ ${rows.length} natures inseridas`, 'ok');
+            setStatus('Natures inseridas!', 'success');
+        }
+
+        async function seedItems() {
+            if (!connect()) return;
+            setStatus('Inserindo itens...', 'loading');
+            log('Iniciando seed de itens...');
+
+            const BATCH = 20;
+            for (let i = 0; i < ITEMS_SEED.length; i += BATCH) {
+                const batch = ITEMS_SEED.slice(i, i + BATCH);
+                const { error } = await sb.from('items').upsert(batch, { onConflict: 'id' });
+                if (error) log('Erro: ' + error.message, 'err');
+                else { stats.items += batch.length; log(`✓ ${batch.length} itens inseridos`, 'ok'); }
+                updateStats();
+            }
+            log(`✓ Total de ${stats.items} itens salvos`, 'ok');
+            setStatus('Itens inseridos!', 'success');
+        }
+
+        async function seedEggs() {
+            if (!connect()) return;
+            setStatus('Buscando egg groups da PokéAPI...', 'loading');
+            log('Buscando egg groups...');
+
+            const eggList = await fetchJSON(`${POKEAPI}/egg-group`);
+            log(`✓ ${eggList.results.length} egg groups encontrados`);
+
+            const eggGroupRows = [];
+            const eggGroupNameMap = {};
+            for (const eg of eggList.results) {
+                const data = await fetchJSON(eg.url);
+                const row = { id: data.id, name: data.name };
+                eggGroupRows.push(row);
+                eggGroupNameMap[data.name] = data.id;
+            }
+
+            const { error: egErr } = await sb.from('egg_groups').upsert(eggGroupRows, { onConflict: 'name' });
+            if (egErr) log('Erro egg_groups: ' + egErr.message, 'err');
+            else { stats.groups = eggGroupRows.length; log(`✓ ${eggGroupRows.length} egg groups inseridos`, 'ok'); }
+            updateStats();
+
+            setStatus('Mapeando Pokemon nos egg groups...', 'loading');
+            log('Mapeando Pokemon → Egg Groups...');
+
+            const pokemonEggRows = [];
+            const pokemonWithEggs = new Set();
+            let processed = 0;
+            const total = 1025;
+
+            for (let id = 1; id <= total; id += 50) {
+                const batch = [];
+                for (let j = id; j < Math.min(id + 50, total + 1); j++) batch.push(j);
+                setProgress(Math.round((id / total) * 60) + 20);
+
+                const promises = batch.map(pid =>
+                    fetchJSON(`${POKEAPI}/pokemon-species/${pid}`).then(data => ({
+                        id: pid,
+                        groups: data.egg_groups
+                    })).catch(() => null)
+                );
+                const results = await Promise.all(promises);
+
+                for (const r of results) {
+                    if (!r || !r.groups) continue;
+                    for (const g of r.groups) {
+                        const gid = eggGroupNameMap[g.name];
+                        if (gid) {
+                            pokemonEggRows.push({ pokemon_id: r.id, egg_group_id: gid });
+                            pokemonWithEggs.add(r.id);
+                        }
+                    }
+                }
+                processed += batch.length;
+                log(`[${processed}/${total}] Pokemon processados...`);
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            if (pokemonEggRows.length > 0) {
+                const BATCH = 2000;
+                for (let i = 0; i < pokemonEggRows.length; i += BATCH) {
+                    const batch = pokemonEggRows.slice(i, i + BATCH);
+                    const { error } = await sb.from('pokemon_egg_groups').upsert(batch, { onConflict: 'pokemon_id,egg_group_id' });
+                    if (error) log('Erro pokemon_egg_groups: ' + error.message, 'err');
+                    else stats.eggPokemon += batch.length;
+                    updateStats();
+                }
+            }
+            log(`✓ ${pokemonEggRows.length} relações Pokemon→Egg Group salvas`, 'ok');
+
+            setStatus('Buscando egg moves...', 'loading');
+            log('Buscando egg moves...');
+            setProgress(85);
+
+            const pokemonIds = [...pokemonWithEggs];
+            let eggMoveCount = 0;
+            const BATCH = 30;
+
+            for (let i = 0; i < pokemonIds.length; i += BATCH) {
+                const batch = pokemonIds.slice(i, i + BATCH);
+                setProgress(85 + Math.round((i / pokemonIds.length) * 15));
+
+                const promises = batch.map(pid =>
+                    fetchJSON(`${POKEAPI}/pokemon-species/${pid}`).then(async (speciesData) => {
+                        const evoChainUrl = speciesData.evolution_chain?.url;
+                        const name = speciesData.name;
+
+                        const pokeData = await fetchJSON(`${POKEAPI}/pokemon/${pid}`).catch(() => null);
+                        if (!pokeData) return [];
+
+                        const eggMoves = pokeData.moves.filter(m => {
+                            const verDetails = m.version_group_details;
+                            return verDetails.some(v =>
+                                v.move_learn_method.name === 'egg'
+                            );
+                        });
+
+                        return eggMoves.map(m => ({
+                            pokemon_id: pid,
+                            move_name: m.move.name
+                        }));
+                    }).catch(() => [])
+                );
+
+                const results = await Promise.all(promises);
+                const moveIdCache = {};
+
+                for (const pairs of results) {
+                    for (const p of pairs) {
+                        if (!moveIdCache[p.move_name]) {
+                            const { data } = await sb.from('moves').select('id').ilike('name', p.move_name.replace(/-/g, ' ')).single();
+                            moveIdCache[p.move_name] = data ? data.id : null;
+                        }
+                        const moveId = moveIdCache[p.move_name];
+                        if (moveId) {
+                            const { error } = await sb.from('egg_moves').upsert(
+                                { pokemon_id: p.pokemon_id, move_id: moveId },
+                                { onConflict: 'pokemon_id,move_id' }
+                            );
+                            if (!error) eggMoveCount++;
+                        }
+                    }
+                }
+
+                stats.eggMoves = eggMoveCount;
+                updateStats();
+                if (i % 150 === 0) log(`  [${i}/${pokemonIds.length}] egg moves...`);
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            log(`✓ ${eggMoveCount} egg moves salvos`, 'ok');
+            setProgress(100);
+            setStatus('✓ Seed de eggs completo!', 'success');
+        }
+
+        async function startSeed() {
+            document.getElementById('btn-seed').disabled = true;
+            document.getElementById('log').innerHTML = '';
+            stats = { items: 0, natures: 0, groups: 0, eggPokemon: 0, eggMoves: 0 };
+            updateStats();
+
+            try {
+                await seedNatures();
+                setProgress(10);
+                await seedItems();
+                setProgress(20);
+                await seedEggs();
+                log('========================================', 'ok');
+                log('SEED V2 COMPLETO!', 'ok');
+                log('DELETE este arquivo!', 'ok');
+            } catch (e) {
+                setStatus('Erro: ' + e.message, 'error');
+                log('ERRO: ' + e.message, 'err');
+            }
+            document.getElementById('btn-seed').disabled = false;
+        }
+    </script>
+</body>
+</html>
