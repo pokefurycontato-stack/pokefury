@@ -7,6 +7,12 @@ dist/
 .cache/
 download-animated-sprites.js
 download-variant-sprites.js
+download-back-sprites.js
+download-missing-gen9.js
+download-home-fallback.js
+audit-sprites.js
+sprite-audit.json
 download-*-report*.json
 report.*.json
 variant-sprite-report.json
+sprite-audit-report.json
