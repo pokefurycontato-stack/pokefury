@@ -2,7 +2,7 @@ const PokeAPI = {
     pokemonCache: {},
     moveCache: {},
     imageCache: {},
-    allTypes: null,
+    megaEvoCache: null,
 
     async init() {
         console.log('[PokeAPI] Initialized with Supabase backend');
@@ -67,6 +67,14 @@ const PokeAPI = {
                 official: row.sprite_official,
                 home: row.sprite_home
             },
+            shinySpriteUrls: {
+                front: row.sprite_front_shiny,
+                official: row.sprite_official_shiny,
+                home: row.sprite_home_shiny
+            },
+            variant: row.variant || 'normal',
+            basePokemonId: row.base_pokemon_id || null,
+            megaStone: row.mega_stone || null,
             moveNames: []
         };
     },
@@ -151,6 +159,90 @@ const PokeAPI = {
         return { pokemon, level };
     },
 
+    async getRandomWildPokemon(minLevel = 2, maxLevel = 8, includeVariants = false) {
+        let pool = [];
+        if (includeVariants) {
+            const { data } = await window.db
+                .from('pokemon')
+                .select('id')
+                .or('variant.eq.normal,variant.eq.alola,variant.eq.galar,variant.eq.hisui,variant.eq.paldea');
+            pool = data || [];
+        } else {
+            const { data } = await window.db
+                .from('pokemon')
+                .select('id')
+                .eq('variant', 'normal');
+            pool = data || [];
+        }
+
+        if (pool.length === 0) {
+            return this.getRandomPokemon(minLevel, maxLevel);
+        }
+
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        const pokemon = await this.ensurePokemon(pick.id);
+        const level = Math.floor(Math.random() * (maxLevel - minLevel + 1)) + minLevel;
+        return { pokemon, level };
+    },
+
+    async getMegaEvolution(basePokemonId) {
+        if (!this.megaEvoCache) {
+            const { data } = await window.db
+                .from('mega_evolutions')
+                .select('*');
+            this.megaEvoCache = {};
+            if (data) {
+                for (const row of data) {
+                    if (!this.megaEvoCache[row.base_pokemon_id]) {
+                        this.megaEvoCache[row.base_pokemon_id] = [];
+                    }
+                    this.megaEvoCache[row.base_pokemon_id].push(row);
+                }
+            }
+        }
+        return this.megaEvoCache[basePokemonId] || [];
+    },
+
+    async canMegaEvolve(pokemon, heldItemId) {
+        if (pokemon.variant !== 'normal') return null;
+        const megas = await this.getMegaEvolution(pokemon.id);
+        if (megas.length === 0) return null;
+
+        for (const mega of megas) {
+            if (mega.mega_stone_item) {
+                const { data: item } = await window.db
+                    .from('items')
+                    .select('name')
+                    .eq('id', heldItemId)
+                    .single();
+                if (item && item.name === mega.mega_stone_item) {
+                    return mega.mega_pokemon_id;
+                }
+            }
+        }
+        return null;
+    },
+
+    async performMegaEvolution(pokemon) {
+        const megas = await this.getMegaEvolution(pokemon.id);
+        if (megas.length === 0) return pokemon;
+
+        const megaId = megas[0].mega_pokemon_id;
+        const megaData = await this.ensurePokemon(megaId);
+        return {
+            ...pokemon,
+            id: megaData.id,
+            name: megaData.name,
+            species: megaData.species,
+            types: megaData.types,
+            baseStats: megaData.baseStats,
+            spriteUrls: megaData.spriteUrls,
+            shinySpriteUrls: megaData.shinySpriteUrls,
+            variant: 'mega',
+            isMega: true
+        };
+    },
+
     getStarters() {
         return [1, 4, 7];
     },
@@ -180,6 +272,11 @@ const PokeAPI = {
         return Promise.all(urls.filter(Boolean).map(url => this.preloadSprite(url)));
     },
 
+    getSpriteUrl(pokemon, shiny = false) {
+        const urls = shiny ? (pokemon.shinySpriteUrls || pokemon.spriteUrls) : pokemon.spriteUrls;
+        return urls?.home || urls?.official || urls?.front || null;
+    },
+
     getFallbackPokemon(idOrName) {
         return {
             id: typeof idOrName === 'number' ? idOrName : 0,
@@ -188,6 +285,10 @@ const PokeAPI = {
             types: ['normal'],
             baseStats: { hp: 50, attack: 50, defense: 50, spAtk: 50, spDef: 50, speed: 50 },
             spriteUrls: { front: null, official: null, home: null },
+            shinySpriteUrls: { front: null, official: null, home: null },
+            variant: 'normal',
+            basePokemonId: null,
+            megaStone: null,
             moveNames: []
         };
     }

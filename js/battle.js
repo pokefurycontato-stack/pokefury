@@ -12,10 +12,11 @@ export function randomNature() {
     return NATURE_NAMES[randomInt(0, NATURE_NAMES.length - 1)];
 }
 
-export async function createPokemon(apiData, level, savedIvs = null, savedEvs = null, savedNature = null) {
+export async function createPokemon(apiData, level, savedIvs = null, savedEvs = null, savedNature = null, savedShiny = false) {
     const ivs = savedIvs || generateIVs();
     const evs = savedEvs || generateEVs();
     const nature = savedNature || randomNature();
+    const isShiny = savedShiny || false;
 
     const allMoves = await PokeAPI.ensurePokemonMoves(apiData.id);
     const learnedMoves = allMoves.filter(m => m.power > 0);
@@ -41,12 +42,17 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         ivs,
         evs,
         nature,
+        isShiny,
+        isMega: false,
+        heldItemId: null,
+        happiness: 70,
         moves: levelMoves.map(move => ({
             ...move,
             id: move.id || move.name.toLowerCase().replace(/\s+/g, '-'),
             currentPp: move.pp
         })),
         spriteUrls: apiData.spriteUrls,
+        shinySpriteUrls: apiData.shinySpriteUrls,
         type: apiData.types[0],
         fainted: false
     };

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokeFury Seed Admin v3</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Inter,system-ui,sans-serif;background:#0a0a1a;color:#e0e0e0;padding:20px}
+        h1{color:#e94560;margin-bottom:8px}
+        h2{color:#6890f0;margin:20px 0 10px;border-bottom:1px solid #333;padding-bottom:6px}
+        h3{color:#78c850;margin:12px 0 6px}
+        .subtitle{color:#888;margin-bottom:20px}
+        .section{background:#12122a;border:1px solid #222;border-radius:12px;padding:20px;margin-bottom:20px}
+        label{display:block;margin:8px 0 4px;color:#aaa;font-size:13px}
+        input,textarea{width:100%;padding:10px;border:1px solid #333;border-radius:8px;background:#1a1a2e;color:#fff;font-size:14px}
+        textarea{height:100px;resize:vertical;font-family:monospace;font-size:12px}
+        button{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin:4px;transition:all .2s}
+        .btn-primary{background:#e94560;color:#fff}
+        .btn-primary:hover{background:#d13550}
+        .btn-secondary{background:#6890f0;color:#fff}
+        .btn-secondary:hover{background:#5070d0}
+        .btn-success{background:#78c850;color:#fff}
+        .btn-success:hover{background:#60a840}
+        .btn-danger{background:#c03028;color:#fff}
+        .btn-danger:hover{background:#a02820}
+        .btn:disabled{opacity:0.4;cursor:not-allowed}
+        #log{background:#0a0a0a;border:1px solid #333;border-radius:8px;padding:12px;margin-top:12px;max-height:500px;overflow-y:auto;font-family:monospace;font-size:12px;white-space:pre-wrap;line-height:1.6}
+        .log-ok{color:#78c850}.log-err{color:#e94560}.log-info{color:#6890f0}.log-warn{color:#f8d030}
+        .progress-bar{width:100%;height:20px;background:#1a1a2e;border-radius:10px;overflow:hidden;margin:8px 0}
+        .progress-fill{height:100%;background:linear-gradient(90deg,#e94560,#6890f0);transition:width .3s;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+        .inline-flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .inline-flex input{width:auto;flex:1;min-width:200px}
+        .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin:2px}
+        .badge-items{background:#6890f033;color:#6890f0;border:1px solid #6890f066}
+        .badge-mega{background:#e9456033;color:#e94560;border:1px solid #e9456066}
+        .badge-gmax{background:#f8d03033;color:#f8d030;border:1px solid #f8d03066}
+        .badge-regional{background:#78c85033;color:#78c850;border:1px solid #78c85066}
+        .badge-shiny{background:#ffd70033;color:#ffd700;border:1px solid #ffd70066}
+    </style>
+</head>
+<body>
+    <h1>PokeFury Seed Admin v3</h1>
+    <p class="subtitle">Items + Variant Pokemon (Mega/Gmax/Regional) + Shiny Sprites</p>
+
+    <div class="section">
+        <label>Service Role Key (obtido do Supabase Dashboard)</label>
+        <input type="password" id="serviceKey" placeholder="eyJhbGciOi...">
+        <div class="inline-flex" style="margin-top:8px">
+            <span id="connStatus" style="color:#888;font-size:12px">Nao conectado</span>
+            <button class="btn-secondary" onclick="testConnection()">Testar Conexao</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>1. Seed de Itens</h2>
+        <p style="color:#888;font-size:13px;margin-bottom:10px">Insere todos os itens do items-data.js na tabela <code>items</code>. Precisa que as tabelas existam.</p>
+        <button class="btn-primary" id="btnSeedItems" onclick="seedItems()" disabled>Seed Itens (~120)</button>
+        <div class="progress-bar" id="itemsProgress" style="display:none"><div class="progress-fill" id="itemsFill">0%</div></div>
+    </div>
+
+    <div class="section">
+        <h2>2. Seed de Pokemon Variantes</h2>
+        <p style="color:#888;font-size:13px;margin-bottom:10px">
+            Busca Mega/Gmax/Regional do PokeAPI e insere como variantes na tabela <code>pokemon</code>.
+            Tambem atualiza sprites shiny dos 1025 Pokemon base.
+        </p>
+        <div class="inline-flex">
+            <button class="btn-success" id="btnSeedMega" onclick="seedMegaPokemon()" disabled>Seed Mega (48)</button>
+            <button class="btn-success" id="btnSeedGmax" onclick="seedGmaxPokemon()" disabled>Seed Gigantamax</button>
+            <button class="btn-success" id="btnSeedRegional" onclick="seedRegionalForms()" disabled>Seed Formas Regionais</button>
+        </div>
+        <div style="margin-top:8px">
+            <button class="btn-secondary" id="btnShinySprites" onclick="updateShinySprites()" disabled>Atualizar Shiny Sprites (1025)</button>
+        </div>
+        <div class="progress-bar" id="variantProgress" style="display:none"><div class="progress-fill" id="variantFill">0%</div></div>
+    </div>
+
+    <div class="section">
+        <h2>3. Seed Completa (Tudo)</h2>
+        <p style="color:#888;font-size:13px;margin-bottom:10px">Executa todos os passos acima em sequencia.</p>
+        <button class="btn-danger" id="btnSeedAll" onclick="seedAll()" disabled>Seed Completa</button>
+        <div class="progress-bar" id="allProgress" style="display:none"><div class="progress-fill" id="allFill">0%</div></div>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+    // ==========================================
+    // MEGA POKEMON DEFINITIONS
+    // IDs 10034-10099 no PokeAPI
+    // ==========================================
+    const MEGA_DEFS = [
+        {id:3,form:'venusaur-mega',name:'Mega Venusaur',stone:'Venusaurite'},
+        {id:6,form:'charizard-mega-x',name:'Mega Charizard X',stone:'Charizardite X'},
+        {id:6,form:'charizard-mega-y',name:'Mega Charizard Y',stone:'Charizardite Y'},
+        {id:9,form:'blastoise-mega',name:'Mega Blastoise',stone:'Blastoisinite'},
+        {id:65,form:'alakazam-mega',name:'Mega Alakazam',stone:'Alakazite'},
+        {id:94,form:'gengar-mega',name:'Mega Gengar',stone:'Gengarite'},
+        {id:115,form:'kangaskhan-mega',name:'Mega Kangaskhan',stone:'Kangaskhanite'},
+        {id:127,form:'pinsir-mega',name:'Mega Pinsir',stone:'Pinsirite'},
+        {id:130,form:'gyarados-mega',name:'Mega Gyarados',stone:'Gyaradosite'},
+        {id:142,form:'aerodactyl-mega',name:'Mega Aerodactyl',stone:'Aerodactylite'},
+        {id:150,form:'mewtwo-mega-x',name:'Mega Mewtwo X',stone:'Mewtwonite X'},
+        {id:150,form:'mewtwo-mega-y',name:'Mega Mewtwo Y',stone:'Mewtwonite Y'},
+        {id:212,form:'scizor-mega',name:'Mega Scizor',stone:'Scizorite'},
+        {id:214,form:'heracross-mega',name:'Mega Heracross',stone:'Heracronite'},
+        {id:229,form:'houndoom-mega',name:'Mega Houndoom',stone:'Houndoominite'},
+        {id:248,form:'tyranitar-mega',name:'Mega Tyranitar',stone:'Tyranitarite'},
+        {id:257,form:'blaziken-mega',name:'Mega Blaziken',stone:'Blazikenite'},
+        {id:282,form:'gardevoir-mega',name:'Mega Gardevoir',stone:'Gardevoirite'},
+        {id:303,form:'mawile-mega',name:'Mega Mawile',stone:'Mawhite'},
+        {id:306,form:'aggron-mega',name:'Mega Aggron',stone:'Aggronite'},
+        {id:310,form:'manectric-mega',name:'Mega Manectric',stone:'Manectite'},
+        {id:445,form:'garchomp-mega',name:'Mega Garchomp',stone:'Garchompite'},
+        {id:448,form:'lucario-mega',name:'Mega Lucario',stone:'Lucarionite'},
+        {id:460,form:'abomasnow-mega',name:'Mega Abomasnow',stone:'Abomasite'},
+        {id:15,form:'beedrill-mega',name:'Mega Beedrill',stone:'Beedrillite'},
+        {id:18,form:'pidgeot-mega',name:'Mega Pidgeot',stone:'Pidgeotite'},
+        {id:80,form:'slowbro-mega',name:'Mega Slowbro',stone:'Slowbronite'},
+        {id:208,form:'steelix-mega',name:'Mega Steelix',stone:'Steelixite'},
+        {id:319,form:'sharpedo-mega',name:'Mega Sharpedo',stone:'Sharpedonite'},
+        {id:323,form:'camerupt-mega',name:'Mega Camerupt',stone:'Cameruptite'},
+        {id:334,form:'altaria-mega',name:'Mega Altaria',stone:'Altarianite'},
+        {id:373,form:'salamence-mega',name:'Mega Salamence',stone:'Salamencite'},
+        {id:376,form:'metagross-mega',name:'Mega Metagross',stone:'Metagrossite'},
+        {id:380,form:'latias-mega',name:'Mega Latias',stone:'Latiasite'},
+        {id:381,form:'latios-mega',name:'Mega Latios',stone:'Latiosite'},
+        {id:384,form:'rayquaza-mega',name:'Mega Rayquaza',stone:'Rayquazite'},
+        {id:428,form:'lopunny-mega',name:'Mega Lopunny',stone:'Lopunnite'},
+        {id:475,form:'gallade-mega',name:'Mega Gallade',stone:'Galladite'},
+        {id:531,form:'audino-mega',name:'Mega Audino',stone:'Audinite'},
+        {id:719,form:'diancie-mega',name:'Mega Diancie',stone:'Diancite'},
+        {id:254,form:'sceptile-mega',name:'Mega Sceptile',stone:'Sceptilite'},
+        {id:260,form:'swampert-mega',name:'Mega Swampert',stone:'Swampertite'},
+        {id:354,form:'banette-mega',name:'Mega Banette',stone:'Banettite'},
+        {id:359,form:'absol-mega',name:'Mega Absol',stone:'Absolite'},
+        {id:376,form:'sableye-mega',name:'Mega Sableye',stone:'Sableyenite'},
+        {id:362,form:'glalie-mega',name:'Mega Glalie',stone:'Glalitite'},
+        {id:530,form:'excadrill-mega',name:'Mega Excadrill',stone:'Excadrillite'},
+    ];
+
+    // ==========================================
+    // GIGANTAMAX POKEMON
+    // ==========================================
+    const GMAX_DEFS = [
+        {form:'charizard-gmax',name:'Gigantamax Charizard'},
+        {form:'butterfree-gmax',name:'Gigantamax Butterfree'},
+        {form:'pikachu-gmax',name:'Gigantamax Pikachu'},
+        {form:'meowth-gmax',name:'Gigantamax Meowth'},
+        {form:'machamp-gmax',name:'Gigantamax Machamp'},
+        {form:'gengar-gmax',name:'Gigantamax Gengar'},
+        {form:'kingler-gmax',name:'Gigantamax Kingler'},
+        {form:'lapras-gmax',name:'Gigantamax Lapras'},
+        {form:'eevee-gmax',name:'Gigantamax Eevee'},
+        {form:'snorlax-gmax',name:'Gigantamax Snorlax'},
+        {form:'garbodor-gmax',name:'Gigantamax Garbodor'},
+        {form:'melmetal-gmax',name:'Gigantamax Melmetal'},
+        {form:'corviknight-gmax',name:'Gigantamax Corviknight'},
+        {form:'orbeetle-gmax',name:'Gigantamax Orbeetle'},
+        {form:'drednaw-gmax',name:'Gigantamax Drednaw'},
+        {form:'coalossal-gmax',name:'Gigantamax Coalossal'},
+        {form:'flapple-gmax',name:'Gigantamax Flapple'},
+        {form:'appletun-gmax',name:'Gigantamax Appletun'},
+        {form:'sandconda-gmax',name:'Gigantamax Sandaconda'},
+        {form:'toxtricity-gmax',name:'Gigantamax Toxtricity'},
+        {form:'centiskorch-gmax',name:'Gigantamax Centiskorch'},
+        {form:'hatterene-gmax',name:'Gigantamax Hatterene'},
+        {form:'grimmsnarl-gmax',name:'Gigantamax Grimmsnarl'},
+        {form:'alcremie-gmax',name:'Gigantamax Alcremie'},
+        {form:'copperajah-gmax',name:'Gigantamax Copperajah'},
+        {form:'duraludon-gmax',name:'Gigantamax Duraludon'},
+    ];
+
+    // ==========================================
+    // REGIONAL FORMS
+    // ==========================================
+    const REGIONAL_DEFS = [
+        // Alolan (PokéAPI name pattern: pokemon-name-alola)
+        {form:'vulpix-alola',name:'Alolan Vulpix',region:'alola'},
+        {form:'ninetales-alola',name:'Alolan Ninetales',region:'alola'},
+        {form:'sandshrew-alola',name:'Alolan Sandshrew',region:'alola'},
+        {form:'sandslash-alola',name:'Alolan Sandslash',region:'alola'},
+        {form:'raichu-alola',name:'Alolan Raichu',region:'alola'},
+        {form:'geodude-alola',name:'Alolan Geodude',region:'alola'},
+        {form:'graveler-alola',name:'Alolan Graveler',region:'alola'},
+        {form:'golem-alola',name:'Alolan Golem',region:'alola'},
+        {form:'grimer-alola',name:'Alolan Grimer',region:'alola'},
+        {form:'muk-alola',name:'Alolan Muk',region:'alola'},
+        {form:'exeggutor-alola',name:'Alolan Exeggutor',region:'alola'},
+        {form:'marowak-alola',name:'Alolan Marowak',region:'alola'},
+        // Galarian
+        {form:'ponyta-galar',name:'Galarian Ponyta',region:'galar'},
+        {form:'rapidash-galar',name:'Galarian Rapidash',region:'galar'},
+        {form:'slowpoke-galar',name:'Galarian Slowpoke',region:'galar'},
+        {form:'slowbro-galar',name:'Galarian Slowbro',region:'galar'},
+        {form:'weezing-galar',name:'Galarian Weezing',region:'galar'},
+        {form:'mr-mime-galar',name:'Galarian Mr. Mime',region:'galar'},
+        {form:'corsola-galar',name:'Galarian Corsola',region:'galar'},
+        {form:'zigzagoon-galar',name:'Galarian Zigzagoon',region:'galar'},
+        {form:'linoone-galar',name:'Galarian Linoone',region:'galar'},
+        {form:'darumaka-galar',name:'Galarian Darumaka',region:'galar'},
+        {form:'darmanitan-galar',name:'Galarian Darmanitan',region:'galar'},
+        {form:'yamask-galar',name:'Galarian Yamask',region:'galar'},
+        {form:'stunfisk-galar',name:'Galarian Stunfisk',region:'galar'},
+        // Hisuian
+        {form:'growlithe-hisui',name:'Hisuian Growlithe',region:'hisui'},
+        {form:'arcanine-hisui',name:'Hisuian Arcanine',region:'hisui'},
+        {form:'voltorb-hisui',name:'Hisuian Voltorb',region:'hisui'},
+        {form:'electrode-hisui',name:'Hisuian Electrode',region:'hisui'},
+        {form:'typhlosion-hisui',name:'Hisuian Typhlosion',region:'hisui'},
+        {form:'qwilfish-hisui',name:'Hisuian Qwilfish',region:'hisui'},
+        {form:'sneasel-hisui',name:'Hisuian Sneasel',region:'hisui'},
+        {form:'sliggoo-hisui',name:'Hisuian Sliggoo',region:'hisui'},
+        {form:'goodra-hisui',name:'Hisuian Goodra',region:'hisui'},
+        {form:'avalugg-hisui',name:'Hisuian Avalugg',region:'hisui'},
+        {form:'braviary-hisui',name:'Hisuian Braviary',region:'hisui'},
+        // Paldean
+        {form:'wooper-paldea',name:'Paldean Wooper',region:'paldea'},
+        {form:'tauros-paldea',name:'Paldean Tauros',region:'paldea'},
+        {form:'paldean-wooper',name:'Paldean Wooper',region:'paldea'},
+        {form:'paldean-tauros',name:'Paldean Tauros',region:'paldea'},
+    ];
+
+    const SR_KEY_INPUT = document.getElementById('serviceKey');
+    const logEl = document.getElementById('log');
+    let SR_KEY = '';
+    let db = null;
+
+    function log(msg, cls='') {
+        const span = document.createElement('span');
+        if (cls) span.className = cls;
+        span.textContent = msg + '\n';
+        logEl.appendChild(span);
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setProgress(id, pct) {
+        const fill = document.getElementById(id);
+        if (fill) { fill.style.width = pct + '%'; fill.textContent = pct + '%'; }
+    }
+
+    function showProgress(barId) {
+        document.getElementById(barId).style.display = 'block';
+    }
+
+    function supa(url, key, method='GET', body=null) {
+        const opts = {
+            method,
+            headers: {
+                'apikey': key,
+                'Authorization': 'Bearer ' + key,
+                'Content-Type': 'application/json',
+                'Prefer': method === 'POST' ? 'resolution=merge-duplicates' : undefined
+            }
+        };
+        if (body) opts.body = JSON.stringify(body);
+        return fetch('https://odevwnnpzsoltbrrjdts.supabase.co/rest/v1/' + url, opts).then(r => {
+            if (!r.ok) return r.text().then(t => { throw new Error(r.status + ': ' + t); });
+            const ct = r.headers.get('content-type');
+            if (ct && ct.includes('json')) return r.json();
+            return r.text();
+        });
+    }
+
+    async function testConnection() {
+        const key = SR_KEY_INPUT.value.trim();
+        if (!key) { log('Insira a service_role key', 'log-err'); return; }
+        SR_KEY = key;
+        try {
+            const data = await supa('pokemon?select=id&limit=1', SR_KEY);
+            log('Conexao OK! Pokemon na DB: verificando...', 'log-ok');
+            const count = await supa('pokemon?select=id', SR_KEY);
+            log('Pokemon total: ' + (Array.isArray(count) ? count.length : '?'), 'log-ok');
+            document.getElementById('connStatus').textContent = 'Conectado ✓';
+            document.getElementById('connStatus').style.color = '#78c850';
+            enableButtons(true);
+        } catch (e) {
+            log('Erro conexao: ' + e.message, 'log-err');
+            document.getElementById('connStatus').textContent = 'Erro ✗';
+            document.getElementById('connStatus').style.color = '#e94560';
+        }
+    }
+
+    function enableButtons(on) {
+        ['btnSeedItems','btnSeedMega','btnSeedGmax','btnSeedRegional','btnShinySprites','btnSeedAll'].forEach(id => {
+            document.getElementById(id).disabled = !on;
+        });
+    }
+
+    // ========== ITEMS SEED ==========
+    async function seedItems() {
+        if (!SR_KEY) { log('Conecte primeiro!', 'log-err'); return; }
+        log('=== SEED DE ITENS ===', 'log-info');
+        showProgress('itemsProgress');
+
+        const ALL_ITEMS = window.ALL_ITEMS || [];
+        const total = ALL_ITEMS.length;
+        let inserted = 0;
+        let errors = 0;
+
+        for (let i = 0; i < total; i++) {
+            const item = ALL_ITEMS[i];
+            const row = {
+                id: item.id,
+                name: item.name,
+                category: item.category,
+                subcategory: item.subcategory || null,
+                effect: item.effect || null,
+                effect_value: item.effect_value || 0,
+                description: item.desc || null,
+                price: item.price || 0,
+                sprite_url: item.sprite || null,
+                holdable: item.holdable || false,
+                usable_in_battle: item.battle || false
+            };
+            try {
+                await supa('items', SR_KEY, 'POST', row);
+                inserted++;
+            } catch (e) {
+                log('Erro item ' + item.name + ': ' + e.message, 'log-err');
+                errors++;
+            }
+            setProgress('itemsFill', Math.round(((i+1)/total)*100));
+        }
+
+        log('Itens inseridos: ' + inserted + ' | Erros: ' + errors, errors > 0 ? 'log-warn' : 'log-ok');
+    }
+
+    // ========== POKEMON VARIANT HELPERS ==========
+    async function fetchPokeAPIForm(formName) {
+        const url = 'https://pokeapi.co/api/v2/pokemon/' + formName;
+        const r = await fetch(url);
+        if (!r.ok) return null;
+        return await r.json();
+    }
+
+    function transformVariantData(apiData, variant, basePokemonId, megaStone) {
+        const stats = {};
+        apiData.stats.forEach(s => {
+            const map = {hp:'hp',attack:'attack',defense:'defense','special-attack':'sp_atk','special-defense':'sp_def',speed:'speed'};
+            stats[map[s.stat.name]] = s.base_stat;
+        });
+
+        const types = apiData.types
+            .sort((a,b) => a.slot - b.slot)
+            .map(t => t.type.name);
+
+        const sprites = apiData.sprites || {};
+        const other = sprites.other || {};
+        const home = other['home'] || {};
+        const official = other['official-artwork'] || {};
+
+        return {
+            id: apiData.id,
+            name: apiData.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+            types,
+            hp: stats.hp || 50,
+            attack: stats.attack || 50,
+            defense: stats.defense || 50,
+            sp_atk: stats.sp_atk || 50,
+            sp_def: stats.sp_def || 50,
+            speed: stats.speed || 50,
+            sprite_front: sprites.front_default || null,
+            sprite_official: official.front_default || null,
+            sprite_home: home.front_default || null,
+            sprite_front_shiny: sprites.front_shiny || null,
+            sprite_official_shiny: official.front_shiny || null,
+            sprite_home_shiny: home.front_shiny || null,
+            variant: variant,
+            base_pokemon_id: basePokemonId,
+            mega_stone: megaStone || null
+        };
+    }
+
+    async function upsertPokemonRow(row) {
+        await supa('pokemon', SR_KEY, 'POST', row);
+    }
+
+    async function seedMegaPokemon() {
+        if (!SR_KEY) { log('Conecte primeiro!', 'log-err'); return; }
+        log('=== SEED DE MEGA POKEMON ===', 'log-info');
+        showProgress('variantProgress');
+
+        let inserted = 0, skipped = 0;
+        for (let i = 0; i < MEGA_DEFS.length; i++) {
+            const def = MEGA_DEFS[i];
+            try {
+                log('Buscando ' + def.form + '...', 'log-info');
+                const apiData = await fetchPokeAPIForm(def.form);
+                if (!apiData) { log('Nao encontrado: ' + def.form, 'log-warn'); skipped++; continue; }
+
+                const row = transformVariantData(apiData, 'mega', def.id, def.stone);
+                await upsertPokemonRow(row);
+                inserted++;
+                log('  OK: ' + row.name + ' (id:' + row.id + ')', 'log-ok');
+            } catch (e) {
+                log('Erro mega ' + def.form + ': ' + e.message, 'log-err');
+                skipped++;
+            }
+            setProgress('variantFill', Math.round(((i+1)/MEGA_DEFS.length)*100));
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        log('Mega inseridos: ' + inserted + ' | Pulados: ' + skipped, 'log-ok');
+    }
+
+    async function seedGmaxPokemon() {
+        if (!SR_KEY) { log('Conecte primeiro!', 'log-err'); return; }
+        log('=== SEED DE GIGANTAMAX POKEMON ===', 'log-info');
+        showProgress('variantProgress');
+
+        let inserted = 0, skipped = 0;
+        for (let i = 0; i < GMAX_DEFS.length; i++) {
+            const def = GMAX_DEFS[i];
+            try {
+                log('Buscando ' + def.form + '...', 'log-info');
+                const apiData = await fetchPokeAPIForm(def.form);
+                if (!apiData) { log('Nao encontrado: ' + def.form, 'log-warn'); skipped++; continue; }
+
+                // base_pokemon_id is extracted from species url
+                const speciesUrl = apiData.species?.url || '';
+                const speciesMatch = speciesUrl.match(/\/pokemon-species\/(\d+)/);
+                const baseId = speciesMatch ? parseInt(speciesMatch[1]) : apiData.id;
+
+                const row = transformVariantData(apiData, 'gigantamax', baseId, null);
+                await upsertPokemonRow(row);
+                inserted++;
+                log('  OK: ' + row.name + ' (id:' + row.id + ')', 'log-ok');
+            } catch (e) {
+                log('Erro gmax ' + def.form + ': ' + e.message, 'log-err');
+                skipped++;
+            }
+            setProgress('variantFill', Math.round(((i+1)/GMAX_DEFS.length)*100));
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        log('Gigantamax inseridos: ' + inserted + ' | Pulados: ' + skipped, 'log-ok');
+    }
+
+    async function seedRegionalForms() {
+        if (!SR_KEY) { log('Conecte primeiro!', 'log-err'); return; }
+        log('=== SEED DE FORMAS REGIONAIS ===', 'log-info');
+        showProgress('variantProgress');
+
+        let inserted = 0, skipped = 0;
+        for (let i = 0; i < REGIONAL_DEFS.length; i++) {
+            const def = REGIONAL_DEFS[i];
+            try {
+                log('Buscando ' + def.form + '...', 'log-info');
+                const apiData = await fetchPokeAPIForm(def.form);
+                if (!apiData) { log('Nao encontrado: ' + def.form, 'log-warn'); skipped++; continue; }
+
+                const speciesUrl = apiData.species?.url || '';
+                const speciesMatch = speciesUrl.match(/\/pokemon-species\/(\d+)/);
+                const baseId = speciesMatch ? parseInt(speciesMatch[1]) : apiData.id;
+
+                const row = transformVariantData(apiData, def.region, baseId, null);
+                await upsertPokemonRow(row);
+                inserted++;
+                log('  OK: ' + row.name + ' (id:' + row.id + ')', 'log-ok');
+            } catch (e) {
+                log('Erro regional ' + def.form + ': ' + e.message, 'log-err');
+                skipped++;
+            }
+            setProgress('variantFill', Math.round(((i+1)/REGIONAL_DEFS.length)*100));
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        log('Regionais inseridos: ' + inserted + ' | Pulados: ' + skipped, 'log-ok');
+    }
+
+    // ========== SHINY SPRITES UPDATE ==========
+    async function updateShinySprites() {
+        if (!SR_KEY) { log('Conecte primeiro!', 'log-err'); return; }
+        log('=== ATUALIZAR SHINY SPRITES (1025 Pokemon base) ===', 'log-info');
+        showProgress('variantProgress');
+
+        let updated = 0, errors = 0;
+
+        for (let id = 1; id <= 1025; id++) {
+            try {
+                const apiData = await fetchPokeAPIForm(String(id));
+                if (!apiData) { errors++; continue; }
+
+                const sprites = apiData.sprites || {};
+                const other = sprites.other || {};
+                const home = other['home'] || {};
+                const official = other['official-artwork'] || {};
+
+                const patch = {
+                    sprite_front_shiny: sprites.front_shiny || null,
+                    sprite_official_shiny: official.front_shiny || null,
+                    sprite_home_shiny: home.front_shiny || null
+                };
+
+                await supa('pokemon?id=eq.' + id, SR_KEY, 'PATCH', patch);
+                updated++;
+            } catch (e) {
+                errors++;
+            }
+            setProgress('variantFill', Math.round((id/1025)*100));
+            if (id % 10 === 0) {
+                log('Progresso: ' + id + '/1025', 'log-info');
+                await new Promise(r => setTimeout(r, 100));
+            } else {
+                await new Promise(r => setTimeout(r, 30));
+            }
+        }
+
+        log('Shiny sprites atualizados: ' + updated + ' | Erros: ' + errors, errors > 0 ? 'log-warn' : 'log-ok');
+    }
+
+    // ========== SEED ALL ==========
+    async function seedAll() {
+        log('========== SEED COMPLETA v3 ==========', 'log-info');
+        await seedItems();
+        await seedMegaPokemon();
+        await seedGmaxPokemon();
+        await seedRegionalForms();
+        await updateShinySprites();
+        log('========== SEED COMPLETA FINALIZADA ==========', 'log-ok');
+    }
+    </script>
+</body>
+</html>

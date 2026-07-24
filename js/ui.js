@@ -17,6 +17,8 @@ export async function preloadBattleSprites(playerPokemon, enemyPokemon) {
     const urls = [];
     if (playerPokemon.spriteUrls) urls.push(playerPokemon.spriteUrls.home || playerPokemon.spriteUrls.official);
     if (enemyPokemon.spriteUrls) urls.push(enemyPokemon.spriteUrls.home || enemyPokemon.spriteUrls.official);
+    if (playerPokemon.shinySpriteUrls) urls.push(playerPokemon.shinySpriteUrls.home || playerPokemon.shinySpriteUrls.official);
+    if (enemyPokemon.shinySpriteUrls) urls.push(enemyPokemon.shinySpriteUrls.home || enemyPokemon.shinySpriteUrls.official);
     await PokeAPI.preloadSprites(urls);
 }
 
@@ -143,13 +145,27 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon) {
 
 function drawPokemonSprite(ctx, x, y, pokemon) {
     const spriteUrls = pokemon.spriteUrls;
-    const spriteUrl = spriteUrls?.home || spriteUrls?.official || spriteUrls?.front;
+    const shinyUrls = pokemon.shinySpriteUrls;
+    const isShiny = pokemon.isShiny;
+
+    let spriteUrl;
+    if (isShiny && shinyUrls) {
+        spriteUrl = shinyUrls.home || shinyUrls.official || shinyUrls.front;
+    }
+    if (!spriteUrl) {
+        spriteUrl = spriteUrls?.home || spriteUrls?.official || spriteUrls?.front;
+    }
     const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
     const typeColor = TYPE_COLORS[pokemon.type] || '#686868';
 
     if (img && img.complete && img.naturalWidth > 0) {
-        ctx.shadowColor = typeColor;
-        ctx.shadowBlur = 30;
+        if (isShiny) {
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 35 + Math.sin(Date.now() / 200) * 10;
+        } else {
+            ctx.shadowColor = typeColor;
+            ctx.shadowBlur = 30;
+        }
 
         const maxW = 160;
         const maxH = 160;
@@ -160,9 +176,9 @@ function drawPokemonSprite(ctx, x, y, pokemon) {
         ctx.drawImage(img, x - drawW / 2, y - drawH / 2, drawW, drawH);
         ctx.shadowBlur = 0;
     } else {
-        ctx.shadowColor = typeColor;
+        ctx.shadowColor = isShiny ? '#ffd700' : typeColor;
         ctx.shadowBlur = 40;
-        ctx.fillStyle = typeColor;
+        ctx.fillStyle = isShiny ? '#ffd700' : typeColor;
         ctx.globalAlpha = 0.8;
         ctx.beginPath();
         ctx.arc(x, y, 40, 0, Math.PI * 2);
@@ -176,24 +192,60 @@ function drawPokemonSprite(ctx, x, y, pokemon) {
         ctx.fillText('?', x, y + 5);
     }
 
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = isShiny ? '#ffd700' : '#fff';
     ctx.font = '600 14px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 4;
-    ctx.fillText(pokemon.name, x, y + 90);
+    let nameText = pokemon.name;
+    if (pokemon.isMega) nameText = '★ ' + nameText;
+    ctx.fillText(nameText, x, y + 90);
     ctx.font = '400 11px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = isShiny ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.6)';
     ctx.fillText(`Lv.${pokemon.level}`, x, y + 108);
     ctx.shadowBlur = 0;
 }
 
-export function initBattleUI(onFight, onRun) {
+export function initBattleUI(onFight, onBag, onMega, onRun) {
     $$('.action-btn[data-action]').forEach(btn => {
         btn.addEventListener('click', () => {
             const action = btn.dataset.action;
             if (action === 'fight') onFight();
+            else if (action === 'bag') onBag();
+            else if (action === 'pokemon') onMega();
             else if (action === 'run') onRun();
         });
     });
+}
+
+export function showBagSelection(items, onSelect) {
+    const moveSelection = $('#move-selection');
+    const moveButtons = $('#move-buttons');
+    const battleActions = $('#battle-actions');
+
+    moveButtons.innerHTML = '';
+    battleActions.classList.add('hidden');
+    moveSelection.classList.remove('hidden');
+
+    items.forEach(inv => {
+        const item = inv.items;
+        const btn = document.createElement('button');
+        btn.className = 'move-btn';
+        btn.style.borderColor = '#78c85060';
+        btn.innerHTML = `
+            <span class="move-name">${item.name}</span>
+            <span class="move-type">${item.category.toUpperCase()}</span>
+            <span class="move-pp">x${inv.quantity}</span>
+            <span class="move-pp">${item.description || ''}</span>
+        `;
+        btn.addEventListener('click', () => {
+            onSelect(inv);
+            hideMoveSelection();
+        });
+        moveButtons.appendChild(btn);
+    });
+
+    $('#btn-back').onclick = () => {
+        hideMoveSelection();
+    };
 }

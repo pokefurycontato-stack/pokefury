@@ -87,11 +87,29 @@ export function calculateAllStats(baseStats, level, ivs, evs, nature) {
     };
 }
 
+function getHeldItemEffect(itemId) {
+    if (!itemId) return null;
+    if (window.ALL_ITEMS) {
+        return window.ALL_ITEMS.find(i => i.id === itemId) || null;
+    }
+    return null;
+}
+
 export async function calculateDamage(attacker, defender, move) {
     const chart = await loadTypeEffectiveness();
     const level = attacker.level || 50;
-    const attack = move.category === 'physical' ? attacker.stats.attack : attacker.stats.spAtk;
-    const defense = move.category === 'physical' ? defender.stats.defense : defender.stats.spDef;
+    let attack = move.category === 'physical' ? attacker.stats.attack : attacker.stats.spAtk;
+    let defense = move.category === 'physical' ? defender.stats.defense : defender.stats.spDef;
+
+    const attackerItem = getHeldItemEffect(attacker.heldItemId);
+    if (attackerItem) {
+        if (attackerItem.effect === 'choice_band' && move.category === 'physical') attack *= 1.5;
+        if (attackerItem.effect === 'choice_specs' && move.category === 'special') attack *= 1.5;
+    }
+    const defenderItem = getHeldItemEffect(defender.heldItemId);
+    if (defenderItem && defenderItem.effect === 'assault_vest' && move.category === 'special') {
+        defense *= 1.5;
+    }
 
     let damage = ((2 * level / 5 + 2) * move.power * attack / defense) / 50 + 2;
 
@@ -103,6 +121,13 @@ export async function calculateDamage(attacker, defender, move) {
 
     const critical = Math.random() < 1 / 16 ? 1.5 : 1;
     damage *= critical;
+
+    if (attackerItem) {
+        if (attackerItem.effect === 'life_orb') damage *= 1.3;
+        if (attackerItem.effect === 'expert_belt' && effectiveness > 1) damage *= 1.2;
+        if (attackerItem.effect === 'muscle_band' && move.category === 'physical') damage *= 1.1;
+        if (attackerItem.effect === 'wise_glasses' && move.category === 'special') damage *= 1.1;
+    }
 
     const randomFactor = randomInt(85, 100) / 100;
     damage *= randomFactor;

@@ -3,8 +3,10 @@ import { randomInt, loadTypeEffectiveness } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive } from './battle.js';
 import {
     showScreen, preloadBattleSprites, updateBattleUI, showBattleMessage, showMoveSelection,
-    drawBattleScene, initBattleUI, updateHpBar
+    drawBattleScene, initBattleUI, updateHpBar, showBagSelection
 } from './ui.js';
+
+const SHINY_CHANCE = 128;
 
 class PokeFuryGame {
     constructor() {
@@ -259,7 +261,13 @@ class PokeFuryGame {
 
         const activePokemon = getFirstAlive(this.playerTeam);
         if (activePokemon) {
-            const spriteUrl = activePokemon.spriteUrls?.home || activePokemon.spriteUrls?.official || activePokemon.spriteUrls?.front;
+            let spriteUrl = null;
+            if (activePokemon.isShiny && activePokemon.shinySpriteUrls) {
+                spriteUrl = activePokemon.shinySpriteUrls.home || activePokemon.shinySpriteUrls.official || activePokemon.shinySpriteUrls.front;
+            }
+            if (!spriteUrl) {
+                spriteUrl = activePokemon.spriteUrls?.home || activePokemon.spriteUrls?.official || activePokemon.spriteUrls?.front;
+            }
             const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
 
             if (img && img.complete && img.naturalWidth > 0) {
@@ -269,14 +277,14 @@ class PokeFuryGame {
                 const drawW = img.naturalWidth * scale;
                 const drawH = img.naturalHeight * scale;
 
-                this.ctx.shadowColor = TYPE_COLORS[activePokemon.type] || '#e94560';
+                this.ctx.shadowColor = activePokemon.isShiny ? '#ffd700' : (TYPE_COLORS[activePokemon.type] || '#e94560');
                 this.ctx.shadowBlur = 40;
                 this.ctx.drawImage(img, w / 2 - drawW / 2, h / 2 - drawH / 2 - 30, drawW, drawH);
                 this.ctx.shadowBlur = 0;
             } else {
-                this.ctx.shadowColor = '#e94560';
+                this.ctx.shadowColor = activePokemon.isShiny ? '#ffd700' : '#e94560';
                 this.ctx.shadowBlur = 40;
-                this.ctx.fillStyle = TYPE_COLORS[activePokemon.type] || '#e94560';
+                this.ctx.fillStyle = activePokemon.isShiny ? '#ffd700' : (TYPE_COLORS[activePokemon.type] || '#e94560');
                 this.ctx.beginPath();
                 this.ctx.arc(w / 2, h / 2 - 30, 12, 0, Math.PI * 2);
                 this.ctx.fill();
@@ -306,9 +314,11 @@ class PokeFuryGame {
     async startWildBattle() {
         const minLevel = 2;
         const maxLevel = 8;
-        const { pokemon, level } = await PokeAPI.getRandomPokemon(minLevel, maxLevel);
+        const includeVariants = Math.random() < 0.15;
+        const { pokemon, level } = await PokeAPI.getRandomWildPokemon(minLevel, maxLevel, includeVariants);
 
-        const wildPokemon = await createPokemon(pokemon, level);
+        const isShiny = Math.random() < (1 / SHINY_CHANCE);
+        const wildPokemon = await createPokemon(pokemon, level, null, null, null, isShiny);
         this.enemyTeam = [wildPokemon];
 
         const activePlayer = getFirstAlive(this.playerTeam);
@@ -323,10 +333,15 @@ class PokeFuryGame {
 
         initBattleUI(
             () => this.onFight(),
+            () => this.onBag(),
+            () => this.onMega(),
             () => this.onRun()
         );
 
-        await showBattleMessage(`Um ${wildPokemon.name} selvagem apareceu!`);
+        let introMsg = `Um ${wildPokemon.name} selvagem apareceu!`;
+        if (isShiny) introMsg = `Um ${wildPokemon.name} SHINY selvagem apareceu!`;
+        if (wildPokemon.variant !== 'normal') introMsg = `Um ${wildPokemon.name} (${wildPokemon.variant}) selvagem apareceu!`;
+        await showBattleMessage(introMsg);
     }
 
     async onFight() {
@@ -344,9 +359,109 @@ class PokeFuryGame {
             await showBattleMessage('Escapou com sucesso!');
             this.endBattle(null);
         } else {
-            await showBattleMessage('Não conseguiu escapar!');
+            await showBattleMessage('Nao conseguiu escapar!');
             await this.enemyTurn();
         }
+    }
+
+    async onBag() {
+        const items = await window.GameData.getInventory();
+        const usableItems = items.filter(inv => inv.items && inv.items.usable_in_battle);
+
+        if (usableItems.length === 0) {
+            await showBattleMessage('Mochila vazia!');
+            return;
+        }
+
+        showBagSelection(usableItems, async (item) => {
+            await this.useItemInBattle(item);
+        });
+    }
+
+    async useItemInBattle(item) {
+        const playerPokemon = getFirstAlive(this.playerTeam);
+        const enemyPokemon = getFirstAlive(this.enemyTeam);
+        const itemData = item.items;
+
+        await window.GameData.removeItem(item.item_id, 1);
+
+        if (itemData.subcategory === 'heal') {
+            const heal = itemData.effect === 'heal_full' || itemData.effect === 'heal_full_status'
+                ? playerPokemon.stats.hp
+                : itemData.effect_value;
+            playerPokemon.currentHp = Math.min(playerPokemon.stats.hp, playerPokemon.currentHp + heal);
+            await showBattleMessage(`Usou ${itemData.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
+        } else if (itemData.category === 'pokeball') {
+            const catchRate = this.calculateCatchRate(enemyPokemon, itemData);
+            const caught = Math.random() < catchRate;
+            if (caught) {
+                await showBattleMessage(`Capturou ${enemyPokemon.name}!`);
+                const added = await window.GameData.addPokemonToTeam(enemyPokemon);
+                if (added) {
+                    await showBattleMessage(`${enemyPokemon.name} foi adicionado a equipe!`);
+                } else {
+                    await showBattleMessage('Equipe cheia! Pokemon perdido.');
+                }
+                this.endBattle('win');
+                return;
+            } else {
+                await showBattleMessage(`O Pokemon escapou da ${itemData.name}!`);
+            }
+        } else if (itemData.effect && itemData.effect.startsWith('cure_')) {
+            await showBattleMessage(`${playerPokemon.name} foi curado de status!`);
+        }
+
+        drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon);
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        await this.enemyTurn();
+    }
+
+    calculateCatchRate(pokemon, pokeball) {
+        const maxHp = pokemon.stats.hp;
+        const currentHp = pokemon.currentHp;
+        const hpFactor = (3 * maxHp - 2 * currentHp) / (3 * maxHp);
+        let rate = hpFactor;
+
+        if (pokeball.effect === 'catch_100x') rate = 1.0;
+        else if (pokeball.effect === 'catch_2x') rate *= 2;
+        else if (pokeball.effect === 'catch_1.5x') rate *= 1.5;
+        else rate *= 1;
+
+        if (pokemon.isShiny) rate *= 0.3;
+        if (pokemon.level > 20) rate *= 0.8;
+
+        return Math.min(rate, 1.0);
+    }
+
+    async onMega() {
+        const playerPokemon = getFirstAlive(this.playerTeam);
+        if (playerPokemon.variant !== 'normal' || playerPokemon.isMega) {
+            await showBattleMessage('Nao pode mega evoluir!');
+            return;
+        }
+
+        if (playerPokemon.heldItemId) {
+            const megaId = await PokeAPI.canMegaEvolve(playerPokemon, playerPokemon.heldItemId);
+            if (megaId) {
+                const megaData = await PokeAPI.ensurePokemon(megaId);
+                const oldStats = { ...playerPokemon.stats };
+                const megaPokemon = await createPokemon(megaData, playerPokemon.level, playerPokemon.ivs, playerPokemon.evs, playerPokemon.nature, playerPokemon.isShiny);
+                megaPokemon.isMega = true;
+                megaPokemon.heldItemId = playerPokemon.heldItemId;
+                megaPokemon.currentHp = Math.min(megaPokemon.stats.hp, playerPokemon.currentHp + (megaPokemon.stats.hp - oldStats.hp));
+
+                const idx = this.playerTeam.indexOf(playerPokemon);
+                if (idx >= 0) this.playerTeam[idx] = megaPokemon;
+
+                await preloadBattleSprites(megaPokemon, getFirstAlive(this.enemyTeam));
+                drawBattleScene(this.ctx, this.canvas, megaPokemon, getFirstAlive(this.enemyTeam));
+                updateBattleUI(this.playerTeam, this.enemyTeam);
+                await showBattleMessage(`${playerPokemon.name} mega evoluiu para ${megaPokemon.name}!`);
+                return;
+            }
+        }
+
+        await showBattleMessage('Nao tem mega stone equipada!');
     }
 
     async executeBattleTurn(playerPokemon, enemyPokemon, playerMove) {

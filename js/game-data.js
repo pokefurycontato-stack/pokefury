@@ -73,7 +73,10 @@ const GameData = {
             ev_sp_def: pokemon.evs?.spDef ?? 0,
             ev_speed: pokemon.evs?.speed ?? 0,
             nature: pokemon.nature || 'hardy',
-            happiness: pokemon.happiness ?? 70
+            happiness: pokemon.happiness ?? 70,
+            is_shiny: pokemon.isShiny || false,
+            is_mega: pokemon.isMega || false,
+            held_item_id: pokemon.heldItemId || null
         }));
 
         const { error } = await window.db
@@ -112,7 +115,10 @@ const GameData = {
                 ev_sp_def: pokemon.evs?.spDef ?? 0,
                 ev_speed: pokemon.evs?.speed ?? 0,
                 nature: pokemon.nature || 'hardy',
-                happiness: pokemon.happiness ?? 70
+                happiness: pokemon.happiness ?? 70,
+                is_shiny: pokemon.isShiny || false,
+                is_mega: pokemon.isMega || false,
+                held_item_id: pokemon.heldItemId || null
             });
         return !error;
     },
