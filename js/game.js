@@ -1,5 +1,5 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
-import { randomInt } from './utils.js';
+import { randomInt, loadTypeEffectiveness } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive } from './battle.js';
 import {
     showScreen, preloadBattleSprites, updateBattleUI, showBattleMessage, showMoveSelection,
@@ -25,6 +25,8 @@ class PokeFuryGame {
 
     async init() {
         await PokeAPI.init();
+        await loadTypeEffectiveness();
+        console.log('[PokeFury] Type effectiveness loaded from Supabase');
         await this.preloadStarters();
         this.render();
 
@@ -354,7 +356,7 @@ class PokeFuryGame {
                 continue;
             }
 
-            const result = executeTurn(attacker, defender, move);
+            const result = await executeTurn(attacker, defender, move);
 
             attacker.moves.forEach(m => {
                 if (m.id === move.id) m.currentPp = Math.max(0, m.currentPp - 1);
@@ -399,7 +401,7 @@ class PokeFuryGame {
         const move = getAIMove(enemyPokemon);
 
         if (move) {
-            const result = executeTurn(enemyPokemon, playerPokemon, move);
+            const result = await executeTurn(enemyPokemon, playerPokemon, move);
 
             enemyPokemon.moves.forEach(m => {
                 if (m.id === move.id) m.currentPp = Math.max(0, m.currentPp - 1);

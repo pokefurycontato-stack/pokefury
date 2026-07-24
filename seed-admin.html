@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokeFury - Seed Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: #e94560; margin-bottom: 8px; }
+        .subtitle { color: rgba(255,255,255,0.4); margin-bottom: 32px; }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .status {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            font-family: monospace;
+        }
+        .status.info { background: rgba(33,150,243,0.1); border: 1px solid rgba(33,150,243,0.2); color: #64b5f6; }
+        .status.success { background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.2); color: #81c784; }
+        .status.error { background: rgba(244,67,54,0.1); border: 1px solid rgba(244,67,54,0.2); color: #e57373; }
+        .status.loading { background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2); color: #ffd54f; }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e94560, #c0392b);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560, #c0392b);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(233,69,96,0.4);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(233,69,96,0.6); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+        .log {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .log-entry { color: rgba(255,255,255,0.5); }
+        .log-entry.ok { color: #81c784; }
+        .log-entry.err { color: #e57373; }
+        .log-entry.warn { color: #ffd54f; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-box { text-align: center; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #e94560; }
+        .stat-label { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 4px; }
+        .warning {
+            background: rgba(255,152,0,0.1);
+            border: 1px solid rgba(255,152,0,0.2);
+            color: #ffb74d;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PokeFury Seed Admin</h1>
+        <p class="subtitle">Popule o banco de dados Supabase com dados da PokéAPI</p>
+
+        <div class="warning">
+            ⚠️ Execute este script apenas UMA VEZ. Depois de popular o banco, delete este arquivo.
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-value" id="stat-pokemon">0</div>
+                <div class="stat-label">Pokemon</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="stat-moves">0</div>
+                <div class="stat-label">Movimentos</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="stat-pairings">0</div>
+                <div class="stat-label">Relações</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+            <div id="status" class="status info">Aguardando início...</div>
+            <div style="margin-top:16px">
+                <button class="btn btn-primary" id="btn-seed" onclick="startSeed()">Iniciar Seed Completo</button>
+                <button class="btn btn-secondary" onclick="seedTypes()">Apenas Tipos</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom:12px; font-size:14px;">Log</h3>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZXZ3bm5wenNvbHRicnJqZHRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDkwMTc2MSwiZXhwIjoyMTAwNDc3NzYxfQ.xlZ4LgzmQ-DZUz1kDk3oucmlvjCkty1TgzfN2IDxhoY';
+        const POKEAPI = 'https://pokeapi.co/api/v2';
+
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let pokemonCount = 0, movesCount = 0, pairingsCount = 0;
+
+        function log(msg, cls = '') {
+            const el = document.getElementById('log');
+            el.innerHTML += `<div class="log-entry ${cls}">${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setProgress(pct) {
+            document.getElementById('progress').style.width = pct + '%';
+        }
+
+        function setStatus(msg, cls) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = 'status ' + cls;
+        }
+
+        function updateStats() {
+            document.getElementById('stat-pokemon').textContent = pokemonCount;
+            document.getElementById('stat-moves').textContent = movesCount;
+            document.getElementById('stat-pairings').textContent = pairingsCount;
+        }
+
+        async function fetchJSON(url) {
+            const r = await fetch(url);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        }
+
+        const TYPE_CHART = {
+            normal:   { rock: 0.5, ghost: 0, steel: 0.5 },
+            fire:     { fire: 0.5, water: 0.5, grass: 2, ice: 2, bug: 2, rock: 0.5, dragon: 0.5, steel: 2 },
+            water:    { fire: 2, water: 0.5, grass: 0.5, ground: 2, rock: 2, dragon: 0.5 },
+            grass:    { fire: 0.5, water: 2, grass: 0.5, poison: 0.5, ground: 2, flying: 0.5, bug: 0.5, rock: 2, dragon: 0.5, steel: 0.5 },
+            electric: { water: 2, grass: 0.5, electric: 0.5, ground: 0, flying: 2, dragon: 0.5 },
+            ice:      { fire: 0.5, water: 0.5, grass: 2, ice: 0.5, ground: 2, flying: 2, dragon: 2, steel: 0.5 },
+            fighting: { normal: 2, ice: 2, poison: 0.5, flying: 0.5, psychic: 0.5, bug: 0.5, rock: 2, ghost: 0, dark: 2, steel: 2, fairy: 0.5 },
+            poison:   { grass: 2, poison: 0.5, ground: 0.5, rock: 0.5, ghost: 0.5, steel: 0, fairy: 2 },
+            ground:   { fire: 2, electric: 2, grass: 0.5, poison: 2, flying: 0, bug: 0.5, rock: 2, steel: 2 },
+            flying:   { electric: 0.5, grass: 2, fighting: 2, bug: 2, rock: 0.5, steel: 0.5 },
+            psychic:  { fighting: 2, poison: 2, psychic: 0.5, dark: 0, steel: 0.5 },
+            bug:      { fire: 0.5, grass: 2, fighting: 0.5, poison: 0.5, flying: 0.5, psychic: 2, ghost: 0.5, dark: 2, steel: 0.5, fairy: 0.5 },
+            rock:     { fire: 2, ice: 2, fighting: 0.5, ground: 0.5, flying: 2, bug: 2, steel: 0.5 },
+            ghost:    { normal: 0, psychic: 2, ghost: 2, dark: 0.5 },
+            dragon:   { dragon: 2, steel: 0.5, fairy: 0 },
+            dark:     { fighting: 0.5, psychic: 2, ghost: 2, dark: 0.5, fairy: 0.5 },
+            steel:    { fire: 0.5, water: 0.5, electric: 0.5, ice: 2, rock: 2, steel: 0.5, fairy: 2 },
+            fairy:    { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 }
+        };
+
+        async function seedTypes() {
+            setStatus('Inserindo efetividade de tipos...', 'loading');
+            log('Iniciando seed de tipos...');
+
+            const rows = [];
+            const allTypes = Object.keys(TYPE_CHART);
+            for (const atk of allTypes) {
+                for (const def of allTypes) {
+                    const mult = TYPE_CHART[atk][def] ?? 1;
+                    if (mult !== 1) {
+                        rows.push({ attack_type: atk, defense_type: def, multiplier: mult });
+                    }
+                }
+            }
+
+            const { error } = await sb.from('type_effectiveness').upsert(rows, { onConflict: 'attack_type,defense_type' });
+            if (error) {
+                log('Erro ao inserir tipos: ' + error.message, 'err');
+                setStatus('Erro ao inserir tipos', 'error');
+                return false;
+            }
+            log(`✓ ${rows.length} relações de tipo inseridas`, 'ok');
+            setStatus('Tipos inseridos com sucesso!', 'success');
+            return true;
+        }
+
+        async function seedPokemon() {
+            setStatus('Buscando lista de Pokemon...', 'loading');
+            log('Buscando lista de 1025 Pokemon da PokéAPI...');
+
+            const list = await fetchJSON(`${POKEAPI}/pokemon?limit=1025`);
+            log(`✓ ${list.results.length} Pokemon encontrados`);
+
+            const BATCH = 50;
+            const total = list.results.length;
+
+            for (let i = 0; i < total; i += BATCH) {
+                const batch = list.results.slice(i, i + BATCH);
+                const pct = Math.round(((i + batch.length) / total) * 100);
+                setStatus(`Buscando Pokemon ${i + 1}-${Math.min(i + BATCH, total)} de ${total}...`, 'loading');
+                setProgress(pct * 0.7);
+                log(`[${i + 1}-${Math.min(i + BATCH, total)}] Buscando dados...`);
+
+                const dataPromises = batch.map(p => fetchJSON(p.url).catch(e => {
+                    log(`  ✗ Erro em ${p.name}: ${e.message}`, 'err');
+                    return null;
+                }));
+                const rawData = await Promise.all(dataPromises);
+
+                const pokemonRows = [];
+                const movePairs = [];
+
+                for (const raw of rawData) {
+                    if (!raw) continue;
+
+                    const types = raw.types.sort((a, b) => a.slot - b.slot).map(t => t.type.name);
+                    const stats = {};
+                    raw.stats.forEach(s => {
+                        const n = s.stat.name;
+                        if (n === 'hp') stats.hp = s.base_stat;
+                        else if (n === 'attack') stats.attack = s.base_stat;
+                        else if (n === 'defense') stats.defense = s.base_stat;
+                        else if (n === 'special-attack') stats.spAtk = s.base_stat;
+                        else if (n === 'special-defense') stats.spDef = s.base_stat;
+                        else if (n === 'speed') stats.speed = s.base_stat;
+                    });
+
+                    pokemonRows.push({
+                        id: raw.id,
+                        name: raw.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-'),
+                        types,
+                        hp: stats.hp, attack: stats.attack, defense: stats.defense,
+                        sp_atk: stats.spAtk, sp_def: stats.spDef, speed: stats.speed,
+                        sprite_front: raw.sprites.front_default,
+                        sprite_official: raw.sprites.other?.['official-artwork']?.front_default || raw.sprites.front_default,
+                        sprite_home: raw.sprites.other?.home?.front_default || raw.sprites.other?.['official-artwork']?.front_default || raw.sprites.front_default
+                    });
+
+                    for (const m of raw.moves) {
+                        movePairs.push({ pokemon_id: raw.id, move_name: m.move.name });
+                    }
+                }
+
+                if (pokemonRows.length > 0) {
+                    const { error } = await sb.from('pokemon').upsert(pokemonRows, { onConflict: 'id' });
+                    if (error) {
+                        log(`  ✗ Erro ao inserir pokemon: ${error.message}`, 'err');
+                    } else {
+                        pokemonCount += pokemonRows.length;
+                        log(`  ✓ ${pokemonRows.length} Pokemon inseridos`, 'ok');
+                    }
+                }
+
+                updateStats();
+
+                await new Promise(r => setTimeout(r, 100));
+
+                globalMovePairs.push(...movePairs);
+            }
+
+            log(`✓ Total de ${pokemonCount} Pokemon salvos`, 'ok');
+            return globalMovePairs;
+        }
+
+        let globalMovePairs = [];
+
+        async function seedMoves() {
+            setStatus('Buscando movimentos...', 'loading');
+            log('Buscando lista de movimentos da PokéAPI...');
+
+            const list = await fetchJSON(`${POKEAPI}/move?limit=1000`);
+            log(`✓ ${list.results.length} movimentos encontrados`);
+
+            const BATCH = 30;
+            const total = list.results.length;
+            const allMoves = [];
+
+            for (let i = 0; i < total; i += BATCH) {
+                const batch = list.results.slice(i, i + BATCH);
+                const pct = Math.round(((i + batch.length) / total) * 100);
+                setStatus(`Buscando movimento ${i + 1}-${Math.min(i + BATCH, total)} de ${total}...`, 'loading');
+                setProgress(70 + pct * 0.25);
+
+                const dataPromises = batch.map(m => fetchJSON(m.url).catch(e => null));
+                const rawData = await Promise.all(dataPromises);
+
+                const moveRows = [];
+                for (const raw of rawData) {
+                    if (!raw) continue;
+                    if (!raw.power) continue;
+                    moveRows.push({
+                        id: raw.id,
+                        name: raw.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-'),
+                        type: raw.type.name,
+                        category: raw.damage_class.name,
+                        power: raw.power,
+                        accuracy: raw.accuracy || 100,
+                        pp: raw.pp
+                    });
+                }
+
+                if (moveRows.length > 0) {
+                    const { error } = await sb.from('moves').upsert(moveRows, { onConflict: 'id' });
+                    if (error) {
+                        log(`  ✗ Erro ao inserir movimentos: ${error.message}`, 'err');
+                    } else {
+                        movesCount += moveRows.length;
+                        allMoves.push(...moveRows);
+                        log(`  ✓ ${moveRows.length} movimentos inseridos`, 'ok');
+                    }
+                }
+
+                updateStats();
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            log(`✓ Total de ${movesCount} movimentos salvos`, 'ok');
+            return allMoves;
+        }
+
+        async function seedPokemonMoves(allMoves) {
+            setStatus('Salvando relações Pokemon-Movimento...', 'loading');
+            log('Indexando movimentos...');
+
+            const moveIdMap = {};
+            for (const m of allMoves) {
+                const key = m.name.toLowerCase().replace(/-/g, '-').replace(/\s+/g, '-');
+                moveIdMap[key] = m.id;
+                moveIdMap[m.name.toLowerCase()] = m.id;
+            }
+
+            const pairsToInsert = [];
+            for (const pair of globalMovePairs) {
+                const moveKey = pair.move_name.toLowerCase();
+                const moveId = moveIdMap[moveKey];
+                if (moveId) {
+                    pairsToInsert.push({ pokemon_id: pair.pokemon_id, move_id: moveId });
+                }
+            }
+
+            log(`✓ ${pairsToInsert.length} relações para inserir`);
+
+            const BATCH = 2000;
+            for (let i = 0; i < pairsToInsert.length; i += BATCH) {
+                const batch = pairsToInsert.slice(i, i + BATCH);
+                setProgress(95 + (i / pairsToInsert.length) * 5);
+                const { error } = await sb.from('pokemon_moves').upsert(batch, { onConflict: 'pokemon_id,move_id' });
+                if (error) {
+                    log(`  ✗ Erro ao inserir relações: ${error.message}`, 'err');
+                } else {
+                    pairingsCount += batch.length;
+                    log(`  ✓ ${batch.length} relações inseridas (lote ${Math.floor(i / BATCH) + 1})`, 'ok');
+                }
+                updateStats();
+            }
+
+            log(`✓ Total de ${pairingsCount} relações salvas`, 'ok');
+        }
+
+        async function startSeed() {
+            document.getElementById('btn-seed').disabled = true;
+            document.getElementById('log').innerHTML = '';
+
+            try {
+                const typesOk = await seedTypes();
+                if (!typesOk) throw new Error('Falha ao inserir tipos');
+
+                const allMoves = await seedMoves();
+                const pokemonMoves = await seedPokemon();
+                globalMovePairs = pokemonMoves;
+
+                await seedPokemonMoves(allMoves);
+
+                setProgress(100);
+                setStatus('✓ Seed completo! Todos os dados estão no Supabase.', 'success');
+                log('========================================', 'ok');
+                log('SEED COMPLETO COM SUCESSO!', 'ok');
+                log('Pokémon: ' + pokemonCount, 'ok');
+                log('Movimentos: ' + movesCount, 'ok');
+                log('Relações: ' + pairingsCount, 'ok');
+                log('========================================', 'ok');
+                log('DELETE este arquivo depois de usar!', 'warn');
+            } catch (e) {
+                setStatus('Erro: ' + e.message, 'error');
+                log('ERRO FATAL: ' + e.message, 'err');
+            }
+
+            document.getElementById('btn-seed').disabled = false;
+        }
+    </script>
+</body>
+</html>

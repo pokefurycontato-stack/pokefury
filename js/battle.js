@@ -1,16 +1,14 @@
 import { calculateDamage, calculateStat, randomInt } from './utils.js';
 
 export async function createPokemon(apiData, level) {
-    const moveNames = (apiData.moveNames || []).slice(0, 20);
-    const learnedMoves = await PokeAPI.ensurePokemonMoves(moveNames);
+    const allMoves = await PokeAPI.ensurePokemonMoves(apiData.id);
 
-    const levelMoves = learnedMoves
-        .filter(m => m.power > 0)
-        .slice(0, 4);
+    const learnedMoves = allMoves.filter(m => m.power > 0);
+    const levelMoves = learnedMoves.slice(0, 4);
 
     if (levelMoves.length === 0) {
         levelMoves.push({
-            id: 'tackle', name: 'Tackle', type: 'normal',
+            id: 33, name: 'Tackle', type: 'normal',
             category: 'physical', power: 40, accuracy: 100, pp: 35
         });
     }
@@ -59,8 +57,8 @@ export function getFirstAlive(team) {
     return team.find(p => !p.fainted);
 }
 
-export function executeTurn(attacker, defender, move) {
-    const result = calculateDamage(attacker, defender, move);
+export async function executeTurn(attacker, defender, move) {
+    const result = await calculateDamage(attacker, defender, move);
 
     if (result.missed) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };

@@ -1,153 +1,152 @@
 const PokeAPI = {
-    BASE_URL: 'https://pokeapi.co/api/v2',
-    CACHE_VERSION: 3,
     pokemonCache: {},
     moveCache: {},
-    spriteCache: {},
     imageCache: {},
-    totalPokemon: 1025,
+    allTypes: null,
 
     async init() {
-        const version = localStorage.getItem('pokefury_cache_version');
-        if (version !== String(this.CACHE_VERSION)) {
-            localStorage.clear();
-            localStorage.setItem('pokefury_cache_version', this.CACHE_VERSION);
-        }
-        const cached = localStorage.getItem('pokefury_pokemon_cache');
-        if (cached) {
-            this.pokemonCache = JSON.parse(cached);
-        }
-        const cachedMoves = localStorage.getItem('pokefury_move_cache');
-        if (cachedMoves) {
-            this.moveCache = JSON.parse(cachedMoves);
-        }
-        console.log('[PokeAPI] Cache initialized with', Object.keys(this.pokemonCache).length, 'pokemon and', Object.keys(this.moveCache).length, 'moves');
-    },
-
-    saveCache() {
-        try {
-            localStorage.setItem('pokefury_pokemon_cache', JSON.stringify(this.pokemonCache));
-            localStorage.setItem('pokefury_move_cache', JSON.stringify(this.moveCache));
-        } catch (e) {
-            console.warn('[PokeAPI] Cache save failed, clearing old entries');
-            this.pokemonCache = {};
-            this.moveCache = {};
-        }
-    },
-
-    async fetchJSON(url) {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.json();
+        console.log('[PokeAPI] Initialized with Supabase backend');
     },
 
     async ensurePokemon(idOrName) {
         const key = String(idOrName).toLowerCase();
         if (this.pokemonCache[key]) return this.pokemonCache[key];
 
-        console.log('[PokeAPI] Fetching pokemon:', key);
-        const raw = await this.fetchJSON(`${this.BASE_URL}/pokemon/${key}`);
+        console.log('[PokeAPI] Fetching pokemon from Supabase:', key);
 
-        const data = this.transformPokemon(raw);
-        this.pokemonCache[data.id] = data;
-        if (data.name !== String(data.id)) {
-            this.pokemonCache[data.name] = data;
+        let data = null;
+        let error = null;
+
+        if (typeof idOrName === 'number' || /^\d+$/.test(String(idOrName))) {
+            const result = await window.db
+                .from('pokemon')
+                .select('*')
+                .eq('id', Number(idOrName))
+                .single();
+            data = result.data;
+            error = result.error;
+        } else {
+            const result = await window.db
+                .from('pokemon')
+                .select('*')
+                .ilike('name', key)
+                .single();
+            data = result.data;
+            error = result.error;
         }
-        this.saveCache();
-        return data;
+
+        if (error || !data) {
+            console.warn('[PokeAPI] Pokemon not found:', key, error);
+            return this.getFallbackPokemon(idOrName);
+        }
+
+        const pokemonData = this.transformPokemon(data);
+        this.pokemonCache[pokemonData.id] = pokemonData;
+        this.pokemonCache[pokemonData.name.toLowerCase()] = pokemonData;
+        this.pokemonCache[pokemonData.species] = pokemonData;
+
+        return pokemonData;
     },
 
-    transformPokemon(raw) {
-        const types = raw.types
-            .sort((a, b) => a.slot - b.slot)
-            .map(t => t.type.name);
-
-        const stats = {};
-        raw.stats.forEach(s => {
-            const name = s.stat.name;
-            if (name === 'hp') stats.hp = s.base_stat;
-            else if (name === 'attack') stats.attack = s.base_stat;
-            else if (name === 'defense') stats.defense = s.base_stat;
-            else if (name === 'special-attack') stats.spAtk = s.base_stat;
-            else if (name === 'special-defense') stats.spDef = s.base_stat;
-            else if (name === 'speed') stats.speed = s.base_stat;
-        });
-
-        const moveNames = raw.moves.map(m => m.move.name);
-
-        const sprites = {
-            front: raw.sprites.front_default,
-            official: raw.sprites.other?.['official-artwork']?.front_default || raw.sprites.front_default,
-            home: raw.sprites.other?.home?.front_default || raw.sprites.other?.['official-artwork']?.front_default || raw.sprites.front_default
-        };
-
+    transformPokemon(row) {
         return {
-            id: raw.id,
-            name: this.capitalize(raw.name),
-            species: raw.name,
-            types,
-            baseStats: stats,
-            spriteUrls: sprites,
-            moveNames: moveNames.slice(0, 20)
+            id: row.id,
+            name: row.name,
+            species: row.name.toLowerCase(),
+            types: row.types,
+            baseStats: {
+                hp: row.hp,
+                attack: row.attack,
+                defense: row.defense,
+                spAtk: row.sp_atk,
+                spDef: row.sp_def,
+                speed: row.speed
+            },
+            spriteUrls: {
+                front: row.sprite_front,
+                official: row.sprite_official,
+                home: row.sprite_home
+            },
+            moveNames: []
         };
+    },
+
+    async ensurePokemonMoves(pokemonId) {
+        const { data, error } = await window.db
+            .from('pokemon_moves')
+            .select('move_id')
+            .eq('pokemon_id', pokemonId);
+
+        if (error || !data || data.length === 0) return [];
+
+        const moveIds = data.map(r => r.move_id);
+        const results = [];
+
+        for (const moveId of moveIds) {
+            const move = await this.ensureMoveById(moveId);
+            if (move && move.power > 0) results.push(move);
+        }
+
+        return results.slice(0, 15);
+    },
+
+    async ensureMoveById(id) {
+        const key = 'id_' + id;
+        if (this.moveCache[key]) return this.moveCache[key];
+
+        const { data, error } = await window.db
+            .from('moves')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error || !data) return null;
+
+        const moveData = {
+            id: data.id,
+            name: data.name,
+            type: data.type,
+            category: data.category,
+            power: data.power,
+            accuracy: data.accuracy,
+            pp: data.pp
+        };
+
+        this.moveCache[key] = moveData;
+        this.moveCache[data.name.toLowerCase().replace(/\s+/g, '-')] = moveData;
+        return moveData;
     },
 
     async ensureMove(name) {
         const key = name.toLowerCase().replace(/\s+/g, '-');
         if (this.moveCache[key]) return this.moveCache[key];
 
-        console.log('[PokeAPI] Fetching move:', key);
-        const raw = await this.fetchJSON(`${this.BASE_URL}/move/${key}`);
+        const { data, error } = await window.db
+            .from('moves')
+            .select('*')
+            .ilike('name', name)
+            .single();
 
-        const data = {
-            id: raw.id,
-            name: this.capitalize(raw.name),
-            type: raw.type.name,
-            category: raw.damage_class.name,
-            power: raw.power || 0,
-            accuracy: raw.accuracy || 100,
-            pp: raw.pp,
-            effectChance: raw.effect_chance
+        if (error || !data) return null;
+
+        const moveData = {
+            id: data.id,
+            name: data.name,
+            type: data.type,
+            category: data.category,
+            power: data.power,
+            accuracy: data.accuracy,
+            pp: data.pp
         };
 
-        this.moveCache[key] = data;
-        this.saveCache();
-        return data;
-    },
-
-    async ensureMoves(moveNames) {
-        const results = [];
-        for (const name of moveNames) {
-            try {
-                const move = await this.ensureMove(name);
-                results.push(move);
-            } catch (e) {
-                console.warn('[PokeAPI] Failed to load move:', name);
-            }
-        }
-        return results;
-    },
-
-    async ensurePokemonMoves(moveNames) {
-        const results = [];
-        const batchSize = 5;
-        for (let i = 0; i < moveNames.length; i += batchSize) {
-            const batch = moveNames.slice(i, i + batchSize);
-            const batchResults = await Promise.all(
-                batch.map(name => this.ensureMove(name).catch(() => null))
-            );
-            batchResults.forEach(m => { if (m) results.push(m); });
-        }
-        return results;
-    },
-
-    async getPokemon(id) {
-        return this.ensurePokemon(id);
+        this.moveCache[key] = moveData;
+        this.moveCache['id_' + data.id] = moveData;
+        return moveData;
     },
 
     async getRandomPokemon(minLevel = 2, maxLevel = 8) {
-        const id = Math.floor(Math.random() * this.totalPokemon) + 1;
-        const pokemon = await this.ensurePokemon(id);
+        const randomId = Math.floor(Math.random() * 1025) + 1;
+        const pokemon = await this.ensurePokemon(randomId);
         const level = Math.floor(Math.random() * (maxLevel - minLevel + 1)) + minLevel;
         return { pokemon, level };
     },
@@ -157,7 +156,8 @@ const PokeAPI = {
     },
 
     preloadSprite(url) {
-        return new Promise((resolve, reject) => {
+        if (!url) return Promise.resolve(null);
+        return new Promise((resolve) => {
             if (this.imageCache[url]) {
                 resolve(this.imageCache[url]);
                 return;
@@ -177,25 +177,19 @@ const PokeAPI = {
     },
 
     async preloadSprites(urls) {
-        return Promise.all(urls.map(url => this.preloadSprite(url)));
+        return Promise.all(urls.filter(Boolean).map(url => this.preloadSprite(url)));
     },
 
-    getSprites(urls) {
-        const imgs = {};
-        for (const [key, url] of Object.entries(urls)) {
-            imgs[key] = this.imageCache[url] || null;
-        }
-        return imgs;
-    },
-
-    capitalize(str) {
-        return str.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    },
-
-    getIdFromName(name) {
-        const key = name.toLowerCase();
-        const data = this.pokemonCache[key];
-        return data ? data.id : null;
+    getFallbackPokemon(idOrName) {
+        return {
+            id: typeof idOrName === 'number' ? idOrName : 0,
+            name: String(idOrName),
+            species: String(idOrName).toLowerCase(),
+            types: ['normal'],
+            baseStats: { hp: 50, attack: 50, defense: 50, spAtk: 50, spDef: 50, speed: 50 },
+            spriteUrls: { front: null, official: null, home: null },
+            moveNames: []
+        };
     }
 };
 
