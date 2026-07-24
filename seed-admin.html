@@ -112,6 +112,14 @@
             ⚠️ Execute este script apenas UMA VEZ. Depois de popular o banco, delete este arquivo.
         </div>
 
+        <div class="card">
+            <label style="color:rgba(255,255,255,0.5); font-size:12px; display:block; margin-bottom:6px;">
+                Service Role Key (Supabase → Settings → API → service_role)
+            </label>
+            <input type="password" id="service-key" placeholder="eyJhbGciOiJIUzI1NiIs..."
+                style="width:100%; padding:14px; background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08); border-radius:12px; color:#fff; font-family:monospace; font-size:12px; outline:none; box-sizing:border-box;">
+        </div>
+
         <div class="stats-grid">
             <div class="stat-box">
                 <div class="stat-value" id="stat-pokemon">0</div>
@@ -132,7 +140,7 @@
             <div id="status" class="status info">Aguardando início...</div>
             <div style="margin-top:16px">
                 <button class="btn btn-primary" id="btn-seed" onclick="startSeed()">Iniciar Seed Completo</button>
-                <button class="btn btn-secondary" onclick="seedTypes()">Apenas Tipos</button>
+                <button class="btn btn-secondary" onclick="if(connectSupabase()) seedTypes()">Apenas Tipos</button>
             </div>
         </div>
 
@@ -145,10 +153,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZXZ3bm5wenNvbHRicnJqZHRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDkwMTc2MSwiZXhwIjoyMTAwNDc3NzYxfQ.xlZ4LgzmQ-DZUz1kDk3oucmlvjCkty1TgzfN2IDxhoY';
         const POKEAPI = 'https://pokeapi.co/api/v2';
 
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let sb = null;
+
+        function connectSupabase() {
+            const key = document.getElementById('service-key').value.trim();
+            if (!key) {
+                log('Cole a service_role key!', 'err');
+                return false;
+            }
+            sb = supabase.createClient(SUPABASE_URL, key);
+            log('✓ Conectado ao Supabase', 'ok');
+            return true;
+        }
 
         let pokemonCount = 0, movesCount = 0, pairingsCount = 0;
 
@@ -403,6 +421,11 @@
         async function startSeed() {
             document.getElementById('btn-seed').disabled = true;
             document.getElementById('log').innerHTML = '';
+
+            if (!connectSupabase()) {
+                document.getElementById('btn-seed').disabled = false;
+                return;
+            }
 
             try {
                 const typesOk = await seedTypes();
