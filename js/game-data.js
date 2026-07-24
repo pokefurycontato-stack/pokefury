@@ -58,7 +58,8 @@ const GameData = {
             max_hp: pokemon.stats.hp,
             moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
             is_active: i === 0,
-            slot: i + 1
+            slot: i + 1,
+            pokemon_id: pokemon.id || null
         }));
 
         const { error } = await window.db

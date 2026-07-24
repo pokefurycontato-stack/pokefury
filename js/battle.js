@@ -1,35 +1,54 @@
-import { MOVES, POKEMON_DATA } from './data.js';
 import { calculateDamage, calculateStat, randomInt } from './utils.js';
 
-export function createPokemon(species, level) {
-    const data = POKEMON_DATA[species];
-    const hp = calculateStat(data.baseStats.hp, level, 20);
+export async function createPokemon(apiData, level) {
+    const moveNames = (apiData.moveNames || []).slice(0, 20);
+    const learnedMoves = await PokeAPI.ensurePokemonMoves(moveNames);
+
+    const levelMoves = learnedMoves
+        .filter(m => m.power > 0)
+        .slice(0, 4);
+
+    if (levelMoves.length === 0) {
+        levelMoves.push({
+            id: 'tackle', name: 'Tackle', type: 'normal',
+            category: 'physical', power: 40, accuracy: 100, pp: 35
+        });
+    }
+
+    const hp = calculateStat(apiData.baseStats.hp, level, 20);
+
     return {
-        species,
-        name: data.name,
-        types: data.types,
+        species: apiData.species,
+        name: apiData.name,
+        id: apiData.id,
+        types: apiData.types,
         level,
         currentHp: hp,
         stats: {
             hp,
-            attack: calculateStat(data.baseStats.attack, level),
-            defense: calculateStat(data.baseStats.defense, level),
-            spAtk: calculateStat(data.baseStats.spAtk, level),
-            spDef: calculateStat(data.baseStats.spDef, level),
-            speed: calculateStat(data.baseStats.speed, level)
+            attack: calculateStat(apiData.baseStats.attack, level),
+            defense: calculateStat(apiData.baseStats.defense, level),
+            spAtk: calculateStat(apiData.baseStats.spAtk, level),
+            spDef: calculateStat(apiData.baseStats.spDef, level),
+            speed: calculateStat(apiData.baseStats.speed, level)
         },
-        moves: data.moves.slice(0, 4).map(moveId => ({
-            ...MOVES[moveId],
-            id: moveId,
-            currentPp: MOVES[moveId].pp
+        moves: levelMoves.map(move => ({
+            ...move,
+            id: move.id || move.name.toLowerCase().replace(/\s+/g, '-'),
+            currentPp: move.pp
         })),
-        color: data.color,
+        spriteUrls: apiData.spriteUrls,
+        type: apiData.types[0],
         fainted: false
     };
 }
 
-export function createTeam(species, level) {
-    return species.map(s => createPokemon(s, level));
+export async function createTeam(apiDataList) {
+    const results = [];
+    for (const { pokemon, level } of apiDataList) {
+        results.push(await createPokemon(pokemon, level));
+    }
+    return results;
 }
 
 export function isTeamFainted(team) {

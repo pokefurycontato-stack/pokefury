@@ -4,9 +4,20 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 export function showScreen(screenId) {
-    $$('.hidden').forEach(el => el.classList.add('hidden'));
+    const screens = ['battle-screen', 'hud', 'character-screen'];
+    screens.forEach(id => {
+        const el = $(`#${id}`);
+        if (el) el.classList.add('hidden');
+    });
     const screen = $(`#${screenId}`);
     if (screen) screen.classList.remove('hidden');
+}
+
+export async function preloadBattleSprites(playerPokemon, enemyPokemon) {
+    const urls = [];
+    if (playerPokemon.spriteUrls) urls.push(playerPokemon.spriteUrls.home || playerPokemon.spriteUrls.official);
+    if (enemyPokemon.spriteUrls) urls.push(enemyPokemon.spriteUrls.home || enemyPokemon.spriteUrls.official);
+    await PokeAPI.preloadSprites(urls);
 }
 
 export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activeEnemyIdx = 0) {
@@ -65,10 +76,13 @@ export function showMoveSelection(moves, onSelect) {
         if (move.currentPp <= 0) return;
         const btn = document.createElement('button');
         btn.className = `move-btn type-${move.type}`;
+        const typeColor = TYPE_COLORS[move.type] || '#686868';
+        btn.style.borderColor = typeColor + '60';
         btn.innerHTML = `
             <span class="move-name">${move.name}</span>
+            <span class="move-type">${move.type.toUpperCase()}</span>
             <span class="move-pp">PP: ${move.currentPp}/${move.pp}</span>
-            <span class="move-pp">Poder: ${move.power}</span>
+            <span class="move-pp">Poder: ${move.power || '—'}</span>
         `;
         btn.addEventListener('click', () => {
             onSelect(move);
@@ -123,37 +137,55 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon) {
         ctx.fill();
     }
 
-    drawPokemonGlow(ctx, w * 0.22, h * 0.42, playerPokemon);
-    drawPokemonGlow(ctx, w * 0.75, h * 0.22, enemyPokemon);
+    drawPokemonSprite(ctx, w * 0.22, h * 0.38, playerPokemon);
+    drawPokemonSprite(ctx, w * 0.75, h * 0.18, enemyPokemon);
 }
 
-function drawPokemonGlow(ctx, x, y, pokemon) {
-    const color = pokemon.color;
-    const size = 50;
+function drawPokemonSprite(ctx, x, y, pokemon) {
+    const spriteUrls = pokemon.spriteUrls;
+    const spriteUrl = spriteUrls?.home || spriteUrls?.official || spriteUrls?.front;
+    const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
+    const typeColor = TYPE_COLORS[pokemon.type] || '#686868';
 
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 40;
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.8;
-    ctx.beginPath();
-    ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
+    if (img && img.complete && img.naturalWidth > 0) {
+        ctx.shadowColor = typeColor;
+        ctx.shadowBlur = 30;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, size * 0.7, 0, Math.PI * 2);
-    ctx.stroke();
+        const maxW = 160;
+        const maxH = 160;
+        const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+        const drawW = img.naturalWidth * scale;
+        const drawH = img.naturalHeight * scale;
+
+        ctx.drawImage(img, x - drawW / 2, y - drawH / 2, drawW, drawH);
+        ctx.shadowBlur = 0;
+    } else {
+        ctx.shadowColor = typeColor;
+        ctx.shadowBlur = 40;
+        ctx.fillStyle = typeColor;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.arc(x, y, 40, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('?', x, y + 5);
+    }
 
     ctx.fillStyle = '#fff';
     ctx.font = '600 14px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(pokemon.name, x, y + size + 30);
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(pokemon.name, x, y + 90);
     ctx.font = '400 11px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.fillText(`Lv.${pokemon.level}`, x, y + size + 48);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(`Lv.${pokemon.level}`, x, y + 108);
+    ctx.shadowBlur = 0;
 }
 
 export function initBattleUI(onFight, onRun) {

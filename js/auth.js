@@ -220,13 +220,6 @@ async function handleRegister() {
             display_email: email
         }, { onConflict: 'id' });
         if (profileError) console.error('[PokeFury] Erro ao criar perfil:', profileError);
-
-        const { error: saveError } = await window.db.from('game_saves').upsert({
-            user_id: data.user.id,
-            player_name: username,
-            starter_pokemon: null
-        }, { onConflict: 'user_id' });
-        if (saveError) console.error('[PokeFury] Erro ao criar save:', saveError);
     }
 
     window.GameData.setUserId(data.user.id);
@@ -244,11 +237,9 @@ function showGame(userData) {
         gameContainer.classList.remove('hidden');
         gameContainer.classList.add('fade-in');
 
-        const logoutBtn = document.getElementById('btn-logout');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                await window.db.auth.signOut();
-                location.reload();
+        if (window.PokeAPI) {
+            window.PokeAPI.init().then(() => {
+                console.log('[PokeFury] PokéAPI initialized');
             });
         }
     }, 500);
