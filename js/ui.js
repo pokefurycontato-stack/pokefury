@@ -15,9 +15,9 @@ export function showScreen(screenId) {
 
 export async function preloadBattleSprites(playerPokemon, enemyPokemon) {
     const urls = [];
-    if (playerPokemon.spriteUrls) urls.push(playerPokemon.spriteUrls.front || playerPokemon.spriteUrls.home || playerPokemon.spriteUrls.official);
+    if (playerPokemon.spriteUrls) urls.push(playerPokemon.spriteUrls.back || playerPokemon.spriteUrls.front || playerPokemon.spriteUrls.home || playerPokemon.spriteUrls.official);
     if (enemyPokemon.spriteUrls) urls.push(enemyPokemon.spriteUrls.front || enemyPokemon.spriteUrls.home || enemyPokemon.spriteUrls.official);
-    if (playerPokemon.shinySpriteUrls) urls.push(playerPokemon.shinySpriteUrls.front || playerPokemon.shinySpriteUrls.home || playerPokemon.shinySpriteUrls.official);
+    if (playerPokemon.shinySpriteUrls) urls.push(playerPokemon.shinySpriteUrls.back || playerPokemon.shinySpriteUrls.front || playerPokemon.shinySpriteUrls.home || playerPokemon.shinySpriteUrls.official);
     if (enemyPokemon.shinySpriteUrls) urls.push(enemyPokemon.shinySpriteUrls.front || enemyPokemon.shinySpriteUrls.home || enemyPokemon.shinySpriteUrls.official);
     await PokeAPI.preloadSprites(urls);
 }
@@ -139,21 +139,30 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon) {
         ctx.fill();
     }
 
-    drawPokemonSprite(ctx, w * 0.22, h * 0.38, playerPokemon);
-    drawPokemonSprite(ctx, w * 0.75, h * 0.18, enemyPokemon);
+    drawPokemonSprite(ctx, w * 0.22, h * 0.38, playerPokemon, true);
+    drawPokemonSprite(ctx, w * 0.75, h * 0.18, enemyPokemon, false);
 }
 
-function drawPokemonSprite(ctx, x, y, pokemon) {
+function drawPokemonSprite(ctx, x, y, pokemon, isPlayer) {
     const spriteUrls = pokemon.spriteUrls;
     const shinyUrls = pokemon.shinySpriteUrls;
     const isShiny = pokemon.isShiny;
 
     let spriteUrl;
-    if (isShiny && shinyUrls) {
-        spriteUrl = shinyUrls.front || shinyUrls.home || shinyUrls.official;
-    }
-    if (!spriteUrl) {
-        spriteUrl = spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
+    if (isPlayer) {
+        if (isShiny && shinyUrls) {
+            spriteUrl = shinyUrls.back || shinyUrls.front || shinyUrls.home || shinyUrls.official;
+        }
+        if (!spriteUrl) {
+            spriteUrl = spriteUrls?.back || spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
+        }
+    } else {
+        if (isShiny && shinyUrls) {
+            spriteUrl = shinyUrls.front || shinyUrls.home || shinyUrls.official;
+        }
+        if (!spriteUrl) {
+            spriteUrl = spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
+        }
     }
     const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
     const typeColor = TYPE_COLORS[pokemon.type] || '#686868';

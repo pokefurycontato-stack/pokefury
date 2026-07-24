@@ -5,3 +5,8 @@ Thumbs.db
 .env
 dist/
 .cache/
+download-animated-sprites.js
+download-variant-sprites.js
+download-*-report*.json
+report.*.json
+variant-sprite-report.json

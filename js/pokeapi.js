@@ -49,9 +49,11 @@ const PokeAPI = {
     },
 
     transformPokemon(row) {
-        const hasAnimated = row.id >= 1 && row.id <= 1025;
+        const hasAnimated = (row.id >= 1 && row.id <= 1025) || (row.id >= 10001 && row.id <= 10046) || (row.id >= 11001 && row.id <= 11026) || (row.id >= 12001 && row.id <= 12037);
         const animBase = 'assets/sprites/pokemon-animated/';
         const animShinyBase = 'assets/sprites/pokemon-animated-shiny/';
+        const animBackBase = 'assets/sprites/pokemon-animated-back/';
+        const animBackShinyBase = 'assets/sprites/pokemon-animated-back-shiny/';
         return {
             id: row.id,
             name: row.name,
@@ -67,11 +69,13 @@ const PokeAPI = {
             },
             spriteUrls: {
                 front: hasAnimated ? (animBase + row.id + '.gif') : row.sprite_front,
+                back: hasAnimated ? (animBackBase + row.id + '.gif') : row.sprite_back,
                 official: row.sprite_official,
                 home: row.sprite_home
             },
             shinySpriteUrls: {
                 front: hasAnimated ? (animShinyBase + row.id + '.gif') : row.sprite_front_shiny,
+                back: hasAnimated ? (animBackShinyBase + row.id + '.gif') : row.sprite_back_shiny,
                 official: row.sprite_official_shiny,
                 home: row.sprite_home_shiny
             },
