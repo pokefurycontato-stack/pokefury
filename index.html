@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokeFury - Combates Fréneticos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="ui-layer">
+            <div id="title-screen">
+                <h1 class="game-title">POKE<span class="fury">FURY</span></h1>
+                <p class="subtitle">Combates Fréneticos de Alta Qualidade</p>
+                <div class="menu-buttons">
+                    <button id="btn-new-game" class="menu-btn">NOVO JOGO</button>
+                    <button id="btn-continue" class="menu-btn" disabled>CONTINUAR</button>
+                    <button id="btn-settings" class="menu-btn">OPÇÕES</button>
+                </div>
+            </div>
+
+            <div id="battle-screen" class="hidden">
+                <div id="battle-ui">
+                    <div id="player-info" class="trainer-info">
+                        <div class="trainer-sprite"></div>
+                        <div class="trainer-details">
+                            <span class="trainer-name"></span>
+                            <div class="pokemon-team"></div>
+                        </div>
+                    </div>
+                    <div id="enemy-info" class="trainer-info">
+                        <div class="trainer-details">
+                            <span class="trainer-name"></span>
+                            <div class="pokemon-team"></div>
+                        </div>
+                        <div class="trainer-sprite"></div>
+                    </div>
+                    <div id="battle-log">
+                        <p id="battle-message"></p>
+                    </div>
+                    <div id="battle-actions">
+                        <button class="action-btn" data-action="fight">ATACAR</button>
+                        <button class="action-btn" data-action="pokemon">POKEMON</button>
+                        <button class="action-btn" data-action="bag">MOCHILA</button>
+                        <button class="action-btn" data-action="run">CORRER</button>
+                    </div>
+                    <div id="move-selection" class="hidden">
+                        <div id="move-buttons"></div>
+                        <button id="btn-back" class="action-btn small">VOLTAR</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="hud" class="hidden">
+                <div id="hud-top">
+                    <span id="player-name-hud"></span>
+                    <span id="location-name"></span>
+                </div>
+                <div id="hud-bottom">
+                    <div id="party-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/data.js"></script>
+    <script type="module" src="js/utils.js"></script>
+    <script type="module" src="js/battle.js"></script>
+    <script type="module" src="js/ui.js"></script>
+    <script type="module" src="js/game.js"></script>
+</body>
+</html>
