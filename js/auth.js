@@ -126,7 +126,8 @@ async function handleLogin() {
         return;
     }
 
-    const email = username.toLowerCase().replace(/\s/g, '') + '@pokefury.app';
+    const email = username;
+
     console.log('[PokeFury] Tentando login com:', email);
 
     const { data, error } = await window.db.auth.signInWithPassword({
@@ -185,7 +186,8 @@ async function handleRegister() {
         return;
     }
 
-    const authEmail = username.toLowerCase().replace(/\s/g, '') + '@pokefury.app';
+    const authEmail = email;
+
     console.log('[PokeFury] Tentando registrar:', authEmail);
 
     const { data, error } = await window.db.auth.signUp({
@@ -228,7 +230,7 @@ async function handleRegister() {
     }
 
     window.GameData.setUserId(data.user.id);
-    showGame({ username, email: authEmail, id: data.user.id });
+    showGame({ username: username, email: authEmail, id: data.user.id });
 }
 
 function showGame(userData) {
