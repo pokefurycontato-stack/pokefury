@@ -153,7 +153,7 @@ class PokeFuryGame {
             ).join('');
 
             card.innerHTML = `
-                <img src="${spriteUrl}" class="starter-sprite" alt="${poke.name}" crossorigin="anonymous">
+                <img src="${spriteUrl}" class="starter-sprite" alt="${poke.name}">
                 <div class="starter-name">${poke.name}</div>
                 <div class="starter-types">${typeBadges}</div>
             `;
