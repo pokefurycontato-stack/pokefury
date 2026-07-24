@@ -56,7 +56,7 @@ class PokeFuryGame {
         this.ctx.fillRect(0, 0, w, h);
 
         this.ctx.fillStyle = '#e94560';
-        this.ctx.globalAlpha = 0.1;
+        this.ctx.globalAlpha = 0.06;
         for (let i = 0; i < 20; i++) {
             const x = (i * 50 + Date.now() / 50) % (w + 50) - 25;
             this.ctx.beginPath();
@@ -77,7 +77,7 @@ class PokeFuryGame {
         this.ctx.fillRect(0, 0, w, h);
 
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = '16px "Press Start 2P"';
+        this.ctx.font = '600 18px Inter, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Escolha seu Pokémon inicial!', w / 2, 60);
 
@@ -86,23 +86,26 @@ class PokeFuryGame {
             const x = w * 0.2 + i * (w * 0.3);
             const y = h * 0.45;
 
+            this.ctx.shadowColor = data.color;
+            this.ctx.shadowBlur = 30;
             this.ctx.fillStyle = data.color;
             this.ctx.beginPath();
             this.ctx.arc(x, y, 50, 0, Math.PI * 2);
             this.ctx.fill();
+            this.ctx.shadowBlur = 0;
 
-            this.ctx.strokeStyle = '#e94560';
-            this.ctx.lineWidth = 3;
+            this.ctx.strokeStyle = 'rgba(233, 69, 96, 0.5)';
+            this.ctx.lineWidth = 2;
             this.ctx.beginPath();
-            this.ctx.arc(x, y, 55, 0, Math.PI * 2);
+            this.ctx.arc(x, y, 58, 0, Math.PI * 2);
             this.ctx.stroke();
 
             this.ctx.fillStyle = '#fff';
-            this.ctx.font = '10px "Press Start 2P"';
-            this.ctx.fillText(data.name, x, y + 80);
-            this.ctx.font = '8px "Press Start 2P"';
-            this.ctx.fillStyle = '#aaa';
-            this.ctx.fillText(data.types.join(' / ').toUpperCase(), x, y + 100);
+            this.ctx.font = '600 12px Inter, sans-serif';
+            this.ctx.fillText(data.name, x, y + 85);
+            this.ctx.font = '400 10px Inter, sans-serif';
+            this.ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            this.ctx.fillText(data.types.join(' / ').toUpperCase(), x, y + 105);
         });
     }
 
@@ -118,28 +121,33 @@ class PokeFuryGame {
         const w = this.canvas.width;
         const h = this.canvas.height;
 
-        this.ctx.fillStyle = '#3a7d44';
+        const grad = this.ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#1a1a2e');
+        grad.addColorStop(1, '#16213e');
+        this.ctx.fillStyle = grad;
         this.ctx.fillRect(0, 0, w, h);
 
-        this.ctx.fillStyle = '#2d6a33';
-        for (let i = 0; i < 50; i++) {
-            const x = (i * 37) % w;
-            const y = (i * 23) % h;
+        this.ctx.fillStyle = '#e94560';
+        this.ctx.globalAlpha = 0.04;
+        for (let i = 0; i < 30; i++) {
+            const x = (i * 37 + Date.now() / 80) % w;
+            const y = h * 0.3 + Math.sin(i * 0.5) * h * 0.2;
             this.ctx.beginPath();
-            this.ctx.arc(x, y, 5 + (i % 3) * 3, 0, Math.PI * 2);
+            this.ctx.arc(x, y, 4 + (i % 3) * 2, 0, Math.PI * 2);
             this.ctx.fill();
         }
+        this.ctx.globalAlpha = 1;
 
-        this.ctx.fillStyle = '#8B4513';
-        this.ctx.fillRect(w / 2 - 15, h / 2 - 25, 30, 50);
-
-        this.ctx.fillStyle = '#ffcc00';
+        this.ctx.shadowColor = '#e94560';
+        this.ctx.shadowBlur = 40;
+        this.ctx.fillStyle = '#e94560';
         this.ctx.beginPath();
-        this.ctx.arc(w / 2, h / 2 - 35, 10, 0, Math.PI * 2);
+        this.ctx.arc(w / 2, h / 2 - 30, 12, 0, Math.PI * 2);
         this.ctx.fill();
+        this.ctx.shadowBlur = 0;
 
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '10px "Press Start 2P"';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.font = '500 14px Inter, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Clique para encontrar um Pokémon selvagem!', w / 2, h - 40);
 

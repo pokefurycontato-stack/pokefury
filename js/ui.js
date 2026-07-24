@@ -88,7 +88,6 @@ export function hideMoveSelection() {
 }
 
 export function updateHpBar(pokemon) {
-    const msg = $('#battle-message');
     const hpPercent = (pokemon.currentHp / pokemon.stats.hp) * 100;
     return `${pokemon.name}: ${pokemon.currentHp}/${pokemon.stats.hp} HP (${hpPercent.toFixed(0)}%)`;
 }
@@ -105,81 +104,56 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon) {
     const h = canvas.height;
 
     const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
-    skyGrad.addColorStop(0, '#87CEEB');
-    skyGrad.addColorStop(1, '#B0E0E6');
+    skyGrad.addColorStop(0, '#0f3460');
+    skyGrad.addColorStop(1, '#16213e');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, w, h * 0.5);
 
-    ctx.fillStyle = '#3a7d44';
+    const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
+    groundGrad.addColorStop(0, '#1a3a1a');
+    groundGrad.addColorStop(1, '#0d1f0d');
+    ctx.fillStyle = groundGrad;
     ctx.fillRect(0, h * 0.5, w, h * 0.5);
 
-    ctx.fillStyle = '#2d6a33';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
     for (let i = 0; i < 10; i++) {
         const x = (i * 100 + 20) % w;
         ctx.beginPath();
-        ctx.arc(x, h * 0.45, 30 + Math.random() * 20, 0, Math.PI * 2);
+        ctx.arc(x, h * 0.48, 20 + (i % 3) * 10, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(w * 0.15, h * 0.35, 120, 80);
-    ctx.fillStyle = '#A0522D';
-    ctx.fillRect(w * 0.15, h * 0.35, 120, 10);
-
-    drawPokemonSprite(ctx, w * 0.15 + 60, h * 0.3, playerPokemon, false);
-
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(w * 0.65, h * 0.15, 100, 60);
-    ctx.fillStyle = '#A0522D';
-    ctx.fillRect(w * 0.65, h * 0.15, 100, 8);
-
-    drawPokemonSprite(ctx, w * 0.65 + 50, h * 0.1, enemyPokemon, true);
+    drawPokemonGlow(ctx, w * 0.22, h * 0.42, playerPokemon);
+    drawPokemonGlow(ctx, w * 0.75, h * 0.22, enemyPokemon);
 }
 
-function drawPokemonSprite(ctx, x, y, pokemon, flipped) {
+function drawPokemonGlow(ctx, x, y, pokemon) {
     const color = pokemon.color;
-    const size = flipped ? 40 : 50;
+    const size = 50;
 
-    ctx.save();
-    ctx.translate(x, y);
-    if (flipped) ctx.scale(-1, 1);
-
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 40;
     ctx.fillStyle = color;
+    ctx.globalAlpha = 0.8;
     ctx.beginPath();
-    ctx.ellipse(0, 0, size * 0.6, size * 0.5, 0, 0, Math.PI * 2);
+    ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
 
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(0, -size * 0.5, size * 0.35, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(-size * 0.12, -size * 0.55, size * 0.12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(-size * 0.1, -size * 0.55, size * 0.06, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(size * 0.12, -size * 0.55, size * 0.12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(size * 0.14, -size * 0.55, size * 0.06, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(-size * 0.15, -size * 0.42);
-    ctx.quadraticCurveTo(0, -size * 0.38, size * 0.15, -size * 0.42);
+    ctx.arc(x, y, size * 0.7, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.restore();
+    ctx.fillStyle = '#fff';
+    ctx.font = '600 14px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(pokemon.name, x, y + size + 30);
+    ctx.font = '400 11px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillText(`Lv.${pokemon.level}`, x, y + size + 48);
 }
 
 export function initBattleUI(onFight, onRun) {
