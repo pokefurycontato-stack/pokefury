@@ -24,6 +24,8 @@ export class Overworld2D {
         this.ctx = this.canvas.getContext('2d');
 
         this.tileSize = 32;
+        this.tileW = 32;
+        this.tileH = 32;
         this.worldCols = 40;
         this.worldRows = 30;
         this.gridCols = this.worldCols;
@@ -82,6 +84,8 @@ export class Overworld2D {
             this.canvas.width = window.innerWidth - 240;
             this.canvas.height = window.innerHeight - 48;
         }
+        this.tileW = this.canvas.width / this.worldCols;
+        this.tileH = this.canvas.height / this.worldRows;
     }
 
     setupInput() {
@@ -188,8 +192,8 @@ export class Overworld2D {
 
         this.pokemonFollowPos = { x: this.player.x, y: this.player.y };
 
-        this.camera.x = this.player.x * this.tileSize - this.canvas.width / 2 + this.tileSize / 2;
-        this.camera.y = this.player.y * this.tileSize - this.canvas.height / 2 + this.tileSize / 2;
+        this.camera.x = this.player.x * this.tileW - this.canvas.width / 2 + this.tileW / 2;
+        this.camera.y = this.player.y * this.tileH - this.canvas.height / 2 + this.tileH / 2;
     }
 
     async loadPokemonFollowSprite(pokemon) {
@@ -277,19 +281,16 @@ export class Overworld2D {
             }
         }
 
-        const ts = this.tileSize;
         const halfW = this.canvas.width / 2;
         const halfH = this.canvas.height / 2;
-        const maxCamX = this.worldCols * ts - this.canvas.width;
-        const maxCamY = this.worldRows * ts - this.canvas.height;
 
         this.camera.x = Math.max(0, Math.min(
-            this.player.x * ts + ts / 2 - halfW,
-            Math.max(0, maxCamX)
+            this.player.x * this.tileW + this.tileW / 2 - halfW,
+            Math.max(0, this.worldCols * this.tileW - this.canvas.width)
         ));
         this.camera.y = Math.max(0, Math.min(
-            this.player.y * ts + ts / 2 - halfH,
-            Math.max(0, maxCamY)
+            this.player.y * this.tileH + this.tileH / 2 - halfH,
+            Math.max(0, this.worldRows * this.tileH - this.canvas.height)
         ));
     }
 
@@ -330,8 +331,8 @@ export class Overworld2D {
         ctx.fillRect(0, 0, w, h);
 
         if (this.currentMapImage && this.currentMapImage.complete) {
-            const mapDrawW = this.worldCols * this.tileSize;
-            const mapDrawH = this.worldRows * this.tileSize;
+            const mapDrawW = this.worldCols * this.tileW;
+            const mapDrawH = this.worldRows * this.tileH;
 
             ctx.drawImage(
                 this.currentMapImage,
@@ -355,53 +356,51 @@ export class Overworld2D {
     }
 
     drawGrid(ctx, w, h) {
-        const ts = this.tileSize;
-        const startX = Math.floor(this.camera.x / ts);
-        const startY = Math.floor(this.camera.y / ts);
-        const endX = Math.ceil((this.camera.x + w) / ts);
-        const endY = Math.ceil((this.camera.y + h) / ts);
+        const startX = Math.floor(this.camera.x / this.tileW);
+        const startY = Math.floor(this.camera.y / this.tileH);
+        const endX = Math.ceil((this.camera.x + w) / this.tileW);
+        const endY = Math.ceil((this.camera.y + h) / this.tileH);
 
         ctx.strokeStyle = 'rgba(255,255,255,0.04)';
         ctx.lineWidth = 0.5;
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
-                const sx = x * ts - this.camera.x;
-                const sy = y * ts - this.camera.y;
-                ctx.strokeRect(sx, sy, ts, ts);
+                const sx = x * this.tileW - this.camera.x;
+                const sy = y * this.tileH - this.camera.y;
+                ctx.strokeRect(sx, sy, this.tileW, this.tileH);
             }
         }
     }
 
     drawPlayer(ctx) {
-        const ts = this.tileSize;
         let drawX, drawY;
 
         if (this.player.moving) {
             const t = this.player.moveProgress;
-            drawX = (this.player.fromX + (this.player.x - this.player.fromX) * t) * ts - this.camera.x;
-            drawY = (this.player.fromY + (this.player.y - this.player.fromY) * t) * ts - this.camera.y;
+            drawX = (this.player.fromX + (this.player.x - this.player.fromX) * t) * this.tileW - this.camera.x;
+            drawY = (this.player.fromY + (this.player.y - this.player.fromY) * t) * this.tileH - this.camera.y;
         } else {
-            drawX = this.player.x * ts - this.camera.x;
-            drawY = this.player.y * ts - this.camera.y;
+            drawX = this.player.x * this.tileW - this.camera.x;
+            drawY = this.player.y * this.tileH - this.camera.y;
         }
 
         const sprite = this.playerSprites[this.player.direction];
         if (sprite && sprite.complete) {
-            ctx.drawImage(sprite, drawX, drawY, ts, ts);
+            ctx.drawImage(sprite, drawX, drawY, this.tileW, this.tileH);
         } else {
             ctx.fillStyle = '#3498db';
-            ctx.fillRect(drawX + 4, drawY + 4, ts - 8, ts - 8);
+            ctx.fillRect(drawX + 4, drawY + 4, this.tileW - 8, this.tileH - 8);
         }
 
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
-        ctx.ellipse(drawX + ts / 2, drawY + ts - 2, ts / 3, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(drawX + this.tileW / 2, drawY + this.tileH - 2, this.tileW / 3, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
         if (this.pokemonFollowing && this.pokemonFollowSprite && this.pokemonFollowSprite.complete) {
-            const px = this.pokemonFollowPos.x * ts - this.camera.x;
-            const py = this.pokemonFollowPos.y * ts - this.camera.y;
-            ctx.drawImage(this.pokemonFollowSprite, px, py, ts, ts);
+            const px = this.pokemonFollowPos.x * this.tileW - this.camera.x;
+            const py = this.pokemonFollowPos.y * this.tileH - this.camera.y;
+            ctx.drawImage(this.pokemonFollowSprite, px, py, this.tileW, this.tileH);
         }
     }
 
