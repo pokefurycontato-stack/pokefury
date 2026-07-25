@@ -10,6 +10,17 @@ export class RegionManager {
     get db() { return window.db; }
     get storageUrl() { return `${window.SUPABASE_URL}/storage/v1/object/public/sprites`; }
 
+    async listBattleBackgrounds() {
+        try {
+            const { data, error } = await this.db.storage.from('sprites').list('battle_backgrounds');
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.warn('[RegionManager] Could not list battle backgrounds:', e);
+            return [];
+        }
+    }
+
     async loadRegions() {
         const { data, error } = await this.db.from('regions').select('*').order('sort_order');
         if (error) throw error;

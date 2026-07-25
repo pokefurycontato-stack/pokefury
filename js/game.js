@@ -784,12 +784,14 @@ class PokeFuryGame {
                 <div class="map-card-actions">
                     <button class="map-card-btn primary" data-action="encounters">Encontros</button>
                     <button class="map-card-btn" data-action="edit">Editar</button>
+                    <button class="map-card-btn" data-action="configure-bg" title="Configurar BG">🎨</button>
                     <button class="map-card-btn danger" data-action="delete">Excluir</button>
                 </div>
             `;
 
             card.querySelector('[data-action="encounters"]').onclick = () => this.openEncounterEditor(map);
             card.querySelector('[data-action="edit"]').onclick = () => this.openMapEditor(map, region);
+            card.querySelector('[data-action="configure-bg"]').onclick = () => this.openBattleBackgroundPicker(map);
             card.querySelector('[data-action="delete"]').onclick = async () => {
                 if (!confirm(`Excluir mapa "${map.name}"?`)) return;
                 await this.regionManager.deleteMap(map.id);
@@ -821,6 +823,45 @@ class PokeFuryGame {
         grid.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:8px">Carregando mapas...</div>';
 
         this.loadAllMapImages(folders, storageUrl, grid, region, modal);
+    }
+
+    async openBattleBackgroundPicker(map) {
+        const modal = document.getElementById('map-picker-modal');
+        const grid = document.getElementById('map-picker-grid');
+        modal.classList.remove('hidden');
+
+        document.getElementById('map-picker-close').onclick = () => modal.classList.add('hidden');
+        document.querySelector('#map-picker-modal .modal-backdrop').onclick = () => modal.classList.add('hidden');
+
+        const backgrounds = await this.regionManager.listBattleBackgrounds();
+        
+        grid.innerHTML = '';
+        if (backgrounds.length === 0) {
+            grid.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:16px;grid-column:1/-1;text-align:center">Nenhum background de batalha encontrado. Faça upload para sprites/battle_backgrounds no Supabase Storage.</div>';
+            return;
+        }
+
+        backgrounds.forEach(bg => {
+            const item = document.createElement('div');
+            item.className = 'map-picker-item';
+            item.innerHTML = `
+                <img src="${window.SUPABASE_URL}/storage/v1/object/public/sprites/${bg.name}" alt="${bg.name}" loading="lazy">
+                <div class="map-picker-item-name">${bg.name.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/-/g, ' ')}</div>
+            `;
+            item.onclick = async () => {
+                const bgName = bg.name;
+                const bgUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/${bgName}`;
+                try {
+                    await this.regionManager.updateMap(map.id, { battle_bg_url: bgUrl });
+                    modal.classList.add('hidden');
+                    this.loadRegionDetail(region);
+                } catch (e) {
+                    console.error('[RegionManager] Error updating battle background:', e);
+                    alert('Erro ao salvar o background.');
+                }
+            };
+            grid.appendChild(item);
+        });
     }
 
     async loadAllMapImages(folders, storageUrl, grid, region, modal) {
