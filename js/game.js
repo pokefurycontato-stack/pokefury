@@ -154,19 +154,32 @@ class PokeFuryGame {
             await this.regionManager.loadRegions();
 
             if (this.regionManager.regions.length === 0) {
-                document.getElementById('location-name').textContent = 'Sem regioes';
+                document.getElementById('location-name').textContent = 'Sem regioes - rode a SQL';
                 return;
             }
 
-            let progress = await this.regionManager.getPlayerProgress(this.currentCharacterId);
+            let progress = null;
+            try {
+                progress = await this.regionManager.getPlayerProgress(this.currentCharacterId);
+            } catch (e) {
+                console.warn('[PokeFury] player_progress table may not exist yet:', e.message);
+            }
 
             if (!progress) {
                 const firstRegion = this.regionManager.regions[0];
                 const firstMaps = await this.regionManager.loadRegionMaps(firstRegion.id);
                 if (firstMaps.length > 0) {
-                    progress = await this.regionManager.initPlayerProgress(
-                        this.currentCharacterId, firstRegion.id, firstMaps[0].id
-                    );
+                    try {
+                        progress = await this.regionManager.initPlayerProgress(
+                            this.currentCharacterId, firstRegion.id, firstMaps[0].id
+                        );
+                    } catch (e) {
+                        console.warn('[PokeFury] Could not save progress, using direct fallback:', e.message);
+                        progress = {
+                            current_region_id: firstRegion.id,
+                            current_map_id: firstMaps[0].id
+                        };
+                    }
                 }
             }
 
@@ -179,6 +192,7 @@ class PokeFuryGame {
                     if (this.currentMap && this.overworld2d) {
                         await this.overworld2d.setCurrentMap(this.currentMap);
                         document.getElementById('location-name').textContent = this.currentMap.name;
+                        console.log(`[PokeFury] Loaded: ${this.currentRegion.name} > ${this.currentMap.name}`);
                     }
                 }
             }
