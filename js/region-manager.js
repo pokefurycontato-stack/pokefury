@@ -134,9 +134,10 @@ export class RegionManager {
         return data;
     }
 
-    async initPlayerProgress(characterId, regionId, mapId) {
+    async initPlayerProgress(characterId, regionId, mapId, userId) {
         const { data, error } = await this.db.from('player_progress')
             .upsert({
+                user_id: userId,
                 character_id: characterId,
                 current_region_id: regionId,
                 current_map_id: mapId,
