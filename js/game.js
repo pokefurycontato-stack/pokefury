@@ -213,13 +213,17 @@ class PokeFuryGame {
         const { error } = await window.db.from('game_saves').upsert({
             user_id: data.user.id,
             player_name: name,
-            starter_pokemon: species,
-            player_gender: this.playerGender
+            starter_pokemon: species
         }, { onConflict: 'user_id' });
 
         if (error) {
-            console.error('[PokeFury] Erro ao salvar personagem:', error);
-            return;
+            console.error('[PokeFury] Erro ao salvar personagem:', error.message || error);
+        } else {
+            try {
+                await window.db.from('game_saves').update({ player_gender: this.playerGender }).eq('user_id', data.user.id);
+            } catch (e) {
+                console.log('[PokeFury] player_gender column not yet available');
+            }
         }
 
         this.playerName = name;
@@ -233,8 +237,17 @@ class PokeFuryGame {
     }
 
     async startGame(starterSpecies) {
-        const pokemonData = await PokeAPI.ensurePokemon(starterSpecies);
-        this.playerTeam = [await createPokemon(pokemonData, 5)];
+        console.log('[PokeFury] startGame called with:', starterSpecies);
+
+        try {
+            const pokemonData = await PokeAPI.ensurePokemon(starterSpecies);
+            console.log('[PokeFury] Starter Pokemon loaded:', pokemonData.name);
+            this.playerTeam = [await createPokemon(pokemonData, 5)];
+            console.log('[PokeFury] Team created');
+        } catch (e) {
+            console.error('[PokeFury] Error creating team:', e);
+            return;
+        }
 
         const save = await window.GameData.getSave();
         const isNew = !save || !save.starter_pokemon || save.starter_pokemon !== starterSpecies;
@@ -244,20 +257,32 @@ class PokeFuryGame {
         if (isNew) {
             await window.GameData.addItem(1, 5);
             await window.GameData.addItem(10, 10);
-            console.log('[PokeFury] Starter items given: 5x Potion, 10x Poké Ball');
+            console.log('[PokeFury] Starter items given: 5x Potion, 10x Poke Ball');
         }
 
         document.getElementById('character-screen').classList.add('hidden');
 
-        if (!this.overworld3d) {
-            this.overworld3d = new Overworld3D(this);
+        try {
+            if (!this.overworld3d) {
+                console.log('[PokeFury] Creating Overworld3D...');
+                this.overworld3d = new Overworld3D(this);
+            }
+        } catch (e) {
+            console.error('[PokeFury] Error creating Overworld3D:', e);
         }
 
         this.state = 'overworld';
         showScreen('hud');
         document.getElementById('player-name-hud').textContent = this.playerName;
-        document.getElementById('location-name').textContent = 'Área Selvagem';
-        this.overworld3d.show();
+        document.getElementById('location-name').textContent = 'Area Selvagem';
+
+        try {
+            if (this.overworld3d) this.overworld3d.show();
+        } catch (e) {
+            console.error('[PokeFury] Error showing overworld:', e);
+        }
+
+        console.log('[PokeFury] Game started successfully!');
     }
 
     render() {
