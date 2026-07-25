@@ -59,6 +59,10 @@ export class Overworld2D {
         this.pokemonFollowSprite = null;
         this.pokemonFollowPos = { x: 20, y: 15 };
 
+        this.mapPokemonEntities = [];
+        this.mapPokemonEncounters = [];
+        this.battleCooldown = 0;
+
         this.playerSprites = {};
         this.loaded = false;
         this.frameCount = 0;
@@ -247,6 +251,15 @@ export class Overworld2D {
 
         this.camera.x = this.player.x * this.tileW - this.canvas.width / 2 + this.tileW / 2;
         this.camera.y = this.player.y * this.tileH - this.canvas.height / 2 + this.tileH / 2;
+
+        if (mapData.id && this.game.regionManager) {
+            try {
+                const encounters = await this.game.regionManager.loadMapEncounters(mapData.id);
+                this.spawnMapPokemon(encounters);
+            } catch (e) {
+                this.mapPokemonEntities = [];
+            }
+        }
     }
 
     isCollisionAt(x, y) {
@@ -343,6 +356,8 @@ export class Overworld2D {
             }
         }
 
+        this.updateMapPokemon();
+
         const halfW = this.canvas.width / 2;
         const halfH = this.canvas.height / 2;
 
@@ -394,6 +409,146 @@ export class Overworld2D {
         }
     }
 
+    async spawnMapPokemon(encounters) {
+        this.mapPokemonEntities = [];
+        this.mapPokemonEncounters = encounters || [];
+        if (encounters.length === 0) return;
+
+        const count = Math.min(4, Math.max(1, Math.floor(encounters.length * 1.5)));
+
+        for (let i = 0; i < count; i++) {
+            const enc = encounters[Math.floor(Math.random() * encounters.length)];
+            let pos = this.findSpawnPosition();
+            if (!pos) continue;
+
+            const spriteUrl = enc.sprite_url;
+            let sprite = null;
+            if (spriteUrl) {
+                sprite = await new Promise(resolve => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => resolve(img);
+                    img.onerror = () => resolve(null);
+                    img.src = spriteUrl;
+                });
+            }
+
+            this.mapPokemonEntities.push({
+                x: pos.x,
+                y: pos.y,
+                fromX: pos.x,
+                fromY: pos.y,
+                moving: false,
+                moveProgress: 0,
+                sprite: sprite,
+                encounter: enc,
+                wanderTimer: Math.floor(Math.random() * 120),
+                wanderCooldown: 60 + Math.floor(Math.random() * 120),
+                active: true,
+                respawnTimer: 0
+            });
+        }
+    }
+
+    findSpawnPosition() {
+        for (let attempt = 0; attempt < 30; attempt++) {
+            let x, y;
+            if (this.spawnZones.length > 0) {
+                const z = this.spawnZones[Math.floor(Math.random() * this.spawnZones.length)];
+                x = z.x + Math.floor(Math.random() * z.w);
+                y = z.y + Math.floor(Math.random() * z.h);
+            } else {
+                x = Math.floor(Math.random() * this.worldCols);
+                y = Math.floor(Math.random() * this.worldRows);
+            }
+
+            if (x < 0 || x >= this.worldCols || y < 0 || y >= this.worldRows) continue;
+            if (this.isCollisionAt(x, y)) continue;
+            if (x === this.player.x && y === this.player.y) continue;
+
+            const occupied = this.mapPokemonEntities.some(p => p.active && p.x === x && p.y === y);
+            if (!occupied) return { x, y };
+        }
+        return null;
+    }
+
+    updateMapPokemon() {
+        if (this.battleCooldown > 0) this.battleCooldown--;
+
+        for (const p of this.mapPokemonEntities) {
+            if (!p.active) {
+                if (p.respawnTimer > 0) {
+                    p.respawnTimer--;
+                    if (p.respawnTimer <= 0) {
+                        p.active = true;
+                        const pos = this.findSpawnPosition();
+                        if (pos) {
+                            p.x = pos.x;
+                            p.y = pos.y;
+                            p.fromX = pos.x;
+                            p.fromY = pos.y;
+                        }
+                    }
+                }
+                continue;
+            }
+
+            if (p.moving) {
+                p.moveProgress += 0.15;
+                if (p.moveProgress >= 1) {
+                    p.moveProgress = 1;
+                    p.moving = false;
+                    p.fromX = p.x;
+                    p.fromY = p.y;
+                }
+            } else {
+                p.wanderTimer--;
+                if (p.wanderTimer <= 0) {
+                    p.wanderTimer = p.wanderCooldown + Math.floor(Math.random() * 60);
+                    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+                    const dir = dirs[Math.floor(Math.random() * dirs.length)];
+                    const nx = p.x + dir.dx;
+                    const ny = p.y + dir.dy;
+
+                    if (nx >= 0 && nx < this.worldCols && ny >= 0 && ny < this.worldRows &&
+                        !this.isCollisionAt(nx, ny) &&
+                        !(nx === this.player.x && ny === this.player.y)) {
+                        p.fromX = p.x;
+                        p.fromY = p.y;
+                        p.x = nx;
+                        p.y = ny;
+                        p.moving = true;
+                        p.moveProgress = 0;
+                    }
+                }
+            }
+        }
+
+        if (this.battleCooldown <= 0) {
+            for (const p of this.mapPokemonEntities) {
+                if (!p.active || p.moving) continue;
+                const dx = Math.abs(p.x - this.player.x);
+                const dy = Math.abs(p.y - this.player.y);
+                if (dx + dy <= 1) {
+                    this.battleCooldown = 60;
+                    this.triggerPokemonBattle(p);
+                    break;
+                }
+            }
+        }
+    }
+
+    async triggerPokemonBattle(entity) {
+        if (!entity.encounter) return;
+
+        const enc = entity.encounter;
+        entity.active = false;
+        entity.respawnTimer = 300;
+
+        const level = enc.min_level + Math.floor(Math.random() * ((enc.max_level || enc.min_level + 3) - enc.min_level + 1));
+        this.game.startBattleWithPokemon(enc.pokemon_name, level);
+    }
+
     render() {
         if (!this.loaded || this.game.state !== 'overworld') return;
 
@@ -415,6 +570,7 @@ export class Overworld2D {
             );
 
             this.drawGrid(ctx, w, h);
+        this.drawMapPokemon(ctx);
         } else {
             ctx.fillStyle = '#2d5a27';
             ctx.fillRect(0, 0, w, h);
@@ -442,6 +598,45 @@ export class Overworld2D {
                 const sx = x * this.tileW - this.camera.x;
                 const sy = y * this.tileH - this.camera.y;
                 ctx.strokeRect(sx, sy, this.tileW, this.tileH);
+            }
+        }
+    }
+
+    drawMapPokemon(ctx) {
+        for (const p of this.mapPokemonEntities) {
+            if (!p.active && p.respawnTimer > 0) continue;
+            if (!p.active) continue;
+
+            let drawX, drawY;
+            if (p.moving) {
+                const t = p.moveProgress;
+                drawX = (p.fromX + (p.x - p.fromX) * t) * this.tileW - this.camera.x;
+                drawY = (p.fromY + (p.y - p.fromY) * t) * this.tileH - this.camera.y;
+            } else {
+                drawX = p.x * this.tileW - this.camera.x;
+                drawY = p.y * this.tileH - this.camera.y;
+            }
+
+            const bobY = Math.sin(Date.now() / 400 + p.x * 3 + p.y * 7) * 3;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(drawX + this.tileW / 2, drawY + this.tileH - 1, this.tileW / 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (p.sprite && p.sprite.complete && p.sprite.naturalWidth > 0) {
+                const spriteSize = this.tileW * 0.85;
+                const offset = (this.tileW - spriteSize) / 2;
+                ctx.drawImage(p.sprite, drawX + offset, drawY + bobY - 4, spriteSize, spriteSize);
+            } else {
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(drawX + this.tileW / 2, drawY + this.tileH / 2 + bobY, this.tileW / 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${Math.floor(this.tileW / 3)}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('?', drawX + this.tileW / 2, drawY + this.tileH / 2 + bobY + 4);
             }
         }
     }

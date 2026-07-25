@@ -350,6 +350,39 @@ class PokeFuryGame {
         await showBattleMessage(introMsg);
     }
 
+    async startBattleWithPokemon(pokemonName, level) {
+        if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
+            console.warn('[PokeFury] No alive pokemon, skipping battle');
+            return;
+        }
+
+        const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
+        const isShiny = Math.random() < (1 / SHINY_CHANCE);
+        const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
+        this.enemyTeam = [pokemon];
+
+        const activePlayer = getFirstAlive(this.playerTeam);
+        await preloadBattleSprites(activePlayer, pokemon);
+
+        this.state = 'battle';
+        if (this.overworld2d) this.overworld2d.hide();
+        this.battleStartTime = Date.now();
+        showScreen('battle-screen');
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon);
+
+        initBattleUI(
+            () => this.onFight(),
+            () => this.onBag(),
+            () => this.onMega(),
+            () => this.onRun()
+        );
+
+        let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
+        if (isShiny) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
+        await showBattleMessage(introMsg);
+    }
+
     async onFight() {
         const playerPokemon = getFirstAlive(this.playerTeam);
         const enemyPokemon = getFirstAlive(this.enemyTeam);
