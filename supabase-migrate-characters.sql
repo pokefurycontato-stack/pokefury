@@ -18,7 +18,22 @@ END $$;
 -- 2. Preencher ids existentes que estejam null
 UPDATE game_saves SET id = uuid_generate_v4() WHERE id IS NULL;
 
--- 3. Remover QUALQUER PRIMARY KEY existente em game_saves
+-- 3. Remover FK constraints que dependem da PK antiga
+DO $$ DECLARE
+    rec RECORD;
+BEGIN
+    FOR rec IN SELECT tc.table_name, tc.constraint_name
+               FROM information_schema.table_constraints tc
+               WHERE tc.constraint_type = 'FOREIGN KEY'
+               AND tc.table_schema = 'public'
+               AND tc.table_name IN ('pokemon_team', 'player_inventory', 'battle_history', 'character_currencies')
+    LOOP
+        EXECUTE 'ALTER TABLE ' || rec.table_name || ' DROP CONSTRAINT IF EXISTS ' || rec.constraint_name;
+        RAISE NOTICE 'Dropped FK %.%', rec.table_name, rec.constraint_name;
+    END LOOP;
+END $$;
+
+-- 4. Remover QUALQUER PRIMARY KEY existente em game_saves
 DO $$ DECLARE
     rec RECORD;
 BEGIN
@@ -31,7 +46,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- 4. Remover QUALQUER UNIQUE constraint em user_id
+-- 5. Remover QUALQUER UNIQUE constraint em user_id
 DO $$ DECLARE
     rec RECORD;
 BEGIN
@@ -44,7 +59,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- 5. Remover índices únicos em user_id
+-- 6. Remover índices únicos
 DO $$ DECLARE
     idx RECORD;
 BEGIN
@@ -57,29 +72,29 @@ BEGIN
     END LOOP;
 END $$;
 
--- 6. Adicionar PRIMARY KEY em id
+-- 7. Adicionar PRIMARY KEY em id
 ALTER TABLE game_saves ADD PRIMARY KEY (id);
 
--- 7. Criar view characters
+-- 8. Criar view characters
 CREATE OR REPLACE VIEW characters AS SELECT * FROM game_saves;
 
--- 8. Adicionar character_id nas tabelas filhas
+-- 9. Recriar coluna character_id nas tabelas filhas (se FK foi removida)
 DO $$ BEGIN
-    ALTER TABLE pokemon_team ADD COLUMN character_id UUID REFERENCES game_saves(id) ON DELETE CASCADE;
+    ALTER TABLE pokemon_team ADD COLUMN character_id UUID;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE player_inventory ADD COLUMN character_id UUID REFERENCES game_saves(id) ON DELETE CASCADE;
+    ALTER TABLE player_inventory ADD COLUMN character_id UUID;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE battle_history ADD COLUMN character_id UUID REFERENCES game_saves(id) ON DELETE CASCADE;
+    ALTER TABLE battle_history ADD COLUMN character_id UUID;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
--- 9. Migrar dados existentes
+-- 10. Migrar dados existentes
 UPDATE pokemon_team pt
 SET character_id = gs.id
 FROM game_saves gs
@@ -98,13 +113,32 @@ FROM game_saves gs
 WHERE bh.user_id = gs.user_id
 AND bh.character_id IS NULL;
 
--- 10. Criar índices para performance
+-- 11. Recriar FK constraints
+DO $$ BEGIN
+    ALTER TABLE pokemon_team ADD CONSTRAINT pokemon_team_character_id_fkey
+        FOREIGN KEY (character_id) REFERENCES game_saves(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE player_inventory ADD CONSTRAINT player_inventory_character_id_fkey
+        FOREIGN KEY (character_id) REFERENCES game_saves(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE battle_history ADD CONSTRAINT battle_history_character_id_fkey
+        FOREIGN KEY (character_id) REFERENCES game_saves(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- 12. Criar índices para performance
 CREATE INDEX IF NOT EXISTS idx_game_saves_user_id ON game_saves(user_id);
 CREATE INDEX IF NOT EXISTS idx_pokemon_team_character_id ON pokemon_team(character_id);
 CREATE INDEX IF NOT EXISTS idx_player_inventory_character_id ON player_inventory(character_id);
 CREATE INDEX IF NOT EXISTS idx_battle_history_character_id ON battle_history(character_id);
 
--- 11. RLS para pokemon_team
+-- 13. RLS para pokemon_team
 ALTER TABLE pokemon_team ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -136,7 +170,7 @@ CREATE POLICY "pokemonteam_delete" ON pokemon_team
         character_id IN (SELECT id FROM game_saves WHERE user_id = auth.uid())
     );
 
--- 12. RLS para player_inventory
+-- 14. RLS para player_inventory
 ALTER TABLE player_inventory ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -168,7 +202,7 @@ CREATE POLICY "inventory_delete" ON player_inventory
         character_id IN (SELECT id FROM game_saves WHERE user_id = auth.uid())
     );
 
--- 13. RLS para battle_history
+-- 15. RLS para battle_history
 ALTER TABLE battle_history ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -188,7 +222,7 @@ CREATE POLICY "battlehistory_insert" ON battle_history
         character_id IN (SELECT id FROM game_saves WHERE user_id = auth.uid())
     );
 
--- 14. Criar tabela de currencies por personagem
+-- 16. Criar tabela de currencies por personagem
 CREATE TABLE IF NOT EXISTS character_currencies (
     character_id UUID PRIMARY KEY REFERENCES game_saves(id) ON DELETE CASCADE,
     diamonds INTEGER DEFAULT 0,
