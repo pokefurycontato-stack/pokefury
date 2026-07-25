@@ -1,3 +1,22 @@
+if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+        let r;
+        if (typeof radii === 'number') {
+            r = [radii, radii, radii, radii];
+        } else if (Array.isArray(radii)) {
+            r = [radii[0] || 0, radii[1] || radii[0] || 0, radii[2] || radii[0] || 0, radii[3] || radii[1] || radii[0] || 0];
+        } else {
+            r = [0, 0, 0, 0];
+        }
+        this.moveTo(x + r[0], y);
+        this.arcTo(x + w, y, x + w, y + h, r[1]);
+        this.arcTo(x + w, y + h, x, y + h, r[2]);
+        this.arcTo(x, y + h, x, y, r[3]);
+        this.arcTo(x, y, x + w, y, r[0]);
+        this.closePath();
+    };
+}
+
 export class Overworld2D {
     constructor(game) {
         this.game = game;
@@ -196,15 +215,22 @@ export class Overworld2D {
         if (this.encounterCooldown > 0) this.encounterCooldown--;
         if (this.moveCooldown > 0) this.moveCooldown--;
 
-        this.handleInput();
-        this.update();
-        this.render();
+        try {
+            this.handleInput();
+            this.update();
+            this.render();
+        } catch (e) {
+            console.error('[Overworld] Loop error:', e);
+        }
 
         requestAnimationFrame(() => this.loop());
     }
 
     handleInput() {
-        if (this.game.state !== 'overworld') return;
+        if (this.game.state !== 'overworld') {
+            if (this.frameCount % 60 === 1) console.log('[Overworld] state is', this.game.state, '- not overworld');
+            return;
+        }
         if (this.player.moving) return;
         if (this.moveCooldown > 0) return;
 
