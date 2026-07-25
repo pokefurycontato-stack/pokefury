@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[PokeFury Auth] DOMContentLoaded');
     createParticles();
     initAuth();
 });
@@ -54,6 +55,8 @@ function initAuth() {
         e.preventDefault();
         handleRegister();
     });
+
+    console.log('[PokeFury Auth] Init complete');
 }
 
 function updatePasswordStrength(password) {
@@ -81,14 +84,16 @@ function updatePasswordStrength(password) {
 }
 
 function showError(formId, message) {
+    console.log('[PokeFury Auth] Error:', formId, message);
     const errorEl = document.getElementById(formId + '-error');
     if (!errorEl) return;
     errorEl.textContent = message;
     errorEl.classList.remove('hidden');
-    setTimeout(() => errorEl.classList.add('hidden'), 6000);
+    setTimeout(() => errorEl.classList.add('hidden'), 8000);
 }
 
 async function handleLogin() {
+    console.log('[PokeFury Auth] handleLogin called');
     if (!window.db) {
         showError('login', 'Supabase não conectado.');
         return;
@@ -99,16 +104,23 @@ async function handleLogin() {
         showError('login', 'Preencha todos os campos.');
         return;
     }
-    const { data, error } = await window.db.auth.signInWithPassword({
-        email: username,
-        password: password
-    });
-    if (error) {
-        showError('login', error.message.includes('Invalid') ? 'Conta não encontrada ou senha incorreta.' : 'Erro: ' + error.message);
-        return;
+
+    try {
+        const { data, error } = await window.db.auth.signInWithPassword({
+            email: username,
+            password: password
+        });
+        if (error) {
+            showError('login', error.message.includes('Invalid') ? 'Conta não encontrada ou senha incorreta.' : 'Erro: ' + error.message);
+            return;
+        }
+        console.log('[PokeFury Auth] Login OK, user:', data.user.id);
+        window.GameData.setUserId(data.user.id);
+        goToCharacterScreen();
+    } catch (e) {
+        console.error('[PokeFury Auth] Login exception:', e);
+        showError('login', 'Erro de conexão: ' + e.message);
     }
-    window.GameData.setUserId(data.user.id);
-    goToCharacterScreen();
 }
 
 async function handleRegister() {
@@ -127,20 +139,26 @@ async function handleRegister() {
     if (password.length < 6) { showError('register', 'Senha deve ter no mínimo 6 caracteres.'); return; }
     if (password !== confirm) { showError('register', 'As senhas não coincidem.'); return; }
 
-    const { data, error } = await window.db.auth.signUp({
-        email: email,
-        password: password,
-        options: { data: { username: username, display_email: email } }
-    });
-    if (error) {
-        showError('register', error.message.includes('already') ? 'Este nome de treinador já existe.' : 'Erro: ' + error.message);
-        return;
+    try {
+        const { data, error } = await window.db.auth.signUp({
+            email: email,
+            password: password,
+            options: { data: { username: username, display_email: email } }
+        });
+        if (error) {
+            showError('register', error.message.includes('already') ? 'Este nome de treinador já existe.' : 'Erro: ' + error.message);
+            return;
+        }
+        if (data.user) {
+            await window.db.from('profiles').upsert({ id: data.user.id, username, display_email: email }, { onConflict: 'id' }).catch(() => {});
+        }
+        console.log('[PokeFury Auth] Register OK, user:', data.user.id);
+        window.GameData.setUserId(data.user.id);
+        goToCharacterScreen();
+    } catch (e) {
+        console.error('[PokeFury Auth] Register exception:', e);
+        showError('register', 'Erro de conexão: ' + e.message);
     }
-    if (data.user) {
-        await window.db.from('profiles').upsert({ id: data.user.id, username, display_email: email }, { onConflict: 'id' }).catch(() => {});
-    }
-    window.GameData.setUserId(data.user.id);
-    goToCharacterScreen();
 }
 
 const TYPE_COLORS = { normal:'#A8A878', fire:'#F08030', water:'#6890F0', electric:'#F8D030', grass:'#78C850', ice:'#98D8D8', fighting:'#C03028', poison:'#A040A0', ground:'#E0C068', flying:'#A890F0', psychic:'#F85888', bug:'#A8B820', rock:'#B8A038', ghost:'#705898', dragon:'#7038F8', dark:'#705848', steel:'#B8B8D0', fairy:'#EE99AC' };
@@ -172,51 +190,70 @@ const STARTER_GEN_LABELS = {
     906: 'Paldea', 909: 'Paldea', 912: 'Paldea'
 };
 
-const TRAINER_AVATARS_MALE = [
-    'trainers/male-01.png', 'trainers/male-02.png', 'trainers/male-03.png',
-    'trainers/male-04.png', 'trainers/male-05.png', 'trainers/male-06.png',
-    'trainers/male-07.png', 'trainers/male-08.png', 'trainers/male-09.png',
-    'trainers/male-10.png'
-];
-
-const TRAINER_AVATARS_FEMALE = [
-    'trainers/female-01.png', 'trainers/female-02.png', 'trainers/female-03.png',
-    'trainers/female-04.png', 'trainers/female-05.png', 'trainers/female-06.png',
-    'trainers/female-07.png', 'trainers/female-08.png', 'trainers/female-09.png',
-    'trainers/female-10.png'
-];
+const TRAINER_AVATARS_MALE = [];
+const TRAINER_AVATARS_FEMALE = [];
+for (let i = 1; i <= 10; i++) {
+    TRAINER_AVATARS_MALE.push(`trainers/male-${String(i).padStart(2, '0')}.png`);
+    TRAINER_AVATARS_FEMALE.push(`trainers/female-${String(i).padStart(2, '0')}.png`);
+}
 
 const MAX_CHARACTERS = 10;
 
 let selectedGender = 'male';
 let selectedAvatarUrl = null;
 let cachedStarters = null;
+let isTransitioning = false;
 
 async function loadAllStarters() {
     if (cachedStarters) return cachedStarters;
     try {
+        console.log('[PokeFury Auth] Loading all starters...');
         const promises = ALL_STARTER_IDS.map(id => window.PokeAPI.ensurePokemon(id));
         cachedStarters = await Promise.all(promises);
+        console.log('[PokeFury Auth] Starters loaded:', cachedStarters.length);
         return cachedStarters;
     } catch (e) {
-        console.error('[PokeFury] Error loading starters:', e);
+        console.error('[PokeFury Auth] Error loading starters:', e);
         return [];
     }
 }
 
 function goToCharacterScreen() {
+    if (isTransitioning) return;
+    isTransitioning = true;
+    console.log('[PokeFury Auth] goToCharacterScreen');
+
     const authScreen = document.getElementById('auth-screen');
     const charScreen = document.getElementById('character-screen');
-    authScreen.classList.add('fade-out');
+
+    if (!authScreen || !charScreen) {
+        console.error('[PokeFury Auth] Missing screens!');
+        isTransitioning = false;
+        return;
+    }
+
+    authScreen.style.transition = 'opacity 0.4s ease';
+    authScreen.style.opacity = '0';
+
     setTimeout(() => {
         authScreen.classList.add('hidden');
+        authScreen.style.opacity = '';
         charScreen.classList.remove('hidden');
-        charScreen.classList.add('fade-in');
+        charScreen.style.opacity = '0';
+        charScreen.style.transition = 'opacity 0.4s ease';
+
+        requestAnimationFrame(() => {
+            charScreen.style.opacity = '1';
+        });
+
+        console.log('[PokeFury Auth] Screens switched, loading character screen...');
         loadCharacterScreen();
-    }, 500);
+    }, 400);
 }
 
 async function loadCharacterScreen() {
+    console.log('[PokeFury Auth] loadCharacterScreen called');
+
     const charSelect = document.getElementById('char-select');
     const charCreate = document.getElementById('char-create');
 
@@ -234,10 +271,14 @@ async function loadCharacterScreen() {
     };
 
     try {
+        console.log('[PokeFury Auth] Querying characters...');
         const characters = await window.GameData.getCharacters();
-        const validCharacters = characters.filter(c => c.starter_pokemon);
+        console.log('[PokeFury Auth] Characters found:', characters.length);
+
+        const validCharacters = (characters || []).filter(c => c && c.starter_pokemon);
 
         if (validCharacters.length === 0) {
+            console.log('[PokeFury Auth] No valid characters, showing create panel');
             showCreatePanel();
             return;
         }
@@ -309,19 +350,23 @@ async function loadCharacterScreen() {
         }
 
     } catch (e) {
-        console.error('[PokeFury] Erro ao carregar personagens:', e);
+        console.error('[PokeFury Auth] Erro ao carregar personagens:', e);
         showCreatePanel();
     }
 }
 
-async function showCreatePanel() {
+function showCreatePanel() {
+    console.log('[PokeFury Auth] showCreatePanel');
     document.getElementById('char-select').classList.add('hidden');
     document.getElementById('char-create').classList.remove('hidden');
 
     const charCountEl = document.getElementById('char-count');
     if (charCountEl) {
-        const chars = await window.GameData.getCharacters();
-        charCountEl.textContent = `${chars.length} / ${MAX_CHARACTERS} personagens`;
+        window.GameData.getCharacters().then(chars => {
+            charCountEl.textContent = `${(chars || []).length} / ${MAX_CHARACTERS} personagens`;
+        }).catch(() => {
+            charCountEl.textContent = `0 / ${MAX_CHARACTERS} personagens`;
+        });
     }
 
     selectedGender = 'male';
@@ -399,6 +444,11 @@ async function renderStarterGrid() {
 
     starterGrid.innerHTML = '';
 
+    if (starters.length === 0) {
+        starterGrid.innerHTML = '<p style="color:rgba(255,255,255,0.4);text-align:center;padding:20px;">Erro ao carregar. Tente novamente.</p>';
+        return;
+    }
+
     const grouped = {};
     starters.forEach(poke => {
         const gen = STARTER_GEN_LABELS[poke.id] || 'Gen ?';
@@ -415,7 +465,7 @@ async function renderStarterGrid() {
         const genRow = document.createElement('div');
         genRow.className = 'starter-gen-row';
 
-        pokes.forEach((poke, i) => {
+        pokes.forEach(poke => {
             const card = document.createElement('div');
             card.className = 'starter-card';
             card.dataset.species = poke.species;
