@@ -1,24 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!window.db) {
-        console.error('[PokeFury] Supabase não está disponível');
-        showError('login', 'Erro de conexão. Verifique o console (F12).');
-        showError('register', 'Erro de conexão. Verifique o console (F12).');
-        createParticles();
-        initAuth();
-        return;
-    }
-
-    try {
-        const { data: { session } } = await window.db.auth.getSession();
-        if (session) {
-            window.GameData.setUserId(session.user.id);
-            showGame(session.user);
-            return;
-        }
-    } catch (err) {
-        console.error('[PokeFury] Erro ao verificar sessão:', err);
-    }
-
     createParticles();
     initAuth();
 });
