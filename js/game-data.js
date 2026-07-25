@@ -227,12 +227,13 @@ const GameData = {
 
     async addItem(itemId, quantity = 1) {
         if (!this.currentCharacterId || !this.userId) return false;
+
         const { data: existing } = await window.db
             .from('player_inventory')
             .select('quantity')
             .eq('character_id', this.currentCharacterId)
             .eq('item_id', itemId)
-            .single();
+            .maybeSingle();
 
         if (existing) {
             const { error } = await window.db
@@ -242,7 +243,7 @@ const GameData = {
                 .eq('item_id', itemId);
             return !error;
         } else {
-            const { error } = await window.db
+            const { error: insertErr } = await window.db
                 .from('player_inventory')
                 .insert({
                     user_id: this.userId,
@@ -250,7 +251,23 @@ const GameData = {
                     item_id: itemId,
                     quantity
                 });
-            return !error;
+            if (insertErr) {
+                const { data: retryExisting } = await window.db
+                    .from('player_inventory')
+                    .select('quantity')
+                    .eq('character_id', this.currentCharacterId)
+                    .eq('item_id', itemId)
+                    .maybeSingle();
+                if (retryExisting) {
+                    const { error } = await window.db
+                        .from('player_inventory')
+                        .update({ quantity: retryExisting.quantity + quantity })
+                        .eq('character_id', this.currentCharacterId)
+                        .eq('item_id', itemId);
+                    return !error;
+                }
+            }
+            return !insertErr;
         }
     },
 
@@ -261,7 +278,7 @@ const GameData = {
             .select('quantity')
             .eq('character_id', this.currentCharacterId)
             .eq('item_id', itemId)
-            .single();
+            .maybeSingle();
 
         if (!existing) return false;
 
@@ -290,7 +307,7 @@ const GameData = {
             .select('quantity')
             .eq('character_id', this.currentCharacterId)
             .eq('item_id', itemId)
-            .single();
+            .maybeSingle();
         if (error) return null;
         return data;
     },
@@ -301,7 +318,7 @@ const GameData = {
             .from('character_currencies')
             .select('*')
             .eq('character_id', this.currentCharacterId)
-            .single();
+            .maybeSingle();
         if (error || !data) return { diamonds: 0, gold: 0, silver: 0 };
         return { diamonds: data.diamonds, gold: data.gold, silver: data.silver };
     },
@@ -312,7 +329,7 @@ const GameData = {
             .from('character_currencies')
             .select('character_id')
             .eq('character_id', this.currentCharacterId)
-            .single();
+            .maybeSingle();
 
         const updates = {
             ...currencies,

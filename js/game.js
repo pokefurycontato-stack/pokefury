@@ -25,6 +25,7 @@ class PokeFuryGame {
         this.battleStartTime = null;
         this.starterDataCache = [];
         this.overworld2d = null;
+        this._starting = false;
 
         this.init();
     }
@@ -84,6 +85,11 @@ class PokeFuryGame {
     }
 
     async startGame(starterSpecies) {
+        if (this._starting) {
+            console.log('[PokeFury] startGame already in progress, skipping');
+            return;
+        }
+        this._starting = true;
         console.log('[PokeFury] startGame called with:', starterSpecies);
 
         try {
