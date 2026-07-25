@@ -62,6 +62,8 @@ export class Overworld2D {
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = [];
         this.battleCooldown = 0;
+        this.pokemonSpriteContainer = null;
+        this.pokemonSpriteElements = new Map();
 
         this.playerSprites = {};
         this.loaded = false;
@@ -255,11 +257,15 @@ export class Overworld2D {
         if (mapData.id && this.game.regionManager) {
             try {
                 const encounters = await this.game.regionManager.loadMapEncounters(mapData.id);
-                console.log('[Overworld] Encounters loaded:', encounters.length, encounters.map(e => e.pokemon_name + ' sprite:' + (e.sprite_url ? 'yes' : 'no')));
                 this.spawnMapPokemon(encounters);
             } catch (e) {
                 console.warn('[Overworld] Failed to load encounters:', e);
                 this.mapPokemonEntities = [];
+                if (this.pokemonSpriteContainer) {
+                    this.pokemonSpriteContainer.remove();
+                    this.pokemonSpriteContainer = null;
+                }
+                this.pokemonSpriteElements.clear();
             }
         }
     }
@@ -412,40 +418,34 @@ export class Overworld2D {
     }
 
     async spawnMapPokemon(encounters) {
+        if (this.pokemonSpriteContainer) {
+            this.pokemonSpriteContainer.remove();
+            this.pokemonSpriteContainer = null;
+        }
+        this.pokemonSpriteElements.clear();
+
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = encounters || [];
-        console.log('[Overworld] spawnMapPokemon called with', encounters.length, 'encounters');
         if (encounters.length === 0) return;
 
         const count = Math.min(4, Math.max(1, Math.floor(encounters.length * 1.5)));
-        console.log('[Overworld] Spawning', count, 'pokemon entities');
 
         for (let i = 0; i < count; i++) {
             const enc = encounters[Math.floor(Math.random() * encounters.length)];
             let pos = this.findSpawnPosition();
-            if (!pos) { console.log('[Overworld] No spawn position found for', enc.pokemon_name); continue; }
+            if (!pos) continue;
 
             const spriteUrl = enc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null);
-            console.log('[Overworld] Loading sprite for', enc.pokemon_name, ':', spriteUrl);
-            let sprite = null;
-            if (spriteUrl) {
-                sprite = await new Promise(resolve => {
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    img.onload = () => { console.log('[Overworld] Sprite loaded OK:', enc.pokemon_name); resolve(img); };
-                    img.onerror = () => { console.log('[Overworld] Sprite FAILED:', enc.pokemon_name, spriteUrl); resolve(null); };
-                    img.src = spriteUrl;
-                });
-            }
 
             this.mapPokemonEntities.push({
+                entityId: `pokemon_${Date.now()}_${i}`,
                 x: pos.x,
                 y: pos.y,
                 fromX: pos.x,
                 fromY: pos.y,
                 moving: false,
                 moveProgress: 0,
-                sprite: sprite,
+                spriteUrl: spriteUrl,
                 encounter: enc,
                 wanderTimer: Math.floor(Math.random() * 120),
                 wanderCooldown: 60 + Math.floor(Math.random() * 120),
@@ -453,7 +453,6 @@ export class Overworld2D {
                 respawnTimer: 0
             });
         }
-        console.log('[Overworld] Total map pokemon entities:', this.mapPokemonEntities.length);
     }
 
     findSpawnPosition() {
@@ -609,41 +608,73 @@ export class Overworld2D {
     }
 
     drawMapPokemon(ctx) {
+        const wrap = this.canvas.parentElement;
+        if (!wrap) return;
+
+        if (!this.pokemonSpriteContainer) {
+            this.pokemonSpriteContainer = document.createElement('div');
+            this.pokemonSpriteContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+            wrap.appendChild(this.pokemonSpriteContainer);
+        }
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
+
+        const activeIds = new Set();
+
         for (const p of this.mapPokemonEntities) {
-            if (!p.active && p.respawnTimer > 0) continue;
             if (!p.active) continue;
+            activeIds.add(p.entityId);
 
             let drawX, drawY;
             if (p.moving) {
                 const t = p.moveProgress;
                 drawX = (p.fromX + (p.x - p.fromX) * t) * this.tileW - this.camera.x;
-                drawY = (p.fromY + (p.y - p.fromY) * t) * this.tileH - this.camera.y;
+                drawY = (p.fromY + (p.y - this.tileH * 0.4) * t) * this.tileH - this.camera.y;
             } else {
                 drawX = p.x * this.tileW - this.camera.x;
-                drawY = p.y * this.tileH - this.camera.y;
+                drawY = p.y * this.tileH - this.tileH * 0.4 - this.camera.y;
             }
 
             const bobY = Math.sin(Date.now() / 400 + p.x * 3 + p.y * 7) * 3;
+            const spriteSize = this.tileW * 1.4;
+
+            drawY += bobY;
+
+            if (drawX + spriteSize < -50 || drawX > this.canvas.width + 50 ||
+                drawY + spriteSize < -50 || drawY > this.canvas.height + 50) {
+                if (this.pokemonSpriteElements.has(p.entityId)) {
+                    this.pokemonSpriteElements.get(p.entityId).style.display = 'none';
+                }
+                continue;
+            }
+
+            let el = this.pokemonSpriteElements.get(p.entityId);
+            if (!el) {
+                el = document.createElement('img');
+                el.style.cssText = `position:absolute;pointer-events:none;image-rendering:pixelated;`;
+                if (p.spriteUrl) el.src = p.spriteUrl;
+                this.pokemonSpriteContainer.appendChild(el);
+                this.pokemonSpriteElements.set(p.entityId, el);
+            }
+
+            el.style.display = 'block';
+            el.style.left = (offsetX + drawX + (this.tileW - spriteSize) / 2) + 'px';
+            el.style.top = (offsetY + drawY - spriteSize * 0.15) + 'px';
+            el.style.width = spriteSize + 'px';
+            el.style.height = spriteSize + 'px';
 
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
-            ctx.ellipse(drawX + this.tileW / 2, drawY + this.tileH - 1, this.tileW / 4, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(drawX + this.tileW / 2, p.y * this.tileH - this.camera.y + this.tileH - 1, this.tileW / 4, 3, 0, 0, Math.PI * 2);
             ctx.fill();
+        }
 
-            if (p.sprite && p.sprite.complete && p.sprite.naturalWidth > 0) {
-                const spriteSize = this.tileW * 1.4;
-                const offset = (this.tileW - spriteSize) / 2;
-                ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(p.sprite, drawX + offset, drawY + bobY - spriteSize * 0.15, spriteSize, spriteSize);
-            } else {
-                ctx.fillStyle = '#ffd700';
-                ctx.beginPath();
-                ctx.arc(drawX + this.tileW / 2, drawY + this.tileH / 2 + bobY, this.tileW / 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#fff';
-                ctx.font = `bold ${Math.floor(this.tileW / 3)}px Inter, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.fillText('?', drawX + this.tileW / 2, drawY + this.tileH / 2 + bobY + 4);
+        for (const [id, el] of this.pokemonSpriteElements) {
+            if (!activeIds.has(id)) {
+                el.style.display = 'none';
             }
         }
     }
