@@ -932,13 +932,15 @@ class PokeFuryGame {
             const { data, error } = await window.db.storage.from('sprites').list('maps');
             if (error) throw error;
 
+            const jsonFiles = (data || []).filter(f => f.name.endsWith('.json'));
+
             container.innerHTML = '';
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:11px;padding:4px">Nenhum mapa salvo</div>';
+            if (jsonFiles.length === 0) {
+                container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:11px;padding:4px">Nenhum mapa tile salvo</div>';
                 return;
             }
 
-            data.forEach(file => {
+            jsonFiles.forEach(file => {
                 const item = document.createElement('div');
                 item.className = 'saved-map-item';
                 const displayName = file.name.replace('.json', '').replace(/-/g, ' ');
