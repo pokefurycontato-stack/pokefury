@@ -101,12 +101,60 @@ export class Overworld2D {
     }
 
     async loadSprites() {
-        this.playerSprites = {
-            down: await this.createPlayerSprite('down'),
-            up: await this.createPlayerSprite('up'),
-            left: await this.createPlayerSprite('left'),
-            right: await this.createPlayerSprite('right')
-        };
+        const gender = this.game.playerGender === 'female' ? 'feminino' : 'masculino';
+        const spriteSheetUrl = `assets/perso ${gender}.webp`;
+
+        try {
+            const spriteSheet = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('Failed to load sprite sheet'));
+                img.src = spriteSheetUrl;
+            });
+
+            this.playerSpriteFrames = {};
+            const directions = ['down', 'up', 'left', 'right'];
+            const frameCount = 4;
+            const frameW = spriteSheet.width / frameCount;
+            const frameH = spriteSheet.height / frameCount;
+
+            for (let row = 0; row < directions.length; row++) {
+                const frames = [];
+                for (let col = 0; col < frameCount; col++) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = frameW;
+                    canvas.height = frameH;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(
+                        spriteSheet,
+                        col * frameW, row * frameH, frameW, frameH,
+                        0, 0, frameW, frameH
+                    );
+                    const img = new Image();
+                    img.src = canvas.toDataURL();
+                    frames.push(new Promise(resolve => { img.onload = () => resolve(img); }));
+                }
+                this.playerSpriteFrames[directions[row]] = await Promise.all(frames);
+            }
+
+            this.playerSprites = {};
+            for (const dir of directions) {
+                this.playerSprites[dir] = this.playerSpriteFrames[dir][0];
+            }
+
+            console.log(`[PokeFury] Sprite sheet loaded: ${gender} (${frameW}x${frameH} per frame)`);
+        } catch (e) {
+            console.warn('[PokeFury] Sprite sheet not found, using procedural sprites:', e.message);
+            this.playerSprites = {
+                down: await this.createPlayerSprite('down'),
+                up: await this.createPlayerSprite('up'),
+                left: await this.createPlayerSprite('left'),
+                right: await this.createPlayerSprite('right')
+            };
+            this.playerSpriteFrames = null;
+        }
     }
 
     async createPlayerSprite(direction) {
@@ -384,7 +432,19 @@ export class Overworld2D {
             drawY = this.player.y * this.tileH - this.camera.y;
         }
 
-        const sprite = this.playerSprites[this.player.direction];
+        let sprite;
+        if (this.playerSpriteFrames) {
+            const frames = this.playerSpriteFrames[this.player.direction];
+            if (this.player.moving) {
+                const walkFrame = Math.min(Math.floor(this.player.moveProgress * frames.length), frames.length - 1);
+                sprite = frames[walkFrame];
+            } else {
+                sprite = frames[0];
+            }
+        } else {
+            sprite = this.playerSprites[this.player.direction];
+        }
+
         if (sprite && sprite.complete) {
             ctx.drawImage(sprite, drawX, drawY, this.tileW, this.tileH);
         } else {
