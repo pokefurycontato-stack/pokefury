@@ -225,8 +225,7 @@ async function loadAllStarters() {
     if (cachedStarters) return cachedStarters;
     try {
         console.log('[PokeFury Auth] Loading all starters...');
-        const promises = ALL_STARTER_IDS.map(id => window.PokeAPI.ensurePokemon(id));
-        cachedStarters = await Promise.all(promises);
+        cachedStarters = await window.PokeAPI.ensurePokemonBatch(ALL_STARTER_IDS);
         console.log('[PokeFury Auth] Starters loaded:', cachedStarters.length);
         return cachedStarters;
     } catch (e) {

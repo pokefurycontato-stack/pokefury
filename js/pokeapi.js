@@ -253,6 +253,25 @@ const PokeAPI = {
         return [1, 4, 7, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498, 501, 650, 653, 656, 722, 725, 728, 810, 813, 816, 906, 909, 912];
     },
 
+    async ensurePokemonBatch(ids) {
+        const uncached = ids.filter(id => !this.pokemonCache[String(id)]);
+        if (uncached.length > 0) {
+            const { data } = await window.db
+                .from('pokemon')
+                .select('*')
+                .in('id', uncached);
+            if (data) {
+                for (const row of data) {
+                    const pokemonData = this.transformPokemon(row);
+                    this.pokemonCache[pokemonData.id] = pokemonData;
+                    this.pokemonCache[pokemonData.name.toLowerCase()] = pokemonData;
+                    this.pokemonCache[pokemonData.species] = pokemonData;
+                }
+            }
+        }
+        return ids.map(id => this.pokemonCache[String(id)]).filter(Boolean);
+    },
+
     preloadSprite(url) {
         if (!url) return Promise.resolve(null);
         return new Promise((resolve) => {
