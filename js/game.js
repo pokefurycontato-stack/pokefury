@@ -41,6 +41,7 @@ class PokeFuryGame {
 
         document.getElementById('btn-new-character').addEventListener('click', () => {
             this.showCharCreate();
+            this.populateCharCreate();
         });
 
         document.getElementById('btn-logout-char').addEventListener('click', async () => {
@@ -80,8 +81,10 @@ class PokeFuryGame {
     }
 
     showCharScreen() {
-        document.getElementById('character-screen').classList.remove('hidden');
-        this.showCharSelect();
+        if (window.showCharCreateScreen) {
+            window.showCharCreateScreen();
+            this.populateCharCreate();
+        }
     }
 
     async showCharSelect() {
@@ -157,7 +160,9 @@ class PokeFuryGame {
     showCharCreate() {
         document.getElementById('char-select').classList.add('hidden');
         document.getElementById('char-create').classList.remove('hidden');
+    }
 
+    populateCharCreate() {
         const avatarGrid = document.getElementById('avatar-grid');
         avatarGrid.innerHTML = '';
 

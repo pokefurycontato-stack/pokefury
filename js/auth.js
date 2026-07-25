@@ -216,9 +216,95 @@ function showGame(userData) {
         authScreen.classList.add('hidden');
         charScreen.classList.remove('hidden');
         charScreen.classList.add('fade-in');
-
-        if (window.pokefury && window.pokefury.showCharScreen) {
-            window.pokefury.showCharScreen();
-        }
+        loadCharScreen(userData);
     }, 500);
 }
+
+async function loadCharScreen(userData) {
+    const charSelect = document.getElementById('char-select');
+    const charCreate = document.getElementById('char-create');
+
+    charCreate.classList.add('hidden');
+    charSelect.classList.remove('hidden');
+
+    const list = document.getElementById('char-list');
+    list.innerHTML = '';
+
+    try {
+        const { data } = await window.db.auth.getUser();
+        if (!data || !data.user) {
+            showCharCreateScreen();
+            return;
+        }
+
+        const { data: saves } = await window.db
+            .from('game_saves')
+            .select('*')
+            .eq('user_id', data.user.id);
+
+        if (!saves || saves.length === 0) {
+            showCharCreateScreen();
+            return;
+        }
+
+        for (const save of saves) {
+            const card = document.createElement('div');
+            card.className = 'char-card';
+
+            let spriteHtml = '<div class="char-card-sprite-placeholder">?</div>';
+            if (save.starter_pokemon) {
+                try {
+                    const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
+                    const spriteUrl = pokeData.spriteUrls?.front || pokeData.spriteUrls?.home || pokeData.spriteUrls?.official;
+                    if (spriteUrl) {
+                        await window.PokeAPI.preloadSprite(spriteUrl);
+                        const img = window.PokeAPI.imageCache[spriteUrl];
+                        if (img && img.complete) {
+                            spriteHtml = `<img src="${spriteUrl}" class="char-card-sprite" alt="${pokeData.name}">`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[PokeFury] Erro ao carregar sprite:', e);
+                }
+            }
+
+            let typeBadges = '';
+            if (save.starter_pokemon) {
+                try {
+                    const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
+                    const TYPE_COLORS = { normal:'#A8A878', fire:'#F08030', water:'#6890F0', electric:'#F8D030', grass:'#78C850', ice:'#98D8D8', fighting:'#C03028', poison:'#A040A0', ground:'#E0C068', flying:'#A890F0', psychic:'#F85888', bug:'#A8B820', rock:'#B8A038', ghost:'#705898', dragon:'#7038F8', dark:'#705848', steel:'#B8B8D0', fairy:'#EE99AC' };
+                    typeBadges = (pokeData.types || []).map(t =>
+                        `<span class="type-badge type-${t}" style="background:${TYPE_COLORS[t] || '#686868'}">${t}</span>`
+                    ).join('');
+                } catch (e) {}
+            }
+
+            card.innerHTML = `
+                ${spriteHtml}
+                <div class="char-card-info">
+                    <div class="char-card-name">${save.player_name || 'Treinador'}</div>
+                    <div class="char-card-meta">${save.starter_pokemon ? 'Starter: ' + save.starter_pokemon : 'Sem starter'}</div>
+                    <div class="char-card-types">${typeBadges}</div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                if (window.pokefury && window.pokefury.loadCharacter) {
+                    window.pokefury.loadCharacter(save);
+                }
+            });
+
+            list.appendChild(card);
+        }
+    } catch (e) {
+        console.error('[PokeFury] Erro ao carregar personagens:', e);
+        showCharCreateScreen();
+    }
+}
+
+function showCharCreateScreen() {
+    document.getElementById('char-select').classList.add('hidden');
+    document.getElementById('char-create').classList.remove('hidden');
+}
+
+window.showCharCreateScreen = showCharCreateScreen;
