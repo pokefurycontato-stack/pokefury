@@ -5,6 +5,7 @@ import {
     showScreen, preloadBattleSprites, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection
 } from './ui.js';
+import { Overworld3D } from './overworld3d.js';
 
 const SHINY_CHANCE = 128;
 
@@ -17,10 +18,12 @@ class PokeFuryGame {
 
         this.state = 'idle';
         this.playerName = 'Treinador';
+        this.playerGender = 'male';
         this.playerTeam = [];
         this.enemyTeam = [];
         this.battleStartTime = null;
         this.starterDataCache = [];
+        this.overworld3d = null;
 
         this.init();
     }
@@ -138,6 +141,28 @@ class PokeFuryGame {
         const avatarGrid = document.getElementById('avatar-grid');
         avatarGrid.innerHTML = '';
 
+        const genderGrid = document.createElement('div');
+        genderGrid.className = 'char-gender-grid';
+        genderGrid.innerHTML = `
+            <div class="gender-card selected" data-gender="male">
+                <div class="gender-icon">M</div>
+                <div class="gender-label">Masculino</div>
+            </div>
+            <div class="gender-card" data-gender="female">
+                <div class="gender-icon">F</div>
+                <div class="gender-label">Feminino</div>
+            </div>
+        `;
+        avatarGrid.appendChild(genderGrid);
+
+        genderGrid.querySelectorAll('.gender-card').forEach(card => {
+            card.addEventListener('click', () => {
+                genderGrid.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.playerGender = card.dataset.gender;
+            });
+        });
+
         const starters = this.starterDataCache;
         const starterGrid = document.getElementById('starter-grid');
         starterGrid.innerHTML = '';
@@ -188,7 +213,8 @@ class PokeFuryGame {
         const { error } = await window.db.from('game_saves').upsert({
             user_id: data.user.id,
             player_name: name,
-            starter_pokemon: species
+            starter_pokemon: species,
+            player_gender: this.playerGender
         }, { onConflict: 'user_id' });
 
         if (error) {
@@ -202,6 +228,7 @@ class PokeFuryGame {
 
     async loadCharacter(save) {
         this.playerName = save.player_name || 'Treinador';
+        this.playerGender = save.player_gender || 'male';
         await this.startGame(save.starter_pokemon);
     }
 
@@ -221,86 +248,24 @@ class PokeFuryGame {
         }
 
         document.getElementById('character-screen').classList.add('hidden');
+
+        if (!this.overworld3d) {
+            this.overworld3d = new Overworld3D(this);
+        }
+
         this.state = 'overworld';
         showScreen('hud');
         document.getElementById('player-name-hud').textContent = this.playerName;
         document.getElementById('location-name').textContent = 'Área Selvagem';
-        this.render();
+        this.overworld3d.show();
     }
 
     render() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        if (this.state === 'overworld') {
-            this.renderOverworld();
-        } else if (this.state === 'battle') {
+        if (this.state === 'battle') {
             this.renderBattle();
         }
-    }
-
-    renderOverworld() {
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-
-        const grad = this.ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, '#1a1a2e');
-        grad.addColorStop(1, '#16213e');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, w, h);
-
-        this.ctx.fillStyle = '#e94560';
-        this.ctx.globalAlpha = 0.04;
-        for (let i = 0; i < 30; i++) {
-            const x = (i * 37 + Date.now() / 80) % w;
-            const y = h * 0.3 + Math.sin(i * 0.5) * h * 0.2;
-            this.ctx.beginPath();
-            this.ctx.arc(x, y, 4 + (i % 3) * 2, 0, Math.PI * 2);
-            this.ctx.fill();
-        }
-        this.ctx.globalAlpha = 1;
-
-        const activePokemon = getFirstAlive(this.playerTeam);
-        if (activePokemon) {
-            let spriteUrl = null;
-            if (activePokemon.isShiny && activePokemon.shinySpriteUrls) {
-                spriteUrl = activePokemon.shinySpriteUrls.front || activePokemon.shinySpriteUrls.home || activePokemon.shinySpriteUrls.official;
-            }
-            if (!spriteUrl) {
-                spriteUrl = activePokemon.spriteUrls?.front || activePokemon.spriteUrls?.home || activePokemon.spriteUrls?.official;
-            }
-            const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
-
-            if (img && img.complete && img.naturalWidth > 0) {
-                const maxW = 200;
-                const maxH = 200;
-                const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
-                const drawW = img.naturalWidth * scale;
-                const drawH = img.naturalHeight * scale;
-
-                this.ctx.shadowColor = activePokemon.isShiny ? '#ffd700' : (TYPE_COLORS[activePokemon.type] || '#e94560');
-                this.ctx.shadowBlur = 40;
-                this.ctx.drawImage(img, w / 2 - drawW / 2, h / 2 - drawH / 2 - 30, drawW, drawH);
-                this.ctx.shadowBlur = 0;
-            } else {
-                this.ctx.shadowColor = activePokemon.isShiny ? '#ffd700' : '#e94560';
-                this.ctx.shadowBlur = 40;
-                this.ctx.fillStyle = activePokemon.isShiny ? '#ffd700' : (TYPE_COLORS[activePokemon.type] || '#e94560');
-                this.ctx.beginPath();
-                this.ctx.arc(w / 2, h / 2 - 30, 12, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.shadowBlur = 0;
-            }
-        }
-
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        this.ctx.font = '500 14px Inter, sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('Clique para encontrar um Pokémon selvagem!', w / 2, h - 40);
-
-        this.canvas.onclick = () => {
-            this.canvas.onclick = null;
-            this.startWildBattle();
-        };
     }
 
     renderBattle() {
@@ -325,6 +290,7 @@ class PokeFuryGame {
         await preloadBattleSprites(activePlayer, wildPokemon);
 
         this.state = 'battle';
+        if (this.overworld3d) this.overworld3d.hide();
         this.battleStartTime = Date.now();
         showScreen('battle-screen');
         updateBattleUI(this.playerTeam, this.enemyTeam);
@@ -569,7 +535,7 @@ class PokeFuryGame {
         this.state = 'overworld';
         showScreen('hud');
         document.getElementById('location-name').textContent = 'Área Selvagem';
-        this.render();
+        if (this.overworld3d) this.overworld3d.show();
     }
 
     async saveTeam() {

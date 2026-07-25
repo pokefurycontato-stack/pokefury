@@ -28,8 +28,11 @@ download-3d-retry.js
 models-3d-report.json
 download-models-3d.js
 assets/models-3d/
+assets/models-3d/player-character/
 generate-shiny-models.js
-tmp-shiny/
+download-trainer-sprites.js
+upload-trainers.js
+trainer-sprites-manifest.json
 node_modules/
-package.json
-package-lock.json
+assets/trainers/
+tmp-shiny/
