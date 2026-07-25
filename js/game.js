@@ -102,17 +102,6 @@ class PokeFuryGame {
             return;
         }
 
-        const team = await window.GameData.getTeam();
-        const isNew = team.length === 0;
-
-        await this.saveTeam();
-
-        if (isNew) {
-            await window.GameData.addItem(1, 5);
-            await window.GameData.addItem(10, 10);
-            console.log('[PokeFury] Starter items given: 5x Potion, 10x Poke Ball');
-        }
-
         document.getElementById('character-screen').classList.add('hidden');
         document.getElementById('game-wrapper').classList.remove('hidden');
 
@@ -141,6 +130,29 @@ class PokeFuryGame {
         }
 
         console.log('[PokeFury] Game started successfully!');
+
+        this._saveInBackground().catch(e =>
+            console.error('[PokeFury] Background save error:', e)
+        );
+    }
+
+    async _saveInBackground() {
+        try {
+            const team = await window.GameData.getTeam();
+            const isNew = team.length === 0;
+
+            await this.saveTeam();
+
+            if (isNew) {
+                await Promise.all([
+                    window.GameData.addItem(1, 5),
+                    window.GameData.addItem(10, 10)
+                ]);
+                console.log('[PokeFury] Starter items given: 5x Potion, 10x Poke Ball');
+            }
+        } catch (e) {
+            console.error('[PokeFury] Error saving team:', e);
+        }
     }
 
     render() {
