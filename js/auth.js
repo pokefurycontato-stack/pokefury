@@ -217,10 +217,7 @@ function showGame(userData) {
         gameWrapper.classList.remove('hidden');
         gameWrapper.classList.add('fade-in');
 
-        if (window.PokeAPI) {
-            window.PokeAPI.init().then(() => {
-                console.log('[PokeFury] PokéAPI initialized');
-            });
-        }
+        const charScreen = document.getElementById('character-screen');
+        if (charScreen) charScreen.classList.remove('hidden');
     }, 500);
 }
