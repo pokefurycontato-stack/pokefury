@@ -145,9 +145,64 @@ async function handleRegister() {
 
 const TYPE_COLORS = { normal:'#A8A878', fire:'#F08030', water:'#6890F0', electric:'#F8D030', grass:'#78C850', ice:'#98D8D8', fighting:'#C03028', poison:'#A040A0', ground:'#E0C068', flying:'#A890F0', psychic:'#F85888', bug:'#A8B820', rock:'#B8A038', ghost:'#705898', dragon:'#7038F8', dark:'#705848', steel:'#B8B8D0', fairy:'#EE99AC' };
 
+const SUPABASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co';
+const STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
+
+const ALL_STARTER_IDS = [
+    1, 4, 7,
+    152, 155, 158,
+    252, 255, 258,
+    387, 390, 393,
+    495, 498, 501,
+    650, 653, 656,
+    722, 725, 728,
+    810, 813, 816,
+    906, 909, 912
+];
+
+const STARTER_GEN_LABELS = {
+    1: 'Kanto', 4: 'Kanto', 7: 'Kanto',
+    152: 'Johto', 155: 'Johto', 158: 'Johto',
+    252: 'Hoenn', 255: 'Hoenn', 258: 'Hoenn',
+    387: 'Sinnoh', 390: 'Sinnoh', 393: 'Sinnoh',
+    495: 'Unova', 498: 'Unova', 501: 'Unova',
+    650: 'Kalos', 653: 'Kalos', 656: 'Kalos',
+    722: 'Alola', 725: 'Alola', 728: 'Alola',
+    810: 'Galar', 813: 'Galar', 816: 'Galar',
+    906: 'Paldea', 909: 'Paldea', 912: 'Paldea'
+};
+
+const TRAINER_AVATARS_MALE = [
+    'trainers/male-01.png', 'trainers/male-02.png', 'trainers/male-03.png',
+    'trainers/male-04.png', 'trainers/male-05.png', 'trainers/male-06.png',
+    'trainers/male-07.png', 'trainers/male-08.png', 'trainers/male-09.png',
+    'trainers/male-10.png'
+];
+
+const TRAINER_AVATARS_FEMALE = [
+    'trainers/female-01.png', 'trainers/female-02.png', 'trainers/female-03.png',
+    'trainers/female-04.png', 'trainers/female-05.png', 'trainers/female-06.png',
+    'trainers/female-07.png', 'trainers/female-08.png', 'trainers/female-09.png',
+    'trainers/female-10.png'
+];
+
 const MAX_CHARACTERS = 10;
 
 let selectedGender = 'male';
+let selectedAvatarUrl = null;
+let cachedStarters = null;
+
+async function loadAllStarters() {
+    if (cachedStarters) return cachedStarters;
+    try {
+        const promises = ALL_STARTER_IDS.map(id => window.PokeAPI.ensurePokemon(id));
+        cachedStarters = await Promise.all(promises);
+        return cachedStarters;
+    } catch (e) {
+        console.error('[PokeFury] Error loading starters:', e);
+        return [];
+    }
+}
 
 function goToCharacterScreen() {
     const authScreen = document.getElementById('auth-screen');
@@ -180,7 +235,6 @@ async function loadCharacterScreen() {
 
     try {
         const characters = await window.GameData.getCharacters();
-
         const validCharacters = characters.filter(c => c.starter_pokemon);
 
         if (validCharacters.length === 0) {
@@ -205,19 +259,21 @@ async function loadCharacterScreen() {
             const card = document.createElement('div');
             card.className = 'char-card';
 
-            let spriteHtml = '<div class="char-card-sprite-placeholder">?</div>';
-            try {
-                const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
-                const spriteUrl = pokeData.spriteUrls?.front || pokeData.spriteUrls?.home || pokeData.spriteUrls?.official;
-                if (spriteUrl) {
-                    await window.PokeAPI.preloadSprite(spriteUrl);
-                    const img = window.PokeAPI.imageCache[spriteUrl];
-                    if (img && img.complete) {
-                        spriteHtml = `<img src="${spriteUrl}" class="char-card-sprite" alt="${pokeData.name}">`;
+            let avatarHtml = '<div class="char-card-sprite-placeholder">?</div>';
+            if (save.avatar_url) {
+                avatarHtml = `<img src="${save.avatar_url}" class="char-card-avatar" alt="${save.player_name}">`;
+            } else {
+                try {
+                    const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
+                    const spriteUrl = pokeData.spriteUrls?.front || pokeData.spriteUrls?.home || pokeData.spriteUrls?.official;
+                    if (spriteUrl) {
+                        await window.PokeAPI.preloadSprite(spriteUrl);
+                        const img = window.PokeAPI.imageCache[spriteUrl];
+                        if (img && img.complete) {
+                            avatarHtml = `<img src="${spriteUrl}" class="char-card-sprite" alt="${pokeData.name}">`;
+                        }
                     }
-                }
-            } catch (e) {
-                console.warn('[PokeFury] Sprite load error:', e);
+                } catch (e) {}
             }
 
             let typeBadges = '';
@@ -232,7 +288,7 @@ async function loadCharacterScreen() {
             const genderColor = save.player_gender === 'female' ? '#e94560' : '#3498db';
 
             card.innerHTML = `
-                ${spriteHtml}
+                ${avatarHtml}
                 <div class="char-card-info">
                     <div class="char-card-name">${save.player_name || 'Treinador'} <span style="color:${genderColor};font-size:14px;">${genderIcon}</span></div>
                     <div class="char-card-meta">Starter: ${save.starter_pokemon}</div>
@@ -258,73 +314,132 @@ async function loadCharacterScreen() {
     }
 }
 
-function showCreatePanel() {
+async function showCreatePanel() {
     document.getElementById('char-select').classList.add('hidden');
     document.getElementById('char-create').classList.remove('hidden');
 
     const charCountEl = document.getElementById('char-count');
     if (charCountEl) {
-        window.GameData.getCharacters().then(chars => {
-            charCountEl.textContent = `${chars.length} / ${MAX_CHARACTERS} personagens`;
-        });
+        const chars = await window.GameData.getCharacters();
+        charCountEl.textContent = `${chars.length} / ${MAX_CHARACTERS} personagens`;
     }
 
+    selectedGender = 'male';
+    selectedAvatarUrl = null;
+
+    renderAvatarGrid('male');
+    renderStarterGrid();
+}
+
+function renderAvatarGrid(gender) {
     const avatarGrid = document.getElementById('avatar-grid');
     avatarGrid.innerHTML = '';
 
-    const genderGrid = document.createElement('div');
-    genderGrid.className = 'char-gender-grid';
-    genderGrid.innerHTML = `
-        <div class="gender-card selected" data-gender="male">
+    const genderRow = document.createElement('div');
+    genderRow.className = 'char-gender-grid';
+    genderRow.innerHTML = `
+        <div class="gender-card ${gender === 'male' ? 'selected' : ''}" data-gender="male">
             <div class="gender-icon">♂</div>
             <div class="gender-label">Masculino</div>
         </div>
-        <div class="gender-card" data-gender="female">
+        <div class="gender-card ${gender === 'female' ? 'selected' : ''}" data-gender="female">
             <div class="gender-icon">♀</div>
             <div class="gender-label">Feminino</div>
         </div>
     `;
-    avatarGrid.appendChild(genderGrid);
+    avatarGrid.appendChild(genderRow);
 
-    selectedGender = 'male';
-
-    genderGrid.querySelectorAll('.gender-card').forEach(card => {
+    genderRow.querySelectorAll('.gender-card').forEach(card => {
         card.addEventListener('click', () => {
-            genderGrid.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
+            genderRow.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
             selectedGender = card.dataset.gender;
+            selectedAvatarUrl = null;
+            loadAvatarOptions(card.dataset.gender);
         });
     });
 
+    loadAvatarOptions(gender);
+}
+
+function loadAvatarOptions(gender) {
+    const avatarGrid = document.getElementById('avatar-grid');
+    const existingGrid = avatarGrid.querySelector('.avatar-options-grid');
+    if (existingGrid) existingGrid.remove();
+
+    const avatarList = gender === 'female' ? TRAINER_AVATARS_FEMALE : TRAINER_AVATARS_MALE;
+
+    const optionsGrid = document.createElement('div');
+    optionsGrid.className = 'avatar-options-grid';
+
+    avatarList.forEach((path, i) => {
+        const url = `${STORAGE_URL}/${path}`;
+        const item = document.createElement('div');
+        item.className = 'avatar-option';
+        item.dataset.url = url;
+        item.innerHTML = `<img src="${url}" alt="Avatar ${i + 1}" onerror="this.parentElement.style.display='none'">`;
+
+        item.addEventListener('click', () => {
+            optionsGrid.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+            item.classList.add('selected');
+            selectedAvatarUrl = url;
+        });
+
+        optionsGrid.appendChild(item);
+    });
+
+    avatarGrid.appendChild(optionsGrid);
+}
+
+async function renderStarterGrid() {
     const starterGrid = document.getElementById('starter-grid');
+    starterGrid.innerHTML = '<p style="color:rgba(255,255,255,0.4);text-align:center;padding:20px;">Carregando Pokémon iniciais...</p>';
+
+    const starters = await loadAllStarters();
+
     starterGrid.innerHTML = '';
 
-    const starters = (window.pokefury && window.pokefury.starterDataCache) ? window.pokefury.starterDataCache : [];
-    if (starters.length === 0) {
-        starterGrid.innerHTML = '<p style="color:rgba(255,255,255,0.4);text-align:center;padding:20px;">Carregando Pokémon iniciais...</p>';
-        return;
+    const grouped = {};
+    starters.forEach(poke => {
+        const gen = STARTER_GEN_LABELS[poke.id] || 'Gen ?';
+        if (!grouped[gen]) grouped[gen] = [];
+        grouped[gen].push(poke);
+    });
+
+    for (const [gen, pokes] of Object.entries(grouped)) {
+        const genHeader = document.createElement('div');
+        genHeader.className = 'starter-gen-header';
+        genHeader.textContent = gen;
+        starterGrid.appendChild(genHeader);
+
+        const genRow = document.createElement('div');
+        genRow.className = 'starter-gen-row';
+
+        pokes.forEach((poke, i) => {
+            const card = document.createElement('div');
+            card.className = 'starter-card';
+            card.dataset.species = poke.species;
+            const spriteUrl = poke.spriteUrls?.front || poke.spriteUrls?.home || poke.spriteUrls?.official;
+            const typeBadges = poke.types.map(t =>
+                `<span class="type-badge type-${t}" style="background:${TYPE_COLORS[t] || '#686868'}">${t}</span>`
+            ).join('');
+            card.innerHTML = `
+                <img src="${spriteUrl}" class="starter-sprite" alt="${poke.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2264%22 height=%2264%22><text y=%2240%22 x=%2210%22 font-size=%2230%22>?</text></svg>'">
+                <div class="starter-name">${poke.name}</div>
+                <div class="starter-types">${typeBadges}</div>
+            `;
+            card.addEventListener('click', () => {
+                starterGrid.querySelectorAll('.starter-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+            });
+            genRow.appendChild(card);
+        });
+
+        starterGrid.appendChild(genRow);
     }
 
-    starters.forEach((poke, i) => {
-        const card = document.createElement('div');
-        card.className = 'starter-card';
-        card.dataset.species = poke.species;
-        const spriteUrl = poke.spriteUrls?.front || poke.spriteUrls?.home || poke.spriteUrls?.official;
-        const typeBadges = poke.types.map(t =>
-            `<span class="type-badge type-${t}" style="background:${TYPE_COLORS[t] || '#686868'}">${t}</span>`
-        ).join('');
-        card.innerHTML = `
-            <img src="${spriteUrl}" class="starter-sprite" alt="${poke.name}">
-            <div class="starter-name">${poke.name}</div>
-            <div class="starter-types">${typeBadges}</div>
-        `;
-        card.addEventListener('click', () => {
-            starterGrid.querySelectorAll('.starter-card').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-        });
-        if (i === 0) card.classList.add('selected');
-        starterGrid.appendChild(card);
-    });
+    const firstCard = starterGrid.querySelector('.starter-card');
+    if (firstCard) firstCard.classList.add('selected');
 }
 
 async function createCharacter() {
@@ -347,7 +462,8 @@ async function createCharacter() {
     const newChar = await window.GameData.createCharacter({
         playerName: name,
         starterPokemon: species,
-        playerGender: selectedGender
+        playerGender: selectedGender,
+        avatarUrl: selectedAvatarUrl
     });
 
     if (!newChar) {
@@ -360,6 +476,7 @@ async function createCharacter() {
     if (window.pokefury) {
         window.pokefury.playerName = name;
         window.pokefury.playerGender = selectedGender;
+        window.pokefury.avatarUrl = selectedAvatarUrl;
         window.pokefury.startGame(species);
     } else {
         console.error('[PokeFury] Game não pronto');

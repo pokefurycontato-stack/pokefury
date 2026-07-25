@@ -6,5 +6,15 @@ export const TYPE_COLORS = {
     steel: '#b8b8d0', fairy: '#ee99ac'
 };
 
-export const STARTER_IDS = [1, 4, 7];
+export const STARTER_IDS = [
+    1, 4, 7,
+    152, 155, 158,
+    252, 255, 258,
+    387, 390, 393,
+    495, 498, 501,
+    650, 653, 656,
+    722, 725, 728,
+    810, 813, 816,
+    906, 909, 912
+];
 export const TOTAL_POKEMON = 1025;

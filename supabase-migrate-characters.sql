@@ -3,9 +3,14 @@
 -- Execute no SQL Editor do Supabase
 -- =============================================
 
--- 1. Adicionar coluna id UUID à tabela game_saves (se não existir)
+-- 1. Adicionar colunas necessárias à tabela game_saves
 DO $$ BEGIN
     ALTER TABLE game_saves ADD COLUMN id UUID DEFAULT uuid_generate_v4();
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE game_saves ADD COLUMN avatar_url TEXT;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 

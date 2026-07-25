@@ -79,6 +79,7 @@ class PokeFuryGame {
         window.GameData.setCurrentCharacter(save.id);
         this.playerName = save.player_name || 'Treinador';
         this.playerGender = save.player_gender || 'male';
+        this.avatarUrl = save.avatar_url || null;
         await this.startGame(save.starter_pokemon);
     }
 
@@ -121,6 +122,10 @@ class PokeFuryGame {
         this.state = 'overworld';
         const profileNameEl = document.getElementById('profile-name');
         if (profileNameEl) profileNameEl.textContent = this.playerName;
+        const profileAvatarEl = document.getElementById('profile-avatar');
+        if (profileAvatarEl && this.avatarUrl) {
+            profileAvatarEl.innerHTML = `<img src="${this.avatarUrl}" class="profile-avatar-img" alt="${this.playerName}">`;
+        }
         document.getElementById('location-name').textContent = 'Área Selvagem';
 
         try {

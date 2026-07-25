@@ -29,7 +29,8 @@ const GameData = {
                 user_id: this.userId,
                 player_name: characterData.playerName,
                 starter_pokemon: characterData.starterPokemon,
-                player_gender: characterData.playerGender || 'male'
+                player_gender: characterData.playerGender || 'male',
+                avatar_url: characterData.avatarUrl || null
             })
             .select()
             .single();
