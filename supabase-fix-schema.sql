@@ -25,7 +25,7 @@ END $$;
 DO $$ DECLARE
     rec RECORD;
 BEGIN
-    FOR rec SELECT conname FROM pg_constraint
+    FOR rec IN SELECT conname FROM pg_constraint
             WHERE conrelid = 'player_inventory'::regclass
             AND contype IN ('u', 'p')
     LOOP

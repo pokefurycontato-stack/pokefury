@@ -36,3 +36,5 @@ trainer-sprites-manifest.json
 node_modules/
 assets/trainers/
 tmp-shiny/
+
+.vercel
