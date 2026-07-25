@@ -1,28 +1,73 @@
 const GameData = {
     userId: null,
+    currentCharacterId: null,
 
     setUserId(id) {
         this.userId = id;
     },
 
-    async getSave() {
-        if (!this.userId) return null;
+    setCurrentCharacter(characterId) {
+        this.currentCharacterId = characterId;
+    },
+
+    async getCharacters() {
+        if (!this.userId) return [];
         const { data, error } = await window.db
             .from('game_saves')
             .select('*')
             .eq('user_id', this.userId)
+            .order('updated_at', { ascending: false });
+        if (error) return [];
+        return data || [];
+    },
+
+    async createCharacter(characterData) {
+        if (!this.userId) return null;
+        const { data, error } = await window.db
+            .from('game_saves')
+            .insert({
+                user_id: this.userId,
+                player_name: characterData.playerName,
+                starter_pokemon: characterData.starterPokemon,
+                player_gender: characterData.playerGender || 'male'
+            })
+            .select()
+            .single();
+        if (error) {
+            console.error('[GameData] createCharacter error:', error);
+            return null;
+        }
+        return data;
+    },
+
+    async deleteCharacter(characterId) {
+        if (!this.userId) return false;
+        const { error } = await window.db
+            .from('game_saves')
+            .delete()
+            .eq('id', characterId)
+            .eq('user_id', this.userId);
+        return !error;
+    },
+
+    async getSave() {
+        if (!this.currentCharacterId) return null;
+        const { data, error } = await window.db
+            .from('game_saves')
+            .select('*')
+            .eq('id', this.currentCharacterId)
             .single();
         if (error) return null;
         return data;
     },
 
     async updateSave(updates) {
-        if (!this.userId) return;
+        if (!this.currentCharacterId) return;
         updates.updated_at = new Date().toISOString();
         const { error } = await window.db
             .from('game_saves')
             .update(updates)
-            .eq('user_id', this.userId);
+            .eq('id', this.currentCharacterId);
         return !error;
     },
 
@@ -31,26 +76,27 @@ const GameData = {
     },
 
     async getTeam() {
-        if (!this.userId) return [];
+        if (!this.currentCharacterId) return [];
         const { data, error } = await window.db
             .from('pokemon_team')
             .select('*')
-            .eq('user_id', this.userId)
+            .eq('character_id', this.currentCharacterId)
             .order('slot', { ascending: true });
         if (error) return [];
         return data || [];
     },
 
     async saveTeam(pokemonList) {
-        if (!this.userId) return;
+        if (!this.currentCharacterId || !this.userId) return;
 
         await window.db
             .from('pokemon_team')
             .delete()
-            .eq('user_id', this.userId);
+            .eq('character_id', this.currentCharacterId);
 
         const inserts = pokemonList.map((pokemon, i) => ({
             user_id: this.userId,
+            character_id: this.currentCharacterId,
             species: pokemon.species,
             nickname: pokemon.nickname || pokemon.name,
             level: pokemon.level,
@@ -93,6 +139,7 @@ const GameData = {
             .from('pokemon_team')
             .insert({
                 user_id: this.userId,
+                character_id: this.currentCharacterId,
                 species: pokemon.species,
                 nickname: pokemon.nickname || pokemon.name,
                 level: pokemon.level,
@@ -124,11 +171,12 @@ const GameData = {
     },
 
     async recordBattle(battleData) {
-        if (!this.userId) return;
+        if (!this.currentCharacterId || !this.userId) return;
         const { error } = await window.db
             .from('battle_history')
             .insert({
                 user_id: this.userId,
+                character_id: this.currentCharacterId,
                 opponent_name: battleData.opponentName,
                 opponent_team: battleData.opponentTeam,
                 result: battleData.result,
@@ -140,11 +188,11 @@ const GameData = {
     },
 
     async getBattleHistory(limit = 20) {
-        if (!this.userId) return [];
+        if (!this.currentCharacterId) return [];
         const { data, error } = await window.db
             .from('battle_history')
             .select('*')
-            .eq('user_id', this.userId)
+            .eq('character_id', this.currentCharacterId)
             .order('created_at', { ascending: false })
             .limit(limit);
         if (error) return [];
@@ -152,11 +200,11 @@ const GameData = {
     },
 
     async getStats() {
-        if (!this.userId) return null;
+        if (!this.currentCharacterId) return null;
         const { data: battles, error } = await window.db
             .from('battle_history')
             .select('result')
-            .eq('user_id', this.userId);
+            .eq('character_id', this.currentCharacterId);
         if (error) return null;
 
         const wins = battles.filter(b => b.result === 'win').length;
@@ -167,21 +215,21 @@ const GameData = {
     },
 
     async getInventory() {
-        if (!this.userId) return [];
+        if (!this.currentCharacterId) return [];
         const { data, error } = await window.db
             .from('player_inventory')
             .select('item_id, quantity, items(*)')
-            .eq('user_id', this.userId);
+            .eq('character_id', this.currentCharacterId);
         if (error) return [];
         return data || [];
     },
 
     async addItem(itemId, quantity = 1) {
-        if (!this.userId) return false;
+        if (!this.currentCharacterId || !this.userId) return false;
         const { data: existing } = await window.db
             .from('player_inventory')
             .select('quantity')
-            .eq('user_id', this.userId)
+            .eq('character_id', this.currentCharacterId)
             .eq('item_id', itemId)
             .single();
 
@@ -189,23 +237,28 @@ const GameData = {
             const { error } = await window.db
                 .from('player_inventory')
                 .update({ quantity: existing.quantity + quantity })
-                .eq('user_id', this.userId)
+                .eq('character_id', this.currentCharacterId)
                 .eq('item_id', itemId);
             return !error;
         } else {
             const { error } = await window.db
                 .from('player_inventory')
-                .insert({ user_id: this.userId, item_id: itemId, quantity });
+                .insert({
+                    user_id: this.userId,
+                    character_id: this.currentCharacterId,
+                    item_id: itemId,
+                    quantity
+                });
             return !error;
         }
     },
 
     async removeItem(itemId, quantity = 1) {
-        if (!this.userId) return false;
+        if (!this.currentCharacterId) return false;
         const { data: existing } = await window.db
             .from('player_inventory')
             .select('quantity')
-            .eq('user_id', this.userId)
+            .eq('character_id', this.currentCharacterId)
             .eq('item_id', itemId)
             .single();
 
@@ -216,29 +269,72 @@ const GameData = {
             const { error } = await window.db
                 .from('player_inventory')
                 .delete()
-                .eq('user_id', this.userId)
+                .eq('character_id', this.currentCharacterId)
                 .eq('item_id', itemId);
             return !error;
         } else {
             const { error } = await window.db
                 .from('player_inventory')
                 .update({ quantity: newQty })
-                .eq('user_id', this.userId)
+                .eq('character_id', this.currentCharacterId)
                 .eq('item_id', itemId);
             return !error;
         }
     },
 
     async getItem(itemId) {
-        if (!this.userId) return null;
+        if (!this.currentCharacterId) return null;
         const { data, error } = await window.db
             .from('player_inventory')
             .select('quantity')
-            .eq('user_id', this.userId)
+            .eq('character_id', this.currentCharacterId)
             .eq('item_id', itemId)
             .single();
         if (error) return null;
         return data;
+    },
+
+    async getCurrencies() {
+        if (!this.currentCharacterId) return { diamonds: 0, gold: 0, silver: 0 };
+        const { data, error } = await window.db
+            .from('character_currencies')
+            .select('*')
+            .eq('character_id', this.currentCharacterId)
+            .single();
+        if (error || !data) return { diamonds: 0, gold: 0, silver: 0 };
+        return { diamonds: data.diamonds, gold: data.gold, silver: data.silver };
+    },
+
+    async updateCurrencies(currencies) {
+        if (!this.currentCharacterId) return false;
+        const { data: existing } = await window.db
+            .from('character_currencies')
+            .select('character_id')
+            .eq('character_id', this.currentCharacterId)
+            .single();
+
+        const updates = {
+            ...currencies,
+            updated_at: new Date().toISOString()
+        };
+
+        if (existing) {
+            const { error } = await window.db
+                .from('character_currencies')
+                .update(updates)
+                .eq('character_id', this.currentCharacterId);
+            return !error;
+        } else {
+            const { error } = await window.db
+                .from('character_currencies')
+                .insert({
+                    character_id: this.currentCharacterId,
+                    diamonds: currencies.diamonds || 0,
+                    gold: currencies.gold || 0,
+                    silver: currencies.silver || 0
+                });
+            return !error;
+        }
     }
 };
 

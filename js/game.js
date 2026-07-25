@@ -19,6 +19,7 @@ class PokeFuryGame {
         this.state = 'idle';
         this.playerName = 'Treinador';
         this.playerGender = 'male';
+        this.currentCharacterId = null;
         this.playerTeam = [];
         this.enemyTeam = [];
         this.battleStartTime = null;
@@ -58,6 +59,13 @@ class PokeFuryGame {
             });
         }
 
+        const switchCharBtn = document.getElementById('btn-switch-character');
+        if (switchCharBtn) {
+            switchCharBtn.addEventListener('click', () => {
+                this.switchCharacter();
+            });
+        }
+
     }
 
     async preloadStarters() {
@@ -67,6 +75,8 @@ class PokeFuryGame {
     }
 
     async loadCharacter(save) {
+        this.currentCharacterId = save.id;
+        window.GameData.setCurrentCharacter(save.id);
         this.playerName = save.player_name || 'Treinador';
         this.playerGender = save.player_gender || 'male';
         await this.startGame(save.starter_pokemon);
@@ -85,8 +95,8 @@ class PokeFuryGame {
             return;
         }
 
-        const save = await window.GameData.getSave();
-        const isNew = !save || !save.starter_pokemon || save.starter_pokemon !== starterSpecies;
+        const team = await window.GameData.getTeam();
+        const isNew = team.length === 0;
 
         await this.saveTeam();
 
@@ -402,6 +412,16 @@ class PokeFuryGame {
 
     async saveTeam() {
         await window.GameData.saveTeam(this.playerTeam);
+    }
+
+    switchCharacter() {
+        this.currentCharacterId = null;
+        window.GameData.setCurrentCharacter(null);
+        document.getElementById('game-wrapper').classList.add('hidden');
+        document.getElementById('character-screen').classList.remove('hidden');
+        if (this.overworld2d) this.overworld2d.hide();
+        this.state = 'idle';
+        loadCharacterScreen();
     }
 }
 

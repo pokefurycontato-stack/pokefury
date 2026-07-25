@@ -145,6 +145,10 @@ async function handleRegister() {
 
 const TYPE_COLORS = { normal:'#A8A878', fire:'#F08030', water:'#6890F0', electric:'#F8D030', grass:'#78C850', ice:'#98D8D8', fighting:'#C03028', poison:'#A040A0', ground:'#E0C068', flying:'#A890F0', psychic:'#F85888', bug:'#A8B820', rock:'#B8A038', ghost:'#705898', dragon:'#7038F8', dark:'#705848', steel:'#B8B8D0', fairy:'#EE99AC' };
 
+const MAX_CHARACTERS = 10;
+
+let selectedGender = 'male';
+
 function goToCharacterScreen() {
     const authScreen = document.getElementById('auth-screen');
     const charScreen = document.getElementById('character-screen');
@@ -175,76 +179,81 @@ async function loadCharacterScreen() {
     };
 
     try {
-        const { data: { user } } = await window.db.auth.getUser();
-        if (!user) {
+        const characters = await window.GameData.getCharacters();
+
+        const validCharacters = characters.filter(c => c.starter_pokemon);
+
+        if (validCharacters.length === 0) {
             showCreatePanel();
             return;
         }
 
-        const { data: saves } = await window.db
-            .from('game_saves')
-            .select('*')
-            .eq('user_id', user.id);
-
-        if (!saves || saves.length === 0 || !saves[0].starter_pokemon) {
-            showCreatePanel();
-            return;
-        }
-
-        const save = saves[0];
         charSelect.classList.remove('hidden');
         charCreate.classList.add('hidden');
 
         const list = document.getElementById('char-list');
         list.innerHTML = '';
 
-        const card = document.createElement('div');
-        card.className = 'char-card';
-
-        let spriteHtml = '<div class="char-card-sprite-placeholder">?</div>';
-        try {
-            const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
-            const spriteUrl = pokeData.spriteUrls?.front || pokeData.spriteUrls?.home || pokeData.spriteUrls?.official;
-            if (spriteUrl) {
-                await window.PokeAPI.preloadSprite(spriteUrl);
-                const img = window.PokeAPI.imageCache[spriteUrl];
-                if (img && img.complete) {
-                    spriteHtml = `<img src="${spriteUrl}" class="char-card-sprite" alt="${pokeData.name}">`;
-                }
-            }
-        } catch (e) {
-            console.warn('[PokeFury] Sprite load error:', e);
+        const newCharBtn = document.getElementById('btn-new-character');
+        if (validCharacters.length >= MAX_CHARACTERS) {
+            newCharBtn.style.display = 'none';
+        } else {
+            newCharBtn.style.display = '';
         }
 
-        let typeBadges = '';
-        try {
-            const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
-            typeBadges = (pokeData.types || []).map(t =>
-                `<span class="type-badge type-${t}" style="background:${TYPE_COLORS[t] || '#686868'}">${t}</span>`
-            ).join('');
-        } catch (e) {}
+        for (const save of validCharacters) {
+            const card = document.createElement('div');
+            card.className = 'char-card';
 
-        card.innerHTML = `
-            ${spriteHtml}
-            <div class="char-card-info">
-                <div class="char-card-name">${save.player_name || 'Treinador'}</div>
-                <div class="char-card-meta">Starter: ${save.starter_pokemon}</div>
-                <div class="char-card-types">${typeBadges}</div>
-            </div>
-        `;
-
-        card.addEventListener('click', () => {
-            if (window.pokefury) {
-                window.pokefury.loadCharacter(save);
-            } else {
-                console.error('[PokeFury] Game não pronto');
+            let spriteHtml = '<div class="char-card-sprite-placeholder">?</div>';
+            try {
+                const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
+                const spriteUrl = pokeData.spriteUrls?.front || pokeData.spriteUrls?.home || pokeData.spriteUrls?.official;
+                if (spriteUrl) {
+                    await window.PokeAPI.preloadSprite(spriteUrl);
+                    const img = window.PokeAPI.imageCache[spriteUrl];
+                    if (img && img.complete) {
+                        spriteHtml = `<img src="${spriteUrl}" class="char-card-sprite" alt="${pokeData.name}">`;
+                    }
+                }
+            } catch (e) {
+                console.warn('[PokeFury] Sprite load error:', e);
             }
-        });
 
-        list.appendChild(card);
+            let typeBadges = '';
+            try {
+                const pokeData = await window.PokeAPI.ensurePokemon(save.starter_pokemon);
+                typeBadges = (pokeData.types || []).map(t =>
+                    `<span class="type-badge type-${t}" style="background:${TYPE_COLORS[t] || '#686868'}">${t}</span>`
+                ).join('');
+            } catch (e) {}
+
+            const genderIcon = save.player_gender === 'female' ? '♀' : '♂';
+            const genderColor = save.player_gender === 'female' ? '#e94560' : '#3498db';
+
+            card.innerHTML = `
+                ${spriteHtml}
+                <div class="char-card-info">
+                    <div class="char-card-name">${save.player_name || 'Treinador'} <span style="color:${genderColor};font-size:14px;">${genderIcon}</span></div>
+                    <div class="char-card-meta">Starter: ${save.starter_pokemon}</div>
+                    <div class="char-card-types">${typeBadges}</div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                window.GameData.setCurrentCharacter(save.id);
+                if (window.pokefury) {
+                    window.pokefury.loadCharacter(save);
+                } else {
+                    console.error('[PokeFury] Game não pronto');
+                }
+            });
+
+            list.appendChild(card);
+        }
 
     } catch (e) {
-        console.error('[PokeFury] Erro ao carregar personagem:', e);
+        console.error('[PokeFury] Erro ao carregar personagens:', e);
         showCreatePanel();
     }
 }
@@ -253,6 +262,13 @@ function showCreatePanel() {
     document.getElementById('char-select').classList.add('hidden');
     document.getElementById('char-create').classList.remove('hidden');
 
+    const charCountEl = document.getElementById('char-count');
+    if (charCountEl) {
+        window.GameData.getCharacters().then(chars => {
+            charCountEl.textContent = `${chars.length} / ${MAX_CHARACTERS} personagens`;
+        });
+    }
+
     const avatarGrid = document.getElementById('avatar-grid');
     avatarGrid.innerHTML = '';
 
@@ -260,21 +276,23 @@ function showCreatePanel() {
     genderGrid.className = 'char-gender-grid';
     genderGrid.innerHTML = `
         <div class="gender-card selected" data-gender="male">
-            <div class="gender-icon">M</div>
+            <div class="gender-icon">♂</div>
             <div class="gender-label">Masculino</div>
         </div>
         <div class="gender-card" data-gender="female">
-            <div class="gender-icon">F</div>
+            <div class="gender-icon">♀</div>
             <div class="gender-label">Feminino</div>
         </div>
     `;
     avatarGrid.appendChild(genderGrid);
 
+    selectedGender = 'male';
+
     genderGrid.querySelectorAll('.gender-card').forEach(card => {
         card.addEventListener('click', () => {
             genderGrid.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
-            if (window.pokefury) window.pokefury.playerGender = card.dataset.gender;
+            selectedGender = card.dataset.gender;
         });
     });
 
@@ -325,27 +343,23 @@ async function createCharacter() {
     }
 
     const species = selectedCard.dataset.species;
-    const { data: { user } } = await window.db.auth.getUser();
-    if (!user) return;
 
-    const { error } = await window.db.from('game_saves').upsert({
-        user_id: user.id,
-        player_name: name,
-        starter_pokemon: species
-    }, { onConflict: 'user_id' });
+    const newChar = await window.GameData.createCharacter({
+        playerName: name,
+        starterPokemon: species,
+        playerGender: selectedGender
+    });
 
-    if (error) {
-        console.error('[PokeFury] Erro ao salvar:', error);
-        alert('Erro ao salvar: ' + error.message);
+    if (!newChar) {
+        alert('Erro ao criar personagem.');
         return;
     }
 
-    try {
-        await window.db.from('game_saves').update({ player_gender: 'male' }).eq('user_id', user.id);
-    } catch (e) {}
+    window.GameData.setCurrentCharacter(newChar.id);
 
     if (window.pokefury) {
         window.pokefury.playerName = name;
+        window.pokefury.playerGender = selectedGender;
         window.pokefury.startGame(species);
     } else {
         console.error('[PokeFury] Game não pronto');
