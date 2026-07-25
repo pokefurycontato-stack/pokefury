@@ -8,6 +8,7 @@ import {
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
 import { RegionManager } from './region-manager.js';
+import { MapZoneEditor } from './zone-editor.js';
 
 const SHINY_CHANCE = 128;
 
@@ -832,19 +833,35 @@ class PokeFuryGame {
     }
 
     openMapEditor(map, region) {
-        const newName = prompt('Nome do mapa:', map.name);
-        if (newName === null) return;
+        if (!this.zoneEditor) {
+            this.zoneEditor = new MapZoneEditor();
+            this.zoneEditor.init();
+        }
 
-        const newRate = prompt('Taxa de enconto (%):', map.encounter_rate);
-        const newMin = prompt('Nivel minimo:', map.min_level);
-        const newMax = prompt('Nivel maximo:', map.max_level);
+        this.zoneEditor.onSave = async (collisionZones, spawnZones) => {
+            await this.regionManager.saveMapZones(map.id, collisionZones, spawnZones);
+            this.showTransitionBanner('Zonas salvas!');
+            this.loadRegionDetail(region);
+        };
 
-        this.regionManager.updateMap(map.id, {
-            name: newName || map.name,
-            encounter_rate: parseInt(newRate) || map.encounter_rate,
-            min_level: parseInt(newMin) || map.min_level,
-            max_level: parseInt(newMax) || map.max_level
-        }).then(() => this.loadRegionDetail(region));
+        const imageLoader = (url) => {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        };
+
+        this.zoneEditor.open({
+            name: map.name,
+            image_url: map.image_url,
+            gridW: this.overworld2d ? this.overworld2d.worldCols : 40,
+            gridH: this.overworld2d ? this.overworld2d.worldRows : 30,
+            collision_zones: map.collision_zones || [],
+            spawn_zones: map.spawn_zones || []
+        }, imageLoader);
     }
 
     async openEncounterEditor(map) {

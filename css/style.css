@@ -734,6 +734,57 @@ body {
 }
 .encounter-modal-content { max-width: 500px; }
 
+/* Zone Editor */
+#zone-editor-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #0d1117; z-index: 9999;
+    display: flex; flex-direction: column;
+}
+.zone-topbar {
+    height: 48px; min-height: 48px;
+    background: #161b22; border-bottom: 1px solid #30363d;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; gap: 12px;
+}
+.zone-topbar-left { display: flex; align-items: center; gap: 10px; }
+.zone-topbar-center { display: flex; gap: 4px; }
+.zone-topbar-right { display: flex; align-items: center; gap: 8px; }
+.zone-body { flex: 1; display: flex; overflow: hidden; }
+.zone-sidebar {
+    width: 240px; min-width: 240px;
+    background: #161b22; border-right: 1px solid #30363d;
+    display: flex; flex-direction: column; padding: 12px; overflow-y: auto;
+}
+.zone-hint {
+    color: rgba(255,255,255,0.3); font-size: 11px; line-height: 1.4;
+    padding: 4px; margin-bottom: 8px;
+}
+.zone-canvas-wrap {
+    flex: 1; position: relative; overflow: hidden; background: #1a1a2e;
+}
+.zone-canvas-wrap canvas {
+    position: absolute; top: 0; left: 0; cursor: crosshair;
+}
+.zone-list {
+    display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto;
+}
+.zone-list-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02);
+    font-size: 11px; color: rgba(255,255,255,0.7);
+}
+.zone-list-item .zone-color-dot {
+    width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
+}
+.zone-list-item .zone-coords { flex: 1; font-variant-numeric: tabular-nums; }
+.zone-list-item .zone-delete {
+    width: 20px; height: 20px; border: none; background: none;
+    color: rgba(255,255,255,0.3); cursor: pointer; font-size: 12px;
+    display: flex; align-items: center; justify-content: center; border-radius: 4px;
+}
+.zone-list-item .zone-delete:hover { color: #f44336; background: rgba(244,67,54,0.1); }
+
 @keyframes fadeInOut {
     0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
     15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }

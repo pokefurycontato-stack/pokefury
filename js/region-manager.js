@@ -97,6 +97,16 @@ export class RegionManager {
         if (error) throw error;
     }
 
+    async saveMapZones(mapId, collisionZones, spawnZones) {
+        const { error } = await this.db.from('region_maps')
+            .update({
+                collision_zones: collisionZones || [],
+                spawn_zones: spawnZones || []
+            })
+            .eq('id', mapId);
+        if (error) throw error;
+    }
+
     async deleteMap(mapId) {
         const { error } = await this.db.from('region_maps').delete().eq('id', mapId);
         if (error) throw error;

@@ -387,6 +387,33 @@
         </div>
     </div>
 
+    <!-- ==================== MAP ZONE EDITOR OVERLAY ==================== -->
+    <div id="zone-editor-overlay" class="hidden">
+        <div class="zone-topbar">
+            <div class="zone-topbar-left">
+                <button id="zone-btn-close" class="editor-btn-close" title="Fechar">✕</button>
+                <span class="editor-title" id="zone-map-name">Editor de Zonas</span>
+            </div>
+            <div class="zone-topbar-center" id="zone-tools"></div>
+            <div class="zone-topbar-right">
+                <button id="zone-btn-save" class="editor-action-btn primary">Salvar Zonas</button>
+            </div>
+        </div>
+        <div class="zone-body">
+            <div class="zone-sidebar">
+                <div class="editor-sidebar-title">Colisao (vermelho)</div>
+                <div class="zone-hint">Arraste para criar retangulos onde o jogador NAO pode andar (paredes, obstaculos)</div>
+                <div class="editor-sidebar-title" style="margin-top:16px">Spawn Pokemon (verde)</div>
+                <div class="zone-hint">Arraste para criar retangulos onde pokemons podem aparecer e caminhar</div>
+                <div class="editor-sidebar-title" style="margin-top:16px">Zonas Cadastradas</div>
+                <div id="zone-list" class="zone-list"></div>
+            </div>
+            <div class="zone-canvas-wrap">
+                <canvas id="zone-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script src="js/supabase-config.js"></script>
     <script src="js/items-data.js"></script>
     <script src="js/game-data.js"></script>
@@ -398,6 +425,7 @@
     <script type="module" src="js/ui.js"></script>
     <script type="module" src="js/game.js"></script>
     <script type="module" src="js/map-editor.js"></script>
+    <script type="module" src="js/zone-editor.js"></script>
     <script type="module" src="js/region-manager.js"></script>
 </body>
 </html>

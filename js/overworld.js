@@ -52,6 +52,8 @@ export class Overworld2D {
         this.currentMapImage = null;
         this.currentMapData = null;
         this.encounterZones = [];
+        this.collisionZones = [];
+        this.spawnZones = [];
 
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
@@ -231,6 +233,9 @@ export class Overworld2D {
             });
         }
 
+        this.collisionZones = mapData.collision_zones || [];
+        this.spawnZones = mapData.spawn_zones || [];
+
         this.player.x = Math.floor(this.worldCols / 2);
         this.player.y = Math.floor(this.worldRows / 2);
         this.player.fromX = this.player.x;
@@ -242,6 +247,13 @@ export class Overworld2D {
 
         this.camera.x = this.player.x * this.tileW - this.canvas.width / 2 + this.tileW / 2;
         this.camera.y = this.player.y * this.tileH - this.canvas.height / 2 + this.tileH / 2;
+    }
+
+    isCollisionAt(x, y) {
+        for (const z of this.collisionZones) {
+            if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return true;
+        }
+        return false;
     }
 
     async loadPokemonFollowSprite(pokemon) {
@@ -292,6 +304,8 @@ export class Overworld2D {
                 this.handleTransition(dir);
                 return;
             }
+
+            if (this.isCollisionAt(nx, ny)) return;
 
             this.player.fromX = this.player.x;
             this.player.fromY = this.player.y;
@@ -358,6 +372,18 @@ export class Overworld2D {
     tryEncounter() {
         if (this.game.state !== 'overworld') return;
         if (!this.game.playerTeam || this.game.playerTeam.length === 0) return;
+
+        if (this.spawnZones.length > 0) {
+            let inSpawnZone = false;
+            for (const z of this.spawnZones) {
+                if (this.player.x >= z.x && this.player.x < z.x + z.w &&
+                    this.player.y >= z.y && this.player.y < z.y + z.h) {
+                    inSpawnZone = true;
+                    break;
+                }
+            }
+            if (!inSpawnZone) return;
+        }
 
         const zone = this.encounterZones[0];
         if (!zone) return;
