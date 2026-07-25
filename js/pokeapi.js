@@ -4,6 +4,20 @@ const PokeAPI = {
     imageCache: {},
     megaEvoCache: null,
 
+    get supabaseStorageUrl() {
+        return `${window.SUPABASE_URL}/storage/v1/object/public/sprites`;
+    },
+
+    getAnimatedFrontUrl(pokemonId) {
+        return `${this.supabaseStorageUrl}/animated-front/${pokemonId}.gif`;
+    },
+
+    getBestSpriteUrl(pokemonData) {
+        if (pokemonData.sprite_front) return pokemonData.sprite_front;
+        if (pokemonData.id) return this.getAnimatedFrontUrl(pokemonData.id);
+        return null;
+    },
+
     async init() {
         console.log('[PokeAPI] Initialized with Supabase backend');
     },

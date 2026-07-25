@@ -924,7 +924,7 @@ class PokeFuryGame {
                 const pokemonData = await PokeAPI.ensurePokemon(name);
                 if (pokemonData) {
                     previewData = pokemonData;
-                    const spriteUrl = pokemonData.sprite_front || pokemonData.sprite_home || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonData.id}.png`;
+                    const spriteUrl = PokeAPI.getBestSpriteUrl(pokemonData);
                     previewEl.innerHTML = `
                         <img src="${spriteUrl}" onerror="this.style.display='none'">
                         <div>
@@ -954,7 +954,7 @@ class PokeFuryGame {
             let pokemonId, spriteUrl;
             if (previewData) {
                 pokemonId = previewData.id;
-                spriteUrl = previewData.sprite_front || previewData.sprite_home || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${previewData.id}.png`;
+                spriteUrl = PokeAPI.getBestSpriteUrl(previewData);
             } else {
                 const pokemonData = await PokeAPI.ensurePokemon(name);
                 if (!pokemonData) {
@@ -962,7 +962,7 @@ class PokeFuryGame {
                     return;
                 }
                 pokemonId = pokemonData.id;
-                spriteUrl = pokemonData.sprite_front || pokemonData.sprite_home || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonData.id}.png`;
+                spriteUrl = PokeAPI.getBestSpriteUrl(pokemonData);
                 previewData = pokemonData;
             }
 

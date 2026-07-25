@@ -425,7 +425,7 @@ export class Overworld2D {
             let pos = this.findSpawnPosition();
             if (!pos) { console.log('[Overworld] No spawn position found for', enc.pokemon_name); continue; }
 
-            const spriteUrl = enc.sprite_url;
+            const spriteUrl = enc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null);
             console.log('[Overworld] Loading sprite for', enc.pokemon_name, ':', spriteUrl);
             let sprite = null;
             if (spriteUrl) {
@@ -631,9 +631,10 @@ export class Overworld2D {
             ctx.fill();
 
             if (p.sprite && p.sprite.complete && p.sprite.naturalWidth > 0) {
-                const spriteSize = this.tileW * 0.85;
+                const spriteSize = this.tileW * 1.4;
                 const offset = (this.tileW - spriteSize) / 2;
-                ctx.drawImage(p.sprite, drawX + offset, drawY + bobY - 4, spriteSize, spriteSize);
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(p.sprite, drawX + offset, drawY + bobY - spriteSize * 0.15, spriteSize, spriteSize);
             } else {
                 ctx.fillStyle = '#ffd700';
                 ctx.beginPath();
