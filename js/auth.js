@@ -189,12 +189,30 @@ const STARTER_GEN_LABELS = {
     906: 'Paldea', 909: 'Paldea', 912: 'Paldea'
 };
 
-const TRAINER_AVATARS_MALE = [];
-const TRAINER_AVATARS_FEMALE = [];
-for (let i = 1; i <= 10; i++) {
-    TRAINER_AVATARS_MALE.push(`trainers/male-${String(i).padStart(2, '0')}.png`);
-    TRAINER_AVATARS_FEMALE.push(`trainers/female-${String(i).padStart(2, '0')}.png`);
-}
+const TRAINER_AVATARS_MALE = [
+    'trainers/red.png',
+    'trainers/ethan.png',
+    'trainers/brendan.png',
+    'trainers/hilbert.png',
+    'trainers/calem.png',
+    'trainers/elio.png',
+    'trainers/victor.png',
+    'trainers/brendan-masters.png',
+    'trainers/ash.png',
+    'trainers/n.png'
+];
+const TRAINER_AVATARS_FEMALE = [
+    'trainers/lyra.png',
+    'trainers/may.png',
+    'trainers/dawn.png',
+    'trainers/serena.png',
+    'trainers/selene.png',
+    'trainers/gloria.png',
+    'trainers/akari.png',
+    'trainers/dawn-masters.png',
+    'trainers/serena-masters.png',
+    'trainers/korrina.png'
+];
 
 const MAX_CHARACTERS = 10;
 
