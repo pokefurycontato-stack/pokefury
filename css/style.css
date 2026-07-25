@@ -453,3 +453,116 @@ body {
 .type-dark { background: #705848; }
 .type-steel { background: #B8B8D0; color: #333; }
 .type-fairy { background: #EE99AC; color: #333; }
+
+/* ===== MAP EDITOR ===== */
+#map-editor-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #0d1117; z-index: 9999;
+    display: flex; flex-direction: column;
+}
+.editor-topbar {
+    height: 48px; min-height: 48px;
+    background: #161b22; border-bottom: 1px solid #30363d;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; gap: 12px;
+}
+.editor-topbar-left { display: flex; align-items: center; gap: 10px; }
+.editor-topbar-center { display: flex; gap: 4px; }
+.editor-topbar-right { display: flex; align-items: center; gap: 8px; }
+.editor-btn-close {
+    width: 32px; height: 32px; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; background: rgba(255,255,255,0.04); color: #fff;
+    font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+}
+.editor-btn-close:hover { background: #e94560; border-color: #e94560; }
+.editor-title { color: #fff; font-size: 14px; font-weight: 700; }
+.editor-coords { color: rgba(255,255,255,0.4); font-size: 11px; font-variant-numeric: tabular-nums; }
+.editor-label { color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 600; }
+.editor-input {
+    width: 52px; padding: 5px 8px; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; background: rgba(255,255,255,0.04); color: #fff;
+    font-size: 12px; font-family: inherit; text-align: center;
+}
+.editor-input:focus { border-color: #e94560; outline: none; }
+.editor-action-btn {
+    padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7);
+    font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+}
+.editor-action-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.editor-action-btn.primary { background: rgba(233,69,96,0.2); border-color: rgba(233,69,96,0.3); color: #e94560; }
+.editor-action-btn.primary:hover { background: rgba(233,69,96,0.3); }
+.editor-action-btn.danger { border-color: rgba(244,67,54,0.3); color: #f44336; }
+.editor-action-btn.danger:hover { background: rgba(244,67,54,0.1); }
+
+.tool-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 10px; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.5);
+    font-size: 10px; font-family: inherit; cursor: pointer; transition: all 0.2s;
+}
+.tool-btn span:first-child { font-size: 16px; }
+.tool-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.tool-btn.selected { background: rgba(233,69,96,0.15); border-color: rgba(233,69,96,0.3); color: #e94560; }
+
+.editor-body { flex: 1; display: flex; overflow: hidden; }
+.editor-sidebar-left {
+    width: 200px; min-width: 200px;
+    background: #161b22; border-right: 1px solid #30363d;
+    display: flex; flex-direction: column; padding: 8px; overflow-y: auto;
+}
+.editor-sidebar-title {
+    color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding: 4px;
+}
+.tile-palette { display: flex; flex-direction: column; gap: 4px; }
+.tile-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px; border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px; background: rgba(255,255,255,0.02);
+    color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 500;
+    font-family: inherit; cursor: pointer; transition: all 0.15s; text-align: left;
+}
+.tile-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.tile-btn.selected { background: rgba(233,69,96,0.12); border-color: rgba(233,69,96,0.3); color: #e94560; }
+.tile-preview {
+    width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+}
+
+.saved-maps-list {
+    display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto;
+    margin-bottom: 8px;
+}
+.saved-map-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px; background: rgba(255,255,255,0.02);
+    color: rgba(255,255,255,0.6); font-size: 11px; cursor: pointer; transition: all 0.15s;
+}
+.saved-map-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.saved-map-item-name { font-weight: 600; }
+.saved-map-item-size { color: rgba(255,255,255,0.3); font-size: 10px; }
+.saved-map-item-delete {
+    background: none; border: none; color: rgba(244,67,54,0.5); cursor: pointer;
+    font-size: 12px; padding: 2px 4px;
+}
+.saved-map-item-delete:hover { color: #f44336; }
+
+.editor-sidebar-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.editor-text-input {
+    width: 100%; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; background: rgba(255,255,255,0.04); color: #fff;
+    font-size: 12px; font-family: inherit;
+}
+.editor-text-input:focus { border-color: #e94560; outline: none; }
+.editor-text-input::placeholder { color: rgba(255,255,255,0.25); }
+
+.editor-canvas-wrap {
+    flex: 1; position: relative; overflow: hidden; background: #0a0a0a;
+}
+#editor-canvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}

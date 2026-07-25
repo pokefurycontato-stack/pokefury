@@ -234,7 +234,7 @@
                     <div id="admin-panel" class="sidebar-section hidden">
                         <div class="sidebar-section-title">Admin</div>
                         <div class="sidebar-section-items">
-                            <button class="item-btn admin-btn" onclick="alert('Criador de Mapas - Em breve!')">Mapas</button>
+                            <button class="item-btn admin-btn">Mapas</button>
                         </div>
                     </div>
 
@@ -291,6 +291,43 @@
         </div>
     </div>
 
+    <!-- ==================== MAP EDITOR OVERLAY ==================== -->
+    <div id="map-editor-overlay" class="hidden">
+        <div class="editor-topbar">
+            <div class="editor-topbar-left">
+                <button id="editor-btn-close" class="editor-btn-close" title="Fechar">✕</button>
+                <span class="editor-title">Map Creator</span>
+                <span id="editor-coords" class="editor-coords">40x30 | Tile: grass</span>
+            </div>
+            <div class="editor-topbar-center" id="editor-tools"></div>
+            <div class="editor-topbar-right">
+                <label class="editor-label">Largura</label>
+                <input type="number" id="editor-grid-w" class="editor-input" value="40" min="10" max="100">
+                <label class="editor-label">Altura</label>
+                <input type="number" id="editor-grid-h" class="editor-input" value="30" min="10" max="100">
+                <button id="editor-btn-resize" class="editor-action-btn">Aplicar</button>
+                <button id="editor-btn-clear" class="editor-action-btn danger">Limpar</button>
+            </div>
+        </div>
+        <div class="editor-body">
+            <div class="editor-sidebar-left">
+                <div class="editor-sidebar-title">Tiles</div>
+                <div id="tile-palette" class="tile-palette"></div>
+                <div class="editor-sidebar-title" style="margin-top:12px">Mapas Salvos</div>
+                <div id="saved-maps-list" class="saved-maps-list"></div>
+                <div class="editor-sidebar-actions">
+                    <input type="text" id="map-name-input" class="editor-text-input" placeholder="Nome do mapa...">
+                    <button id="editor-btn-save" class="editor-action-btn primary">Salvar</button>
+                    <button id="editor-btn-load" class="editor-action-btn">Carregar</button>
+                    <button id="editor-btn-export" class="editor-action-btn">Exportar JSON</button>
+                </div>
+            </div>
+            <div class="editor-canvas-wrap">
+                <canvas id="editor-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script src="js/supabase-config.js"></script>
     <script src="js/items-data.js"></script>
     <script src="js/game-data.js"></script>
@@ -301,5 +338,6 @@
     <script type="module" src="js/battle.js"></script>
     <script type="module" src="js/ui.js"></script>
     <script type="module" src="js/game.js"></script>
+    <script type="module" src="js/map-editor.js"></script>
 </body>
 </html>

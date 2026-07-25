@@ -6,6 +6,7 @@ import {
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
+import { MapEditor } from './map-editor.js';
 
 const SHINY_CHANCE = 128;
 
@@ -132,7 +133,10 @@ class PokeFuryGame {
         console.log('[PokeFury] Game started successfully!');
 
         const adminPanel = document.getElementById('admin-panel');
-        if (adminPanel && window.isAdmin) adminPanel.classList.remove('hidden');
+        if (adminPanel && window.isAdmin) {
+            adminPanel.classList.remove('hidden');
+            this.setupMapEditor();
+        }
 
         this._saveInBackground().catch(e =>
             console.error('[PokeFury] Background save error:', e)
@@ -448,6 +452,174 @@ class PokeFuryGame {
         if (this.overworld2d) this.overworld2d.hide();
         this.state = 'idle';
         loadCharacterScreen();
+    }
+
+    setupMapEditor() {
+        const mapasBtn = document.querySelector('#admin-panel .admin-btn');
+        if (!mapasBtn) return;
+
+        mapasBtn.onclick = () => {
+            const overlay = document.getElementById('map-editor-overlay');
+            overlay.classList.remove('hidden');
+            if (!this.mapEditor) {
+                this.mapEditor = new MapEditor();
+                this.setupMapEditorEvents();
+            }
+            this.mapEditor.resize(
+                overlay.querySelector('.editor-canvas-wrap').clientWidth,
+                overlay.querySelector('.editor-canvas-wrap').clientHeight
+            );
+            this.loadSavedMapsList();
+        };
+    }
+
+    setupMapEditorEvents() {
+        const me = this.mapEditor;
+        const overlay = document.getElementById('map-editor-overlay');
+
+        document.getElementById('editor-btn-close').onclick = () => {
+            overlay.classList.add('hidden');
+        };
+
+        document.getElementById('editor-btn-resize').onclick = () => {
+            const w = parseInt(document.getElementById('editor-grid-w').value) || 40;
+            const h = parseInt(document.getElementById('editor-grid-h').value) || 30;
+            me.setGridSize(w, h);
+        };
+
+        document.getElementById('editor-btn-clear').onclick = () => {
+            if (confirm('Tem certeza? Isso apagará todo o mapa.')) {
+                me.clear();
+            }
+        };
+
+        document.getElementById('editor-btn-save').onclick = () => this.saveMapToStorage();
+        document.getElementById('editor-btn-load').onclick = () => this.loadSavedMapsList();
+        document.getElementById('editor-btn-export').onclick = () => this.exportMapJSON();
+
+        window.addEventListener('resize', () => {
+            if (!overlay.classList.contains('hidden')) {
+                const wrap = overlay.querySelector('.editor-canvas-wrap');
+                me.resize(wrap.clientWidth, wrap.clientHeight);
+            }
+        });
+    }
+
+    async saveMapToStorage() {
+        const me = this.mapEditor;
+        const nameInput = document.getElementById('map-name-input');
+        const name = (nameInput.value || '').trim();
+        if (!name) {
+            alert('Digite um nome para o mapa.');
+            return;
+        }
+
+        const mapData = me.toJSON();
+        const fileName = `maps/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.json`;
+
+        try {
+            const blob = new Blob([mapData], { type: 'application/json' });
+            const file = new File([blob], `${fileName}`, { type: 'application/json' });
+
+            const { data, error } = await window.db.storage
+                .from('sprites')
+                .upload(fileName, file, { upsert: true });
+
+            if (error) throw error;
+
+            me.currentMapName = name;
+            alert(`Mapa "${name}" salvo com sucesso!`);
+            this.loadSavedMapsList();
+        } catch (e) {
+            console.error('[MapEditor] Save error:', e);
+            alert('Erro ao salvar: ' + e.message);
+        }
+    }
+
+    async loadSavedMapsList() {
+        const container = document.getElementById('saved-maps-list');
+        if (!container) return;
+        container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:11px;padding:4px">Carregando...</div>';
+
+        try {
+            const { data, error } = await window.db.storage.from('sprites').list('maps');
+            if (error) throw error;
+
+            container.innerHTML = '';
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:11px;padding:4px">Nenhum mapa salvo</div>';
+                return;
+            }
+
+            data.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'saved-map-item';
+                const displayName = file.name.replace('.json', '').replace(/-/g, ' ');
+                item.innerHTML = `
+                    <div>
+                        <div class="saved-map-item-name">${displayName}</div>
+                        <div class="saved-map-item-size">${new Date(file.created_at).toLocaleDateString('pt-BR')}</div>
+                    </div>
+                    <button class="saved-map-item-delete" title="Excluir">🗑️</button>
+                `;
+
+                item.querySelector('.saved-map-item-name').parentElement.onclick = () => this.loadMapFromStorage(file.name);
+                item.querySelector('.saved-map-item-delete').onclick = (e) => {
+                    e.stopPropagation();
+                    this.deleteMapFromStorage(file.name);
+                };
+
+                container.appendChild(item);
+            });
+        } catch (e) {
+            container.innerHTML = `<div style="color:#f44336;font-size:11px;padding:4px">Erro: ${e.message}</div>`;
+        }
+    }
+
+    async loadMapFromStorage(fileName) {
+        const me = this.mapEditor;
+        try {
+            const { data, error } = await window.db.storage.from('sprites').download(`maps/${fileName}`);
+            if (error) throw error;
+
+            const text = await data.text();
+            const json = JSON.parse(text);
+            me.fromJSON(json);
+
+            const nameInput = document.getElementById('map-name-input');
+            nameInput.value = fileName.replace('.json', '').replace(/-/g, ' ');
+
+            document.getElementById('editor-grid-w').value = me.gridW;
+            document.getElementById('editor-grid-h').value = me.gridH;
+
+            alert(`Mapa "${fileName.replace('.json', '')}" carregado!`);
+        } catch (e) {
+            console.error('[MapEditor] Load error:', e);
+            alert('Erro ao carregar: ' + e.message);
+        }
+    }
+
+    async deleteMapFromStorage(fileName) {
+        if (!confirm('Tem certeza que deseja excluir este mapa?')) return;
+        try {
+            const { error } = await window.db.storage.from('sprites').remove([`maps/${fileName}`]);
+            if (error) throw error;
+            this.loadSavedMapsList();
+        } catch (e) {
+            alert('Erro ao excluir: ' + e.message);
+        }
+    }
+
+    exportMapJSON() {
+        const me = this.mapEditor;
+        const json = me.toJSON();
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${me.currentMapName || 'mapa'}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 }
 
