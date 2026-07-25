@@ -163,8 +163,7 @@ async function handleRegister() {
 
 const TYPE_COLORS = { normal:'#A8A878', fire:'#F08030', water:'#6890F0', electric:'#F8D030', grass:'#78C850', ice:'#98D8D8', fighting:'#C03028', poison:'#A040A0', ground:'#E0C068', flying:'#A890F0', psychic:'#F85888', bug:'#A8B820', rock:'#B8A038', ghost:'#705898', dragon:'#7038F8', dark:'#705848', steel:'#B8B8D0', fairy:'#EE99AC' };
 
-const SUPABASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co';
-const STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
+const STORAGE_BASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public';
 
 const ALL_STARTER_IDS = [
     1, 4, 7,
@@ -418,7 +417,7 @@ function loadAvatarOptions(gender) {
     optionsGrid.className = 'avatar-options-grid';
 
     avatarList.forEach((path, i) => {
-        const url = `${STORAGE_URL}/${path}`;
+        const url = `${STORAGE_BASE_URL}/${path}`;
         const item = document.createElement('div');
         item.className = 'avatar-option';
         item.dataset.url = url;

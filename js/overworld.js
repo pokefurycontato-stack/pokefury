@@ -1,4 +1,4 @@
-class Overworld2D {
+export class Overworld2D {
     constructor(game) {
         this.game = game;
         this.canvas = document.getElementById('game-canvas');
