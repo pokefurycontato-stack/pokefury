@@ -102,7 +102,7 @@ export class Overworld2D {
 
     async loadSprites() {
         const gender = this.game.playerGender === 'female' ? 'feminino' : 'masculino';
-        const spriteSheetUrl = `assets/perso ${gender}.webp`;
+        const spriteSheetUrl = `assets/perso_${gender}.webp`;
 
         try {
             const spriteSheet = await new Promise((resolve, reject) => {
