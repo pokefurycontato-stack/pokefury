@@ -116,6 +116,11 @@ async function handleLogin() {
         }
         console.log('[PokeFury Auth] Login OK, user:', data.user.id);
         window.GameData.setUserId(data.user.id);
+
+        const { data: profile } = await window.db.from('profiles').select('is_admin').eq('id', data.user.id).single().catch(() => ({ data: null }));
+        window.isAdmin = !!(profile && profile.is_admin);
+        console.log('[PokeFury Auth] Admin:', window.isAdmin);
+
         goToCharacterScreen();
     } catch (e) {
         console.error('[PokeFury Auth] Login exception:', e);
