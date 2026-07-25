@@ -228,14 +228,14 @@ async function handleRegister() {
 
 function showGame(userData) {
     const authScreen = document.getElementById('auth-screen');
-    const gameContainer = document.getElementById('game-container');
+    const gameWrapper = document.getElementById('game-wrapper');
 
     authScreen.classList.add('fade-out');
 
     setTimeout(() => {
         authScreen.classList.add('hidden');
-        gameContainer.classList.remove('hidden');
-        gameContainer.classList.add('fade-in');
+        gameWrapper.classList.remove('hidden');
+        gameWrapper.classList.add('fade-in');
 
         if (window.PokeAPI) {
             window.PokeAPI.init().then(() => {

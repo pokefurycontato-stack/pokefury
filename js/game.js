@@ -5,7 +5,7 @@ import {
     showScreen, preloadBattleSprites, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection
 } from './ui.js';
-import { Overworld3D } from './overworld3d.js';
+import { Overworld2D } from './overworld.js';
 
 const SHINY_CHANCE = 128;
 
@@ -23,7 +23,7 @@ class PokeFuryGame {
         this.enemyTeam = [];
         this.battleStartTime = null;
         this.starterDataCache = [];
-        this.overworld3d = null;
+        this.overworld2d = null;
 
         this.init();
     }
@@ -47,6 +47,29 @@ class PokeFuryGame {
             await window.db.auth.signOut();
             location.reload();
         });
+
+        document.querySelectorAll('.section-header[data-toggle]').forEach(header => {
+            header.addEventListener('click', () => {
+                header.classList.toggle('open');
+                const items = header.nextElementSibling;
+                if (items) items.classList.toggle('open');
+            });
+        });
+
+        document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        const logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                await window.db.auth.signOut();
+                location.reload();
+            });
+        }
 
         setTimeout(() => {
             this.showCharScreen();
@@ -263,21 +286,22 @@ class PokeFuryGame {
         document.getElementById('character-screen').classList.add('hidden');
 
         try {
-            if (!this.overworld3d) {
-                console.log('[PokeFury] Creating Overworld3D...');
-                this.overworld3d = new Overworld3D(this);
+            if (!this.overworld2d) {
+                console.log('[PokeFury] Creating Overworld2D...');
+                this.overworld2d = new Overworld2D(this);
             }
         } catch (e) {
-            console.error('[PokeFury] Error creating Overworld3D:', e);
+            console.error('[PokeFury] Error creating Overworld2D:', e);
         }
 
         this.state = 'overworld';
         showScreen('hud');
-        document.getElementById('player-name-hud').textContent = this.playerName;
-        document.getElementById('location-name').textContent = 'Area Selvagem';
+        const profileNameEl = document.getElementById('profile-name');
+        if (profileNameEl) profileNameEl.textContent = this.playerName;
+        document.getElementById('location-name').textContent = 'Área Selvagem';
 
         try {
-            if (this.overworld3d) this.overworld3d.show();
+            if (this.overworld2d) this.overworld2d.show();
         } catch (e) {
             console.error('[PokeFury] Error showing overworld:', e);
         }
@@ -315,7 +339,7 @@ class PokeFuryGame {
         await preloadBattleSprites(activePlayer, wildPokemon);
 
         this.state = 'battle';
-        if (this.overworld3d) this.overworld3d.hide();
+        if (this.overworld2d) this.overworld2d.hide();
         this.battleStartTime = Date.now();
         showScreen('battle-screen');
         updateBattleUI(this.playerTeam, this.enemyTeam);
@@ -560,7 +584,7 @@ class PokeFuryGame {
         this.state = 'overworld';
         showScreen('hud');
         document.getElementById('location-name').textContent = 'Área Selvagem';
-        if (this.overworld3d) this.overworld3d.show();
+        if (this.overworld2d) this.overworld2d.show();
     }
 
     async saveTeam() {
