@@ -255,8 +255,10 @@ export class Overworld2D {
         if (mapData.id && this.game.regionManager) {
             try {
                 const encounters = await this.game.regionManager.loadMapEncounters(mapData.id);
+                console.log('[Overworld] Encounters loaded:', encounters.length, encounters.map(e => e.pokemon_name + ' sprite:' + (e.sprite_url ? 'yes' : 'no')));
                 this.spawnMapPokemon(encounters);
             } catch (e) {
+                console.warn('[Overworld] Failed to load encounters:', e);
                 this.mapPokemonEntities = [];
             }
         }
@@ -412,23 +414,26 @@ export class Overworld2D {
     async spawnMapPokemon(encounters) {
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = encounters || [];
+        console.log('[Overworld] spawnMapPokemon called with', encounters.length, 'encounters');
         if (encounters.length === 0) return;
 
         const count = Math.min(4, Math.max(1, Math.floor(encounters.length * 1.5)));
+        console.log('[Overworld] Spawning', count, 'pokemon entities');
 
         for (let i = 0; i < count; i++) {
             const enc = encounters[Math.floor(Math.random() * encounters.length)];
             let pos = this.findSpawnPosition();
-            if (!pos) continue;
+            if (!pos) { console.log('[Overworld] No spawn position found for', enc.pokemon_name); continue; }
 
             const spriteUrl = enc.sprite_url;
+            console.log('[Overworld] Loading sprite for', enc.pokemon_name, ':', spriteUrl);
             let sprite = null;
             if (spriteUrl) {
                 sprite = await new Promise(resolve => {
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
-                    img.onload = () => resolve(img);
-                    img.onerror = () => resolve(null);
+                    img.onload = () => { console.log('[Overworld] Sprite loaded OK:', enc.pokemon_name); resolve(img); };
+                    img.onerror = () => { console.log('[Overworld] Sprite FAILED:', enc.pokemon_name, spriteUrl); resolve(null); };
                     img.src = spriteUrl;
                 });
             }
@@ -448,6 +453,7 @@ export class Overworld2D {
                 respawnTimer: 0
             });
         }
+        console.log('[Overworld] Total map pokemon entities:', this.mapPokemonEntities.length);
     }
 
     findSpawnPosition() {
