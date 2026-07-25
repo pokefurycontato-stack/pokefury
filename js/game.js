@@ -352,6 +352,7 @@ class PokeFuryGame {
     async onFight() {
         const playerPokemon = getFirstAlive(this.playerTeam);
         const enemyPokemon = getFirstAlive(this.enemyTeam);
+        if (!playerPokemon || !enemyPokemon) return;
 
         showMoveSelection(playerPokemon.moves, async (move) => {
             await this.executeBattleTurn(playerPokemon, enemyPokemon, move);
@@ -359,6 +360,8 @@ class PokeFuryGame {
     }
 
     async onRun() {
+        const playerPokemon = getFirstAlive(this.playerTeam);
+        if (!playerPokemon) return;
         const escaped = Math.random() < 0.5;
         if (escaped) {
             await showBattleMessage('Escapou com sucesso!');
@@ -386,6 +389,7 @@ class PokeFuryGame {
     async useItemInBattle(item) {
         const playerPokemon = getFirstAlive(this.playerTeam);
         const enemyPokemon = getFirstAlive(this.enemyTeam);
+        if (!playerPokemon || !enemyPokemon) return;
         const itemData = item.items;
 
         await window.GameData.removeItem(item.item_id, 1);
@@ -440,6 +444,7 @@ class PokeFuryGame {
 
     async onMega() {
         const playerPokemon = getFirstAlive(this.playerTeam);
+        if (!playerPokemon) return;
         if (playerPokemon.variant !== 'normal' || playerPokemon.isMega) {
             await showBattleMessage('Nao pode mega evoluir!');
             return;
@@ -470,6 +475,7 @@ class PokeFuryGame {
     }
 
     async executeBattleTurn(playerPokemon, enemyPokemon, playerMove) {
+        if (!playerPokemon || !enemyPokemon) return;
         const order = determineTurnOrder(playerPokemon, enemyPokemon);
 
         for (const pokemon of order) {
@@ -573,6 +579,15 @@ class PokeFuryGame {
                 result: result,
                 xpGained: result === 'win' ? enemy.level * 10 : 0,
                 duration: duration
+            });
+        }
+
+        if (result === 'lose' && this.playerTeam) {
+            this.playerTeam.forEach(p => {
+                if (p.fainted) {
+                    p.fainted = false;
+                    p.currentHp = Math.max(1, Math.floor(p.stats.hp * 0.5));
+                }
             });
         }
 

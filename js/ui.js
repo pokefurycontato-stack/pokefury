@@ -29,8 +29,8 @@ export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activ
     const playerInfo = $('#player-info');
     const enemyInfo = $('#enemy-info');
 
-    playerInfo.querySelector('.trainer-name').textContent = `Você - Lv.${playerPokemon.level}`;
-    enemyInfo.querySelector('.trainer-name').textContent = `Inimigo - Lv.${enemyPokemon.level}`;
+    if (playerPokemon) playerInfo.querySelector('.trainer-name').textContent = `Você - Lv.${playerPokemon.level}`;
+    if (enemyPokemon) enemyInfo.querySelector('.trainer-name').textContent = `Inimigo - Lv.${enemyPokemon.level}`;
 
     updateTeamIndicators('#player-info .pokemon-team', playerTeam);
     updateTeamIndicators('#enemy-info .pokemon-team', enemyTeam);
@@ -144,7 +144,8 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon) {
 }
 
 function drawPokemonSprite(ctx, x, y, pokemon, isPlayer) {
-    const spriteUrls = pokemon.spriteUrls;
+    if (!pokemon) return;
+    const spriteUrls = pokemon.spriteUrls || {};
     const shinyUrls = pokemon.shinySpriteUrls;
     const isShiny = pokemon.isShiny;
 

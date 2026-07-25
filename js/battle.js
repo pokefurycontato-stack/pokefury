@@ -83,6 +83,9 @@ export function getFirstAlive(team) {
 }
 
 export async function executeTurn(attacker, defender, move) {
+    if (!attacker || !defender || !move) {
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
+    }
     const result = await calculateDamage(attacker, defender, move);
 
     if (result.missed) {
