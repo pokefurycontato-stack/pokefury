@@ -1,6 +1,7 @@
 -- =============================================
 -- MIGRAÇÃO: Múltiplos Personagens por Conta
 -- Execute no SQL Editor do Supabase
+-- Pode ser executada várias vezes com segurança
 -- =============================================
 
 -- 1. Adicionar colunas necessárias à tabela game_saves
@@ -17,74 +18,68 @@ END $$;
 -- 2. Preencher ids existentes que estejam null
 UPDATE game_saves SET id = uuid_generate_v4() WHERE id IS NULL;
 
--- 3. Definir id como PRIMARY KEY (remover PK antigo se existir)
-DO $$ BEGIN
-    ALTER TABLE game_saves DROP CONSTRAINT IF EXISTS game_saves_pkey;
-EXCEPTION WHEN OTHERS THEN NULL;
+-- 3. Remover QUALQUER PRIMARY KEY existente em game_saves
+DO $$ DECLARE
+    rec RECORD;
+BEGIN
+    FOR rec IN SELECT conname FROM pg_constraint
+               WHERE conrelid = 'game_saves'::regclass
+               AND contype = 'p'
+    LOOP
+        EXECUTE 'ALTER TABLE game_saves DROP CONSTRAINT IF EXISTS ' || rec.conname;
+        RAISE NOTICE 'Dropped primary key: %', rec.conname;
+    END LOOP;
 END $$;
 
-ALTER TABLE game_saves ADD PRIMARY KEY (id);
-
--- 4. REMOVER constraint UNIQUE em user_id para permitir múltiplos personagens
-DO $$ BEGIN
-    -- Tenta encontrar e remover constraints UNIQUE que envolvam user_id
-    ALTER TABLE game_saves DROP CONSTRAINT IF EXISTS game_saves_user_id_key;
-    ALTER TABLE game_saves DROP CONSTRAINT IF EXISTS game_saves_user_id_unique;
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
-
--- Também remove via nome genérico do índice único
+-- 4. Remover QUALQUER UNIQUE constraint em user_id
 DO $$ DECLARE
     rec RECORD;
 BEGIN
     FOR rec IN SELECT conname FROM pg_constraint
                WHERE conrelid = 'game_saves'::regclass
                AND contype = 'u'
-               AND array_length(conkey, 1) = 1
     LOOP
         EXECUTE 'ALTER TABLE game_saves DROP CONSTRAINT IF EXISTS ' || rec.conname;
+        RAISE NOTICE 'Dropped unique constraint: %', rec.conname;
     END LOOP;
 END $$;
 
--- 5. Garantir que user_id NÃO tenha constraint UNIQUE
--- (verificação adicional via índice)
+-- 5. Remover índices únicos em user_id
 DO $$ DECLARE
     idx RECORD;
 BEGIN
     FOR idx IN SELECT indexname FROM pg_indexes
                WHERE tablename = 'game_saves'
                AND indexdef LIKE '%UNIQUE%'
-               AND indexdef LIKE '%user_id%'
     LOOP
         EXECUTE 'DROP INDEX IF EXISTS ' || idx.indexname;
+        RAISE NOTICE 'Dropped unique index: %', idx.indexname;
     END LOOP;
 END $$;
 
--- 6. Criar tabela characters como alias limpo (view)
+-- 6. Adicionar PRIMARY KEY em id
+ALTER TABLE game_saves ADD PRIMARY KEY (id);
+
+-- 7. Criar view characters
 CREATE OR REPLACE VIEW characters AS SELECT * FROM game_saves;
 
--- 7. Adicionar character_id nas tabelas filhas
-
--- pokemon_team: adicionar character_id
+-- 8. Adicionar character_id nas tabelas filhas
 DO $$ BEGIN
     ALTER TABLE pokemon_team ADD COLUMN character_id UUID REFERENCES game_saves(id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
--- player_inventory: adicionar character_id
 DO $$ BEGIN
     ALTER TABLE player_inventory ADD COLUMN character_id UUID REFERENCES game_saves(id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
--- battle_history: adicionar character_id
 DO $$ BEGIN
     ALTER TABLE battle_history ADD COLUMN character_id UUID REFERENCES game_saves(id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
--- 8. Migrar dados existentes: vincular cada row ao personagem do user
--- (como antes existia 1 save por user, mapeamos diretamente)
+-- 9. Migrar dados existentes
 UPDATE pokemon_team pt
 SET character_id = gs.id
 FROM game_saves gs
@@ -103,18 +98,13 @@ FROM game_saves gs
 WHERE bh.user_id = gs.user_id
 AND bh.character_id IS NULL;
 
--- 9. Criar índices para performance
+-- 10. Criar índices para performance
 CREATE INDEX IF NOT EXISTS idx_game_saves_user_id ON game_saves(user_id);
 CREATE INDEX IF NOT EXISTS idx_pokemon_team_character_id ON pokemon_team(character_id);
 CREATE INDEX IF NOT EXISTS idx_player_inventory_character_id ON player_inventory(character_id);
 CREATE INDEX IF NOT EXISTS idx_battle_history_character_id ON battle_history(character_id);
 
--- 10. Atualizar RLS policies
-
--- game_saves: manter como está (user_id = auth.uid())
--- (RLS existente já funciona)
-
--- pokemon_team: adicionar política para character_id
+-- 11. RLS para pokemon_team
 ALTER TABLE pokemon_team ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -146,7 +136,7 @@ CREATE POLICY "pokemonteam_delete" ON pokemon_team
         character_id IN (SELECT id FROM game_saves WHERE user_id = auth.uid())
     );
 
--- player_inventory: adicionar política para character_id
+-- 12. RLS para player_inventory
 ALTER TABLE player_inventory ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -178,7 +168,7 @@ CREATE POLICY "inventory_delete" ON player_inventory
         character_id IN (SELECT id FROM game_saves WHERE user_id = auth.uid())
     );
 
--- battle_history: adicionar política para character_id
+-- 13. RLS para battle_history
 ALTER TABLE battle_history ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -198,7 +188,7 @@ CREATE POLICY "battlehistory_insert" ON battle_history
         character_id IN (SELECT id FROM game_saves WHERE user_id = auth.uid())
     );
 
--- 11. Criar tabela de currencies por personagem (se não existir)
+-- 14. Criar tabela de currencies por personagem
 CREATE TABLE IF NOT EXISTS character_currencies (
     character_id UUID PRIMARY KEY REFERENCES game_saves(id) ON DELETE CASCADE,
     diamonds INTEGER DEFAULT 0,
