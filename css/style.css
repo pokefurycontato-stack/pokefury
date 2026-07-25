@@ -574,3 +574,16 @@ body {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     image-rendering: pixelated; image-rendering: crisp-edges;
 }
+.editor-layers {
+    display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;
+}
+.layer-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; color: rgba(255,255,255,0.6); font-size: 11px;
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.layer-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.layer-btn.selected { background: rgba(233,69,96,0.15); border-color: #e94560; color: #fff; }
+.stamp-btn:hover { background: rgba(233,69,96,0.1) !important; color: #fff !important; }
+.stamp-btn.selected { border-color: #e94560 !important; background: rgba(233,69,96,0.15) !important; color: #fff !important; }

@@ -7,18 +7,26 @@ export class MapEditor {
         this.gridW = 40;
         this.gridH = 30;
         this.tool = 'paint';
+        this.activeLayer = 'ground';
         this.selectedTileIndex = null;
         this.selectedTileSheet = null;
+        this.selectedStamp = null;
         this.painting = false;
-        this.map = [];
-        this.collisionMap = [];
-        this.grassMap = [];
         this.camera = { x: 0, y: 0 };
         this.dragging = false;
         this.dragStart = { x: 0, y: 0 };
         this.currentMapName = '';
         this.tilesets = {};
         this.allTiles = [];
+        this.animationFrame = 0;
+        this.animationTimer = null;
+        this.stampPreview = null;
+
+        this.groundMap = [];
+        this.objectMap = [];
+        this.overlayMap = [];
+        this.collisionMap = [];
+        this.grassMap = [];
 
         this.TILESET_SOURCES = [
             { id: 'frlg_outdoor', url: 'tilesets/frlg-outdoor.png', name: 'FRLG Exterior', cols: 8, tileSize: 16 },
@@ -31,6 +39,40 @@ export class MapEditor {
             { id: 'water', url: 'tilesets/5_waterfall.png', name: 'Água', cols: 8, tileSize: 16 }
         ];
 
+        this.STAMPS = [
+            { id: 'tree_small', name: 'Árvore Pequena', layer: 'object', width: 1, height: 2, tiles: [
+                { dx: 0, dy: 0, sheet: 'plants', col: 0, row: 0 },
+                { dx: 0, dy: 1, sheet: 'plants', col: 0, row: 1, isCanopy: true }
+            ]},
+            { id: 'tree_large', name: 'Árvore Grande', layer: 'object', width: 2, height: 3, tiles: [
+                { dx: 0, dy: 0, sheet: 'plants', col: 1, row: 0 },
+                { dx: 1, dy: 0, sheet: 'plants', col: 2, row: 0 },
+                { dx: 0, dy: 1, sheet: 'plants', col: 1, row: 1 },
+                { dx: 1, dy: 1, sheet: 'plants', col: 2, row: 1 },
+                { dx: 0, dy: 2, sheet: 'plants', col: 1, row: 2, isCanopy: true },
+                { dx: 1, dy: 2, sheet: 'plants', col: 2, row: 2, isCanopy: true }
+            ]},
+            { id: 'house_small', name: 'Casa', layer: 'object', width: 2, height: 2, tiles: [
+                { dx: 0, dy: 0, sheet: 'frlg_buildings', col: 0, row: 0, isRoof: true },
+                { dx: 1, dy: 0, sheet: 'frlg_buildings', col: 1, row: 0, isRoof: true },
+                { dx: 0, dy: 1, sheet: 'frlg_buildings', col: 0, row: 1 },
+                { dx: 1, dy: 1, sheet: 'frlg_buildings', col: 1, row: 1 }
+            ]},
+            { id: 'fence_h', name: 'Cerca H', layer: 'object', width: 2, height: 1, tiles: [
+                { dx: 0, dy: 0, sheet: 'frlg_outdoor', col: 4, row: 2 },
+                { dx: 1, dy: 0, sheet: 'frlg_outdoor', col: 5, row: 2 }
+            ]},
+            { id: 'flower_red', name: 'Flores Vermelhas', layer: 'ground', width: 1, height: 1, tiles: [
+                { dx: 0, dy: 0, sheet: 'plants', col: 0, row: 2, animated: true }
+            ]},
+            { id: 'tall_grass', name: 'Grama Alta', layer: 'ground', width: 1, height: 1, tiles: [
+                { dx: 0, dy: 0, sheet: 'plants', col: 0, row: 0, animated: true, encounter: true }
+            ]},
+            { id: 'water_tile', name: 'Água', layer: 'ground', width: 1, height: 1, tiles: [
+                { dx: 0, dy: 0, sheet: 'water', col: 0, row: 0, animated: true }
+            ]}
+        ];
+
         this.SUPABASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co';
         this.STORAGE_URL = `${this.SUPABASE_URL}/storage/v1/object/public/sprites`;
 
@@ -40,9 +82,19 @@ export class MapEditor {
     async init() {
         this.generateEmptyMap();
         this.buildToolbar();
+        this.buildLayerSelector();
+        this.buildStampPanel();
         this.setupEvents();
+        this.startAnimation();
         await this.loadAllTilesets();
         this.render();
+    }
+
+    startAnimation() {
+        this.animationTimer = setInterval(() => {
+            this.animationFrame = (this.animationFrame + 1) % 4;
+            this.render();
+        }, 300);
     }
 
     async loadAllTilesets() {
@@ -170,6 +222,7 @@ export class MapEditor {
                     btn.classList.add('selected');
                     this.selectedTileIndex = tile.globalIndex;
                     this.selectedTileSheet = tile.sheet;
+                    this.selectedStamp = null;
                 };
 
                 grid.appendChild(btn);
@@ -203,16 +256,68 @@ export class MapEditor {
         });
     }
 
+    buildLayerSelector() {
+        const container = document.getElementById('editor-layers');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const layers = [
+            { id: 'ground', name: 'Chão', icon: '🟫' },
+            { id: 'object', name: 'Objetos', icon: '🌳' },
+            { id: 'overlay', name: 'Sobreposição', icon: '🏠' }
+        ];
+
+        layers.forEach(layer => {
+            const btn = document.createElement('button');
+            btn.className = 'layer-btn' + (layer.id === this.activeLayer ? ' selected' : '');
+            btn.innerHTML = `<span>${layer.icon}</span><span>${layer.name}</span>`;
+            btn.onclick = () => {
+                container.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                this.activeLayer = layer.id;
+                this.render();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    buildStampPanel() {
+        const container = document.getElementById('editor-stamps');
+        if (!container) return;
+        container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:11px;padding:4px 0">Objetos Multi-tile:</div>';
+
+        this.STAMPS.forEach(stamp => {
+            const btn = document.createElement('button');
+            btn.className = 'stamp-btn';
+            btn.style.cssText = 'padding:4px 8px;margin:2px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#ccc;border-radius:4px;cursor:pointer;font-size:10px;width:100%;text-align:left;';
+            btn.textContent = `${stamp.name} (${stamp.width}x${stamp.height})`;
+            btn.onclick = () => {
+                container.querySelectorAll('.stamp-btn').forEach(b => b.style.borderColor = 'rgba(255,255,255,0.1)');
+                btn.style.borderColor = '#e94560';
+                this.selectedStamp = stamp;
+                this.tool = 'stamp';
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('selected'));
+            };
+            container.appendChild(btn);
+        });
+    }
+
     generateEmptyMap() {
-        this.map = [];
+        this.groundMap = [];
+        this.objectMap = [];
+        this.overlayMap = [];
         this.collisionMap = [];
         this.grassMap = [];
         for (let y = 0; y < this.gridH; y++) {
-            this.map[y] = [];
+            this.groundMap[y] = [];
+            this.objectMap[y] = [];
+            this.overlayMap[y] = [];
             this.collisionMap[y] = [];
             this.grassMap[y] = [];
             for (let x = 0; x < this.gridW; x++) {
-                this.map[y][x] = null;
+                this.groundMap[y][x] = null;
+                this.objectMap[y][x] = null;
+                this.overlayMap[y][x] = null;
                 this.collisionMap[y][x] = 0;
                 this.grassMap[y][x] = 0;
             }
@@ -238,10 +343,11 @@ export class MapEditor {
                 return;
             }
             if (this.painting) this.handlePaint(e);
+            this.updateStampPreview(e);
             this.render();
         });
         this.canvas.addEventListener('mouseup', () => { this.painting = false; this.dragging = false; this.canvas.style.cursor = 'crosshair'; });
-        this.canvas.addEventListener('mouseleave', () => { this.painting = false; this.dragging = false; });
+        this.canvas.addEventListener('mouseleave', () => { this.painting = false; this.dragging = false; this.stampPreview = null; });
         this.canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoom = e.deltaY > 0 ? -4 : 4;
@@ -249,6 +355,15 @@ export class MapEditor {
             this.render();
         }, { passive: false });
         this.canvas.style.cursor = 'crosshair';
+    }
+
+    updateStampPreview(e) {
+        if (this.tool !== 'stamp' || !this.selectedStamp) {
+            this.stampPreview = null;
+            return;
+        }
+        const { x, y } = this.getTileAt(e);
+        this.stampPreview = { x, y, stamp: this.selectedStamp };
     }
 
     getTileAt(e) {
@@ -259,6 +374,15 @@ export class MapEditor {
         return { x: Math.floor(mx / ts), y: Math.floor(my / ts) };
     }
 
+    getActiveMap() {
+        switch (this.activeLayer) {
+            case 'ground': return this.groundMap;
+            case 'object': return this.objectMap;
+            case 'overlay': return this.overlayMap;
+            default: return this.groundMap;
+        }
+    }
+
     handlePaint(e) {
         const { x, y } = this.getTileAt(e);
         if (x < 0 || x >= this.gridW || y < 0 || y >= this.gridH) return;
@@ -266,22 +390,13 @@ export class MapEditor {
         if (this.tool === 'paint') {
             this.paintTileAt(x, y);
         } else if (this.tool === 'erase') {
-            this.map[y][x] = null;
-            this.collisionMap[y][x] = 0;
-            this.grassMap[y][x] = 0;
+            this.eraseTileAt(x, y);
         } else if (this.tool === 'fill') {
             this.floodFill(x, y);
         } else if (this.tool === 'pick') {
-            const t = this.map[y][x];
-            if (t) {
-                const idx = this.allTiles.findIndex(tile => tile.sheet === t.sheet && tile.col === t.col && tile.row === t.row);
-                if (idx >= 0) {
-                    this.selectedTileIndex = idx;
-                    document.querySelectorAll('.palette-tile-btn').forEach(b => {
-                        b.classList.toggle('selected', parseInt(b.dataset.index) === idx);
-                    });
-                }
-            }
+            this.pickTileAt(x, y);
+        } else if (this.tool === 'stamp' && this.selectedStamp) {
+            this.placeStamp(x, y);
         }
         this.render();
     }
@@ -290,19 +405,84 @@ export class MapEditor {
         if (this.selectedTileIndex === null) return;
         const tile = this.allTiles[this.selectedTileIndex];
         if (!tile) return;
-        this.map[y][x] = { sheet: tile.sheet, col: tile.col, row: tile.row };
-        const isSolid = tile.sheet === 'buildings' || tile.sheet === 'roofs';
-        const isGrassDetail = tile.sheet === 'plants' || tile.sheet === 'grass_cliff';
-        this.collisionMap[y][x] = isSolid ? 1 : 0;
-        this.grassMap[y][x] = isGrassDetail ? 1 : 0;
+
+        const map = this.getActiveMap();
+        map[y][x] = { sheet: tile.sheet, col: tile.col, row: tile.row };
+
+        if (this.activeLayer === 'ground') {
+            const isGrass = tile.sheet === 'plants' || tile.sheet === 'grass_cliff';
+            this.grassMap[y][x] = isGrass ? 1 : 0;
+        }
+
+        if (this.activeLayer === 'object' || this.activeLayer === 'overlay') {
+            const isSolid = tile.sheet === 'frlg_buildings' || tile.sheet === 'roofs';
+            this.collisionMap[y][x] = isSolid ? 1 : 0;
+        }
+    }
+
+    eraseTileAt(x, y) {
+        const map = this.getActiveMap();
+        map[y][x] = null;
+        if (this.activeLayer === 'ground') {
+            this.grassMap[y][x] = 0;
+        }
+        if (this.activeLayer === 'object' || this.activeLayer === 'overlay') {
+            this.collisionMap[y][x] = 0;
+        }
+    }
+
+    pickTileAt(x, y) {
+        const map = this.getActiveMap();
+        const t = map[y][x];
+        if (t) {
+            const idx = this.allTiles.findIndex(tile => tile.sheet === t.sheet && tile.col === t.col && tile.row === t.row);
+            if (idx >= 0) {
+                this.selectedTileIndex = idx;
+                document.querySelectorAll('.palette-tile-btn').forEach(b => {
+                    b.classList.toggle('selected', parseInt(b.dataset.index) === idx);
+                });
+            }
+        }
+    }
+
+    placeStamp(x, y) {
+        if (!this.selectedStamp) return;
+        const stamp = this.selectedStamp;
+        const targetMap = stamp.layer === 'overlay' ? this.overlayMap : this.objectMap;
+
+        for (let dy = 0; dy < stamp.height; dy++) {
+            for (let dx = 0; dx < stamp.width; dx++) {
+                const tx = x + dx;
+                const ty = y + dy;
+                if (tx < 0 || tx >= this.gridW || ty < 0 || ty >= this.gridH) continue;
+                const tileDef = stamp.tiles.find(t => t.dx === dx && t.dy === dy);
+                if (tileDef) {
+                    targetMap[ty][tx] = {
+                        sheet: tileDef.sheet,
+                        col: tileDef.col,
+                        row: tileDef.row,
+                        isCanopy: tileDef.isCanopy,
+                        isRoof: tileDef.isRoof,
+                        animated: tileDef.animated,
+                        encounter: tileDef.encounter
+                    };
+                    if (tileDef.isCanopy || tileDef.isRoof) {
+                        this.collisionMap[ty][tx] = 1;
+                    }
+                } else {
+                    targetMap[ty][tx] = null;
+                }
+            }
+        }
+
+        this.stampPreview = null;
     }
 
     floodFill(x, y) {
         if (this.selectedTileIndex === null) return;
-        const target = this.map[y][x];
-        const newTile = { ...this.allTiles[this.selectedTileIndex] };
-        delete newTile.canvas;
-        delete newTile.label;
+        const map = this.getActiveMap();
+        const target = map[y][x];
+        const newTile = { sheet: this.allTiles[this.selectedTileIndex].sheet, col: this.allTiles[this.selectedTileIndex].col, row: this.allTiles[this.selectedTileIndex].row };
 
         if (target && newTile.sheet === target.sheet && newTile.col === target.col && newTile.row === target.row) return;
 
@@ -313,13 +493,11 @@ export class MapEditor {
             const key = `${cx},${cy}`;
             if (visited.has(key)) continue;
             if (cx < 0 || cx >= this.gridW || cy < 0 || cy >= this.gridH) continue;
-            const current = this.map[cy][cx];
+            const current = map[cy][cx];
             const match = (!target && !current) || (target && current && current.sheet === target.sheet && current.col === target.col && current.row === target.row);
             if (!match) continue;
             visited.add(key);
-            this.map[cy][cx] = newTile;
-            this.collisionMap[cy][cx] = 0;
-            this.grassMap[cy][cx] = 0;
+            map[cy][cx] = newTile;
             stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
         }
     }
@@ -340,6 +518,14 @@ export class MapEditor {
         if (!sheet._cache) sheet._cache = {};
         sheet._cache[key] = c;
         return c;
+    }
+
+    getAnimatedOffset(tileData) {
+        if (!tileData || !tileData.animated) return 0;
+        if (tileData.sheet === 'water') {
+            return (this.animationFrame % 2) * 16;
+        }
+        return (this.animationFrame % 4) * 4;
     }
 
     render() {
@@ -364,12 +550,13 @@ export class MapEditor {
                 if (x < 0 || x >= this.gridW || y < 0 || y >= this.gridH) continue;
                 const sx = x * ts - this.camera.x;
                 const sy = y * ts - this.camera.y;
-                const tileData = this.map[y][x];
 
-                if (tileData) {
-                    const tileCanvas = this.getTileCanvas(tileData);
+                const groundTile = this.groundMap[y][x];
+                if (groundTile) {
+                    const tileCanvas = this.getTileCanvas(groundTile);
                     if (tileCanvas) {
-                        ctx.drawImage(tileCanvas, 0, 0, 16, 16, sx, sy, ts, ts);
+                        const offset = this.getAnimatedOffset(groundTile);
+                        ctx.drawImage(tileCanvas, offset, 0, 16, 16, sx, sy, ts, ts);
                     }
                 } else {
                     ctx.fillStyle = '#2d5a27';
@@ -378,6 +565,24 @@ export class MapEditor {
                     const gx = sx + ((x * 7) % ts);
                     const gy = sy + ((y * 13) % ts);
                     ctx.fillRect(gx, gy, 2, 3);
+                }
+
+                const objectTile = this.objectMap[y][x];
+                if (objectTile) {
+                    const tileCanvas = this.getTileCanvas(objectTile);
+                    if (tileCanvas) {
+                        const offset = this.getAnimatedOffset(objectTile);
+                        ctx.drawImage(tileCanvas, offset, 0, 16, 16, sx, sy, ts, ts);
+                    }
+                }
+
+                const overlayTile = this.overlayMap[y][x];
+                if (overlayTile) {
+                    const tileCanvas = this.getTileCanvas(overlayTile);
+                    if (tileCanvas) {
+                        const offset = this.getAnimatedOffset(overlayTile);
+                        ctx.drawImage(tileCanvas, offset, 0, 16, 16, sx, sy, ts, ts);
+                    }
                 }
 
                 if (this.collisionMap[y] && this.collisionMap[y][x]) {
@@ -391,6 +596,18 @@ export class MapEditor {
                     ctx.stroke();
                 }
             }
+        }
+
+        if (this.stampPreview && this.selectedStamp) {
+            const sx = this.stampPreview.x * ts - this.camera.x;
+            const sy = this.stampPreview.y * ts - this.camera.y;
+            const sw = this.selectedStamp.width * ts;
+            const sh = this.selectedStamp.height * ts;
+            ctx.strokeStyle = 'rgba(233,69,96,0.8)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(sx, sy, sw, sh);
+            ctx.fillStyle = 'rgba(233,69,96,0.2)';
+            ctx.fillRect(sx, sy, sw, sh);
         }
 
         ctx.strokeStyle = 'rgba(255,255,255,0.06)';
@@ -409,7 +626,7 @@ export class MapEditor {
         ctx.strokeRect(-this.camera.x, -this.camera.y, this.gridW * ts, this.gridH * ts);
 
         const coordsEl = document.getElementById('editor-coords');
-        if (coordsEl) coordsEl.textContent = `${this.gridW}x${this.gridH} | Zoom: ${this.displayTileSize}px`;
+        if (coordsEl) coordsEl.textContent = `${this.gridW}x${this.gridH} | Zoom: ${this.displayTileSize}px | Camada: ${this.activeLayer}`;
     }
 
     resize(w, h) {
@@ -419,22 +636,30 @@ export class MapEditor {
     }
 
     setGridSize(w, h) {
-        const newMap = [];
+        const newGround = [];
+        const newObject = [];
+        const newOverlay = [];
         const newCollision = [];
         const newGrass = [];
         for (let y = 0; y < h; y++) {
-            newMap[y] = [];
+            newGround[y] = [];
+            newObject[y] = [];
+            newOverlay[y] = [];
             newCollision[y] = [];
             newGrass[y] = [];
             for (let x = 0; x < w; x++) {
-                newMap[y][x] = (this.map[y] && this.map[y][x]) || null;
+                newGround[y][x] = (this.groundMap[y] && this.groundMap[y][x]) || null;
+                newObject[y][x] = (this.objectMap[y] && this.objectMap[y][x]) || null;
+                newOverlay[y][x] = (this.overlayMap[y] && this.overlayMap[y][x]) || null;
                 newCollision[y][x] = (this.collisionMap[y] && this.collisionMap[y][x]) || 0;
                 newGrass[y][x] = (this.grassMap[y] && this.grassMap[y][x]) || 0;
             }
         }
         this.gridW = w;
         this.gridH = h;
-        this.map = newMap;
+        this.groundMap = newGround;
+        this.objectMap = newObject;
+        this.overlayMap = newOverlay;
         this.collisionMap = newCollision;
         this.grassMap = newGrass;
         this.render();
@@ -445,7 +670,9 @@ export class MapEditor {
             width: this.gridW,
             height: this.gridH,
             displayTileSize: this.displayTileSize,
-            map: this.map,
+            ground: this.groundMap,
+            objects: this.objectMap,
+            overlay: this.overlayMap,
             collision: this.collisionMap,
             grass: this.grassMap
         });
@@ -457,7 +684,15 @@ export class MapEditor {
             this.gridW = data.width;
             this.gridH = data.height;
             this.displayTileSize = data.displayTileSize || 32;
-            this.map = data.map;
+            if (data.ground) {
+                this.groundMap = data.ground;
+                this.objectMap = data.objects || this.generateEmptyLayer();
+                this.overlayMap = data.overlay || this.generateEmptyLayer();
+            } else if (data.map) {
+                this.groundMap = data.map;
+                this.objectMap = this.generateEmptyLayer();
+                this.overlayMap = this.generateEmptyLayer();
+            }
             this.collisionMap = data.collision;
             this.grassMap = data.grass;
             this.render();
@@ -466,6 +701,17 @@ export class MapEditor {
             console.error('[MapEditor] Failed to load map:', e);
             return false;
         }
+    }
+
+    generateEmptyLayer() {
+        const layer = [];
+        for (let y = 0; y < this.gridH; y++) {
+            layer[y] = [];
+            for (let x = 0; x < this.gridW; x++) {
+                layer[y][x] = null;
+            }
+        }
+        return layer;
     }
 
     clear() {
