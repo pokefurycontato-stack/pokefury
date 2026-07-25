@@ -2,11 +2,13 @@ export class MapEditor {
     constructor() {
         this.canvas = document.getElementById('editor-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.tileSize = 32;
+        this.tileSize = 16;
+        this.displayTileSize = 32;
         this.gridW = 40;
         this.gridH = 30;
         this.tool = 'paint';
-        this.selectedTile = 'grass';
+        this.selectedTileIndex = null;
+        this.selectedTileSheet = null;
         this.painting = false;
         this.map = [];
         this.collisionMap = [];
@@ -14,51 +16,106 @@ export class MapEditor {
         this.camera = { x: 0, y: 0 };
         this.dragging = false;
         this.dragStart = { x: 0, y: 0 };
-        this.currentMapId = null;
         this.currentMapName = '';
+        this.tilesets = {};
+        this.allTiles = [];
 
-        this.TILES = {
-            grass:       { color: '#2d5a27', label: 'Grama' },
-            tall_grass:  { color: '#4a9a43', label: 'Grama Alta' },
-            flower:      { color: '#e94560', label: 'Flores' },
-            tree:        { color: '#1a3a15', label: 'Árvore' },
-            water:       { color: '#2980b9', label: 'Água' },
-            path:        { color: '#8d7b68', label: 'Caminho' },
-            house:       { color: '#6c5ce7', label: 'Casa' },
-            wall:        { color: '#5a3a1a', label: 'Parede' },
-            door:        { color: '#d4a017', label: 'Porta' },
-            sand:        { color: '#e8d5a3', label: 'Areia' },
-            rock:        { color: '#7f8c8d', label: 'Pedra' },
-            stairs:      { color: '#95a5a6', label: 'Escadas' },
-            sign:        { color: '#f39c12', label: 'Placa' },
-            fence_h:     { color: '#a0522d', label: 'Cerca H' },
-            fence_v:     { color: '#8b4513', label: 'Cerca V' },
-            empty:       { color: '#0d1117', label: 'Vazio' }
-        };
+        this.TILESET_SOURCES = [
+            { id: 'terrain', url: 'tilesets/1_terrain.png', name: 'Terreno', cols: 8 },
+            { id: 'plants', url: 'tilesets/3_plants.png', name: 'Plantas', cols: 8 },
+            { id: 'buildings', url: 'tilesets/4_buildings.png', name: 'Construções', cols: 8 },
+            { id: 'water', url: 'tilesets/5_waterfall.png', name: 'Água', cols: 8 },
+            { id: 'floors', url: 'tilesets/6_floors.png', name: 'Pisos', cols: 8 },
+            { id: 'grass_cliff', url: 'tilesets/7_grass_cliff.png', name: 'Grama/Cliff', cols: 8 },
+            { id: 'beach', url: 'tilesets/9_beach.png', name: 'Praia', cols: 8 },
+            { id: 'dirt', url: 'tilesets/10_dirt.png', name: 'Terra', cols: 8 },
+            { id: 'roofs', url: 'tilesets/11_roofs.png', name: 'Telhados', cols: 8 },
+            { id: 'pokemon', url: 'tilesets/pokemon-inspired.png', name: 'Pokémon', cols: 8 }
+        ];
+
+        this.SUPABASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co';
+        this.STORAGE_URL = `${this.SUPABASE_URL}/storage/v1/object/public/sprites`;
 
         this.init();
     }
 
-    init() {
+    async init() {
         this.generateEmptyMap();
-        this.buildPalette();
         this.buildToolbar();
         this.setupEvents();
+        await this.loadAllTilesets();
         this.render();
     }
 
-    generateEmptyMap() {
-        this.map = [];
-        this.collisionMap = [];
-        this.grassMap = [];
-        for (let y = 0; y < this.gridH; y++) {
-            this.map[y] = [];
-            this.collisionMap[y] = [];
-            this.grassMap[y] = [];
-            for (let x = 0; x < this.gridW; x++) {
-                this.map[y][x] = 'grass';
-                this.collisionMap[y][x] = 0;
-                this.grassMap[y][x] = 0;
+    async loadAllTilesets() {
+        const container = document.getElementById('tile-palette');
+        if (container) container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:11px;padding:8px">Carregando tiles...</div>';
+
+        const promises = this.TILESET_SOURCES.map(src => this.loadTileset(src));
+        await Promise.all(promises);
+
+        this.buildPalette();
+        if (this.allTiles.length > 0) {
+            this.selectedTileIndex = 0;
+            this.selectedTileSheet = this.allTiles[0].sheet;
+        }
+    }
+
+    loadTileset(source) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                this.tilesets[source.id] = {
+                    img,
+                    cols: source.cols,
+                    rows: Math.ceil(img.height / 16),
+                    name: source.name
+                };
+                this.parseTileset(source.id);
+                resolve();
+            };
+            img.onerror = () => {
+                console.warn(`[MapEditor] Failed to load tileset: ${source.id}`);
+                resolve();
+            };
+            img.src = `${this.STORAGE_URL}/${source.url}`;
+        });
+    }
+
+    parseTileset(sheetId) {
+        const sheet = this.tilesets[sheetId];
+        if (!sheet) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 16;
+        canvas.height = 16;
+        const ctx = canvas.getContext('2d');
+
+        for (let r = 0; r < sheet.rows; r++) {
+            for (let c = 0; c < sheet.cols; c++) {
+                ctx.clearRect(0, 0, 16, 16);
+                ctx.drawImage(sheet.img, c * 16, r * 16, 16, 16, 0, 0, 16, 16);
+
+                const data = ctx.getImageData(0, 0, 16, 16).data;
+                let hasContent = false;
+                for (let i = 3; i < data.length; i += 4) {
+                    if (data[i] > 0) { hasContent = true; break; }
+                }
+                if (!hasContent) continue;
+
+                const tileCanvas = document.createElement('canvas');
+                tileCanvas.width = 16;
+                tileCanvas.height = 16;
+                tileCanvas.getContext('2d').drawImage(sheet.img, c * 16, r * 16, 16, 16, 0, 0, 16, 16);
+
+                this.allTiles.push({
+                    sheet: sheetId,
+                    col: c,
+                    row: r,
+                    canvas: tileCanvas,
+                    label: `${sheet.name} ${r * sheet.cols + c}`
+                });
             }
         }
     }
@@ -67,27 +124,69 @@ export class MapEditor {
         const container = document.getElementById('tile-palette');
         if (!container) return;
         container.innerHTML = '';
-        for (const [id, info] of Object.entries(this.TILES)) {
-            const btn = document.createElement('button');
-            btn.className = 'tile-btn' + (id === this.selectedTile ? ' selected' : '');
-            btn.dataset.tile = id;
-            btn.innerHTML = `<div class="tile-preview" style="background:${info.color}"></div><span>${info.label}</span>`;
-            btn.onclick = () => {
-                container.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                this.selectedTile = id;
+
+        const categories = {};
+        this.TILESET_SOURCES.forEach(src => {
+            const sheet = this.tilesets[src.id];
+            if (!sheet) return;
+            categories[src.id] = { name: src.name, tiles: [] };
+        });
+
+        this.allTiles.forEach((tile, idx) => {
+            if (categories[tile.sheet]) {
+                categories[tile.sheet].tiles.push({ ...tile, globalIndex: idx });
+            }
+        });
+
+        for (const [catId, cat] of Object.entries(categories)) {
+            if (cat.tiles.length === 0) continue;
+
+            const header = document.createElement('div');
+            header.className = 'palette-category-header';
+            header.textContent = cat.name;
+            header.onclick = () => {
+                const items = header.nextElementSibling;
+                if (items) items.classList.toggle('collapsed');
             };
-            container.appendChild(btn);
+            container.appendChild(header);
+
+            const grid = document.createElement('div');
+            grid.className = 'palette-tile-grid';
+
+            cat.tiles.forEach(tile => {
+                const btn = document.createElement('button');
+                btn.className = 'palette-tile-btn';
+                btn.dataset.index = tile.globalIndex;
+
+                const preview = document.createElement('canvas');
+                preview.width = 16;
+                preview.height = 16;
+                preview.style.width = '32px';
+                preview.style.height = '32px';
+                preview.style.imageRendering = 'pixelated';
+                preview.getContext('2d').drawImage(tile.canvas, 0, 0);
+                btn.appendChild(preview);
+
+                btn.onclick = () => {
+                    container.querySelectorAll('.palette-tile-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    this.selectedTileIndex = tile.globalIndex;
+                    this.selectedTileSheet = tile.sheet;
+                };
+
+                grid.appendChild(btn);
+            });
+
+            container.appendChild(grid);
         }
     }
 
     buildToolbar() {
         const tools = [
-            { id: 'paint',  icon: '🖌️', label: 'Pintar' },
-            { id: 'erase',  icon: '🧹', label: 'Apagar' },
-            { id: 'fill',   icon: '🪣', label: 'Preencher' },
-            { id: 'pick',   icon: '💉', label: 'Copiar' },
-            { id: 'rect',   icon: '⬜', label: 'Retângulo' }
+            { id: 'paint', icon: '🖌️', label: 'Pintar' },
+            { id: 'erase', icon: '🧹', label: 'Apagar' },
+            { id: 'fill', icon: '🪣', label: 'Preencher' },
+            { id: 'pick', icon: '💉', label: 'Copiar' }
         ];
         const container = document.getElementById('editor-tools');
         if (!container) return;
@@ -104,6 +203,22 @@ export class MapEditor {
             };
             container.appendChild(btn);
         });
+    }
+
+    generateEmptyMap() {
+        this.map = [];
+        this.collisionMap = [];
+        this.grassMap = [];
+        for (let y = 0; y < this.gridH; y++) {
+            this.map[y] = [];
+            this.collisionMap[y] = [];
+            this.grassMap[y] = [];
+            for (let x = 0; x < this.gridW; x++) {
+                this.map[y][x] = null;
+                this.collisionMap[y][x] = 0;
+                this.grassMap[y][x] = 0;
+            }
+        }
     }
 
     setupEvents() {
@@ -131,8 +246,8 @@ export class MapEditor {
         this.canvas.addEventListener('mouseleave', () => { this.painting = false; this.dragging = false; });
         this.canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const zoom = e.deltaY > 0 ? -2 : 2;
-            this.tileSize = Math.max(8, Math.min(64, this.tileSize + zoom));
+            const zoom = e.deltaY > 0 ? -4 : 4;
+            this.displayTileSize = Math.max(16, Math.min(96, this.displayTileSize + zoom));
             this.render();
         }, { passive: false });
         this.canvas.style.cursor = 'crosshair';
@@ -142,9 +257,8 @@ export class MapEditor {
         const rect = this.canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left + this.camera.x;
         const my = e.clientY - rect.top + this.camera.y;
-        const tx = Math.floor(mx / this.tileSize);
-        const ty = Math.floor(my / this.tileSize);
-        return { x: tx, y: ty };
+        const ts = this.displayTileSize;
+        return { x: Math.floor(mx / ts), y: Math.floor(my / ts) };
     }
 
     handlePaint(e) {
@@ -152,35 +266,48 @@ export class MapEditor {
         if (x < 0 || x >= this.gridW || y < 0 || y >= this.gridH) return;
 
         if (this.tool === 'paint') {
-            this.paintTile(x, y, this.selectedTile);
+            this.paintTileAt(x, y);
         } else if (this.tool === 'erase') {
-            this.paintTile(x, y, 'empty');
+            this.map[y][x] = null;
+            this.collisionMap[y][x] = 0;
+            this.grassMap[y][x] = 0;
         } else if (this.tool === 'fill') {
-            this.floodFill(x, y, this.selectedTile);
+            this.floodFill(x, y);
         } else if (this.tool === 'pick') {
-            this.selectedTile = this.map[y][x];
-            document.querySelectorAll('#tile-palette .tile-btn').forEach(b => {
-                b.classList.toggle('selected', b.dataset.tile === this.selectedTile);
-            });
-        } else if (this.tool === 'rect') {
-            this.paintTile(x, y, this.selectedTile);
+            const t = this.map[y][x];
+            if (t) {
+                const idx = this.allTiles.findIndex(tile => tile.sheet === t.sheet && tile.col === t.col && tile.row === t.row);
+                if (idx >= 0) {
+                    this.selectedTileIndex = idx;
+                    document.querySelectorAll('.palette-tile-btn').forEach(b => {
+                        b.classList.toggle('selected', parseInt(b.dataset.index) === idx);
+                    });
+                }
+            }
         }
         this.render();
     }
 
-    paintTile(x, y, tile) {
-        if (x < 0 || x >= this.gridW || y < 0 || y >= this.gridH) return;
-        this.map[y][x] = tile;
-        const isTree = tile === 'tree' || tile === 'wall' || tile === 'fence_h' || tile === 'fence_v' || tile === 'rock';
-        const isGrass = tile === 'tall_grass' || tile === 'grass' || tile === 'flower';
-        this.collisionMap[y][x] = isTree ? 1 : 0;
-        this.grassMap[y][x] = isGrass && tile !== 'grass' ? 1 : 0;
+    paintTileAt(x, y) {
+        if (this.selectedTileIndex === null) return;
+        const tile = this.allTiles[this.selectedTileIndex];
+        if (!tile) return;
+        this.map[y][x] = { sheet: tile.sheet, col: tile.col, row: tile.row };
+        const isSolid = tile.sheet === 'buildings' || tile.sheet === 'roofs';
+        const isGrassDetail = tile.sheet === 'plants' || tile.sheet === 'grass_cliff';
+        this.collisionMap[y][x] = isSolid ? 1 : 0;
+        this.grassMap[y][x] = isGrassDetail ? 1 : 0;
     }
 
-    floodFill(x, y, tile) {
-        if (x < 0 || x >= this.gridW || y < 0 || y >= this.gridH) return;
+    floodFill(x, y) {
+        if (this.selectedTileIndex === null) return;
         const target = this.map[y][x];
-        if (target === tile) return;
+        const newTile = { ...this.allTiles[this.selectedTileIndex] };
+        delete newTile.canvas;
+        delete newTile.label;
+
+        if (target && newTile.sheet === target.sheet && newTile.col === target.col && newTile.row === target.row) return;
+
         const stack = [[x, y]];
         const visited = new Set();
         while (stack.length > 0) {
@@ -188,62 +315,87 @@ export class MapEditor {
             const key = `${cx},${cy}`;
             if (visited.has(key)) continue;
             if (cx < 0 || cx >= this.gridW || cy < 0 || cy >= this.gridH) continue;
-            if (this.map[cy][cx] !== target) continue;
+            const current = this.map[cy][cx];
+            const match = (!target && !current) || (target && current && current.sheet === target.sheet && current.col === target.col && current.row === target.row);
+            if (!match) continue;
             visited.add(key);
-            this.paintTile(cx, cy, tile);
+            this.map[cy][cx] = newTile;
+            this.collisionMap[cy][cx] = 0;
+            this.grassMap[cy][cx] = 0;
             stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
         }
     }
 
-    render() {
-        const w = this.canvas.width = this.canvas.parentElement.clientWidth;
-        const h = this.canvas.height = this.canvas.parentElement.clientHeight;
-        const ctx = this.ctx;
-        const ts = this.tileSize;
+    getTileCanvas(tileData) {
+        if (!tileData) return null;
+        const sheet = this.tilesets[tileData.sheet];
+        if (!sheet) return null;
 
-        ctx.fillStyle = '#0d1117';
+        const key = `${tileData.sheet}_${tileData.col}_${tileData.row}`;
+        if (sheet._cache && sheet._cache[key]) return sheet._cache[key];
+
+        const c = document.createElement('canvas');
+        c.width = 16;
+        c.height = 16;
+        c.getContext('2d').drawImage(sheet.img, tileData.col * 16, tileData.row * 16, 16, 16, 0, 0, 16, 16);
+
+        if (!sheet._cache) sheet._cache = {};
+        sheet._cache[key] = c;
+        return c;
+    }
+
+    render() {
+        const parent = this.canvas.parentElement;
+        if (!parent) return;
+        const w = this.canvas.width = parent.clientWidth;
+        const h = this.canvas.height = parent.clientHeight;
+        const ctx = this.ctx;
+        const ts = this.displayTileSize;
+
+        ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = '#1a1a2e';
         ctx.fillRect(0, 0, w, h);
 
-        const startX = Math.floor(this.camera.x / ts);
-        const startY = Math.floor(this.camera.y / ts);
-        const endX = Math.ceil((this.camera.x + w) / ts);
-        const endY = Math.ceil((this.camera.y + h) / ts);
+        const startX = Math.floor(this.camera.x / ts) - 1;
+        const startY = Math.floor(this.camera.y / ts) - 1;
+        const endX = Math.ceil((this.camera.x + w) / ts) + 1;
+        const endY = Math.ceil((this.camera.y + h) / ts) + 1;
 
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
                 if (x < 0 || x >= this.gridW || y < 0 || y >= this.gridH) continue;
-                const tile = this.map[y][x];
-                const info = this.TILES[tile] || this.TILES.empty;
                 const sx = x * ts - this.camera.x;
                 const sy = y * ts - this.camera.y;
+                const tileData = this.map[y][x];
 
-                ctx.fillStyle = info.color;
-                ctx.fillRect(sx, sy, ts, ts);
-
-                if (tile === 'tree') {
+                if (tileData) {
+                    const tileCanvas = this.getTileCanvas(tileData);
+                    if (tileCanvas) {
+                        ctx.drawImage(tileCanvas, 0, 0, 16, 16, sx, sy, ts, ts);
+                    }
+                } else {
                     ctx.fillStyle = '#2d5a27';
-                    ctx.beginPath();
-                    ctx.arc(sx + ts / 2, sy + ts / 2 - 2, ts / 2 - 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#5a3a1a';
-                    ctx.fillRect(sx + ts / 2 - 2, sy + ts / 2 + 4, 4, 10);
-                } else if (tile === 'water') {
-                    ctx.fillStyle = '#5dade2';
-                    const wave = Math.sin(Date.now() * 0.003 + x * 0.5) * 2;
-                    ctx.fillRect(sx, sy + ts / 2 + wave, ts, 2);
-                } else if (tile === 'house') {
-                    ctx.fillStyle = '#a29bfe';
-                    ctx.fillRect(sx + 4, sy + 4, ts - 8, ts - 8);
+                    ctx.fillRect(sx, sy, ts, ts);
+                    ctx.fillStyle = '#3a7a33';
+                    const gx = sx + ((x * 7) % ts);
+                    const gy = sy + ((y * 13) % ts);
+                    ctx.fillRect(gx, gy, 2, 3);
                 }
 
                 if (this.collisionMap[y] && this.collisionMap[y][x]) {
-                    ctx.fillStyle = 'rgba(255,0,0,0.15)';
+                    ctx.fillStyle = 'rgba(255,0,0,0.2)';
                     ctx.fillRect(sx, sy, ts, ts);
+                    ctx.strokeStyle = 'rgba(255,0,0,0.4)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, sy); ctx.lineTo(sx + ts, sy + ts);
+                    ctx.moveTo(sx + ts, sy); ctx.lineTo(sx, sy + ts);
+                    ctx.stroke();
                 }
             }
         }
 
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
         ctx.lineWidth = 0.5;
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
@@ -254,14 +406,12 @@ export class MapEditor {
             }
         }
 
-        ctx.strokeStyle = 'rgba(233,69,96,0.3)';
+        ctx.strokeStyle = 'rgba(233,69,96,0.5)';
         ctx.lineWidth = 2;
         ctx.strokeRect(-this.camera.x, -this.camera.y, this.gridW * ts, this.gridH * ts);
 
         const coordsEl = document.getElementById('editor-coords');
-        if (coordsEl) {
-            coordsEl.textContent = `${this.gridW}x${this.gridH} | Tile: ${this.selectedTile}`;
-        }
+        if (coordsEl) coordsEl.textContent = `${this.gridW}x${this.gridH} | Zoom: ${this.displayTileSize}px`;
     }
 
     resize(w, h) {
@@ -279,7 +429,7 @@ export class MapEditor {
             newCollision[y] = [];
             newGrass[y] = [];
             for (let x = 0; x < w; x++) {
-                newMap[y][x] = (this.map[y] && this.map[y][x]) || 'grass';
+                newMap[y][x] = (this.map[y] && this.map[y][x]) || null;
                 newCollision[y][x] = (this.collisionMap[y] && this.collisionMap[y][x]) || 0;
                 newGrass[y][x] = (this.grassMap[y] && this.grassMap[y][x]) || 0;
             }
@@ -296,7 +446,7 @@ export class MapEditor {
         return JSON.stringify({
             width: this.gridW,
             height: this.gridH,
-            tileSize: this.tileSize,
+            displayTileSize: this.displayTileSize,
             map: this.map,
             collision: this.collisionMap,
             grass: this.grassMap
@@ -308,7 +458,7 @@ export class MapEditor {
             const data = typeof json === 'string' ? JSON.parse(json) : json;
             this.gridW = data.width;
             this.gridH = data.height;
-            this.tileSize = data.tileSize || 32;
+            this.displayTileSize = data.displayTileSize || 32;
             this.map = data.map;
             this.collisionMap = data.collision;
             this.grassMap = data.grass;
@@ -322,7 +472,6 @@ export class MapEditor {
 
     clear() {
         this.generateEmptyMap();
-        this.currentMapId = null;
         this.currentMapName = '';
         this.render();
     }

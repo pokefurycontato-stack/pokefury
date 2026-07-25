@@ -509,7 +509,7 @@ body {
 
 .editor-body { flex: 1; display: flex; overflow: hidden; }
 .editor-sidebar-left {
-    width: 200px; min-width: 200px;
+    width: 220px; min-width: 220px;
     background: #161b22; border-right: 1px solid #30363d;
     display: flex; flex-direction: column; padding: 8px; overflow-y: auto;
 }
@@ -517,20 +517,27 @@ body {
     color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding: 4px;
 }
-.tile-palette { display: flex; flex-direction: column; gap: 4px; }
-.tile-btn {
-    display: flex; align-items: center; gap: 10px;
-    padding: 6px 8px; border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 6px; background: rgba(255,255,255,0.02);
-    color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 500;
-    font-family: inherit; cursor: pointer; transition: all 0.15s; text-align: left;
+.tile-palette { display: flex; flex-direction: column; gap: 2px; }
+.palette-category-header {
+    padding: 6px 8px; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5);
+    text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
+    border-radius: 4px; transition: background 0.15s;
 }
-.tile-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
-.tile-btn.selected { background: rgba(233,69,96,0.12); border-color: rgba(233,69,96,0.3); color: #e94560; }
-.tile-preview {
-    width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
-    flex-shrink: 0;
+.palette-category-header:hover { background: rgba(255,255,255,0.06); }
+.palette-tile-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;
+    padding: 4px; margin-bottom: 4px;
 }
+.palette-tile-grid.collapsed { display: none; }
+.palette-tile-btn {
+    width: 36px; height: 36px; border: 2px solid rgba(255,255,255,0.06);
+    border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.1s; padding: 0;
+}
+.palette-tile-btn canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+.palette-tile-btn:hover { border-color: rgba(233,69,96,0.5); transform: scale(1.1); }
+.palette-tile-btn.selected { border-color: #e94560; box-shadow: 0 0 8px rgba(233,69,96,0.4); transform: scale(1.1); }
 
 .saved-maps-list {
     display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto;
@@ -565,4 +572,5 @@ body {
 }
 #editor-canvas {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    image-rendering: pixelated; image-rendering: crisp-edges;
 }
