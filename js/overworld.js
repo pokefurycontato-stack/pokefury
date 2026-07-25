@@ -62,7 +62,8 @@ export class Overworld2D {
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = [];
         this.battleCooldown = 0;
-        this.overworldSheetCache = {};
+        this.pokemonSpriteContainer = null;
+        this.pokemonSpriteElements = new Map();
 
         this.playerSprites = {};
         this.loaded = false;
@@ -223,64 +224,6 @@ export class Overworld2D {
         });
     }
 
-    async loadOverworldSheet(pokemonId) {
-        if (this.overworldSheetCache[pokemonId]) {
-            return this.overworldSheetCache[pokemonId];
-        }
-
-        const sheetUrl = window.PokeAPI.getOverworldUrl(pokemonId);
-        if (!sheetUrl) return null;
-
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = sheetUrl;
-        });
-
-        const frameW = img.width / 4;
-        const frameH = img.height / 4;
-
-        const frames = {
-            down: [],
-            left: [],
-            right: [],
-            up: []
-        };
-
-        const directions = ['down', 'left', 'right', 'up'];
-        for (let row = 0; row < 4; row++) {
-            const dir = directions[row];
-            for (let col = 0; col < 4; col++) {
-                const canvas = document.createElement('canvas');
-                canvas.width = frameW;
-                canvas.height = frameH;
-                const ctx = canvas.getContext('2d');
-                ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(
-                    img,
-                    col * frameW, row * frameH, frameW, frameH,
-                    0, 0, frameW, frameH
-                );
-                const frameImg = new Image();
-                frameImg.src = canvas.toDataURL();
-                await new Promise(r => { frameImg.onload = r; });
-                frames[dir].push(frameImg);
-            }
-        }
-
-        const sheet = {
-            img,
-            frameW,
-            frameH,
-            frames
-        };
-
-        this.overworldSheetCache[pokemonId] = sheet;
-        return sheet;
-    }
-
     async setCurrentMap(mapData) {
         this.currentMapData = mapData;
         this.currentMapImage = await this.loadMapImage(mapData.image_url);
@@ -311,6 +254,12 @@ export class Overworld2D {
         this.camera.x = this.player.x * this.tileW - this.canvas.width / 2 + this.tileW / 2;
         this.camera.y = this.player.y * this.tileH - this.canvas.height / 2 + this.tileH / 2;
 
+        if (this.pokemonSpriteContainer) {
+            this.pokemonSpriteContainer.remove();
+            this.pokemonSpriteContainer = null;
+        }
+        this.pokemonSpriteElements.clear();
+
         if (mapData.id && this.game.regionManager) {
             try {
                 const encounters = await this.game.regionManager.loadMapEncounters(mapData.id);
@@ -336,51 +285,6 @@ export class Overworld2D {
             this.pokemonFollowSprite = await PokeAPI.preloadSprite(spriteUrl);
         }
         this.pokemonFollowing = pokemon;
-    }
-
-    async loadPokemonSheet(pokemonId) {
-        if (this.overworldSheetCache[pokemonId]) {
-            return this.overworldSheetCache[pokemonId];
-        }
-
-        const url = window.PokeAPI.getOverworldUrl(pokemonId);
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                const frames = {};
-                const frameW = img.width / 4;
-                const frameH = img.height / 4;
-                const directions = ['down', 'left', 'right', 'up'];
-
-                for (let row = 0; row < 4; row++) {
-                    frames[directions[row]] = [];
-                    for (let col = 0; col < 4; col++) {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = frameW;
-                        canvas.height = frameH;
-                        const ctx = canvas.getContext('2d');
-                        ctx.imageSmoothingEnabled = false;
-                        ctx.drawImage(
-                            img,
-                            col * frameW, row * frameH, frameW, frameH,
-                            0, 0, frameW, frameH
-                        );
-                        const frameImg = new Image();
-                        frameImg.src = canvas.toDataURL();
-                        frames[directions[row]].push(frameImg);
-                    }
-                }
-
-                this.overworldSheetCache[pokemonId] = { sheet: img, frames, frameW, frameH };
-                resolve(this.overworldSheetCache[pokemonId]);
-            };
-            img.onerror = () => {
-                console.warn('[Overworld] Failed to load sprite sheet:', pokemonId);
-                resolve(null);
-            };
-            img.src = url;
-        });
     }
 
     loop() {
@@ -526,25 +430,17 @@ export class Overworld2D {
             let pos = this.findSpawnPosition();
             if (!pos) continue;
 
-            const sheet = await this.loadOverworldSheet(enc.pokemon_id);
+            // Garante que estamos usando a URL correta do banco de dados (GIF)
+            const spriteUrl = enc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null);
 
             this.mapPokemonEntities.push({
                 entityId: `pokemon_${Date.now()}_${i}`,
                 x: pos.x,
                 y: pos.y,
-                fromX: pos.x,
-                fromY: pos.y,
-                moving: false,
-                moveProgress: 0,
-                sheet: sheet,
+                spriteUrl: spriteUrl,
                 encounter: enc,
-                wanderTimer: Math.floor(Math.random() * 120),
-                wanderCooldown: 60 + Math.floor(Math.random() * 120),
                 active: true,
-                respawnTimer: 0,
-                frame: 0,
-                frameTimer: 0,
-                direction: 'down'
+                respawnTimer: 0
             });
         }
     }
@@ -584,50 +480,13 @@ export class Overworld2D {
                         if (pos) {
                             p.x = pos.x;
                             p.y = pos.y;
-                            p.fromX = pos.x;
-                            p.fromY = pos.y;
-                            p.direction = 'down';
                         }
                     }
                 }
                 continue;
             }
 
-            if (p.moving) {
-                p.moveProgress += 0.15;
-                if (p.moveProgress >= 1) {
-                    p.moveProgress = 1;
-                    p.moving = false;
-                    p.fromX = p.x;
-                    p.fromY = p.y;
-                }
-            } else {
-                p.wanderTimer--;
-                if (p.wanderTimer <= 0) {
-                    p.wanderTimer = p.wanderCooldown + Math.floor(Math.random() * 60);
-                    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
-                    const dir = dirs[Math.floor(Math.random() * dirs.length)];
-                    const nx = p.x + dir.dx;
-                    const ny = p.y + dir.dy;
-
-                    if (nx >= 0 && nx < this.worldCols && ny >= 0 && ny < this.worldRows &&
-                        !this.isCollisionAt(nx, ny) &&
-                        !(nx === this.player.x && ny === this.player.y)) {
-                        p.fromX = p.x;
-                        p.fromY = p.y;
-                        p.x = nx;
-                        p.y = ny;
-                        p.moving = true;
-                        p.moveProgress = 0;
-                        p.direction = this.getDirection(p.fromX, p.fromY, p.x, p.y);
-                    }
-                }
-            }
-        }
-
-        if (this.battleCooldown <= 0) {
-            for (const p of this.mapPokemonEntities) {
-                if (!p.active || p.moving) continue;
+            if (this.battleCooldown <= 0) {
                 const dx = Math.abs(p.x - this.player.x);
                 const dy = Math.abs(p.y - this.player.y);
                 if (dx + dy <= 1) {
@@ -671,7 +530,7 @@ export class Overworld2D {
             );
 
             this.drawGrid(ctx, w, h);
-        this.drawMapPokemon(ctx);
+            this.drawMapPokemon(ctx);
         } else {
             ctx.fillStyle = '#2d5a27';
             ctx.fillRect(0, 0, w, h);
@@ -704,59 +563,70 @@ export class Overworld2D {
     }
 
     drawMapPokemon(ctx) {
+        const wrap = this.canvas.parentElement;
+        if (!wrap) return;
+
+        if (!this.pokemonSpriteContainer) {
+            this.pokemonSpriteContainer = document.createElement('div');
+            this.pokemonSpriteContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+            wrap.appendChild(this.pokemonSpriteContainer);
+        }
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
+
+        const activeIds = new Set();
+
         for (const p of this.mapPokemonEntities) {
-            if (!p.active || !p.sheet) continue;
+            if (!p.active) continue;
+            activeIds.add(p.entityId);
 
-            let drawX, drawY;
-            if (p.moving) {
-                const t = p.moveProgress;
-                drawX = (p.fromX + (p.x - p.fromX) * t) * this.tileW - this.camera.x;
-                drawY = (p.fromY + (p.y - p.fromY) * t) * this.tileH - this.camera.y;
-            } else {
-                drawX = p.x * this.tileW - this.camera.x;
-                drawY = p.y * this.tileH - this.camera.y;
-            }
+            // Coordenadas FIXAS (sem movimento)
+            const drawX = p.x * this.tileW - this.camera.x;
+            const drawY = p.y * this.tileH - this.camera.y;
 
+            // Efeito de balanço (Bobbing) preservado
             const bobY = Math.sin(Date.now() / 400 + p.x * 3 + p.y * 7) * 3;
-            drawY += bobY;
+            const spriteSize = this.tileW * 1.4;
 
-            if (p.moving) {
-                p.frameTimer++;
-                if (p.frameTimer >= 6) {
-                    p.frameTimer = 0;
-                    p.frame = (p.frame + 1) % 4;
+            const finalY = drawY - this.tileH * 0.4 + bobY;
+
+            if (drawX + spriteSize < -50 || drawX > this.canvas.width + 50 ||
+                finalY + spriteSize < -50 || finalY > this.canvas.height + 50) {
+                if (this.pokemonSpriteElements.has(p.entityId)) {
+                    this.pokemonSpriteElements.get(p.entityId).style.display = 'none';
                 }
-            } else {
-                p.frame = 0;
-                p.frameTimer = 0;
+                continue;
             }
 
-            const direction = p.direction;
-            const frameImg = p.sheet.frames[direction][p.frame];
-            if (!frameImg || !frameImg.complete) continue;
+            let el = this.pokemonSpriteElements.get(p.entityId);
+            if (!el) {
+                el = document.createElement('img');
+                el.style.cssText = `position:absolute;pointer-events:none;image-rendering:pixelated;`;
+                // Prioriza a URL do GIF do banco de dados
+                if (p.spriteUrl) el.src = p.spriteUrl;
+                this.pokemonSpriteContainer.appendChild(el);
+                this.pokemonSpriteElements.set(p.entityId, el);
+            }
 
-            const spriteScale = 1.4;
-            const frameW = p.sheet.frameW * spriteScale;
-            const frameH = p.sheet.frameH * spriteScale;
-            const offsetX = (this.tileW - frameW) / 2;
-            const offsetY = -frameH * 0.15;
-
-            ctx.drawImage(frameImg, drawX + offsetX, drawY + offsetY, frameW, frameH);
+            el.style.display = 'block';
+            el.style.left = (offsetX + drawX + (this.tileW - spriteSize) / 2) + 'px';
+            el.style.top = (offsetY + finalY - spriteSize * 0.15) + 'px';
+            el.style.width = spriteSize + 'px';
+            el.style.height = spriteSize + 'px';
 
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
             ctx.ellipse(drawX + this.tileW / 2, p.y * this.tileH - this.camera.y + this.tileH - 1, this.tileW / 4, 3, 0, 0, Math.PI * 2);
             ctx.fill();
         }
-    }
 
-    getDirection(fromX, fromY, toX, toY) {
-        const dx = toX - fromX;
-        const dy = toY - fromY;
-        if (Math.abs(dx) > Math.abs(dy)) {
-            return dx > 0 ? 'right' : 'left';
-        } else {
-            return dy > 0 ? 'down' : 'up';
+        for (const [id, el] of this.pokemonSpriteElements) {
+            if (!activeIds.has(id)) {
+                el.style.display = 'none';
+            }
         }
     }
 
