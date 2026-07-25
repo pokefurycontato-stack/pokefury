@@ -208,16 +208,17 @@ async function handleRegister() {
 
 function showGame(userData) {
     const authScreen = document.getElementById('auth-screen');
-    const gameWrapper = document.getElementById('game-wrapper');
+    const charScreen = document.getElementById('character-screen');
 
     authScreen.classList.add('fade-out');
 
     setTimeout(() => {
         authScreen.classList.add('hidden');
-        gameWrapper.classList.remove('hidden');
-        gameWrapper.classList.add('fade-in');
+        charScreen.classList.remove('hidden');
+        charScreen.classList.add('fade-in');
 
-        const charScreen = document.getElementById('character-screen');
-        if (charScreen) charScreen.classList.remove('hidden');
+        if (window.pokefury && window.pokefury.showCharScreen) {
+            window.pokefury.showCharScreen();
+        }
     }, 500);
 }

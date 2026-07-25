@@ -4,7 +4,7 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 export function showScreen(screenId) {
-    const screens = ['battle-screen', 'hud', 'character-screen'];
+    const screens = ['battle-screen', 'hud'];
     screens.forEach(id => {
         const el = $(`#${id}`);
         if (el) el.classList.add('hidden');

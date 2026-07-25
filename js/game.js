@@ -71,9 +71,6 @@ class PokeFuryGame {
             });
         }
 
-        setTimeout(() => {
-            this.showCharScreen();
-        }, 600);
     }
 
     async preloadStarters() {
@@ -284,6 +281,7 @@ class PokeFuryGame {
         }
 
         document.getElementById('character-screen').classList.add('hidden');
+        document.getElementById('game-wrapper').classList.remove('hidden');
 
         try {
             if (!this.overworld2d) {
@@ -295,7 +293,6 @@ class PokeFuryGame {
         }
 
         this.state = 'overworld';
-        showScreen('hud');
         const profileNameEl = document.getElementById('profile-name');
         if (profileNameEl) profileNameEl.textContent = this.playerName;
         document.getElementById('location-name').textContent = 'Área Selvagem';
@@ -593,5 +590,5 @@ class PokeFuryGame {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    new PokeFuryGame();
+    window.pokefury = new PokeFuryGame();
 });
