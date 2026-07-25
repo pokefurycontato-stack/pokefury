@@ -114,7 +114,7 @@ export class Overworld2D {
             });
 
             this.playerSpriteFrames = {};
-            const directions = ['down', 'up', 'left', 'right'];
+            const directions = ['down', 'left', 'right', 'up'];
             const frameCount = 4;
             const frameW = spriteSheet.width / frameCount;
             const frameH = spriteSheet.height / frameCount;
