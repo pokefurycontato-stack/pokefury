@@ -21,16 +21,14 @@ export class MapEditor {
         this.allTiles = [];
 
         this.TILESET_SOURCES = [
-            { id: 'terrain', url: 'tilesets/1_terrain.png', name: 'Terreno', cols: 8 },
-            { id: 'plants', url: 'tilesets/3_plants.png', name: 'Plantas', cols: 8 },
-            { id: 'buildings', url: 'tilesets/4_buildings.png', name: 'Construções', cols: 8 },
-            { id: 'water', url: 'tilesets/5_waterfall.png', name: 'Água', cols: 8 },
-            { id: 'floors', url: 'tilesets/6_floors.png', name: 'Pisos', cols: 8 },
-            { id: 'grass_cliff', url: 'tilesets/7_grass_cliff.png', name: 'Grama/Cliff', cols: 8 },
-            { id: 'beach', url: 'tilesets/9_beach.png', name: 'Praia', cols: 8 },
-            { id: 'dirt', url: 'tilesets/10_dirt.png', name: 'Terra', cols: 8 },
-            { id: 'roofs', url: 'tilesets/11_roofs.png', name: 'Telhados', cols: 8 },
-            { id: 'pokemon', url: 'tilesets/pokemon-inspired.png', name: 'Pokémon', cols: 8 }
+            { id: 'frlg_outdoor', url: 'tilesets/frlg-outdoor.png', name: 'FRLG Exterior', cols: 8, tileSize: 16 },
+            { id: 'frlg_tileset1', url: 'tilesets/frlg-tileset1.png', name: 'FRLG Routes', cols: 8, tileSize: 16 },
+            { id: 'frlg_tileset2', url: 'tilesets/frlg-tileset2.png', name: 'FRLG Cidades', cols: 8, tileSize: 16 },
+            { id: 'frlg_buildings', url: 'tilesets/frlg-buildings.png', name: 'FRLG Prédios', cols: 8, tileSize: 16 },
+            { id: 'pokemon', url: 'tilesets/pokemon-inspired.png', name: 'Pokémon Insp.', cols: 8, tileSize: 16 },
+            { id: 'terrain', url: 'tilesets/1_terrain.png', name: 'Terreno', cols: 8, tileSize: 16 },
+            { id: 'plants', url: 'tilesets/3_plants.png', name: 'Plantas', cols: 8, tileSize: 16 },
+            { id: 'water', url: 'tilesets/5_waterfall.png', name: 'Água', cols: 8, tileSize: 16 }
         ];
 
         this.SUPABASE_URL = 'https://odevwnnpzsoltbrrjdts.supabase.co';
