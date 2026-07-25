@@ -24,34 +24,36 @@ export class Overworld2D {
         this.ctx = this.canvas.getContext('2d');
 
         this.tileSize = 32;
-        this.gridCols = 30;
-        this.gridRows = 20;
+        this.worldCols = 40;
+        this.worldRows = 30;
+        this.gridCols = this.worldCols;
+        this.gridRows = this.worldRows;
 
         this.player = {
-            x: 15,
-            y: 10,
+            x: 20,
+            y: 15,
             direction: 'down',
             frame: 0,
             frameTimer: 0,
             moving: false,
             moveProgress: 0,
-            fromX: 15,
-            fromY: 10
+            fromX: 20,
+            fromY: 15
         };
 
         this.camera = { x: 0, y: 0 };
         this.keys = {};
         this.moveCooldown = 0;
         this.encounterCooldown = 0;
+        this.transitionCooldown = 0;
 
         this.currentMapImage = null;
         this.currentMapData = null;
         this.encounterZones = [];
-        this.transitionZones = [];
 
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
-        this.pokemonFollowPos = { x: 15, y: 10 };
+        this.pokemonFollowPos = { x: 20, y: 15 };
 
         this.playerSprites = {};
         this.loaded = false;
@@ -80,8 +82,6 @@ export class Overworld2D {
             this.canvas.width = window.innerWidth - 240;
             this.canvas.height = window.innerHeight - 48;
         }
-        this.gridCols = Math.ceil(this.canvas.width / this.tileSize) + 2;
-        this.gridRows = Math.ceil(this.canvas.height / this.tileSize) + 2;
     }
 
     setupInput() {
@@ -97,7 +97,6 @@ export class Overworld2D {
     }
 
     async loadSprites() {
-        const playerGender = this.game.playerGender || 'male';
         this.playerSprites = {
             down: await this.createPlayerSprite('down'),
             up: await this.createPlayerSprite('up'),
@@ -146,11 +145,6 @@ export class Overworld2D {
             ctx.fillRect(20, 5, 2, 2);
         }
 
-        if (this.player.moving && (direction === 'left' || direction === 'right')) {
-            const bob = Math.sin(this.frameCount * 0.3) * 2;
-            ctx.translate(0, bob);
-        }
-
         const img = new Image();
         img.src = canvas.toDataURL();
         return new Promise(resolve => { img.onload = () => resolve(img); });
@@ -175,7 +169,7 @@ export class Overworld2D {
         this.currentMapImage = await this.loadMapImage(mapData.image_url);
 
         this.encounterZones = [];
-        this.transitionZones = [];
+        this.transitionCooldown = 0;
 
         if (mapData.encounter_rate > 0) {
             this.encounterZones.push({
@@ -185,20 +179,17 @@ export class Overworld2D {
             });
         }
 
-        this.transitionZones.push(
-            { edge: 'top', target: 'prev' },
-            { edge: 'bottom', target: 'next' },
-            { edge: 'left', target: 'prev' },
-            { edge: 'right', target: 'next' }
-        );
-
-        this.player.x = Math.floor(this.gridCols / 2);
-        this.player.y = Math.floor(this.gridRows / 2);
+        this.player.x = Math.floor(this.worldCols / 2);
+        this.player.y = Math.floor(this.worldRows / 2);
         this.player.fromX = this.player.x;
         this.player.fromY = this.player.y;
         this.player.moving = false;
+        this.player.direction = 'down';
 
-        this.playerFollowPos = { x: this.player.x, y: this.player.y };
+        this.pokemonFollowPos = { x: this.player.x, y: this.player.y };
+
+        this.camera.x = this.player.x * this.tileSize - this.canvas.width / 2 + this.tileSize / 2;
+        this.camera.y = this.player.y * this.tileSize - this.canvas.height / 2 + this.tileSize / 2;
     }
 
     async loadPokemonFollowSprite(pokemon) {
@@ -214,6 +205,7 @@ export class Overworld2D {
         this.frameCount++;
         if (this.encounterCooldown > 0) this.encounterCooldown--;
         if (this.moveCooldown > 0) this.moveCooldown--;
+        if (this.transitionCooldown > 0) this.transitionCooldown--;
 
         try {
             this.handleInput();
@@ -227,12 +219,10 @@ export class Overworld2D {
     }
 
     handleInput() {
-        if (this.game.state !== 'overworld') {
-            if (this.frameCount % 60 === 1) console.log('[Overworld] state is', this.game.state, '- not overworld');
-            return;
-        }
+        if (this.game.state !== 'overworld') return;
         if (this.player.moving) return;
         if (this.moveCooldown > 0) return;
+        if (this.transitionCooldown > 0) return;
 
         let dx = 0, dy = 0, dir = null;
 
@@ -246,7 +236,7 @@ export class Overworld2D {
             const nx = this.player.x + dx;
             const ny = this.player.y + dy;
 
-            if (nx < 0 || nx >= this.gridCols || ny < 0 || ny >= this.gridRows) {
+            if (nx < 0 || nx >= this.worldCols || ny < 0 || ny >= this.worldRows) {
                 this.handleTransition(dir);
                 return;
             }
@@ -262,6 +252,8 @@ export class Overworld2D {
     }
 
     handleTransition(direction) {
+        if (this.transitionCooldown > 0) return;
+        this.transitionCooldown = 30;
         if (this.game.regionManager) {
             this.game.advanceToNextMap();
         }
@@ -285,8 +277,20 @@ export class Overworld2D {
             }
         }
 
-        this.camera.x = this.player.x * this.tileSize - this.canvas.width / 2 + this.tileSize / 2;
-        this.camera.y = this.player.y * this.tileSize - this.canvas.height / 2 + this.tileSize / 2;
+        const ts = this.tileSize;
+        const halfW = this.canvas.width / 2;
+        const halfH = this.canvas.height / 2;
+        const maxCamX = this.worldCols * ts - this.canvas.width;
+        const maxCamY = this.worldRows * ts - this.canvas.height;
+
+        this.camera.x = Math.max(0, Math.min(
+            this.player.x * ts + ts / 2 - halfW,
+            Math.max(0, maxCamX)
+        ));
+        this.camera.y = Math.max(0, Math.min(
+            this.player.y * ts + ts / 2 - halfH,
+            Math.max(0, maxCamY)
+        ));
     }
 
     updatePokemonFollow() {
@@ -326,17 +330,14 @@ export class Overworld2D {
         ctx.fillRect(0, 0, w, h);
 
         if (this.currentMapImage && this.currentMapImage.complete) {
-            const imgW = this.currentMapImage.width;
-            const imgH = this.currentMapImage.height;
-            const scaleX = w / imgW;
-            const scaleY = h / imgH;
-            const scale = Math.max(scaleX, scaleY);
-            const drawW = imgW * scale;
-            const drawH = imgH * scale;
-            const offsetX = (w - drawW) / 2;
-            const offsetY = (h - drawH) / 2;
+            const mapDrawW = this.worldCols * this.tileSize;
+            const mapDrawH = this.worldRows * this.tileSize;
 
-            ctx.drawImage(this.currentMapImage, offsetX, offsetY, drawW, drawH);
+            ctx.drawImage(
+                this.currentMapImage,
+                -this.camera.x, -this.camera.y,
+                mapDrawW, mapDrawH
+            );
 
             this.drawGrid(ctx, w, h);
         } else {
@@ -422,8 +423,8 @@ export class Overworld2D {
 
         ctx.drawImage(this.currentMapImage, mmX, mmY, mmW, mmH);
 
-        const px = mmX + (this.player.x / this.gridCols) * mmW;
-        const py = mmY + (this.player.y / this.gridRows) * mmH;
+        const px = mmX + (this.player.x / this.worldCols) * mmW;
+        const py = mmY + (this.player.y / this.worldRows) * mmH;
         ctx.fillStyle = '#e94560';
         ctx.beginPath();
         ctx.arc(px, py, 3, 0, Math.PI * 2);

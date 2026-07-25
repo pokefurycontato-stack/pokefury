@@ -209,7 +209,7 @@ class PokeFuryGame {
             if (!result) return;
 
             if (result.type === 'end') {
-                alert(result.message);
+                this.showTransitionBanner(result.message, 5000);
                 return;
             }
 
@@ -233,18 +233,24 @@ class PokeFuryGame {
         }
     }
 
-    showTransitionBanner(text) {
+    showTransitionBanner(text, duration = 3000) {
         const banner = document.createElement('div');
         banner.style.cssText = `
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.85); color: #fff; padding: 24px 48px;
             border-radius: 12px; border: 2px solid #e94560; z-index: 9999;
             font-size: 20px; font-weight: 700; text-align: center;
-            animation: fadeInOut 3s ease-in-out forwards; pointer-events: none;
+            pointer-events: none;
         `;
         banner.textContent = text;
         document.body.appendChild(banner);
-        setTimeout(() => banner.remove(), 3000);
+        banner.style.opacity = '0';
+        banner.style.transition = 'opacity 0.3s';
+        requestAnimationFrame(() => { banner.style.opacity = '1'; });
+        setTimeout(() => {
+            banner.style.opacity = '0';
+            setTimeout(() => banner.remove(), 300);
+        }, duration);
     }
 
     async _saveInBackground() {
