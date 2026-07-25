@@ -170,9 +170,7 @@ class PokeFuryGame {
                 const firstMaps = await this.regionManager.loadRegionMaps(firstRegion.id);
                 if (firstMaps.length > 0) {
                     try {
-                        const userId = window.db.auth.getUser?.()?.data?.user?.id
-                            || window.db.auth.user?.()?.id
-                            || null;
+                        const userId = window.GameData.userId || window.db.auth.getUser?.()?.data?.user?.id;
                         progress = await this.regionManager.initPlayerProgress(
                             this.currentCharacterId, firstRegion.id, firstMaps[0].id, userId
                         );
