@@ -261,13 +261,13 @@ export class Overworld2D {
 
     update() {
         if (this.player.moving) {
-            this.player.moveProgress += 0.2;
+            this.player.moveProgress += 0.1;
             if (this.player.moveProgress >= 1) {
                 this.player.moveProgress = 1;
                 this.player.moving = false;
                 this.player.fromX = this.player.x;
                 this.player.fromY = this.player.y;
-                this.moveCooldown = 3;
+                this.moveCooldown = 6;
 
                 this.updatePokemonFollow();
 
