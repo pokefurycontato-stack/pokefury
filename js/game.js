@@ -907,22 +907,71 @@ class PokeFuryGame {
         const encounters = await this.regionManager.loadMapEncounters(map.id);
         this.renderEncounterList(encounters, map);
 
-        document.getElementById('encounter-add-btn').onclick = async () => {
-            const name = document.getElementById('encounter-pokemon-name').value.trim();
-            const id = parseInt(document.getElementById('encounter-pokemon-id').value);
-            const weight = parseInt(document.getElementById('encounter-weight').value) || 50;
+        const nameInput = document.getElementById('encounter-pokemon-name');
+        const previewEl = document.getElementById('encounter-preview');
+        let previewData = null;
 
-            if (!name || !id) {
-                alert('Preencha nome e ID do Pokemon');
+        nameInput.oninput = async () => {
+            const name = nameInput.value.trim().toLowerCase();
+            if (name.length < 2) {
+                previewEl.innerHTML = 'Digite o nome para buscar...';
+                previewData = null;
                 return;
             }
 
-            const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
-            await this.regionManager.addEncounter(map.id, name, id, weight, spriteUrl);
+            previewEl.innerHTML = 'Buscando...';
+            try {
+                const pokemonData = await PokeAPI.ensurePokemon(name);
+                if (pokemonData) {
+                    previewData = pokemonData;
+                    const spriteUrl = pokemonData.sprite_front || pokemonData.sprite_home || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonData.id}.png`;
+                    previewEl.innerHTML = `
+                        <img src="${spriteUrl}" onerror="this.style.display='none'">
+                        <div>
+                            <div class="preview-name">${pokemonData.name || name}</div>
+                            <div class="preview-id">#${pokemonData.id}</div>
+                        </div>
+                    `;
+                } else {
+                    previewEl.innerHTML = 'Pokemon nao encontrado';
+                    previewData = null;
+                }
+            } catch (e) {
+                previewEl.innerHTML = 'Pokemon nao encontrado no banco';
+                previewData = null;
+            }
+        };
 
-            document.getElementById('encounter-pokemon-name').value = '';
-            document.getElementById('encounter-pokemon-id').value = '';
+        document.getElementById('encounter-add-btn').onclick = async () => {
+            const name = nameInput.value.trim();
+            const weight = parseInt(document.getElementById('encounter-weight').value) || 50;
+
+            if (!name) {
+                alert('Digite o nome do Pokemon');
+                return;
+            }
+
+            let pokemonId, spriteUrl;
+            if (previewData) {
+                pokemonId = previewData.id;
+                spriteUrl = previewData.sprite_front || previewData.sprite_home || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${previewData.id}.png`;
+            } else {
+                const pokemonData = await PokeAPI.ensurePokemon(name);
+                if (!pokemonData) {
+                    alert('Pokemon nao encontrado: ' + name);
+                    return;
+                }
+                pokemonId = pokemonData.id;
+                spriteUrl = pokemonData.sprite_front || pokemonData.sprite_home || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonData.id}.png`;
+                previewData = pokemonData;
+            }
+
+            await this.regionManager.addEncounter(map.id, previewData ? (previewData.name || name) : name, pokemonId, weight, spriteUrl);
+
+            nameInput.value = '';
             document.getElementById('encounter-weight').value = '50';
+            previewEl.innerHTML = '';
+            previewData = null;
 
             const updated = await this.regionManager.loadMapEncounters(map.id);
             this.renderEncounterList(updated, map);

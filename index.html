@@ -379,10 +379,12 @@
             </div>
             <div id="encounter-list" class="encounter-list"></div>
             <div class="encounter-add">
-                <input type="text" id="encounter-pokemon-name" class="editor-text-input" placeholder="Nome do Pokemon (ex: Pikachu)">
-                <input type="number" id="encounter-pokemon-id" class="editor-input" placeholder="ID" style="width:70px">
-                <input type="number" id="encounter-weight" class="editor-input" placeholder="Peso" value="50" style="width:70px">
-                <button id="encounter-add-btn" class="editor-action-btn primary">+ Adicionar</button>
+                <div style="display:flex;gap:8px;align-items:center;width:100%">
+                    <input type="text" id="encounter-pokemon-name" class="editor-text-input" placeholder="Nome do Pokemon (ex: Pikachu, Charizard, Mewtwo...)" style="flex:1">
+                    <input type="number" id="encounter-weight" class="editor-input" placeholder="Peso" value="50" style="width:70px">
+                    <button id="encounter-add-btn" class="editor-action-btn primary">+ Adicionar</button>
+                </div>
+                <div id="encounter-preview" class="encounter-preview"></div>
             </div>
         </div>
     </div>
