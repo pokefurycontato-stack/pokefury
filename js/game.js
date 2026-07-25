@@ -289,6 +289,11 @@ class PokeFuryGame {
     }
 
     async startWildBattle(minLevel = 2, maxLevel = 8) {
+        if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
+            console.warn('[PokeFury] No alive pokemon, skipping wild battle');
+            return;
+        }
+
         let pokemon = null;
 
         if (this.currentMap) {
@@ -522,6 +527,13 @@ class PokeFuryGame {
     async enemyTurn() {
         const playerPokemon = getFirstAlive(this.playerTeam);
         const enemyPokemon = getFirstAlive(this.enemyTeam);
+        if (!playerPokemon || !enemyPokemon) {
+            if (isTeamFainted(this.playerTeam)) {
+                await showBattleMessage('Todos seus Pokémon desmaiaram...');
+                this.endBattle('lose');
+            }
+            return;
+        }
         const move = getAIMove(enemyPokemon);
 
         if (move) {

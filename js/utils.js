@@ -96,6 +96,9 @@ function getHeldItemEffect(itemId) {
 }
 
 export async function calculateDamage(attacker, defender, move) {
+    if (!attacker?.stats || !defender?.stats) {
+        return { damage: 0, effectiveness: 1, critical: false, missed: true };
+    }
     const chart = await loadTypeEffectiveness();
     const level = attacker.level || 50;
     let attack = move.category === 'physical' ? attacker.stats.attack : attacker.stats.spAtk;
