@@ -7,6 +7,7 @@ import {
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
+import { RegionManager } from './region-manager.js';
 
 const SHINY_CHANCE = 128;
 
@@ -27,6 +28,11 @@ class PokeFuryGame {
         this.starterDataCache = [];
         this.overworld2d = null;
         this._starting = false;
+
+        this.regionManager = new RegionManager();
+        this.currentRegion = null;
+        this.currentMap = null;
+        this.currentRegionMaps = [];
 
         this.init();
     }
@@ -122,10 +128,10 @@ class PokeFuryGame {
         if (profileAvatarEl && this.avatarUrl) {
             profileAvatarEl.innerHTML = `<img src="${this.avatarUrl}" class="profile-avatar-img" alt="${this.playerName}">`;
         }
-        document.getElementById('location-name').textContent = 'Área Selvagem';
 
         try {
             if (this.overworld2d) this.overworld2d.show();
+            await this.loadPlayerRegion();
         } catch (e) {
             console.error('[PokeFury] Error showing overworld:', e);
         }
@@ -135,12 +141,95 @@ class PokeFuryGame {
         const adminPanel = document.getElementById('admin-panel');
         if (adminPanel && window.isAdmin) {
             adminPanel.classList.remove('hidden');
-            this.setupMapEditor();
+            this.setupAdminButtons();
         }
 
         this._saveInBackground().catch(e =>
             console.error('[PokeFury] Background save error:', e)
         );
+    }
+
+    async loadPlayerRegion() {
+        try {
+            await this.regionManager.loadRegions();
+
+            if (this.regionManager.regions.length === 0) {
+                document.getElementById('location-name').textContent = 'Sem regioes';
+                return;
+            }
+
+            let progress = await this.regionManager.getPlayerProgress(this.currentCharacterId);
+
+            if (!progress) {
+                const firstRegion = this.regionManager.regions[0];
+                const firstMaps = await this.regionManager.loadRegionMaps(firstRegion.id);
+                if (firstMaps.length > 0) {
+                    progress = await this.regionManager.initPlayerProgress(
+                        this.currentCharacterId, firstRegion.id, firstMaps[0].id
+                    );
+                }
+            }
+
+            if (progress) {
+                this.currentRegion = this.regionManager.regions.find(r => r.id === progress.current_region_id);
+                if (this.currentRegion) {
+                    this.currentRegionMaps = await this.regionManager.loadRegionMaps(this.currentRegion.id);
+                    this.currentMap = this.currentRegionMaps.find(m => m.id === progress.current_map_id);
+
+                    if (this.currentMap && this.overworld2d) {
+                        await this.overworld2d.setCurrentMap(this.currentMap);
+                        document.getElementById('location-name').textContent = this.currentMap.name;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[PokeFury] Error loading region:', e);
+            document.getElementById('location-name').textContent = 'Area Selvagem';
+        }
+    }
+
+    async advanceToNextMap() {
+        try {
+            const result = await this.regionManager.advanceToNextMap(this.currentCharacterId);
+            if (!result) return;
+
+            if (result.type === 'end') {
+                alert(result.message);
+                return;
+            }
+
+            this.currentRegion = result.region;
+            this.currentMap = result.map;
+            this.currentRegionMaps = await this.regionManager.loadRegionMaps(this.currentRegion.id);
+
+            if (this.overworld2d) {
+                await this.overworld2d.setCurrentMap(this.currentMap);
+            }
+
+            document.getElementById('location-name').textContent = this.currentMap.name;
+
+            if (result.type === 'next_region') {
+                this.showTransitionBanner(`Nova Regiao: ${this.currentRegion.name}`);
+            } else {
+                this.showTransitionBanner(this.currentMap.name);
+            }
+        } catch (e) {
+            console.error('[PokeFury] Error advancing map:', e);
+        }
+    }
+
+    showTransitionBanner(text) {
+        const banner = document.createElement('div');
+        banner.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85); color: #fff; padding: 24px 48px;
+            border-radius: 12px; border: 2px solid #e94560; z-index: 9999;
+            font-size: 20px; font-weight: 700; text-align: center;
+            animation: fadeInOut 3s ease-in-out forwards; pointer-events: none;
+        `;
+        banner.textContent = text;
+        document.body.appendChild(banner);
+        setTimeout(() => banner.remove(), 3000);
     }
 
     async _saveInBackground() {
@@ -178,18 +267,39 @@ class PokeFuryGame {
         }
     }
 
-    async startWildBattle() {
-        const minLevel = 2;
-        const maxLevel = 8;
-        const includeVariants = Math.random() < 0.15;
-        const { pokemon, level } = await PokeAPI.getRandomWildPokemon(minLevel, maxLevel, includeVariants);
+    async startWildBattle(minLevel = 2, maxLevel = 8) {
+        let pokemon = null;
 
-        const isShiny = Math.random() < (1 / SHINY_CHANCE);
-        const wildPokemon = await createPokemon(pokemon, level, null, null, null, isShiny);
-        this.enemyTeam = [wildPokemon];
+        if (this.currentMap) {
+            const encounters = await this.regionManager.loadMapEncounters(this.currentMap.id);
+            if (encounters.length > 0) {
+                const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
+                let roll = Math.random() * totalWeight;
+                for (const enc of encounters) {
+                    roll -= enc.weight;
+                    if (roll <= 0) {
+                        const encMin = enc.min_level || this.currentMap.min_level || minLevel;
+                        const encMax = enc.max_level || this.currentMap.max_level || maxLevel;
+                        const level = encMin + Math.floor(Math.random() * (encMax - encMin + 1));
+                        const pokemonData = await PokeAPI.ensurePokemon(enc.pokemon_name);
+                        const isShiny = Math.random() < (1 / SHINY_CHANCE);
+                        pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!pokemon) {
+            const includeVariants = Math.random() < 0.15;
+            const result = await PokeAPI.getRandomWildPokemon(minLevel, maxLevel, includeVariants);
+            const isShiny = Math.random() < (1 / SHINY_CHANCE);
+            pokemon = await createPokemon(result.pokemon, result.level, null, null, null, isShiny);
+        }
+        this.enemyTeam = [pokemon];
 
         const activePlayer = getFirstAlive(this.playerTeam);
-        await preloadBattleSprites(activePlayer, wildPokemon);
+        await preloadBattleSprites(activePlayer, pokemon);
 
         this.state = 'battle';
         if (this.overworld2d) this.overworld2d.hide();
@@ -197,7 +307,7 @@ class PokeFuryGame {
         showScreen('battle-screen');
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
-        drawBattleScene(this.ctx, this.canvas, activePlayer, wildPokemon);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon);
 
         initBattleUI(
             () => this.onFight(),
@@ -206,9 +316,10 @@ class PokeFuryGame {
             () => this.onRun()
         );
 
-        let introMsg = `Um ${wildPokemon.name} selvagem apareceu!`;
-        if (isShiny) introMsg = `Um ${wildPokemon.name} SHINY selvagem apareceu!`;
-        if (wildPokemon.variant !== 'normal') introMsg = `Um ${wildPokemon.name} (${wildPokemon.variant}) selvagem apareceu!`;
+        const isShinyBattle = pokemon.isShiny;
+        let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
+        if (isShinyBattle) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
+        if (pokemon.variant !== 'normal') introMsg = `Um ${pokemon.name} (${pokemon.variant}) selvagem apareceu!`;
         await showBattleMessage(introMsg);
     }
 
@@ -454,23 +565,299 @@ class PokeFuryGame {
         loadCharacterScreen();
     }
 
-    setupMapEditor() {
-        const mapasBtn = document.querySelector('#admin-panel .admin-btn');
-        if (!mapasBtn) return;
+    setupAdminButtons() {
+        const regionsBtn = document.getElementById('admin-btn-regions');
+        if (regionsBtn) {
+            regionsBtn.onclick = () => this.openRegionManager();
+        }
 
-        mapasBtn.onclick = () => {
-            const overlay = document.getElementById('map-editor-overlay');
-            overlay.classList.remove('hidden');
-            if (!this.mapEditor) {
-                this.mapEditor = new MapEditor();
-                this.setupMapEditorEvents();
-            }
-            this.mapEditor.resize(
-                overlay.querySelector('.editor-canvas-wrap').clientWidth,
-                overlay.querySelector('.editor-canvas-wrap').clientHeight
-            );
-            this.loadSavedMapsList();
+        const mapsBtn = document.getElementById('admin-btn-maps');
+        if (mapsBtn) {
+            mapsBtn.onclick = () => {
+                const overlay = document.getElementById('map-editor-overlay');
+                overlay.classList.remove('hidden');
+                if (!this.mapEditor) {
+                    this.mapEditor = new MapEditor();
+                    this.setupMapEditorEvents();
+                }
+                this.mapEditor.resize(
+                    overlay.querySelector('.editor-canvas-wrap').clientWidth,
+                    overlay.querySelector('.editor-canvas-wrap').clientHeight
+                );
+                this.loadSavedMapsList();
+            };
+        }
+    }
+
+    async openRegionManager() {
+        const overlay = document.getElementById('region-overlay');
+        overlay.classList.remove('hidden');
+
+        document.getElementById('region-btn-close').onclick = () => overlay.classList.add('hidden');
+
+        await this.regionManager.loadRegions();
+        this.renderRegionList();
+
+        document.getElementById('region-btn-create').onclick = async () => {
+            const name = prompt('Nome da nova regiao:');
+            if (!name) return;
+            await this.regionManager.createRegion(name);
+            this.renderRegionList();
         };
+    }
+
+    renderRegionList() {
+        const container = document.getElementById('region-list');
+        container.innerHTML = '';
+
+        this.regionManager.regions.forEach(region => {
+            const item = document.createElement('div');
+            item.className = 'region-item';
+            item.innerHTML = `
+                <button class="region-item-delete" title="Excluir">🗑️</button>
+                <div class="region-item-name">${region.name}</div>
+                <div class="region-item-meta">${region.description || 'Sem descricao'}</div>
+            `;
+            item.onclick = (e) => {
+                if (e.target.closest('.region-item-delete')) return;
+                container.querySelectorAll('.region-item').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                this.loadRegionDetail(region);
+            };
+            item.querySelector('.region-item-delete').onclick = async (e) => {
+                e.stopPropagation();
+                if (!confirm(`Excluir regiao "${region.name}"?`)) return;
+                await this.regionManager.deleteRegion(region.id);
+                this.renderRegionList();
+                document.getElementById('region-detail').innerHTML = '<div class="region-empty"><p>Selecione uma regiao</p></div>';
+            };
+            container.appendChild(item);
+        });
+    }
+
+    async loadRegionDetail(region) {
+        const detail = document.getElementById('region-detail');
+        const maps = await this.regionManager.loadRegionMaps(region.id);
+
+        detail.innerHTML = `
+            <div class="region-info">
+                <h3>${region.name}</h3>
+                <p>${region.description || 'Sem descricao'}</p>
+                <div class="region-info-row">
+                    <input type="text" id="region-name-input" value="${region.name}" placeholder="Nome">
+                    <input type="text" id="region-desc-input" value="${region.description || ''}" placeholder="Descricao">
+                    <button class="editor-action-btn primary" id="region-save-btn">Salvar</button>
+                </div>
+            </div>
+            <div class="region-maps-header">
+                <h4>Mapas (${maps.length})</h4>
+                <button class="editor-action-btn primary" id="region-add-map-btn">+ Adicionar Mapa</button>
+            </div>
+            <div class="map-sequence" id="map-sequence"></div>
+        `;
+
+        document.getElementById('region-save-btn').onclick = async () => {
+            const newName = document.getElementById('region-name-input').value;
+            const newDesc = document.getElementById('region-desc-input').value;
+            await this.regionManager.updateRegion(region.id, { name: newName, description: newDesc });
+            this.renderRegionList();
+        };
+
+        document.getElementById('region-add-map-btn').onclick = () => {
+            this.openMapPicker(region);
+        };
+
+        this.renderMapSequence(maps, region);
+    }
+
+    renderMapSequence(maps, region) {
+        const container = document.getElementById('map-sequence');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (maps.length === 0) {
+            container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:16px;text-align:center">Nenhum mapa adicionado. Clique "+ Adicionar Mapa" para comecar.</div>';
+            return;
+        }
+
+        maps.forEach((map, idx) => {
+            if (idx > 0) {
+                const arrow = document.createElement('div');
+                arrow.className = 'map-arrow';
+                arrow.textContent = '↓';
+                container.appendChild(arrow);
+            }
+
+            const card = document.createElement('div');
+            card.className = 'map-card';
+            card.innerHTML = `
+                <div class="map-card-number">${idx + 1}</div>
+                <div class="map-card-preview">
+                    <img src="${map.image_url}" alt="${map.name}" onerror="this.style.display='none'">
+                </div>
+                <div class="map-card-info">
+                    <div class="map-card-name">${map.name}</div>
+                    <div class="map-card-meta">Encontros: ${map.encounter_rate}% | Nivel: ${map.min_level}-${map.max_level}${map.is_gym ? ' | GYM' : ''}</div>
+                </div>
+                <div class="map-card-actions">
+                    <button class="map-card-btn primary" data-action="encounters">Encontros</button>
+                    <button class="map-card-btn" data-action="edit">Editar</button>
+                    <button class="map-card-btn danger" data-action="delete">Excluir</button>
+                </div>
+            `;
+
+            card.querySelector('[data-action="encounters"]').onclick = () => this.openEncounterEditor(map);
+            card.querySelector('[data-action="edit"]').onclick = () => this.openMapEditor(map, region);
+            card.querySelector('[data-action="delete"]').onclick = async () => {
+                if (!confirm(`Excluir mapa "${map.name}"?`)) return;
+                await this.regionManager.deleteMap(map.id);
+                const updatedMaps = await this.regionManager.loadRegionMaps(region.id);
+                this.renderMapSequence(updatedMaps, region);
+            };
+
+            container.appendChild(card);
+        });
+    }
+
+    openMapPicker(region) {
+        const modal = document.getElementById('map-picker-modal');
+        const grid = document.getElementById('map-picker-grid');
+        modal.classList.remove('hidden');
+
+        document.getElementById('map-picker-close').onclick = () => modal.classList.add('hidden');
+        document.querySelector('#map-picker-modal .modal-backdrop').onclick = () => modal.classList.add('hidden');
+
+        const storageUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites`;
+
+        const folders = [
+            { prefix: 'maps/routes', label: 'Routes' },
+            { prefix: 'maps/towns', label: 'Towns' },
+            { prefix: 'maps/dungeons', label: 'Dungeons' },
+            { prefix: 'maps/interiors', label: 'Interiors' }
+        ];
+
+        grid.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:8px">Carregando mapas...</div>';
+
+        this.loadAllMapImages(folders, storageUrl, grid, region, modal);
+    }
+
+    async loadAllMapImages(folders, storageUrl, grid, region, modal) {
+        grid.innerHTML = '';
+
+        for (const folder of folders) {
+            try {
+                const { data, error } = await window.db.storage.from('sprites').list(folder.prefix);
+                if (error || !data) continue;
+
+                const images = data.filter(f => /\.(png|jpg|jpeg|gif)$/i.test(f.name));
+                if (images.length === 0) continue;
+
+                const sectionHeader = document.createElement('div');
+                sectionHeader.style.cssText = 'grid-column: 1/-1; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 8px 4px 4px;';
+                sectionHeader.textContent = folder.label;
+                grid.appendChild(sectionHeader);
+
+                images.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'map-picker-item';
+                    item.innerHTML = `
+                        <img src="${storageUrl}/${folder.prefix}/${file.name}" alt="${file.name}" loading="lazy">
+                        <div class="map-picker-item-name">${file.name.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/-/g, ' ')}</div>
+                    `;
+                    item.onclick = async () => {
+                        const mapName = file.name.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/-/g, ' ');
+                        const imageUrl = `${storageUrl}/${folder.prefix}/${file.name}`;
+                        await this.regionManager.addMapToRegion(region.id, mapName, imageUrl);
+                        modal.classList.add('hidden');
+                        this.loadRegionDetail(region);
+                    };
+                    grid.appendChild(item);
+                });
+            } catch (e) {
+                console.warn(`[RegionManager] Error loading ${folder.prefix}:`, e);
+            }
+        }
+
+        if (grid.children.length === 0) {
+            grid.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:16px;grid-column:1/-1;text-align:center">Nenhum mapa encontrado. Faca upload de imagens para sprites/maps/ no Supabase Storage.</div>';
+        }
+    }
+
+    openMapEditor(map, region) {
+        const newName = prompt('Nome do mapa:', map.name);
+        if (newName === null) return;
+
+        const newRate = prompt('Taxa de enconto (%):', map.encounter_rate);
+        const newMin = prompt('Nivel minimo:', map.min_level);
+        const newMax = prompt('Nivel maximo:', map.max_level);
+
+        this.regionManager.updateMap(map.id, {
+            name: newName || map.name,
+            encounter_rate: parseInt(newRate) || map.encounter_rate,
+            min_level: parseInt(newMin) || map.min_level,
+            max_level: parseInt(newMax) || map.max_level
+        }).then(() => this.loadRegionDetail(region));
+    }
+
+    async openEncounterEditor(map) {
+        const modal = document.getElementById('encounter-modal');
+        modal.classList.remove('hidden');
+
+        document.getElementById('encounter-modal-close').onclick = () => modal.classList.add('hidden');
+        document.querySelector('#encounter-modal .modal-backdrop').onclick = () => modal.classList.add('hidden');
+
+        const encounters = await this.regionManager.loadMapEncounters(map.id);
+        this.renderEncounterList(encounters, map);
+
+        document.getElementById('encounter-add-btn').onclick = async () => {
+            const name = document.getElementById('encounter-pokemon-name').value.trim();
+            const id = parseInt(document.getElementById('encounter-pokemon-id').value);
+            const weight = parseInt(document.getElementById('encounter-weight').value) || 50;
+
+            if (!name || !id) {
+                alert('Preencha nome e ID do Pokemon');
+                return;
+            }
+
+            const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+            await this.regionManager.addEncounter(map.id, name, id, weight, spriteUrl);
+
+            document.getElementById('encounter-pokemon-name').value = '';
+            document.getElementById('encounter-pokemon-id').value = '';
+            document.getElementById('encounter-weight').value = '50';
+
+            const updated = await this.regionManager.loadMapEncounters(map.id);
+            this.renderEncounterList(updated, map);
+        };
+    }
+
+    renderEncounterList(encounters, map) {
+        const container = document.getElementById('encounter-list');
+        container.innerHTML = '';
+
+        if (encounters.length === 0) {
+            container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:8px">Nenhum encontro definido</div>';
+            return;
+        }
+
+        encounters.forEach(enc => {
+            const item = document.createElement('div');
+            item.className = 'encounter-item';
+            item.innerHTML = `
+                <img class="encounter-item-sprite" src="${enc.sprite_url}" alt="${enc.pokemon_name}" onerror="this.style.display='none'">
+                <div class="encounter-item-info">
+                    <div class="encounter-item-name">#${enc.pokemon_id} ${enc.pokemon_name}</div>
+                    <div class="encounter-item-meta">Peso: ${enc.weight}</div>
+                </div>
+                <button class="map-card-btn danger">Remover</button>
+            `;
+            item.querySelector('.danger').onclick = async () => {
+                await this.regionManager.deleteEncounter(enc.id);
+                const updated = await this.regionManager.loadMapEncounters(map.id);
+                this.renderEncounterList(updated, map);
+            };
+            container.appendChild(item);
+        });
     }
 
     setupMapEditorEvents() {

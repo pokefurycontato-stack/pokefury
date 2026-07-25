@@ -234,7 +234,8 @@
                     <div id="admin-panel" class="sidebar-section hidden">
                         <div class="sidebar-section-title">Admin</div>
                         <div class="sidebar-section-items">
-                            <button class="item-btn admin-btn">Mapas</button>
+                            <button class="item-btn admin-btn" id="admin-btn-regions">Regioes</button>
+                            <button class="item-btn admin-btn" id="admin-btn-maps">Mapas</button>
                         </div>
                     </div>
 
@@ -330,6 +331,62 @@
         </div>
     </div>
 
+    <!-- ==================== REGION MANAGER OVERLAY ==================== -->
+    <div id="region-overlay" class="hidden">
+        <div class="region-topbar">
+            <div class="region-topbar-left">
+                <button id="region-btn-close" class="editor-btn-close" title="Fechar">✕</button>
+                <span class="editor-title">Gerenciar Regioes</span>
+            </div>
+            <div class="region-topbar-right">
+                <button id="region-btn-create" class="editor-action-btn primary">+ Nova Regiao</button>
+            </div>
+        </div>
+        <div class="region-body">
+            <div class="region-sidebar">
+                <div class="editor-sidebar-title">Regioes</div>
+                <div id="region-list" class="region-list"></div>
+            </div>
+            <div class="region-main">
+                <div id="region-detail" class="region-detail">
+                    <div class="region-empty">
+                        <p>Selecione uma regiao ou crie uma nova</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAP PICKER MODAL ==================== -->
+    <div id="map-picker-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Escolher Mapa</span>
+                <button id="map-picker-close" class="editor-btn-close">✕</button>
+            </div>
+            <div id="map-picker-grid" class="map-picker-grid"></div>
+        </div>
+    </div>
+
+    <!-- ==================== ENCOUNTER EDITOR MODAL ==================== -->
+    <div id="encounter-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content encounter-modal-content">
+            <div class="modal-header">
+                <span>Editar Encontros Selvagens</span>
+                <button id="encounter-modal-close" class="editor-btn-close">✕</button>
+            </div>
+            <div id="encounter-list" class="encounter-list"></div>
+            <div class="encounter-add">
+                <input type="text" id="encounter-pokemon-name" class="editor-text-input" placeholder="Nome do Pokemon (ex: Pikachu)">
+                <input type="number" id="encounter-pokemon-id" class="editor-input" placeholder="ID" style="width:70px">
+                <input type="number" id="encounter-weight" class="editor-input" placeholder="Peso" value="50" style="width:70px">
+                <button id="encounter-add-btn" class="editor-action-btn primary">+ Adicionar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/supabase-config.js"></script>
     <script src="js/items-data.js"></script>
     <script src="js/game-data.js"></script>
@@ -341,5 +398,6 @@
     <script type="module" src="js/ui.js"></script>
     <script type="module" src="js/game.js"></script>
     <script type="module" src="js/map-editor.js"></script>
+    <script type="module" src="js/region-manager.js"></script>
 </body>
 </html>
