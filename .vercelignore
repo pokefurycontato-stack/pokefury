@@ -1,0 +1,5 @@
+node_modules/
+assets/models-3d/
+.git/
+*.sql
+supabase/
