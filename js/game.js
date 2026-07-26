@@ -791,7 +791,7 @@ class PokeFuryGame {
 
             card.querySelector('[data-action="encounters"]').onclick = () => this.openEncounterEditor(map);
             card.querySelector('[data-action="edit"]').onclick = () => this.openMapEditor(map, region);
-            card.querySelector('[data-action="configure-bg"]').onclick = () => this.openBattleBackgroundPicker(map);
+            card.querySelector('[data-action="configure-bg"]').onclick = () => this.openBattleBackgroundPicker(map, region);
             card.querySelector('[data-action="delete"]').onclick = async () => {
                 if (!confirm(`Excluir mapa "${map.name}"?`)) return;
                 await this.regionManager.deleteMap(map.id);
@@ -825,7 +825,7 @@ class PokeFuryGame {
         this.loadAllMapImages(folders, storageUrl, grid, region, modal);
     }
 
-    async openBattleBackgroundPicker(map) {
+    async openBattleBackgroundPicker(map, region) {
         const modal = document.getElementById('map-picker-modal');
         const grid = document.getElementById('map-picker-grid');
         modal.classList.remove('hidden');
