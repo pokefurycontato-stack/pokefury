@@ -285,7 +285,7 @@ class PokeFuryGame {
         const activePlayer = getFirstAlive(this.playerTeam);
         const activeEnemy = getFirstAlive(this.enemyTeam);
         if (activePlayer && activeEnemy) {
-            drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy);
+            drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg);
         }
     }
 
@@ -334,7 +334,7 @@ class PokeFuryGame {
         showScreen('battle-screen');
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
-        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg);
 
         initBattleUI(
             () => this.onFight(),
@@ -364,12 +364,14 @@ class PokeFuryGame {
         const activePlayer = getFirstAlive(this.playerTeam);
         await preloadBattleSprites(activePlayer, pokemon);
 
+        this.currentBattleBg = this.currentMap?.battle_bg_url;
         this.state = 'battle';
         if (this.overworld2d) this.overworld2d.hide();
         this.battleStartTime = Date.now();
         showScreen('battle-screen');
         updateBattleUI(this.playerTeam, this.enemyTeam);
-        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon);
+
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg);
 
         initBattleUI(
             () => this.onFight(),
@@ -454,7 +456,7 @@ class PokeFuryGame {
             await showBattleMessage(`${playerPokemon.name} foi curado de status!`);
         }
 
-        drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon);
+        drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
         updateBattleUI(this.playerTeam, this.enemyTeam);
         await this.enemyTurn();
     }
@@ -498,7 +500,7 @@ class PokeFuryGame {
                 if (idx >= 0) this.playerTeam[idx] = megaPokemon;
 
                 await preloadBattleSprites(megaPokemon, getFirstAlive(this.enemyTeam));
-                drawBattleScene(this.ctx, this.canvas, megaPokemon, getFirstAlive(this.enemyTeam));
+                drawBattleScene(this.ctx, this.canvas, megaPokemon, getFirstAlive(this.enemyTeam), this.currentBattleBg);
                 updateBattleUI(this.playerTeam, this.enemyTeam);
                 await showBattleMessage(`${playerPokemon.name} mega evoluiu para ${megaPokemon.name}!`);
                 return;
@@ -590,7 +592,7 @@ class PokeFuryGame {
 
             await showBattleMessage(updateHpBar(playerPokemon));
 
-            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon);
+            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
             if (playerPokemon.fainted) {

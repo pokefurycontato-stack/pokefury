@@ -115,28 +115,58 @@ export function showEffectivenessText(effectiveness) {
     return '';
 }
 
-export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon) {
+const bgCache = new Map();
+
+export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgroundUrl = null) {
     const w = canvas.width;
     const h = canvas.height;
 
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
-    skyGrad.addColorStop(0, '#0f3460');
-    skyGrad.addColorStop(1, '#16213e');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, w, h * 0.5);
+    if (backgroundUrl) {
+        let img = bgCache.get(backgroundUrl);
+        if (!img) {
+            img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = backgroundUrl;
+            bgCache.set(backgroundUrl, img);
+        }
+        
+        if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, 0, 0, w, h);
+        } else {
+            // Fallback to gradients while loading or if failed
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+            skyGrad.addColorStop(0, '#0f3460');
+            skyGrad.addColorStop(1, '#16213e');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h * 0.5);
 
-    const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
-    groundGrad.addColorStop(0, '#1a3a1a');
-    groundGrad.addColorStop(1, '#0d1f0d');
-    ctx.fillStyle = groundGrad;
-    ctx.fillRect(0, h * 0.5, w, h * 0.5);
+            const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
+            groundGrad.addColorStop(0, '#1a3a1a');
+            groundGrad.addColorStop(1, '#0d1f0d');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, h * 0.5, w, h * 0.5);
+        }
+    } else {
+        // Default gradients
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+        skyGrad.addColorStop(0, '#0f3460');
+        skyGrad.addColorStop(1, '#16213e');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h * 0.5);
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-    for (let i = 0; i < 10; i++) {
-        const x = (i * 100 + 20) % w;
-        ctx.beginPath();
-        ctx.arc(x, h * 0.48, 20 + (i % 3) * 10, 0, Math.PI * 2);
-        ctx.fill();
+        const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
+        groundGrad.addColorStop(0, '#1a3a1a');
+        groundGrad.addColorStop(1, '#0d1f0d');
+        ctx.fillStyle = groundGrad;
+        ctx.fillRect(0, h * 0.5, w, h * 0.5);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        for (let i = 0; i < 10; i++) {
+            const x = (i * 100 + 20) % w;
+            ctx.beginPath();
+            ctx.arc(x, h * 0.48, 20 + (i % 3) * 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     drawPokemonSprite(ctx, w * 0.22, h * 0.38, playerPokemon, true);
