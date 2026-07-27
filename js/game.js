@@ -3,7 +3,7 @@ import { randomInt, loadTypeEffectiveness } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive } from './battle.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
-    drawBattleScene, initBattleUI, updateHpBar, showBagSelection
+    drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -639,6 +639,7 @@ class PokeFuryGame {
 
         this.state = 'overworld';
         showScreen('hud');
+        hideBattlePokemonSprites();
         document.getElementById('location-name').textContent = 'Área Selvagem';
         if (this.overworld2d) this.overworld2d.show();
     }

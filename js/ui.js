@@ -3,6 +3,10 @@ import { TYPE_COLORS } from './data.js';
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
+let battlePokemonContainer = null;
+const battlePokemonSprites = { player: null, enemy: null };
+const battlePokemonNames = { player: null, enemy: null };
+
 export function showScreen(screenId) {
     const screens = ['battle-screen', 'hud'];
     screens.forEach(id => {
@@ -180,81 +184,110 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    drawPokemonSprite(ctx, w * 0.22 + 30, h * 0.58 + 150, playerPokemon, true, 1.2);
-    drawPokemonSprite(ctx, w * 0.73, h * 0.32 + 80, enemyPokemon, false, 1.0);
+    const playerX = w * 0.22 + 30;
+    const playerY = h * 0.58 + 150;
+    const enemyX = w * 0.73;
+    const enemyY = h * 0.32 + 80;
+
+    updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 1.2);
+    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 1.0);
+
+    drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 1.2);
+    drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 1.0);
 }
 
-function drawPokemonSprite(ctx, x, y, pokemon, isPlayer, sizeScale = 1.0) {
-    if (!pokemon) return;
+function ensureBattlePokemonContainer() {
+    if (battlePokemonContainer) return battlePokemonContainer;
+    const mainArea = document.getElementById('main-area');
+    if (!mainArea) return null;
+    battlePokemonContainer = document.createElement('div');
+    battlePokemonContainer.id = 'battle-pokemon-sprites';
+    battlePokemonContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;';
+    mainArea.appendChild(battlePokemonContainer);
+    return battlePokemonContainer;
+}
+
+function getBattleSpriteUrl(pokemon, isPlayer) {
+    if (!pokemon) return null;
     const spriteUrls = pokemon.spriteUrls || {};
     const shinyUrls = pokemon.shinySpriteUrls;
     const isShiny = pokemon.isShiny;
-
-    let spriteUrl;
+    let url;
     if (isPlayer) {
-        if (isShiny && shinyUrls) {
-            spriteUrl = shinyUrls.back || shinyUrls.front || shinyUrls.home || shinyUrls.official;
-        }
-        if (!spriteUrl) {
-            spriteUrl = spriteUrls?.back || spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
-        }
+        if (isShiny && shinyUrls) url = shinyUrls.back || shinyUrls.front || shinyUrls.home || shinyUrls.official;
+        if (!url) url = spriteUrls?.back || spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
     } else {
-        if (isShiny && shinyUrls) {
-            spriteUrl = shinyUrls.front || shinyUrls.home || shinyUrls.official;
-        }
-        if (!spriteUrl) {
-            spriteUrl = spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
-        }
+        if (isShiny && shinyUrls) url = shinyUrls.front || shinyUrls.home || shinyUrls.official;
+        if (!url) url = spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
     }
-    const img = spriteUrl ? PokeAPI.imageCache[spriteUrl] : null;
-    const typeColor = TYPE_COLORS[pokemon.type] || '#686868';
+    return url || null;
+}
 
+function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
+    const container = ensureBattlePokemonContainer();
+    if (!container) return;
+    const isPlayer = side === 'player';
+    const url = getBattleSpriteUrl(pokemon, isPlayer);
+
+    let el = battlePokemonSprites[side];
+    if (!url || !pokemon) {
+        if (el) el.style.display = 'none';
+        return;
+    }
+
+    if (!el) {
+        el = document.createElement('img');
+        el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;';
+        container.appendChild(el);
+        battlePokemonSprites[side] = el;
+    }
+
+    el.src = url;
+    el.style.display = 'block';
+
+    const maxDim = Math.round(140 * sizeScale);
+    el.style.width = maxDim + 'px';
+    el.style.height = maxDim + 'px';
+    el.style.left = (x - maxDim / 2) + 'px';
+    el.style.top = (y - maxDim / 2) + 'px';
+}
+
+function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {
+    if (!pokemon) return;
+    const url = getBattleSpriteUrl(pokemon, true);
+    const img = url ? PokeAPI.imageCache[url] : null;
+    const isShiny = pokemon.isShiny;
+
+    let spriteH = 140 * sizeScale;
     if (img && img.complete && img.naturalWidth > 0) {
-        if (isShiny) {
-            ctx.shadowColor = '#ffd700';
-            ctx.shadowBlur = 35 + Math.sin(Date.now() / 200) * 10;
-        } else {
-            ctx.shadowColor = typeColor;
-            ctx.shadowBlur = 30;
-        }
-
         const maxW = Math.round(140 * sizeScale);
         const maxH = Math.round(140 * sizeScale);
-        const spriteScale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
-        const drawW = img.naturalWidth * spriteScale;
-        const drawH = img.naturalHeight * spriteScale;
-
-        ctx.drawImage(img, x - drawW / 2, y - drawH / 2, drawW, drawH);
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = isShiny ? '#ffd700' : '#fff';
-        ctx.font = `600 ${Math.round(14 * sizeScale)}px Inter, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 4;
-        let nameText = pokemon.name;
-        if (pokemon.isMega) nameText = '★ ' + nameText;
-        ctx.fillText(nameText, x, y + drawH / 2 + Math.round(16 * sizeScale));
-        ctx.font = `400 ${Math.round(11 * sizeScale)}px Inter, sans-serif`;
-        ctx.fillStyle = isShiny ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.6)';
-        ctx.fillText(`Lv.${pokemon.level}`, x, y + drawH / 2 + Math.round(32 * sizeScale));
-        ctx.shadowBlur = 0;
-    } else {
-        ctx.shadowColor = isShiny ? '#ffd700' : typeColor;
-        ctx.shadowBlur = 40;
-        ctx.fillStyle = isShiny ? '#ffd700' : typeColor;
-        ctx.globalAlpha = 0.8;
-        ctx.beginPath();
-        ctx.arc(x, y, 40 * sizeScale, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = '#fff';
-        ctx.font = '600 12px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('?', x, y + 5);
+        const s = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+        spriteH = img.naturalHeight * s;
     }
+
+    ctx.fillStyle = isShiny ? '#ffd700' : '#fff';
+    ctx.font = `600 ${Math.round(14 * sizeScale)}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    let nameText = pokemon.name;
+    if (pokemon.isMega) nameText = '★ ' + nameText;
+    ctx.fillText(nameText, x, y + spriteH / 2 + Math.round(16 * sizeScale));
+    ctx.font = `400 ${Math.round(11 * sizeScale)}px Inter, sans-serif`;
+    ctx.fillStyle = isShiny ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.6)';
+    ctx.fillText(`Lv.${pokemon.level}`, x, y + spriteH / 2 + Math.round(32 * sizeScale));
+    ctx.shadowBlur = 0;
+}
+
+export function hideBattlePokemonSprites() {
+    if (battlePokemonSprites.player) battlePokemonSprites.player.style.display = 'none';
+    if (battlePokemonSprites.enemy) battlePokemonSprites.enemy.style.display = 'none';
+}
+
+export function showBattlePokemonSprites() {
+    if (battlePokemonSprites.player) battlePokemonSprites.player.style.display = 'block';
+    if (battlePokemonSprites.enemy) battlePokemonSprites.enemy.style.display = 'block';
 }
 
 export function initBattleUI(onFight, onBag, onMega, onRun) {
