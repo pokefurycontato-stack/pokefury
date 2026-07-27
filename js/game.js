@@ -282,10 +282,13 @@ class PokeFuryGame {
     }
 
     renderBattle() {
+        if (this.state !== 'battle') return;
         const activePlayer = getFirstAlive(this.playerTeam);
         const activeEnemy = getFirstAlive(this.enemyTeam);
         if (activePlayer && activeEnemy) {
             drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg);
+        } else {
+            hideBattlePokemonSprites();
         }
     }
 
@@ -416,10 +419,10 @@ class PokeFuryGame {
         if (!playerPokemon) return;
         const escaped = Math.random() < 0.5;
         if (escaped) {
-            await showBattleMessage('Escapou com sucesso!');
+            await showBattleMessage('Você fugiu do combate com sucesso!');
             this.endBattle(null);
         } else {
-            await showBattleMessage('Nao conseguiu escapar!');
+            await showBattleMessage('Não foi possível fugir do combate!');
             await this.enemyTurn();
         }
     }
@@ -622,6 +625,8 @@ class PokeFuryGame {
     }
 
     async endBattle(result) {
+        if (this.state !== 'battle') return;
+
         if (result) {
             const duration = Math.floor((Date.now() - this.battleStartTime) / 1000);
             const enemy = this.enemyTeam[0];
@@ -648,6 +653,7 @@ class PokeFuryGame {
         this.state = 'overworld';
         showScreen('hud');
         hideBattlePokemonSprites();
+        this.enemyTeam = [];
         document.getElementById('location-name').textContent = 'Área Selvagem';
         if (this.overworld2d) this.overworld2d.show();
     }

@@ -469,11 +469,14 @@ export class Overworld2D {
         if (!entity.encounter) return;
 
         const enc = entity.encounter;
-        entity.active = false;
-        entity.respawnTimer = 300;
 
         const level = enc.min_level + Math.floor(Math.random() * ((enc.max_level || enc.min_level + 3) - enc.min_level + 1));
         await this.game.startBattleWithPokemon(enc.pokemon_name, level);
+
+        if (this.game.state === 'battle') {
+            entity.active = false;
+            entity.respawnTimer = 300;
+        }
     }
 
     render() {

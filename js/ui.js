@@ -6,6 +6,8 @@ const $$ = (sel) => document.querySelectorAll(sel);
 let battlePokemonContainer = null;
 const battlePokemonSprites = { player: null, enemy: null };
 const battlePokemonState = { player: null, enemy: null };
+let battleMessageInterval = null;
+let battleMessageResolve = null;
 
 export function showScreen(screenId) {
     const screens = ['battle-screen', 'hud'];
@@ -55,17 +57,31 @@ function updateTeamIndicators(selector, team) {
 export function showBattleMessage(message) {
     return new Promise(resolve => {
         const msgEl = $('#battle-message');
+
+        if (battleMessageInterval) {
+            clearInterval(battleMessageInterval);
+            battleMessageInterval = null;
+        }
+        if (battleMessageResolve) {
+            battleMessageResolve();
+            battleMessageResolve = null;
+        }
+
         msgEl.textContent = '';
+        if (!message) { resolve(); return; }
+
         let i = 0;
-        const interval = setInterval(() => {
+        battleMessageInterval = setInterval(() => {
             if (i < message.length) {
                 msgEl.textContent += message[i];
                 i++;
             } else {
-                clearInterval(interval);
+                clearInterval(battleMessageInterval);
+                battleMessageInterval = null;
                 setTimeout(resolve, 600);
             }
         }, 25);
+        battleMessageResolve = resolve;
     });
 }
 
@@ -277,6 +293,10 @@ function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {
 }
 
 export function hideBattlePokemonSprites() {
+    if (battleMessageInterval) {
+        clearInterval(battleMessageInterval);
+        battleMessageInterval = null;
+    }
     if (battlePokemonSprites.player) battlePokemonSprites.player.style.display = 'none';
     if (battlePokemonSprites.enemy) battlePokemonSprites.enemy.style.display = 'none';
 }
