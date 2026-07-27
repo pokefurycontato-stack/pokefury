@@ -487,7 +487,7 @@ export class Overworld2D {
 
         if (this.game.state === 'battle') {
             entity.active = false;
-            const RESPAWN = { common: 200, uncommon: 350, rare: 500, legendary: 800 };
+            const RESPAWN = { common: 200, uncommon: 350, rare: 500, legendary: 800, inicial: 800 };
             entity.respawnTimer = RESPAWN[enc.rarity] || 300;
         }
     }

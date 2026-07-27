@@ -63,15 +63,33 @@
     if (pokeErr) { console.error('Failed to load pokemon:', pokeErr); return; }
     console.log(`[Biomes] Found ${allPokemon.length} pokemon with variant=normal`);
 
+    // Helper: Starter Pokemon ID ranges (each gen: 3 starters × 3 evolutions = 9 IDs)
+    const STARTER_IDS = new Set();
+    const STARTER_RANGES = [
+        [1, 9],       // Gen 1: Bulbasaur-venusaur, Charmander-charizard, Squirtle-blastoise
+        [152, 160],   // Gen 2: Chikorita-meganium, Cyndaquil-typhlosion, Totodile-feraligatr
+        [252, 260],   // Gen 3: Treecko-sceptile, Torchic-blaziken, Mudkip-swampert
+        [387, 395],   // Gen 4: Turtwig-torterra, Chimchar-infernape, Piplup-empoleon
+        [495, 503],   // Gen 5: Snivy-serperior, Tepig-emboar, Oshawott-samurott
+        [650, 658],   // Gen 6: Chespin-chesnaught, Fennekin-delphox, Froakie-greninja
+        [722, 730],   // Gen 7: Rowlet-decidueye, Litten-incineroar, Popplio-primarina
+        [810, 818],   // Gen 8: Grookey-rillaboom, Scorbunny-cinderace, Sobble-inteleon
+        [906, 914]    // Gen 9: Sprigatito-meowscarada, Fuecoco-skeledirge, Quaxly-quaquaval
+    ];
+    for (const [min, max] of STARTER_RANGES) {
+        for (let i = min; i <= max; i++) STARTER_IDS.add(i);
+    }
+
     // Helper: calculate rarity from base stat total
     function getRarity(p) {
+        if (STARTER_IDS.has(p.id)) return 'inicial';
         const bst = (p.hp || 0) + (p.attack || 0) + (p.defense || 0) + (p.sp_atk || 0) + (p.sp_def || 0) + (p.speed || 0);
         if (bst >= 600) return 'legendary';
         if (bst >= 500) return 'rare';
         if (bst >= 400) return 'uncommon';
         return 'common';
     }
-    const RARITY_WEIGHTS = { common: 50, uncommon: 30, rare: 15, legendary: 5 };
+    const RARITY_WEIGHTS = { common: 50, uncommon: 30, rare: 15, legendary: 5, inicial: 5 };
 
     // Debug: show first 5 pokemon types
     console.log('[Biomes] Sample pokemon types:', allPokemon.slice(0, 5).map(p => `${p.name}: ${JSON.stringify(p.types)}`));

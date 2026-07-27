@@ -310,8 +310,8 @@ class PokeFuryGame {
             const encounters = await this.regionManager.loadMapEncounters(this.currentMap.id);
             if (encounters.length > 0) {
                 // Rarity tier spawn rates (configurable)
-                const TIER_RATES = { common: 60, uncommon: 25, rare: 12, legendary: 3 };
-                const tiers = ['common', 'uncommon', 'rare', 'legendary'];
+                const TIER_RATES = { common: 57, uncommon: 25, rare: 12, legendary: 3, inicial: 3 };
+                const tiers = ['common', 'uncommon', 'rare', 'legendary', 'inicial'];
 
                 // Step 1: Pick rarity tier
                 const tierTotal = tiers.reduce((sum, t) => sum + (TIER_RATES[t] || 0), 0);
@@ -1086,8 +1086,8 @@ class PokeFuryGame {
         encounters.forEach(enc => {
             const item = document.createElement('div');
             item.className = 'encounter-item';
-            const rarityColors = { common: '#aaa', uncommon: '#3498db', rare: '#e94560', legendary: '#f39c12' };
-            const rarityLabels = { common: 'Comum', uncommon: 'Incomum', rare: 'Raro', legendary: 'Lendario' };
+            const rarityColors = { common: '#aaa', uncommon: '#3498db', rare: '#e94560', legendary: '#f39c12', inicial: '#2ecc71' };
+            const rarityLabels = { common: 'Comum', uncommon: 'Incomum', rare: 'Raro', legendary: 'Lendario', inicial: 'Inicial' };
             const rarity = enc.rarity || 'common';
             const rarityColor = rarityColors[rarity] || '#aaa';
             const rarityLabel = rarityLabels[rarity] || rarity;
