@@ -1074,7 +1074,7 @@ class PokeFuryGame {
                     <div class="encounter-item-name">#${enc.pokemon_id} ${enc.pokemon_name}</div>
                     <div class="encounter-item-meta">Peso: ${enc.weight}</div>
                 </div>
-                <button class.map-card-btn danger">Remover</button>
+                <button class="map-card-btn danger">Remover</button>
             `;
             item.querySelector('.danger').onclick = async () => {
                 await this.regionManager.deleteEncounter(enc.id);
