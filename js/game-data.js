@@ -1,13 +1,17 @@
 const GameData = {
-    userId: null,
-    currentCharacterId: null,
+    userId: localStorage.getItem('pokefury_userId') || null,
+    currentCharacterId: localStorage.getItem('pokefury_characterId') || null,
 
     setUserId(id) {
         this.userId = id;
+        if (id) localStorage.setItem('pokefury_userId', id);
+        else localStorage.removeItem('pokefury_userId');
     },
 
     setCurrentCharacter(characterId) {
         this.currentCharacterId = characterId;
+        if (characterId) localStorage.setItem('pokefury_characterId', characterId);
+        else localStorage.removeItem('pokefury_characterId');
     },
 
     async getCharacters() {

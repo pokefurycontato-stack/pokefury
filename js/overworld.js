@@ -561,7 +561,7 @@ export class Overworld2D {
         const enc = entity.encounter;
 
         const level = enc.min_level + Math.floor(Math.random() * ((enc.max_level || enc.min_level + 3) - enc.min_level + 1));
-        await this.game.startBattleWithPokemon(enc.pokemon_name, level);
+        await this.game.startBattleWithPokemon(enc.pokemon_name, level, entity.spriteUrl);
 
         if (this.game.state === 'battle') {
             entity.active = false;

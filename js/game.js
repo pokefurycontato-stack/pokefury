@@ -45,6 +45,14 @@ class PokeFuryGame {
         await this.preloadStarters();
         this.render();
 
+        // Check for auto-login from session restore
+        if (window._pendingAutoLogin) {
+            const save = window._pendingAutoLogin;
+            window._pendingAutoLogin = null;
+            await this.loadCharacter(save);
+            return;
+        }
+
         document.querySelectorAll('.section-header[data-toggle]').forEach(header => {
             header.addEventListener('click', () => {
                 header.classList.toggle('open');
@@ -63,6 +71,8 @@ class PokeFuryGame {
         const logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
+                localStorage.removeItem('pokefury_userId');
+                localStorage.removeItem('pokefury_characterId');
                 await window.db.auth.signOut();
                 location.reload();
             });
@@ -376,7 +386,7 @@ class PokeFuryGame {
         await showBattleMessage(introMsg);
     }
 
-    async startBattleWithPokemon(pokemonName, level) {
+    async startBattleWithPokemon(pokemonName, level, spriteUrl) {
         hideBattlePokemonSprites();
         if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
             console.warn('[PokeFury] No alive pokemon, skipping battle');
@@ -387,6 +397,12 @@ class PokeFuryGame {
             const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
             const isShiny = Math.random() < (1 / SHINY_CHANCE);
             const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
+
+            // Force sprite URL from map entity if provided
+            if (spriteUrl && pokemon.spriteUrls) {
+                pokemon.spriteUrls.front = spriteUrl;
+            }
+
             this.enemyTeam = [pokemon];
 
             const activePlayer = getFirstAlive(this.playerTeam);
