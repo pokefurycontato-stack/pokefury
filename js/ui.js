@@ -180,8 +180,8 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    drawPokemonSprite(ctx, w * 0.22, h * 0.58, playerPokemon, true, 1.2);
-    drawPokemonSprite(ctx, w * 0.73, h * 0.32, enemyPokemon, false, 1.0);
+    drawPokemonSprite(ctx, w * 0.22 + 30, h * 0.58 + 50, playerPokemon, true, 1.2);
+    drawPokemonSprite(ctx, w * 0.73, h * 0.32 + 80, enemyPokemon, false, 1.0);
 }
 
 function drawPokemonSprite(ctx, x, y, pokemon, isPlayer, sizeScale = 1.0) {
