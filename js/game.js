@@ -296,6 +296,9 @@ class PokeFuryGame {
         }
 
         this.currentBattleBg = this.getNormalizedBattleBg();
+        if (this.currentBattleBg) {
+            await this.preloadBattleBg(this.currentBattleBg);
+        }
 
         let pokemon = null;
 
@@ -367,6 +370,9 @@ class PokeFuryGame {
         await preloadBattleSprites(activePlayer, pokemon);
 
         this.currentBattleBg = this.getNormalizedBattleBg();
+        if (this.currentBattleBg) {
+            await this.preloadBattleBg(this.currentBattleBg);
+        }
         this.state = 'battle';
         if (this.overworld2d) this.overworld2d.hide();
         this.battleStartTime = Date.now();
@@ -639,9 +645,27 @@ class PokeFuryGame {
 
     getNormalizedBattleBg() {
         if (this.currentMap && this.currentMap.battle_bg_url) {
+            console.log('[PokeFury] Battle BG URL:', this.currentMap.battle_bg_url);
             return this.currentMap.battle_bg_url;
         }
+        console.log('[PokeFury] No battle BG configured for map:', this.currentMap?.name);
         return null;
+    }
+
+    preloadBattleBg(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                console.log('[PokeFury] Battle BG loaded OK');
+                resolve();
+            };
+            img.onerror = () => {
+                console.warn('[PokeFury] Battle BG failed to load:', url);
+                resolve();
+            };
+            img.src = url;
+        });
     }
 
     async saveTeam() {

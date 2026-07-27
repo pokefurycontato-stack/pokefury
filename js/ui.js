@@ -132,8 +132,7 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         
         if (img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, 0, 0, w, h);
-        } else {
-            // Fallback to gradients while loading or if failed
+        } else if (img.complete) {
             const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
             skyGrad.addColorStop(0, '#0f3460');
             skyGrad.addColorStop(1, '#16213e');
@@ -147,7 +146,6 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
             ctx.fillRect(0, h * 0.5, w, h * 0.5);
         }
     } else {
-        // Default gradients
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
         skyGrad.addColorStop(0, '#0f3460');
         skyGrad.addColorStop(1, '#16213e');
