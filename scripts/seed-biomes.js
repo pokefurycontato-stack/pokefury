@@ -63,25 +63,41 @@
     if (pokeErr) { console.error('Failed to load pokemon:', pokeErr); return; }
     console.log(`[Biomes] Found ${allPokemon.length} pokemon with variant=normal`);
 
-    // Helper: Starter Pokemon ID ranges (each gen: 3 starters × 3 evolutions = 9 IDs)
+    // Helper: Starter Pokemon ID ranges
     const STARTER_IDS = new Set();
     const STARTER_RANGES = [
-        [1, 9],       // Gen 1: Bulbasaur-venusaur, Charmander-charizard, Squirtle-blastoise
-        [152, 160],   // Gen 2: Chikorita-meganium, Cyndaquil-typhlosion, Totodile-feraligatr
-        [252, 260],   // Gen 3: Treecko-sceptile, Torchic-blaziken, Mudkip-swampert
-        [387, 395],   // Gen 4: Turtwig-torterra, Chimchar-infernape, Piplup-empoleon
-        [495, 503],   // Gen 5: Snivy-serperior, Tepig-emboar, Oshawott-samurott
-        [650, 658],   // Gen 6: Chespin-chesnaught, Fennekin-delphox, Froakie-greninja
-        [722, 730],   // Gen 7: Rowlet-decidueye, Litten-incineroar, Popplio-primarina
-        [810, 818],   // Gen 8: Grookey-rillaboom, Scorbunny-cinderace, Sobble-inteleon
-        [906, 914]    // Gen 9: Sprigatito-meowscarada, Fuecoco-skeledirge, Quaxly-quaquaval
+        [1, 9], [152, 160], [252, 260], [387, 395], [495, 503],
+        [650, 658], [722, 730], [810, 818], [906, 914]
     ];
     for (const [min, max] of STARTER_RANGES) {
         for (let i = min; i <= max; i++) STARTER_IDS.add(i);
     }
 
-    // Helper: calculate rarity from base stat total
+    // Helper: ALL legendary + mythical Pokemon IDs (every generation)
+    const LEGENDARY_IDS = new Set([
+        // Gen 1
+        144, 145, 146, 150, 151,
+        // Gen 2
+        243, 244, 245, 249, 250, 251,
+        // Gen 3
+        377, 378, 379, 380, 381, 382, 383, 384, 385, 386,
+        // Gen 4
+        480, 481, 482, 483, 484, 485, 486, 488, 490, 491, 492, 493,
+        // Gen 5
+        638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649,
+        // Gen 6
+        716, 717, 718, 719, 720, 721,
+        // Gen 7
+        785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802, 807, 808, 809,
+        // Gen 8
+        891, 892, 893, 894, 895, 896, 897, 898, 905,
+        // Gen 9
+        1000, 1001, 1002, 1003, 1007, 1008, 1009, 1010, 1024
+    ]);
+
+    // Helper: calculate rarity
     function getRarity(p) {
+        if (LEGENDARY_IDS.has(p.id)) return 'legendary';
         if (STARTER_IDS.has(p.id)) return 'inicial';
         const bst = (p.hp || 0) + (p.attack || 0) + (p.defense || 0) + (p.sp_atk || 0) + (p.sp_def || 0) + (p.speed || 0);
         if (bst >= 600) return 'legendary';
