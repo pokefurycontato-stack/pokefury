@@ -257,8 +257,7 @@ export class Overworld2D {
 
         if (mapData.id && this.game.regionManager) {
             try {
-                const encounters = await this.game.regionManager.loadMapEncounters(mapData.id);
-                this.spawnMapPokemon(encounters);
+                await this.loadOrSpawnMapPokemon(mapData.id);
             } catch (e) {
                 console.warn('[Overworld] Failed to load encounters:', e);
                 this.mapPokemonEntities = [];
@@ -424,6 +423,90 @@ export class Overworld2D {
         }
     }
 
+    async loadOrSpawnMapPokemon(mapId) {
+        const db = window.db;
+        const charId = this.game.currentCharacterId;
+        if (!db || !charId) {
+            const encounters = await this.game.regionManager.loadMapEncounters(mapId);
+            this.spawnMapPokemon(encounters);
+            return;
+        }
+
+        // Load existing entities from DB
+        const { data: saved } = await db.from('map_pokemon_entities')
+            .select('*, map_encounters(*)')
+            .eq('character_id', charId)
+            .eq('map_id', mapId);
+
+        if (saved && saved.length > 0) {
+            this.mapPokemonEntities = saved.map(row => ({
+                dbId: row.id,
+                entityId: `pokemon_${row.id}`,
+                x: row.pos_x,
+                y: row.pos_y,
+                spriteUrl: row.map_encounters?.sprite_url || null,
+                encounter: row.map_encounters,
+                active: row.active,
+                respawnTimer: row.respawn_timer || 0
+            }));
+            this.mapPokemonEncounters = await this.game.regionManager.loadMapEncounters(mapId);
+            return;
+        }
+
+        // No saved entities — spawn fresh and save to DB
+        const encounters = await this.game.regionManager.loadMapEncounters(mapId);
+        this.mapPokemonEncounters = encounters;
+        this.mapPokemonEntities = [];
+
+        if (encounters.length === 0) return;
+
+        const count = Math.min(4, Math.max(1, Math.floor(encounters.length * 1.5)));
+        const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50), 0);
+
+        for (let i = 0; i < count; i++) {
+            let roll = Math.random() * totalWeight;
+            let enc = encounters[0];
+            for (const e of encounters) {
+                roll -= (e.weight || 50);
+                if (roll <= 0) { enc = e; break; }
+            }
+
+            let pos = this.findSpawnPosition();
+            if (!pos) continue;
+
+            const spriteUrl = enc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null);
+
+            // Save to DB
+            let dbId = null;
+            if (enc.id) {
+                const { data: inserted } = await db.from('map_pokemon_entities')
+                    .insert({
+                        character_id: charId,
+                        map_id: mapId,
+                        encounter_id: enc.id,
+                        pos_x: pos.x,
+                        pos_y: pos.y,
+                        active: true,
+                        respawn_timer: 0
+                    })
+                    .select('id')
+                    .single();
+                dbId = inserted?.id;
+            }
+
+            this.mapPokemonEntities.push({
+                dbId: dbId,
+                entityId: `pokemon_${Date.now()}_${i}`,
+                x: pos.x,
+                y: pos.y,
+                spriteUrl: spriteUrl,
+                encounter: enc,
+                active: true,
+                respawnTimer: 0
+            });
+        }
+    }
+
     findSpawnPosition() {
         for (let attempt = 0; attempt < 30; attempt++) {
             let x, y;
@@ -454,12 +537,7 @@ export class Overworld2D {
                 if (p.respawnTimer > 0) {
                     p.respawnTimer--;
                     if (p.respawnTimer <= 0) {
-                        p.active = true;
-                        const pos = this.findSpawnPosition();
-                        if (pos) {
-                            p.x = pos.x;
-                            p.y = pos.y;
-                        }
+                        this.respawnEntity(p);
                     }
                 }
                 continue;
@@ -489,6 +567,52 @@ export class Overworld2D {
             entity.active = false;
             const RESPAWN = { common: 200, uncommon: 350, rare: 500, legendary: 800, inicial: 800 };
             entity.respawnTimer = RESPAWN[enc.rarity] || 300;
+
+            // Mark inactive in DB
+            if (entity.dbId && window.db) {
+                await window.db.from('map_pokemon_entities')
+                    .update({ active: false, respawn_timer: entity.respawnTimer })
+                    .eq('id', entity.dbId);
+            }
+        }
+    }
+
+    async respawnEntity(entity) {
+        const encounters = this.mapPokemonEncounters;
+        if (!encounters || encounters.length === 0) return;
+
+        // Pick new random encounter using weighted selection
+        const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50), 0);
+        let roll = Math.random() * totalWeight;
+        let newEnc = encounters[0];
+        for (const e of encounters) {
+            roll -= (e.weight || 50);
+            if (roll <= 0) { newEnc = e; break; }
+        }
+
+        const pos = this.findSpawnPosition();
+        if (!pos) return;
+
+        const spriteUrl = newEnc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(newEnc.pokemon_id) : null);
+
+        entity.encounter = newEnc;
+        entity.spriteUrl = spriteUrl;
+        entity.x = pos.x;
+        entity.y = pos.y;
+        entity.active = true;
+        entity.respawnTimer = 0;
+
+        // Update DB: replace encounter, position, reactivate
+        if (entity.dbId && window.db) {
+            await window.db.from('map_pokemon_entities')
+                .update({
+                    encounter_id: newEnc.id,
+                    pos_x: pos.x,
+                    pos_y: pos.y,
+                    active: true,
+                    respawn_timer: 0
+                })
+                .eq('id', entity.dbId);
         }
     }
 
