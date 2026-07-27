@@ -23,17 +23,18 @@
         'Geleira':    ['ice']
     };
 
-    // Generation ranges: sort_order → [min_id, max_id]
+    // Generation ranges: region name → [min_id, max_id]
     const GENS = {
-        1: [1, 151],     // Kanto
-        2: [152, 251],   // Johto
-        3: [252, 386],   // Hoenn
-        4: [387, 493],   // Sinnoh
-        5: [494, 649],   // Unova
-        6: [650, 721],   // Kalos
-        7: [722, 809],   // Alola
-        8: [810, 905],   // Galar
-        9: [906, 1025]   // Paldea
+        'Kanto':  [1, 151],
+        'Johto':  [152, 251],
+        'Hoenn':  [252, 386],
+        'Sinnoh': [387, 493],
+        'Unova':  [494, 649],
+        'Kalos':  [650, 721],
+        'Alola':  [722, 809],
+        'Galar':  [810, 905],
+        'Hisui':  [387, 493],
+        'Paldea': [906, 1025]
     };
 
     // Level ranges per biome
@@ -75,20 +76,30 @@
     const existingSet = new Set((existing || []).map(e => `${e.map_id}_${e.pokemon_id}`));
     console.log(`[Biomes] Found ${existingSet.size} existing encounters`);
 
-    // 5) For each region, create encounters for each biome map
+    // 5.5) Delete ALL existing map_encounters to start fresh
+    console.log('[Biomes] Clearing all existing encounters...');
+    const { error: delErr } = await db.from('map_encounters').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (delErr) {
+        console.error('[Biomes] Failed to delete existing encounters:', delErr);
+        return;
+    }
+    existingSet.clear();
+    console.log('[Biomes] All encounters cleared');
+
+    // 6) For each region, create encounters for each biome map
     let totalInserted = 0;
 
     for (const region of regions) {
-        const genRange = GENS[region.sort_order];
+        const genRange = GENS[region.name];
         if (!genRange) {
-            console.warn(`[Biomes] No gen range for sort_order=${region.sort_order}, skipping ${region.name}`);
+            console.warn(`[Biomes] No gen range for "${region.name}", skipping`);
             continue;
         }
         const [minId, maxId] = genRange;
 
         // Get this region's maps
         const regionMaps = allMaps.filter(m => m.region_id === region.id);
-        console.log(`[Biomes] ${region.name} (gen ${region.sort_order}, IDs ${minId}-${maxId}): ${regionMaps.length} maps`);
+        console.log(`[Biomes] ${region.name} (IDs ${minId}-${maxId}): ${regionMaps.length} maps`);
 
         // Filter pokemon for this generation
         const genPokemon = allPokemon.filter(p => p.id >= minId && p.id <= maxId);
