@@ -70,6 +70,8 @@ export class Overworld2D {
         this.frameCount = 0;
 
         this.mapImageCache = {};
+        this.mapThumbnails = {};
+        this.mapNavigatorRects = [];
 
         this.init();
     }
@@ -106,6 +108,7 @@ export class Overworld2D {
         document.addEventListener('keyup', (e) => {
             this.keys[e.key] = false;
         });
+        this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
     }
 
     async loadSprites() {
@@ -261,6 +264,8 @@ export class Overworld2D {
                 this.mapPokemonEntities = [];
             }
         }
+
+        this.preloadMapThumbnails();
     }
 
     isCollisionAt(x, y) {
@@ -680,6 +685,8 @@ export class Overworld2D {
     }
 
     drawHUD(ctx, w, h) {
+        this.drawMapNavigator(ctx, w);
+
         const mapName = this.currentMapData?.name || '';
         const regionName = this.game.currentRegion?.name || '';
 
@@ -709,6 +716,116 @@ export class Overworld2D {
         ctx.font = '10px Inter, sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('WASD/Setas para mover | Chegue na borda para avançar', 12, h - 12);
+    }
+
+    async preloadMapThumbnails() {
+        const maps = this.game.currentRegionMaps || [];
+        for (const m of maps) {
+            if (this.mapThumbnails[m.id]) continue;
+            const img = await new Promise((resolve) => {
+                const el = new Image();
+                el.crossOrigin = 'anonymous';
+                el.onload = () => resolve(el);
+                el.onerror = () => resolve(null);
+                el.src = m.image_url;
+            });
+            this.mapThumbnails[m.id] = img;
+        }
+    }
+
+    drawMapNavigator(ctx, screenW) {
+        const maps = this.game.currentRegionMaps || [];
+        if (maps.length <= 1) { this.mapNavigatorRects = []; return; }
+
+        const thumbW = 44;
+        const thumbH = 32;
+        const gap = 4;
+        const totalW = maps.length * thumbW + (maps.length - 1) * gap;
+        let startX = Math.floor((screenW - totalW) / 2);
+        const thumbY = 12;
+
+        this.mapNavigatorRects = [];
+
+        for (let i = 0; i < maps.length; i++) {
+            const m = maps[i];
+            const x = startX + i * (thumbW + gap);
+            const isCurrent = m.id === this.currentMapData?.id;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.beginPath();
+            ctx.roundRect(x, thumbY, thumbW, thumbH, 4);
+            ctx.fill();
+
+            const thumb = this.mapThumbnails[m.id];
+            if (thumb && thumb.complete) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x, thumbY, thumbW, thumbH, 4);
+                ctx.clip();
+                ctx.drawImage(thumb, x, thumbY, thumbW, thumbH);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.fillRect(x + 4, thumbY + 4, thumbW - 8, thumbH - 8);
+            }
+
+            if (isCurrent) {
+                ctx.strokeStyle = '#e94560';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(x, thumbY, thumbW, thumbH, 4);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = '8px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            const label = m.name.length > 8 ? m.name.slice(0, 7) + '..' : m.name;
+            ctx.fillText(label, x + thumbW / 2, thumbY + thumbH + 10);
+
+            this.mapNavigatorRects.push({ x, y: thumbY, w: thumbW, h: thumbH, map: m });
+        }
+    }
+
+    handleCanvasClick(e) {
+        if (this.game.state !== 'overworld') return;
+        if (!this.mapNavigatorRects.length) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const cx = (e.clientX - rect.left) * scaleX;
+        const cy = (e.clientY - rect.top) * scaleY;
+
+        for (const r of this.mapNavigatorRects) {
+            if (cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h) {
+                if (r.map.id !== this.currentMapData?.id) {
+                    this.teleportToMap(r.map);
+                }
+                return;
+            }
+        }
+    }
+
+    async teleportToMap(mapData) {
+        this.currentMapData = mapData;
+        this.game.currentMap = mapData;
+
+        if (this.game.regionManager && this.game.currentCharacterId) {
+            const userId = window.GameData.userId;
+            await this.game.regionManager.initPlayerProgress(
+                this.game.currentCharacterId,
+                mapData.region_id,
+                mapData.id,
+                userId
+            );
+        }
+
+        await this.setCurrentMap(mapData);
+
+        const locationEl = document.getElementById('location-name');
+        if (locationEl) locationEl.textContent = mapData.name;
+        this.game.showTransitionBanner(mapData.name);
     }
 
     show() {
