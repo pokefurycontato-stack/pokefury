@@ -180,11 +180,11 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    drawPokemonSprite(ctx, w * 0.22, h * 0.38, playerPokemon, true);
-    drawPokemonSprite(ctx, w * 0.75, h * 0.18, enemyPokemon, false);
+    drawPokemonSprite(ctx, w * 0.22, h * 0.58, playerPokemon, true, 1.2);
+    drawPokemonSprite(ctx, w * 0.73, h * 0.32, enemyPokemon, false, 1.0);
 }
 
-function drawPokemonSprite(ctx, x, y, pokemon, isPlayer) {
+function drawPokemonSprite(ctx, x, y, pokemon, isPlayer, sizeScale = 1.0) {
     if (!pokemon) return;
     const spriteUrls = pokemon.spriteUrls || {};
     const shinyUrls = pokemon.shinySpriteUrls;
@@ -218,13 +218,26 @@ function drawPokemonSprite(ctx, x, y, pokemon, isPlayer) {
             ctx.shadowBlur = 30;
         }
 
-        const maxW = 160;
-        const maxH = 160;
-        const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
-        const drawW = img.naturalWidth * scale;
-        const drawH = img.naturalHeight * scale;
+        const maxW = Math.round(140 * sizeScale);
+        const maxH = Math.round(140 * sizeScale);
+        const spriteScale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+        const drawW = img.naturalWidth * spriteScale;
+        const drawH = img.naturalHeight * spriteScale;
 
         ctx.drawImage(img, x - drawW / 2, y - drawH / 2, drawW, drawH);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = isShiny ? '#ffd700' : '#fff';
+        ctx.font = `600 ${Math.round(14 * sizeScale)}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 4;
+        let nameText = pokemon.name;
+        if (pokemon.isMega) nameText = '★ ' + nameText;
+        ctx.fillText(nameText, x, y + drawH / 2 + Math.round(16 * sizeScale));
+        ctx.font = `400 ${Math.round(11 * sizeScale)}px Inter, sans-serif`;
+        ctx.fillStyle = isShiny ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.6)';
+        ctx.fillText(`Lv.${pokemon.level}`, x, y + drawH / 2 + Math.round(32 * sizeScale));
         ctx.shadowBlur = 0;
     } else {
         ctx.shadowColor = isShiny ? '#ffd700' : typeColor;
@@ -232,7 +245,7 @@ function drawPokemonSprite(ctx, x, y, pokemon, isPlayer) {
         ctx.fillStyle = isShiny ? '#ffd700' : typeColor;
         ctx.globalAlpha = 0.8;
         ctx.beginPath();
-        ctx.arc(x, y, 40, 0, Math.PI * 2);
+        ctx.arc(x, y, 40 * sizeScale, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
@@ -242,19 +255,6 @@ function drawPokemonSprite(ctx, x, y, pokemon, isPlayer) {
         ctx.textAlign = 'center';
         ctx.fillText('?', x, y + 5);
     }
-
-    ctx.fillStyle = isShiny ? '#ffd700' : '#fff';
-    ctx.font = '600 14px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 4;
-    let nameText = pokemon.name;
-    if (pokemon.isMega) nameText = '★ ' + nameText;
-    ctx.fillText(nameText, x, y + 90);
-    ctx.font = '400 11px Inter, sans-serif';
-    ctx.fillStyle = isShiny ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.6)';
-    ctx.fillText(`Lv.${pokemon.level}`, x, y + 108);
-    ctx.shadowBlur = 0;
 }
 
 export function initBattleUI(onFight, onBag, onMega, onRun) {
