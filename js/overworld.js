@@ -294,9 +294,13 @@ export class Overworld2D {
         if (this.transitionCooldown > 0) this.transitionCooldown--;
 
         try {
-            this.handleInput();
-            this.update();
-            this.render();
+            if (this.game.state === 'battle') {
+                this.game.render();
+            } else {
+                this.handleInput();
+                this.update();
+                this.render();
+            }
         } catch (e) {
             console.error('[Overworld] Loop error:', e);
         }
@@ -744,10 +748,11 @@ export class Overworld2D {
     show() {
         if (!this.loaded) return;
         this.canvas.style.display = 'block';
+        if (this.pokemonSpriteContainer) this.pokemonSpriteContainer.style.display = 'block';
         this.resize();
     }
 
     hide() {
-        this.canvas.style.display = 'none';
+        if (this.pokemonSpriteContainer) this.pokemonSpriteContainer.style.display = 'none';
     }
 }

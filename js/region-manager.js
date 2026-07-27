@@ -12,6 +12,7 @@ export class RegionManager {
 
     async listBattleBackgrounds() {
         try {
+            // Garantir que estamos listando da pasta correta no Supabase
             const { data, error } = await this.db.storage.from('sprites').list('battle_backgrounds');
             if (error) throw error;
             return data || [];
