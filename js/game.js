@@ -292,6 +292,7 @@ class PokeFuryGame {
     async startWildBattle(minLevel = 2, maxLevel = 8) {
         if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
             console.warn('[PokeFury] No alive pokemon, skipping wild battle');
+            hideBattlePokemonSprites();
             return;
         }
 
@@ -355,40 +356,49 @@ class PokeFuryGame {
     }
 
     async startBattleWithPokemon(pokemonName, level) {
+        hideBattlePokemonSprites();
         if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
             console.warn('[PokeFury] No alive pokemon, skipping battle');
             return;
         }
 
-        const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
-        const isShiny = Math.random() < (1 / SHINY_CHANCE);
-        const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
-        this.enemyTeam = [pokemon];
+        try {
+            const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
+            const isShiny = Math.random() < (1 / SHINY_CHANCE);
+            const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
+            this.enemyTeam = [pokemon];
 
-        const activePlayer = getFirstAlive(this.playerTeam);
+            const activePlayer = getFirstAlive(this.playerTeam);
 
-        this.currentBattleBg = this.getNormalizedBattleBg();
-        if (this.currentBattleBg) {
-            await preloadBattleBgImage(this.currentBattleBg);
+            this.currentBattleBg = this.getNormalizedBattleBg();
+            if (this.currentBattleBg) {
+                await preloadBattleBgImage(this.currentBattleBg);
+            }
+            this.state = 'battle';
+            if (this.overworld2d) this.overworld2d.hide();
+            this.battleStartTime = Date.now();
+            showScreen('battle-screen');
+            updateBattleUI(this.playerTeam, this.enemyTeam);
+
+            drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg);
+
+            initBattleUI(
+                () => this.onFight(),
+                () => this.onBag(),
+                () => this.onMega(),
+                () => this.onRun()
+            );
+
+            let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
+            if (isShiny) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
+            await showBattleMessage(introMsg);
+        } catch (e) {
+            console.error('[PokeFury] Error starting battle:', e);
+            hideBattlePokemonSprites();
+            this.state = 'overworld';
+            if (this.overworld2d) this.overworld2d.show();
+            showScreen('hud');
         }
-        this.state = 'battle';
-        if (this.overworld2d) this.overworld2d.hide();
-        this.battleStartTime = Date.now();
-        showScreen('battle-screen');
-        updateBattleUI(this.playerTeam, this.enemyTeam);
-
-        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg);
-
-        initBattleUI(
-            () => this.onFight(),
-            () => this.onBag(),
-            () => this.onMega(),
-            () => this.onRun()
-        );
-
-        let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
-        if (isShiny) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
-        await showBattleMessage(introMsg);
     }
 
     async onFight() {

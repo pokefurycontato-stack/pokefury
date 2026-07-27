@@ -231,14 +231,6 @@ export class Overworld2D {
         this.encounterZones = [];
         this.transitionCooldown = 0;
 
-        if (mapData.encounter_rate > 0) {
-            this.encounterZones.push({
-                rate: mapData.encounter_rate / 100,
-                minLevel: mapData.min_level || 2,
-                maxLevel: mapData.max_level || 8
-            });
-        }
-
         this.collisionZones = mapData.collision_zones || [];
         this.spawnZones = mapData.spawn_zones || [];
 
@@ -362,10 +354,6 @@ export class Overworld2D {
                 this.moveCooldown = 6;
 
                 this.updatePokemonFollow();
-
-                if (this.encounterCooldown <= 0 && this.encounterZones.length > 0) {
-                    this.tryEncounter();
-                }
             }
         }
 
@@ -394,31 +382,6 @@ export class Overworld2D {
         } else {
             if (Math.abs(dx) === 1) this.pokemonFollowPos.x += Math.sign(dx);
             if (Math.abs(dy) === 1) this.pokemonFollowPos.y += Math.sign(dy);
-        }
-    }
-
-    tryEncounter() {
-        if (this.game.state !== 'overworld') return;
-        if (!this.game.playerTeam || this.game.playerTeam.length === 0) return;
-
-        if (this.spawnZones.length > 0) {
-            let inSpawnZone = false;
-            for (const z of this.spawnZones) {
-                if (this.player.x >= z.x && this.player.x < z.x + z.w &&
-                    this.player.y >= z.y && this.player.y < z.y + z.h) {
-                    inSpawnZone = true;
-                    break;
-                }
-            }
-            if (!inSpawnZone) return;
-        }
-
-        const zone = this.encounterZones[0];
-        if (!zone) return;
-
-        if (Math.random() < zone.rate) {
-            this.encounterCooldown = 20;
-            this.game.startWildBattle(zone.minLevel, zone.maxLevel);
         }
     }
 
@@ -510,7 +473,7 @@ export class Overworld2D {
         entity.respawnTimer = 300;
 
         const level = enc.min_level + Math.floor(Math.random() * ((enc.max_level || enc.min_level + 3) - enc.min_level + 1));
-        this.game.startBattleWithPokemon(enc.pokemon_name, level);
+        await this.game.startBattleWithPokemon(enc.pokemon_name, level);
     }
 
     render() {
