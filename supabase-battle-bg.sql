@@ -1,0 +1,1 @@
+ALTER TABLE region_maps ADD COLUMN IF NOT EXISTS battle_bg_url TEXT;

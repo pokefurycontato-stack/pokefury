@@ -295,6 +295,8 @@ class PokeFuryGame {
             return;
         }
 
+        this.currentBattleBg = this.getNormalizedBattleBg();
+
         let pokemon = null;
 
         if (this.currentMap) {
@@ -364,7 +366,7 @@ class PokeFuryGame {
         const activePlayer = getFirstAlive(this.playerTeam);
         await preloadBattleSprites(activePlayer, pokemon);
 
-        this.currentBattleBg = this.currentMap?.battle_bg_url;
+        this.currentBattleBg = this.getNormalizedBattleBg();
         this.state = 'battle';
         if (this.overworld2d) this.overworld2d.hide();
         this.battleStartTime = Date.now();
@@ -536,7 +538,7 @@ class PokeFuryGame {
             if (result.missed) {
                 await showBattleMessage(`${attacker.name} errou ${move.name}!`);
             } else {
-                await showBattleMessage(`${attacker.name} usou ${move.name}!`);
+                await showBattleMessage(`${attacker.name} usou ${move.name}!`;
 
                 const effText = getEffectivenessText(result.effectiveness);
                 if (effText) await showBattleMessage(effText);
@@ -546,7 +548,7 @@ class PokeFuryGame {
                 await showBattleMessage(updateHpBar(defender));
             }
 
-            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon);
+            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
             if (defender.fainted) {
@@ -585,7 +587,7 @@ class PokeFuryGame {
                 if (m.id === move.id) m.currentPp = Math.max(0, m.currentPp - 1);
             });
 
-            await showBattleMessage(`${enemyPokemon.name} usou ${move.name}!`);
+            await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`;
 
             const effText = getEffectivenessText(result.effectiveness);
             if (effText) await showBattleMessage(effText);
@@ -633,6 +635,13 @@ class PokeFuryGame {
         showScreen('hud');
         document.getElementById('location-name').textContent = 'Área Selvagem';
         if (this.overworld2d) this.overworld2d.show();
+    }
+
+    getNormalizedBattleBg() {
+        if (this.currentMap && this.currentMap.battle_bg_url) {
+            return this.currentMap.battle_bg_url;
+        }
+        return null;
     }
 
     async saveTeam() {
@@ -784,10 +793,10 @@ class PokeFuryGame {
                     <div class="map-card-meta">Encontros: ${map.encounter_rate}% | Nivel: ${map.min_level}-${map.max_level}${map.is_gym ? ' | GYM' : ''}</div>
                 </div>
                 <div class="map-card-actions">
-                    <button class="map-card-btn primary" data-action="encounters">Encontros</button>
-                    <button class="map-card-btn" data-action="edit">Editar</button>
-                    <button class="map-card-btn" data-action="configure-bg" title="Configurar BG">🎨</button>
-                    <button class="map-card-btn danger" data-action="delete">Excluir</button>
+                    <button class.map-card-btn primary" data-action="encounters">Encontros</button>
+                    <button class.map-card-btn" data-action="edit">Editar</button>
+                    <button .map-card-btn" data-action="configure-bg" title="Configurar BG">🎨</button>
+                    <button .map-card-btn danger" data-action="delete">Excluir</button>
                 </div>
             `;
 
@@ -847,14 +856,17 @@ class PokeFuryGame {
             const item = document.createElement('div');
             item.className = 'map-picker-item';
             item.innerHTML = `
-                <img src="${window.SUPABASE_URL}/storage/v1/object/public/sprites/${bg.name}" alt="${bg.name}" loading="lazy">
+                <img src="${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bg.name}" alt="${bg.name}" loading="lazy">
                 <div class="map-picker-item-name">${bg.name.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/-/g, ' ')}</div>
             `;
             item.onclick = async () => {
                 const bgName = bg.name;
-                const bgUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/${bgName}`;
+                const bgUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bgName}`;
                 try {
                     await this.regionManager.updateMap(map.id, { battle_bg_url: bgUrl });
+                    if (this.currentMap && this.currentMap.id === map.id) {
+                        this.currentMap.battle_bg_url = bgUrl;
+                    }
                     modal.classList.add('hidden');
                     this.loadRegionDetail(region);
                 } catch (e) {
@@ -874,7 +886,7 @@ class PokeFuryGame {
                 const { data, error } = await window.db.storage.from('sprites').list(folder.prefix);
                 if (error || !data) continue;
 
-                const images = data.filter(f => /\.(png|jpg|jpeg|gif)$/i.test(f.name));
+                const images = data.filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f.name));
                 if (images.length === 0) continue;
 
                 const sectionHeader = document.createElement('div');
@@ -1039,7 +1051,7 @@ class PokeFuryGame {
                     <div class="encounter-item-name">#${enc.pokemon_id} ${enc.pokemon_name}</div>
                     <div class="encounter-item-meta">Peso: ${enc.weight}</div>
                 </div>
-                <button class="map-card-btn danger">Remover</button>
+                <button class.map-card-btn danger">Remover</button>
             `;
             item.querySelector('.danger').onclick = async () => {
                 await this.regionManager.deleteEncounter(enc.id);
