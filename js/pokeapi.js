@@ -12,14 +12,6 @@ const PokeAPI = {
         return `${this.supabaseStorageUrl}/animated-front/${pokemonId}.gif`;
     },
 
-    getOverworldUrl(pokemonId) {
-        return `${this.supabaseStorageUrl}/overworld/${pokemonId}.png`;
-    },
-
-    getOverworldShinyUrl(pokemonId) {
-        return `${this.supabaseStorageUrl}/overworld-shiny/${pokemonId}.png`;
-    },
-
     getBestSpriteUrl(pokemonData) {
         if (pokemonData.sprite_front) return pokemonData.sprite_front;
         if (pokemonData.id) return this.getAnimatedFrontUrl(pokemonData.id);
