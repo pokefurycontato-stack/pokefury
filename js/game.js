@@ -2,7 +2,7 @@ import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
 import { randomInt, loadTypeEffectiveness } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive } from './battle.js';
 import {
-    showScreen, preloadBattleSprites, updateBattleUI, showBattleMessage, showMoveSelection,
+    showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
@@ -297,7 +297,7 @@ class PokeFuryGame {
 
         this.currentBattleBg = this.getNormalizedBattleBg();
         if (this.currentBattleBg) {
-            await this.preloadBattleBg(this.currentBattleBg);
+            await preloadBattleBgImage(this.currentBattleBg);
         }
 
         let pokemon = null;
@@ -371,7 +371,7 @@ class PokeFuryGame {
 
         this.currentBattleBg = this.getNormalizedBattleBg();
         if (this.currentBattleBg) {
-            await this.preloadBattleBg(this.currentBattleBg);
+            await preloadBattleBgImage(this.currentBattleBg);
         }
         this.state = 'battle';
         if (this.overworld2d) this.overworld2d.hide();
@@ -650,22 +650,6 @@ class PokeFuryGame {
         }
         console.log('[PokeFury] No battle BG configured for map:', this.currentMap?.name);
         return null;
-    }
-
-    preloadBattleBg(url) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                console.log('[PokeFury] Battle BG loaded OK');
-                resolve();
-            };
-            img.onerror = () => {
-                console.warn('[PokeFury] Battle BG failed to load:', url);
-                resolve();
-            };
-            img.src = url;
-        });
     }
 
     async saveTeam() {

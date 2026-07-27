@@ -117,6 +117,19 @@ export function showEffectivenessText(effectiveness) {
 
 const bgCache = new Map();
 
+export function preloadBattleBgImage(url) {
+    return new Promise((resolve) => {
+        if (!url) { resolve(); return; }
+        let img = bgCache.get(url);
+        if (img && img.complete && img.naturalWidth > 0) { resolve(); return; }
+        img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { bgCache.set(url, img); resolve(); };
+        img.onerror = () => { resolve(); };
+        img.src = url;
+    });
+}
+
 export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgroundUrl = null) {
     const w = canvas.width;
     const h = canvas.height;
