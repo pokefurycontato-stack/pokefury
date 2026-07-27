@@ -5,7 +5,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 let battlePokemonContainer = null;
 const battlePokemonSprites = { player: null, enemy: null };
-const battlePokemonNames = { player: null, enemy: null };
+const battlePokemonState = { player: null, enemy: null };
 
 export function showScreen(screenId) {
     const screens = ['battle-screen', 'hud'];
@@ -202,26 +202,23 @@ function ensureBattlePokemonContainer() {
     if (!mainArea) return null;
     battlePokemonContainer = document.createElement('div');
     battlePokemonContainer.id = 'battle-pokemon-sprites';
-    battlePokemonContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;';
+    battlePokemonContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:25;';
     mainArea.appendChild(battlePokemonContainer);
     return battlePokemonContainer;
 }
 
 function getBattleSpriteUrl(pokemon, isPlayer) {
     if (!pokemon) return null;
+    const spriteUrls = pokemon.spriteUrls || {};
+    const shinyUrls = pokemon.shinySpriteUrls || {};
     const isShiny = pokemon.isShiny;
 
     if (isPlayer) {
-        if (isShiny) {
-            return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-back-shiny/${pokemon.id}.gif`
-                || `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-back/${pokemon.id}.gif`;
-        }
-        return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-back/${pokemon.id}.gif`;
+        if (isShiny) return shinyUrls.back || shinyUrls.front || spriteUrls.back || spriteUrls.front;
+        return spriteUrls.back || spriteUrls.front;
     } else {
-        if (isShiny) {
-            return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-front-shiny/${pokemon.id}.gif`;
-        }
-        return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-front/${pokemon.id}.gif`;
+        if (isShiny) return shinyUrls.front || shinyUrls.home || shinyUrls.official || spriteUrls.front;
+        return spriteUrls.front || spriteUrls.home || spriteUrls.official;
     }
 }
 
@@ -237,14 +234,20 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
         return;
     }
 
+    const stateKey = `${pokemon.id}_${pokemon.isShiny}_${pokemon.isMega}`;
+
     if (!el) {
         el = document.createElement('img');
         el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;';
         container.appendChild(el);
         battlePokemonSprites[side] = el;
+        battlePokemonState[side] = null;
     }
 
-    el.src = url;
+    if (battlePokemonState[side] !== stateKey) {
+        el.src = url;
+        battlePokemonState[side] = stateKey;
+    }
     el.style.display = 'block';
 
     const maxDim = Math.round(140 * sizeScale);

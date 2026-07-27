@@ -331,7 +331,6 @@ class PokeFuryGame {
         this.enemyTeam = [pokemon];
 
         const activePlayer = getFirstAlive(this.playerTeam);
-        await preloadBattleSprites(activePlayer, pokemon);
 
         this.state = 'battle';
         if (this.overworld2d) this.overworld2d.hide();
@@ -367,7 +366,6 @@ class PokeFuryGame {
         this.enemyTeam = [pokemon];
 
         const activePlayer = getFirstAlive(this.playerTeam);
-        await preloadBattleSprites(activePlayer, pokemon);
 
         this.currentBattleBg = this.getNormalizedBattleBg();
         if (this.currentBattleBg) {
