@@ -324,7 +324,6 @@ export class Overworld2D {
             const ny = this.player.y + dy;
 
             if (nx < 0 || nx >= this.worldCols || ny < 0 || ny >= this.worldRows) {
-                this.handleTransition(dir);
                 return;
             }
 
@@ -777,7 +776,7 @@ export class Overworld2D {
                 ctx.stroke();
             }
 
-            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.fillStyle = '#000000';
             ctx.font = '8px Inter, sans-serif';
             ctx.textAlign = 'center';
             const label = m.name.length > 8 ? m.name.slice(0, 7) + '..' : m.name;
