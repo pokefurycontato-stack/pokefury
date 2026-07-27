@@ -309,9 +309,27 @@ class PokeFuryGame {
         if (this.currentMap) {
             const encounters = await this.regionManager.loadMapEncounters(this.currentMap.id);
             if (encounters.length > 0) {
-                const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
+                // Rarity tier spawn rates (configurable)
+                const TIER_RATES = { common: 60, uncommon: 25, rare: 12, legendary: 3 };
+                const tiers = ['common', 'uncommon', 'rare', 'legendary'];
+
+                // Step 1: Pick rarity tier
+                const tierTotal = tiers.reduce((sum, t) => sum + (TIER_RATES[t] || 0), 0);
+                let tierRoll = Math.random() * tierTotal;
+                let selectedTier = 'common';
+                for (const t of tiers) {
+                    tierRoll -= (TIER_RATES[t] || 0);
+                    if (tierRoll <= 0) { selectedTier = t; break; }
+                }
+
+                // Step 2: Filter encounters by selected tier, fallback to all if tier empty
+                let pool = encounters.filter(e => e.rarity === selectedTier);
+                if (pool.length === 0) pool = encounters;
+
+                // Step 3: Weighted random within the pool
+                const totalWeight = pool.reduce((sum, e) => sum + e.weight, 0);
                 let roll = Math.random() * totalWeight;
-                for (const enc of encounters) {
+                for (const enc of pool) {
                     roll -= enc.weight;
                     if (roll <= 0) {
                         const encMin = enc.min_level || this.currentMap.min_level || minLevel;
@@ -1068,11 +1086,18 @@ class PokeFuryGame {
         encounters.forEach(enc => {
             const item = document.createElement('div');
             item.className = 'encounter-item';
+            const rarityColors = { common: '#aaa', uncommon: '#3498db', rare: '#e94560', legendary: '#f39c12' };
+            const rarityLabels = { common: 'Comum', uncommon: 'Incomum', rare: 'Raro', legendary: 'Lendario' };
+            const rarity = enc.rarity || 'common';
+            const rarityColor = rarityColors[rarity] || '#aaa';
+            const rarityLabel = rarityLabels[rarity] || rarity;
             item.innerHTML = `
                 <img class="encounter-item-sprite" src="${enc.sprite_url}" alt="${enc.pokemon_name}" onerror="this.style.display='none'">
                 <div class="encounter-item-info">
                     <div class="encounter-item-name">#${enc.pokemon_id} ${enc.pokemon_name}</div>
-                    <div class="encounter-item-meta">Peso: ${enc.weight}</div>
+                    <div class="encounter-item-meta">
+                        <span style="color:${rarityColor};font-weight:bold">${rarityLabel}</span> | Peso: ${enc.weight}
+                    </div>
                 </div>
                 <button class="map-card-btn danger">Remover</button>
             `;

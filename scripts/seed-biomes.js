@@ -56,12 +56,22 @@
     if (regErr) { console.error('Failed to load regions:', regErr); return; }
     console.log(`[Biomes] Found ${regions.length} regions:`, regions.map(r => `${r.name} (sort=${r.sort_order})`));
 
-    // 2) Load all pokemon (only variant=normal)
+    // 2) Load all pokemon (only variant=normal) WITH STATS for rarity calculation
     const { data: allPokemon, error: pokeErr } = await db.from('pokemon')
-        .select('id, name, types, variant')
+        .select('id, name, types, variant, hp, attack, defense, sp_atk, sp_def, speed')
         .eq('variant', 'normal');
     if (pokeErr) { console.error('Failed to load pokemon:', pokeErr); return; }
     console.log(`[Biomes] Found ${allPokemon.length} pokemon with variant=normal`);
+
+    // Helper: calculate rarity from base stat total
+    function getRarity(p) {
+        const bst = (p.hp || 0) + (p.attack || 0) + (p.defense || 0) + (p.sp_atk || 0) + (p.sp_def || 0) + (p.speed || 0);
+        if (bst >= 600) return 'legendary';
+        if (bst >= 500) return 'rare';
+        if (bst >= 400) return 'uncommon';
+        return 'common';
+    }
+    const RARITY_WEIGHTS = { common: 50, uncommon: 30, rare: 15, legendary: 5 };
 
     // Debug: show first 5 pokemon types
     console.log('[Biomes] Sample pokemon types:', allPokemon.slice(0, 5).map(p => `${p.name}: ${JSON.stringify(p.types)}`));
@@ -128,16 +138,20 @@
             // Build encounter rows, skip duplicates
             const rows = matching
                 .filter(p => !existingSet.has(`${map.id}_${p.id}`))
-                .map(p => ({
-                    map_id: map.id,
-                    pokemon_name: p.name,
-                    pokemon_id: p.id,
-                    weight: 50,
-                    min_level: minLvl,
-                    max_level: maxLvl,
-                    is_shiny: false,
-                    sprite_url: `${ANIMATED_URL}/${p.id}.gif`
-                }));
+                .map(p => {
+                    const rarity = getRarity(p);
+                    return {
+                        map_id: map.id,
+                        pokemon_name: p.name,
+                        pokemon_id: p.id,
+                        weight: RARITY_WEIGHTS[rarity],
+                        min_level: minLvl,
+                        max_level: maxLvl,
+                        is_shiny: false,
+                        sprite_url: `${ANIMATED_URL}/${p.id}.gif`,
+                        rarity: rarity
+                    };
+                });
 
             if (rows.length === 0) {
                 console.log(`[Biomes] ${map.name} (${region.name}): all encounters already exist`);

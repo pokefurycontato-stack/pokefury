@@ -396,12 +396,20 @@ export class Overworld2D {
 
         const count = Math.min(4, Math.max(1, Math.floor(encounters.length * 1.5)));
 
+        // Weighted random selection based on encounter weight (rarity)
+        const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50), 0);
+
         for (let i = 0; i < count; i++) {
-            const enc = encounters[Math.floor(Math.random() * encounters.length)];
+            let roll = Math.random() * totalWeight;
+            let enc = encounters[0];
+            for (const e of encounters) {
+                roll -= (e.weight || 50);
+                if (roll <= 0) { enc = e; break; }
+            }
+
             let pos = this.findSpawnPosition();
             if (!pos) continue;
 
-            // Garante que estamos usando a URL correta do banco de dados (GIF)
             const spriteUrl = enc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null);
 
             this.mapPokemonEntities.push({
@@ -479,7 +487,8 @@ export class Overworld2D {
 
         if (this.game.state === 'battle') {
             entity.active = false;
-            entity.respawnTimer = 300;
+            const RESPAWN = { common: 200, uncommon: 350, rare: 500, legendary: 800 };
+            entity.respawnTimer = RESPAWN[enc.rarity] || 300;
         }
     }
 
