@@ -209,18 +209,20 @@ function ensureBattlePokemonContainer() {
 
 function getBattleSpriteUrl(pokemon, isPlayer) {
     if (!pokemon) return null;
-    const spriteUrls = pokemon.spriteUrls || {};
-    const shinyUrls = pokemon.shinySpriteUrls;
     const isShiny = pokemon.isShiny;
-    let url;
+
     if (isPlayer) {
-        if (isShiny && shinyUrls) url = shinyUrls.back || shinyUrls.front || shinyUrls.home || shinyUrls.official;
-        if (!url) url = spriteUrls?.back || spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
+        if (isShiny) {
+            return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-back-shiny/${pokemon.id}.gif`
+                || `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-back/${pokemon.id}.gif`;
+        }
+        return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-back/${pokemon.id}.gif`;
     } else {
-        if (isShiny && shinyUrls) url = shinyUrls.front || shinyUrls.home || shinyUrls.official;
-        if (!url) url = spriteUrls?.front || spriteUrls?.home || spriteUrls?.official;
+        if (isShiny) {
+            return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-front-shiny/${pokemon.id}.gif`;
+        }
+        return `${window.SUPABASE_URL}/storage/v1/object/public/sprites/animated-front/${pokemon.id}.gif`;
     }
-    return url || null;
 }
 
 function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
@@ -254,17 +256,8 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
 
 function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {
     if (!pokemon) return;
-    const url = getBattleSpriteUrl(pokemon, true);
-    const img = url ? PokeAPI.imageCache[url] : null;
     const isShiny = pokemon.isShiny;
-
-    let spriteH = 140 * sizeScale;
-    if (img && img.complete && img.naturalWidth > 0) {
-        const maxW = Math.round(140 * sizeScale);
-        const maxH = Math.round(140 * sizeScale);
-        const s = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
-        spriteH = img.naturalHeight * s;
-    }
+    const spriteH = 120 * sizeScale;
 
     ctx.fillStyle = isShiny ? '#ffd700' : '#fff';
     ctx.font = `600 ${Math.round(14 * sizeScale)}px Inter, sans-serif`;
