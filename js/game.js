@@ -538,7 +538,7 @@ class PokeFuryGame {
             if (result.missed) {
                 await showBattleMessage(`${attacker.name} errou ${move.name}!`);
             } else {
-                await showBattleMessage(`${attacker.name} usou ${move.name}!`;
+                await showBattleMessage(`${attacker.name} usou ${move.name}!`);
 
                 const effText = getEffectivenessText(result.effectiveness);
                 if (effText) await showBattleMessage(effText);
@@ -587,7 +587,7 @@ class PokeFuryGame {
                 if (m.id === move.id) m.currentPp = Math.max(0, m.currentPp - 1);
             });
 
-            await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`;
+            await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`);
 
             const effText = getEffectivenessText(result.effectiveness);
             if (effText) await showBattleMessage(effText);
