@@ -237,8 +237,13 @@ export class Overworld2D {
         this.collisionZones = mapData.collision_zones || [];
         this.spawnZones = mapData.spawn_zones || [];
 
-        this.player.x = Math.floor(this.worldCols / 2);
-        this.player.y = Math.floor(this.worldRows / 2);
+        if (mapData.player_spawn_x != null && mapData.player_spawn_y != null) {
+            this.player.x = mapData.player_spawn_x;
+            this.player.y = mapData.player_spawn_y;
+        } else {
+            this.player.x = Math.floor(this.worldCols / 2);
+            this.player.y = Math.floor(this.worldRows / 2);
+        }
         this.player.fromX = this.player.x;
         this.player.fromY = this.player.y;
         this.player.moving = false;

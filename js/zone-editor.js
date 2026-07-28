@@ -15,6 +15,7 @@ export class MapZoneEditor {
         this.drawRect = null;
         this.collisionZones = [];
         this.spawnZones = [];
+        this.playerSpawn = null;
         this.onSave = null;
     }
 
@@ -31,6 +32,7 @@ export class MapZoneEditor {
         const tools = [
             { id: 'collision', icon: '🔴', label: 'Colisao' },
             { id: 'spawn', icon: '🟢', label: 'Spawn' },
+            { id: 'player', icon: '🧑', label: 'Treinador' },
             { id: 'eraser', icon: '🧹', label: 'Apagar' }
         ];
 
@@ -58,6 +60,11 @@ export class MapZoneEditor {
             if (e.button === 0) {
                 if (this.tool === 'eraser') {
                     this.handleErase(e);
+                } else if (this.tool === 'player') {
+                    const pos = this.getTileAt(e);
+                    this.playerSpawn = { x: pos.x, y: pos.y };
+                    this.renderZoneList();
+                    this.render();
                 } else {
                     this.painting = true;
                     const pos = this.getTileAt(e);
@@ -194,7 +201,19 @@ export class MapZoneEditor {
             container.appendChild(item);
         });
 
-        if (this.collisionZones.length === 0 && this.spawnZones.length === 0) {
+        if (this.playerSpawn) {
+            const item = document.createElement('div');
+            item.className = 'zone-list-item';
+            item.innerHTML = `
+                <div class="zone-color-dot" style="background:#2196f3"></div>
+                <div class="zone-coords">Treinador: (${this.playerSpawn.x},${this.playerSpawn.y})</div>
+                <button class="zone-delete" title="Remover">✕</button>
+            `;
+            item.querySelector('.zone-delete').onclick = () => { this.playerSpawn = null; this.renderZoneList(); this.render(); };
+            container.appendChild(item);
+        }
+
+        if (this.collisionZones.length === 0 && this.spawnZones.length === 0 && !this.playerSpawn) {
             container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:11px;padding:8px">Nenhuma zona definida</div>';
         }
     }
@@ -247,6 +266,20 @@ export class MapZoneEditor {
             ctx.strokeRect(z.x * ts - this.camera.x, z.y * ts - this.camera.y, z.w * ts, z.h * ts);
         }
 
+        if (this.playerSpawn) {
+            const px = this.playerSpawn.x * ts - this.camera.x;
+            const py = this.playerSpawn.y * ts - this.camera.y;
+            ctx.fillStyle = 'rgba(33,150,243,0.5)';
+            ctx.fillRect(px, py, ts, ts);
+            ctx.strokeStyle = 'rgba(33,150,243,0.9)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px, py, ts, ts);
+            ctx.fillStyle = '#fff';
+            ctx.font = `${Math.max(10, ts * 0.6)}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('🧑', px + ts / 2, py + ts * 0.75);
+        }
+
         if (this.drawRect) {
             let { x, y, w, h } = this.drawRect;
             if (w < 0) { x += w + 1; w = -w; }
@@ -275,6 +308,9 @@ export class MapZoneEditor {
         this.gridH = mapData.gridH || 30;
         this.collisionZones = mapData.collision_zones ? [...mapData.collision_zones] : [];
         this.spawnZones = mapData.spawn_zones ? [...mapData.spawn_zones] : [];
+        this.playerSpawn = (mapData.player_spawn_x != null && mapData.player_spawn_y != null)
+            ? { x: mapData.player_spawn_x, y: mapData.player_spawn_y }
+            : null;
 
         const overlay = document.getElementById('zone-editor-overlay');
         overlay.classList.remove('hidden');
@@ -299,7 +335,7 @@ export class MapZoneEditor {
 
         document.getElementById('zone-btn-save').onclick = () => {
             if (this.onSave) {
-                this.onSave(this.collisionZones, this.spawnZones);
+                this.onSave(this.collisionZones, this.spawnZones, this.playerSpawn);
             }
             overlay.classList.add('hidden');
         };

@@ -1019,8 +1019,16 @@ class PokeFuryGame {
             this.zoneEditor.init();
         }
 
-        this.zoneEditor.onSave = async (collisionZones, spawnZones) => {
-            await this.regionManager.saveMapZones(map.id, collisionZones, spawnZones);
+        this.zoneEditor.onSave = async (collisionZones, spawnZones, playerSpawn) => {
+            const update = { collision_zones: collisionZones, spawn_zones: spawnZones };
+            if (playerSpawn) {
+                update.player_spawn_x = playerSpawn.x;
+                update.player_spawn_y = playerSpawn.y;
+            } else {
+                update.player_spawn_x = null;
+                update.player_spawn_y = null;
+            }
+            await window.db.from('region_maps').update(update).eq('id', map.id);
             this.showTransitionBanner('Zonas salvas!');
             this.loadRegionDetail(region);
         };
@@ -1041,7 +1049,9 @@ class PokeFuryGame {
             gridW: this.overworld2d ? this.overworld2d.worldCols : 40,
             gridH: this.overworld2d ? this.overworld2d.worldRows : 30,
             collision_zones: map.collision_zones || [],
-            spawn_zones: map.spawn_zones || []
+            spawn_zones: map.spawn_zones || [],
+            player_spawn_x: map.player_spawn_x,
+            player_spawn_y: map.player_spawn_y
         }, imageLoader);
 
         // Map image change button
