@@ -1077,7 +1077,7 @@ class PokeFuryGame {
             if (q.length < 2) { results.style.display = 'none'; return; }
 
             debounce = setTimeout(async () => {
-                const { data } = await window.db.from('game_saves').select('id, player_name, starter_pokemon').ilike('player_name', `%${q}%`).limit(10);
+                const { data } = await window.db.from('game_saves').select('id, player_name, starter_pokemon, user_id').ilike('player_name', `%${q}%`).limit(10);
                 if (!data || data.length === 0) { results.style.display = 'none'; return; }
 
                 results.innerHTML = '';
@@ -1389,7 +1389,7 @@ class PokeFuryGame {
             const nextSlot = existingTeam && existingTeam.length > 0 ? existingTeam[0].slot + 1 : 1;
 
             const insertData = {
-                user_id: this._donateSelectedChar.user_id || null,
+                user_id: this._donateSelectedChar.user_id || this.userId,
                 character_id: this._donateSelectedChar.id,
                 species: pokemonData.species,
                 nickname: pokemonData.name,
