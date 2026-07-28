@@ -29,10 +29,10 @@ CREATE POLICY "pa_insert" ON pokemon_abilities FOR INSERT WITH CHECK (auth.role(
 DROP POLICY IF EXISTS "pa_update" ON pokemon_abilities;
 CREATE POLICY "pa_update" ON pokemon_abilities FOR UPDATE USING (auth.role() = 'authenticated');
 
--- Pokemon Moves with level and learn method
+-- Pokemon Moves with level and learn method (no FK to moves - PokeAPI IDs may not match)
 CREATE TABLE IF NOT EXISTS pokemon_moves_v2 (
-    pokemon_id INTEGER REFERENCES pokemon(id) ON DELETE CASCADE,
-    move_id INTEGER REFERENCES moves(id) ON DELETE CASCADE,
+    pokemon_id INTEGER NOT NULL,
+    move_id INTEGER NOT NULL,
     learn_method TEXT DEFAULT 'level-up',
     level_learned INTEGER DEFAULT 0,
     PRIMARY KEY (pokemon_id, move_id, learn_method)
