@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS abilities (
 ALTER TABLE abilities ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "abilities_select" ON abilities;
 CREATE POLICY "abilities_select" ON abilities FOR SELECT USING (true);
+DROP POLICY IF EXISTS "abilities_insert" ON abilities;
+CREATE POLICY "abilities_insert" ON abilities FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "abilities_update" ON abilities;
+CREATE POLICY "abilities_update" ON abilities FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- Pokemon Abilities junction table
 CREATE TABLE IF NOT EXISTS pokemon_abilities (
@@ -21,7 +25,9 @@ ALTER TABLE pokemon_abilities ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "pa_select" ON pokemon_abilities;
 CREATE POLICY "pa_select" ON pokemon_abilities FOR SELECT USING (true);
 DROP POLICY IF EXISTS "pa_insert" ON pokemon_abilities;
-CREATE POLICY "pa_insert" ON pokemon_abilities FOR INSERT WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "pa_insert" ON pokemon_abilities FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "pa_update" ON pokemon_abilities;
+CREATE POLICY "pa_update" ON pokemon_abilities FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- Pokemon Moves with level and learn method
 CREATE TABLE IF NOT EXISTS pokemon_moves_v2 (
@@ -35,7 +41,9 @@ ALTER TABLE pokemon_moves_v2 ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "pmv2_select" ON pokemon_moves_v2;
 CREATE POLICY "pmv2_select" ON pokemon_moves_v2 FOR SELECT USING (true);
 DROP POLICY IF EXISTS "pmv2_insert" ON pokemon_moves_v2;
-CREATE POLICY "pmv2_insert" ON pokemon_moves_v2 FOR INSERT WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "pmv2_insert" ON pokemon_moves_v2 FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "pmv2_update" ON pokemon_moves_v2;
+CREATE POLICY "pmv2_update" ON pokemon_moves_v2 FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_pa_pokemon ON pokemon_abilities(pokemon_id);
