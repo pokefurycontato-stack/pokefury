@@ -639,6 +639,7 @@ class PokeFuryGame {
 
     async executeBattleTurn(playerPokemon, enemyPokemon, playerMove) {
         if (!playerPokemon || !enemyPokemon) return;
+        try {
         const order = determineTurnOrder(playerPokemon, enemyPokemon);
 
         for (const pokemon of order) {
@@ -657,7 +658,7 @@ class PokeFuryGame {
             const result = await executeTurn(attacker, defender, move);
 
             attacker.moves.forEach(m => {
-                if (m.id === move.id) m.currentPp = Math.max(0, m.currentPp - 1);
+                if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
             });
 
             if (result.missed) {
@@ -691,6 +692,11 @@ class PokeFuryGame {
                 }
             }
         }
+        } catch (e) {
+            console.error('[Battle] executeBattleTurn error:', e);
+            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
+            updateBattleUI(this.playerTeam, this.enemyTeam);
+        }
     }
 
     async enemyTurn() {
@@ -709,7 +715,7 @@ class PokeFuryGame {
             const result = await executeTurn(enemyPokemon, playerPokemon, move);
 
             enemyPokemon.moves.forEach(m => {
-                if (m.id === move.id) m.currentPp = Math.max(0, m.currentPp - 1);
+                if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
             });
 
             await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`);

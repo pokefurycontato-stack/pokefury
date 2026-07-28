@@ -28,12 +28,17 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
             .lte('level_learned', level)
             .order('level_learned');
 
+        console.log(`[Battle] pokemon_moves_v2 for ${apiData.name} (id=${apiData.id}, level=${level}):`, data?.length || 0, 'rows');
+
         if (data && data.length > 0) {
             const moveIds = data.map(m => m.move_id);
             const { data: moveDetails } = await window.db
                 .from('moves')
                 .select('id, name, type, category, power, accuracy, pp')
                 .in('id', moveIds);
+
+            console.log(`[Battle] moves table matched:`, moveDetails?.length || 0, 'of', moveIds.length);
+
             if (moveDetails) {
                 levelMoves = moveDetails.slice(0, 4).map(m => ({
                     id: m.id,
@@ -50,10 +55,40 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         console.warn('[Battle] Error fetching level-up moves:', e);
     }
 
+    console.log(`[Battle] Path 1 moves for ${apiData.name}:`, levelMoves.map(m => m.name));
+
     if (levelMoves.length === 0) {
-        const allMoves = await PokeAPI.ensurePokemonMoves(apiData.id);
-        levelMoves = allMoves.slice(0, 4);
+        try {
+            const { data } = await window.db
+                .from('pokemon_moves')
+                .select('move_id')
+                .eq('pokemon_id', apiData.id);
+            console.log(`[Battle] Fallback pokemon_moves for ${apiData.name}:`, data?.length || 0, 'rows');
+            if (data && data.length > 0) {
+                const moveIds = data.map(r => r.move_id);
+                const { data: moveDetails } = await window.db
+                    .from('moves')
+                    .select('id, name, type, category, power, accuracy, pp')
+                    .in('id', moveIds);
+                console.log(`[Battle] Fallback moves matched:`, moveDetails?.length || 0);
+                if (moveDetails) {
+                    levelMoves = moveDetails.slice(0, 4).map(m => ({
+                        id: m.id,
+                        name: m.name,
+                        type: m.type,
+                        category: m.category || 'physical',
+                        power: m.power || 0,
+                        accuracy: m.accuracy || 100,
+                        pp: m.pp || 35
+                    }));
+                }
+            }
+        } catch (e) {
+            console.warn('[Battle] Error in fallback move load:', e);
+        }
     }
+
+    console.log(`[Battle] Final moves for ${apiData.name} Lv.${level}:`, levelMoves.map(m => m.name));
 
     if (levelMoves.length === 0) {
         levelMoves.push({
