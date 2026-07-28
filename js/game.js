@@ -167,6 +167,7 @@ class PokeFuryGame {
                     pokemon.happiness = row.happiness ?? 70;
                     pokemon.isMega = row.is_mega || false;
                     pokemon.heldItemId = row.held_item_id || null;
+                    pokemon.statusEffect = row.status_effect || null;
                     if (row.moves && Array.isArray(row.moves)) {
                         for (const savedMove of row.moves) {
                             const move = pokemon.moves.find(m => m.id === savedMove.id || m.id === String(savedMove.id));
@@ -832,8 +833,34 @@ class PokeFuryGame {
         stopBattleVideo();
         this.enemyTeam = [];
         this.updatePartyPanel();
-        document.getElementById('location-name').textContent = 'Área Selvagem';
         if (this.overworld2d) this.overworld2d.show();
+
+        if (result === 'lose') {
+            await this.teleportToPokemonCenter();
+        } else {
+            document.getElementById('location-name').textContent = 'Área Selvagem';
+        }
+    }
+
+    async teleportToPokemonCenter() {
+        if (!this.currentRegion) return;
+        const maps = await this.regionManager.loadRegionMaps(this.currentRegion.id);
+        const center = maps.find(m => m.name === 'Centro Pokemon');
+        if (!center) {
+            console.warn('[PokeFury] Centro Pokemon not found for region:', this.currentRegion.name);
+            document.getElementById('location-name').textContent = 'Área Selvagem';
+            return;
+        }
+
+        this.currentMap = center;
+        this.regionManager.initPlayerProgress(this.currentCharacterId, this.currentRegion.id, center.id, this.userId);
+        if (this.overworld2d) {
+            this.overworld2d.setCurrentMap(center);
+            this.overworld2d.show();
+        }
+        this.updatePartyPanel();
+        document.getElementById('location-name').textContent = 'Centro Pokemon';
+        this.showTransitionBanner('Você foi enviado ao Centro Pokemon...');
     }
 
     async checkEvolutions() {
@@ -936,6 +963,46 @@ class PokeFuryGame {
             }
 
             list.appendChild(slot);
+        }
+
+        let healBtn = document.getElementById('heal-pokemon-btn');
+        const isPokemonCenter = this.currentMap && this.currentMap.name === 'Centro Pokemon';
+        if (isPokemonCenter) {
+            if (!healBtn) {
+                healBtn = document.createElement('button');
+                healBtn.id = 'heal-pokemon-btn';
+                healBtn.style.cssText = 'width:100%;margin-top:8px;padding:10px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(233,69,96,0.3)';
+                healBtn.onmouseenter = () => { healBtn.style.transform = 'scale(1.03)'; healBtn.style.boxShadow = '0 4px 12px rgba(233,69,96,0.5)'; };
+                healBtn.onmouseleave = () => { healBtn.style.transform = 'scale(1)'; healBtn.style.boxShadow = '0 2px 8px rgba(233,69,96,0.3)'; };
+                healBtn.onclick = () => this.healAllPokemon();
+                list.parentElement.appendChild(healBtn);
+            }
+            healBtn.textContent = this.playerTeam.every(p => !p.fainted && p.currentHp === p.stats.hp) ? 'Time Curado!' : 'Curar Pokemons';
+            healBtn.disabled = this.playerTeam.every(p => !p.fainted && p.currentHp === p.stats.hp);
+            healBtn.style.opacity = healBtn.disabled ? '0.5' : '1';
+            healBtn.style.cursor = healBtn.disabled ? 'default' : 'pointer';
+        } else if (healBtn) {
+            healBtn.remove();
+        }
+    }
+
+    async healAllPokemon() {
+        if (!this.playerTeam) return;
+        let healed = 0;
+        for (const p of this.playerTeam) {
+            const wasHurt = p.currentHp < p.stats.hp || p.fainted || p.statusEffect;
+            if (wasHurt) {
+                p.currentHp = p.stats.hp;
+                p.fainted = false;
+                p.statusEffect = null;
+                p.moves.forEach(m => { m.currentPp = m.pp || 35; });
+                healed++;
+            }
+        }
+        if (healed > 0) {
+            await this.saveTeam();
+            this.updatePartyPanel();
+            this.showTransitionBanner('Seus Pokemon foram curados!');
         }
     }
 

@@ -125,7 +125,9 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         shinySpriteUrls: apiData.shinySpriteUrls,
         type: apiData.types[0],
         fainted: false,
-        experience: expForLevel(1) + (level - 1) * 50
+        experience: expForLevel(1) + (level - 1) * 50,
+        statusEffect: null,
+        _statStages: { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 }
     };
 }
 
