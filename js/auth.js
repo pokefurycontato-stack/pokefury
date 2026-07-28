@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[PokeFury Auth] DOMContentLoaded');
     createParticles();
-    checkExistingSession();
     initAuth();
 });
 
@@ -17,47 +16,6 @@ function createParticles() {
         particle.style.animationDelay = Math.random() * 6 + 's';
         particle.style.animationDuration = Math.random() * 10 + 10 + 's';
         container.appendChild(particle);
-    }
-}
-
-async function checkExistingSession() {
-    try {
-        if (!window.db) return;
-        const { data: { session } } = await window.db.auth.getSession();
-        if (session && session.user) {
-            console.log('[PokeFury Auth] Existing session found, auto-login:', session.user.id);
-            window.GameData.setUserId(session.user.id);
-
-            try {
-                const { data: profile } = await window.db.from('profiles').select('is_admin').eq('id', session.user.id).single();
-                window.isAdmin = !!(profile && profile.is_admin);
-            } catch (e) {
-                window.isAdmin = false;
-            }
-
-            // Check if we have a saved character
-            const savedCharId = window.GameData.currentCharacterId;
-            if (savedCharId) {
-                // Try to load the character directly
-                const { data: save } = await window.db.from('game_saves').select('*').eq('id', savedCharId).single();
-                if (save) {
-                    console.log('[PokeFury Auth] Restoring character:', save.player_name);
-                    isTransitioning = true;
-                    document.getElementById('auth-screen').classList.add('hidden');
-                    document.getElementById('character-screen').classList.add('hidden');
-                    isTransitioning = false;
-
-                    // Need game module to load character
-                    window._pendingAutoLogin = save;
-                    return;
-                }
-            }
-
-            // No saved character, go to character screen
-            goToCharacterScreen();
-        }
-    } catch (e) {
-        console.log('[PokeFury Auth] Session check failed:', e);
     }
 }
 

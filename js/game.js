@@ -45,12 +45,23 @@ class PokeFuryGame {
         await this.preloadStarters();
         this.render();
 
-        // Check for auto-login from session restore
-        if (window._pendingAutoLogin) {
-            const save = window._pendingAutoLogin;
-            window._pendingAutoLogin = null;
-            await this.loadCharacter(save);
-            return;
+        // Auto-login: check for existing session + saved character
+        if (window.GameData.userId && window.GameData.currentCharacterId) {
+            try {
+                const { data: { session } } = await window.db.auth.getSession();
+                if (session && session.user) {
+                    const { data: save } = await window.db.from('game_saves').select('*').eq('id', window.GameData.currentCharacterId).single();
+                    if (save) {
+                        console.log('[PokeFury] Auto-restoring session for:', save.player_name);
+                        document.getElementById('auth-screen').classList.add('hidden');
+                        document.getElementById('character-screen').classList.add('hidden');
+                        await this.loadCharacter(save);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.log('[PokeFury] Auto-login failed:', e);
+            }
         }
 
         document.querySelectorAll('.section-header[data-toggle]').forEach(header => {
@@ -1007,6 +1018,63 @@ class PokeFuryGame {
             collision_zones: map.collision_zones || [],
             spawn_zones: map.spawn_zones || []
         }, imageLoader);
+
+        // Map image change button
+        document.getElementById('zone-btn-change-image').onclick = () => {
+            this.openMapImagePicker(map, region);
+        };
+    }
+
+    async openMapImagePicker(map, region) {
+        const modal = document.getElementById('map-image-modal');
+        const grid = document.getElementById('map-image-grid');
+        modal.classList.remove('hidden');
+
+        document.getElementById('map-image-modal-close').onclick = () => modal.classList.add('hidden');
+
+        grid.innerHTML = '<div style="color:rgba(255,255,255,0.3);grid-column:1/-1;text-align:center">Carregando imagens...</div>';
+
+        const folders = ['routes', 'towns', 'dungeons', 'interiors'];
+        const storageUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/maps`;
+        let allImages = [];
+
+        for (const folder of folders) {
+            try {
+                const { data } = await window.db.storage.from('sprites').list(`maps/${folder}`);
+                if (data) {
+                    data.filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f.name)).forEach(f => {
+                        allImages.push({ name: f.name, folder, url: `${storageUrl}/${folder}/${f.name}` });
+                    });
+                }
+            } catch (e) {
+                console.warn(`[MapImagePicker] Could not list maps/${folder}:`, e);
+            }
+        }
+
+        if (allImages.length === 0) {
+            grid.innerHTML = '<div style="color:rgba(255,255,255,0.3);grid-column:1/-1;text-align:center">Nenhuma imagem encontrada. Faça upload para sprites/maps/</div>';
+            return;
+        }
+
+        grid.innerHTML = '';
+        for (const img of allImages) {
+            const card = document.createElement('div');
+            card.style.cssText = 'cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color 0.2s';
+            card.innerHTML = `
+                <img src="${img.url}" style="width:100%;height:80px;object-fit:cover;display:block" loading="lazy" onerror="this.style.display='none'">
+                <div style="padding:4px 8px;font-size:10px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${img.folder}/${img.name}</div>
+            `;
+            card.onmouseenter = () => card.style.borderColor = '#e94560';
+            card.onmouseleave = () => card.style.borderColor = 'transparent';
+            card.onclick = async () => {
+                await window.db.from('region_maps').update({ image_url: img.url }).eq('id', map.id);
+                map.image_url = img.url;
+                modal.classList.add('hidden');
+                this.showTransitionBanner('Imagem do mapa atualizada!');
+                this.loadRegionDetail(region);
+            };
+            grid.appendChild(card);
+        }
     }
 
     async openEncounterEditor(map) {
