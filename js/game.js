@@ -53,6 +53,15 @@ class PokeFuryGame {
                     const { data: save } = await window.db.from('game_saves').select('*').eq('id', window.GameData.currentCharacterId).single();
                     if (save) {
                         console.log('[PokeFury] Auto-restoring session for:', save.player_name);
+                        window.GameData.setUserId(session.user.id);
+
+                        try {
+                            const { data: profile } = await window.db.from('profiles').select('is_admin').eq('id', session.user.id).single();
+                            window.isAdmin = !!(profile && profile.is_admin);
+                        } catch (e) {
+                            window.isAdmin = false;
+                        }
+
                         document.getElementById('auth-screen').classList.add('hidden');
                         document.getElementById('character-screen').classList.add('hidden');
                         await this.loadCharacter(save);
