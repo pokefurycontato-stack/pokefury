@@ -34,18 +34,18 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
                 .from('moves')
                 .select('id, name, type, category, power, accuracy, pp')
                 .in('id', moveIds);
-            if (moveDetails) {
-                const validMoves = moveDetails.filter(m => m.power > 0);
-                levelMoves = validMoves.slice(0, 4).map(m => ({
-                    id: m.id,
-                    name: m.name,
-                    type: m.type,
-                    category: m.category,
-                    power: m.power,
-                    accuracy: m.accuracy,
-                    pp: m.pp
-                }));
-            }
+        if (moveDetails) {
+            const validMoves = moveDetails.filter(m => m.power > 0);
+            levelMoves = validMoves.slice(0, 4).map(m => ({
+                id: m.id,
+                name: m.name,
+                type: m.type,
+                category: m.category || 'physical',
+                power: m.power || 40,
+                accuracy: m.accuracy || 100,
+                pp: m.pp || 35
+            }));
+        }
         }
     } catch (e) {
         console.warn('[Battle] Error fetching level-up moves:', e);
@@ -85,7 +85,7 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         moves: levelMoves.map(move => ({
             ...move,
             id: move.id || move.name.toLowerCase().replace(/\s+/g, '-'),
-            currentPp: move.pp
+            currentPp: move.pp || 35
         })),
         spriteUrls: apiData.spriteUrls,
         shinySpriteUrls: apiData.shinySpriteUrls,
