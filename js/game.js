@@ -361,12 +361,12 @@ class PokeFuryGame {
 
     renderBattle() {
         if (this.state !== 'battle') return;
-        const activePlayer = getFirstAlive(this.playerTeam);
-        const activeEnemy = getFirstAlive(this.enemyTeam);
+        const activePlayer = getFirstAlive(this.playerTeam) || this._lastBattlePlayer;
+        const activeEnemy = getFirstAlive(this.enemyTeam) || this._lastBattleEnemy;
         if (activePlayer && activeEnemy) {
+            this._lastBattlePlayer = activePlayer;
+            this._lastBattleEnemy = activeEnemy;
             drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg);
-        } else {
-            hideBattlePokemonSprites();
         }
     }
 
@@ -433,6 +433,8 @@ class PokeFuryGame {
         const activePlayer = getFirstAlive(this.playerTeam);
 
         this.state = 'battle';
+        this._lastBattlePlayer = activePlayer;
+        this._lastBattleEnemy = pokemon;
         if (this.overworld2d) this.overworld2d.hide();
         this.battleStartTime = Date.now();
         showScreen('battle-screen');
@@ -480,6 +482,8 @@ class PokeFuryGame {
                 await preloadBattleBgImage(this.currentBattleBg);
             }
             this.state = 'battle';
+            this._lastBattlePlayer = activePlayer;
+            this._lastBattleEnemy = pokemon;
             if (this.overworld2d) this.overworld2d.hide();
             this.battleStartTime = Date.now();
             showScreen('battle-screen');
@@ -811,6 +815,8 @@ class PokeFuryGame {
         this.saveTeam();
 
         this.state = 'overworld';
+        this._lastBattlePlayer = null;
+        this._lastBattleEnemy = null;
         showScreen('hud');
         hideBattlePokemonSprites();
         stopBattleVideo();
