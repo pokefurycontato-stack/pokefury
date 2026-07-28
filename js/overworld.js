@@ -310,6 +310,10 @@ export class Overworld2D {
         if (this.moveCooldown > 0) this.moveCooldown--;
         if (this.transitionCooldown > 0) this.transitionCooldown--;
 
+        if (this.frameCount % 30 === 0 && this.game.state === 'overworld') {
+            this.game.updatePartyPanel();
+        }
+
         try {
             if (this.game.state === 'battle') {
                 this.game.render();

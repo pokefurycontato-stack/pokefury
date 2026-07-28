@@ -801,3 +801,123 @@ body {
     85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
 }
+
+/* ===== PARTY PANEL ===== */
+#party-panel {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    width: 180px;
+    background: rgba(10, 10, 30, 0.85);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 8px;
+    z-index: 15;
+    pointer-events: auto;
+    backdrop-filter: blur(4px);
+}
+.party-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.party-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    margin-bottom: 3px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+    transition: background 0.2s;
+}
+.party-slot:hover {
+    background: rgba(255,255,255,0.08);
+}
+.party-slot.fainted {
+    opacity: 0.45;
+}
+.party-slot-sprite {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.party-slot-pokeball {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    opacity: 0.3;
+    image-rendering: pixelated;
+}
+.party-slot-gif {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 36px;
+    image-rendering: pixelated;
+    object-fit: contain;
+}
+.party-slot-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.party-slot-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.party-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.party-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+.party-bar-hp {
+    background: linear-gradient(90deg, #4caf50, #8bc34a);
+}
+.party-bar-hp.low {
+    background: linear-gradient(90deg, #f44336, #ff9800);
+}
+.party-bar-hp.mid {
+    background: linear-gradient(90deg, #ff9800, #ffc107);
+}
+.party-bar-exp {
+    background: linear-gradient(90deg, #2196f3, #03a9f4);
+}
+.party-bar-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 8px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1;
+}

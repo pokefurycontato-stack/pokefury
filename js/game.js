@@ -151,6 +151,7 @@ class PokeFuryGame {
             console.log('[PokeFury] Starter Pokemon loaded:', pokemonData.name);
             this.playerTeam = [await createPokemon(pokemonData, 5)];
             console.log('[PokeFury] Team created');
+            this.updatePartyPanel();
         } catch (e) {
             console.error('[PokeFury] Error creating team:', e);
             return;
@@ -725,6 +726,7 @@ class PokeFuryGame {
         hideBattlePokemonSprites();
         stopBattleVideo();
         this.enemyTeam = [];
+        this.updatePartyPanel();
         document.getElementById('location-name').textContent = 'Área Selvagem';
         if (this.overworld2d) this.overworld2d.show();
     }
@@ -740,6 +742,50 @@ class PokeFuryGame {
 
     async saveTeam() {
         await window.GameData.saveTeam(this.playerTeam);
+    }
+
+    updatePartyPanel() {
+        const list = document.getElementById('party-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        for (let i = 0; i < 6; i++) {
+            const p = this.playerTeam[i];
+            const slot = document.createElement('div');
+            slot.className = 'party-slot' + (p && p.fainted ? ' fainted' : '');
+
+            if (p) {
+                const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+                const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
+                const hpClass = hpPct <= 25 ? 'low' : hpPct <= 50 ? 'mid' : '';
+                const expPct = 50;
+
+                slot.innerHTML = `
+                    <div class="party-slot-sprite">
+                        <img class="party-slot-pokeball" src="assets/pokeballsil.png" alt="">
+                        <img class="party-slot-gif" src="${spriteUrl}" alt="${p.name}" onerror="this.style.display='none'">
+                    </div>
+                    <div class="party-slot-info">
+                        <div class="party-slot-name">${p.name} <span style="opacity:0.4">Lv${p.level}</span></div>
+                        <div class="party-bar-wrap"><div class="party-bar party-bar-hp ${hpClass}" style="width:${hpPct}%"></div></div>
+                        <div class="party-bar-label">HP ${p.currentHp}/${p.stats.hp}</div>
+                        <div class="party-bar-wrap"><div class="party-bar party-bar-exp" style="width:${expPct}%"></div></div>
+                        <div class="party-bar-label">EXP</div>
+                    </div>
+                `;
+            } else {
+                slot.innerHTML = `
+                    <div class="party-slot-sprite">
+                        <img class="party-slot-pokeball" src="assets/pokeballsil.png" alt="">
+                    </div>
+                    <div class="party-slot-info">
+                        <div class="party-slot-name" style="opacity:0.3">Vazio</div>
+                    </div>
+                `;
+            }
+
+            list.appendChild(slot);
+        }
     }
 
     switchCharacter() {
