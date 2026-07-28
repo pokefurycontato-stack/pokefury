@@ -94,8 +94,8 @@ export class Overworld2D {
             this.canvas.width = window.innerWidth - 240;
             this.canvas.height = window.innerHeight - 48;
         }
-        this.tileW = this.canvas.width / this.worldCols;
-        this.tileH = this.canvas.height / this.worldRows;
+        this.tileW = 32;
+        this.tileH = 32;
     }
 
     setupInput() {
