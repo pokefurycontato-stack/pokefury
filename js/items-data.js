@@ -23,6 +23,7 @@ const ITEMS_DATA = [
     {id:53,name:'X Sp. Atk',category:'battle_item',subcategory:'stat',effect:'boost_sp_atk',desc:'+1 sp.atk.',price:350,holdable:false,battle:true,sprite:'assets/sprites/items/x-sp-atk.png'},
     {id:54,name:'X Sp. Def',category:'battle_item',subcategory:'stat',effect:'boost_sp_def',desc:'+1 sp.def.',price:350,holdable:false,battle:true,sprite:'assets/sprites/items/x-sp-def.png'},
     {id:55,name:'Dire Hit',category:'battle_item',subcategory:'crit',effect:'boost_crit',desc:'Aumenta chance de crit.',price:650,holdable:false,battle:true,sprite:'assets/sprites/items/dire-hit.png'},
+    {id:99,name:'Exp. Share',category:'held_item',subcategory:'exp',effect:'exp_share',desc:'Divide EXP igualmente entre todos os pokemon que o possuem.',price:3000,holdable:true,battle:false,sprite:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/exp-share.png'},
     {id:60,name:'Escape Rope',category:'field',subcategory:'escape',effect:'escape',desc:'Sai de cavernas.',price:550,holdable:false,battle:false,sprite:'assets/sprites/items/escape-rope.png'},
     {id:70,name:'Exp Candy XS',category:'medicine',subcategory:'exp',effect:'exp_100',effect_value:100,desc:'+100 EXP.',price:0,holdable:false,battle:false,sprite:'assets/sprites/items/exp-candy-xs.png'},
     {id:71,name:'Exp Candy S',category:'medicine',subcategory:'exp',effect:'exp_500',effect_value:500,desc:'+500 EXP.',price:0,holdable:false,battle:false,sprite:'assets/sprites/items/exp-candy-s.png'},

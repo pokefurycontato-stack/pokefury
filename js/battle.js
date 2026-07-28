@@ -134,14 +134,18 @@ export function expForLevel(level) {
     return Math.floor(Math.pow(level, 3) * 0.8);
 }
 
-export function awardExp(team, enemyLevel) {
-    const alive = team.filter(p => !p.fainted);
-    if (alive.length === 0) return [];
-
+export function awardExp(team, enemyLevel, activePokemon) {
     const messages = [];
-    const baseExp = Math.floor((enemyLevel * 50) / alive.length);
+    const baseExp = Math.floor((enemyLevel * 15) / 3);
 
-    for (const p of alive) {
+    for (const p of team) {
+        if (p.fainted) continue;
+
+        const isAttacker = activePokemon && p === activePokemon;
+        const hasExpShare = p.heldItemId === 99;
+
+        if (!isAttacker && !hasExpShare) continue;
+
         const prevLevel = p.level;
         p.experience = (p.experience || 0) + baseExp;
 

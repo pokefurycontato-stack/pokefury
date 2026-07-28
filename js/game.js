@@ -743,7 +743,8 @@ class PokeFuryGame {
 
         if (result === 'win' && this.playerTeam && this.enemyTeam.length > 0) {
             const enemyLevel = this.enemyTeam[0].level;
-            const levelMsgs = awardExp(this.playerTeam, enemyLevel);
+            const activePokemon = getFirstAlive(this.playerTeam);
+            const levelMsgs = awardExp(this.playerTeam, enemyLevel, activePokemon);
             for (const msg of levelMsgs) {
                 await showBattleMessage(msg);
             }
