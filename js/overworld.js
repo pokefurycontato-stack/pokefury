@@ -70,6 +70,13 @@ export class Overworld2D {
         this.wallpaperImg = new Image();
         this.wallpaperImg.src = 'assets/wallpapergrid.jpeg';
 
+        this.bgVideo = document.createElement('video');
+        this.bgVideo.src = 'assets/campobatalha.mp4';
+        this.bgVideo.loop = true;
+        this.bgVideo.muted = true;
+        this.bgVideo.playsInline = true;
+        this.bgVideo.play().catch(() => {});
+
         this.playerSprites = {};
         this.loaded = false;
         this.frameCount = 0;
@@ -645,7 +652,9 @@ export class Overworld2D {
         ctx.fillStyle = '#0d1117';
         ctx.fillRect(0, 0, w, h);
 
-        if (this.wallpaperImg.complete && this.wallpaperImg.naturalWidth > 0) {
+        if (this.bgVideo.readyState >= 2) {
+            ctx.drawImage(this.bgVideo, 0, 0, w, h);
+        } else if (this.wallpaperImg.complete && this.wallpaperImg.naturalWidth > 0) {
             ctx.drawImage(this.wallpaperImg, 0, 0, w, h);
         }
 
