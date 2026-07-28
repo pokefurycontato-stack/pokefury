@@ -1118,20 +1118,35 @@ class PokeFuryGame {
             return;
         }
 
-        try {
-            const { data } = await window.db.from('pokemon_abilities').select('ability_id, abilities(name)').eq('pokemon_id', pokemonData.id);
-            if (data && data.length > 0) {
-                for (const a of data) {
-                    const opt = document.createElement('option');
-                    opt.value = a.ability_id;
-                    opt.textContent = a.abilities?.name || `Ability ${a.ability_id}`;
-                    select.appendChild(opt);
-                }
-            } else {
-                select.innerHTML = '<option value="">Sem habilidades</option>';
-            }
-        } catch (e) {
-            select.innerHTML = '<option value="">Erro ao carregar</option>';
+        const TYPE_ABILITIES = {
+            normal: ['Run Away', 'Guts', 'Scrappy'],
+            fire: ['Blaze', 'Flash Fire', 'Flame Body'],
+            water: ['Torrent', 'Rain Dish', 'Water Absorb'],
+            grass: ['Overgrow', 'Chlorophyll', 'Leaf Guard'],
+            electric: ['Static', 'Lightning Rod', 'Volt Absorb'],
+            ice: ['Ice Body', 'Snow Cloak', 'Refrigerator'],
+            fighting: ['Guts', 'Steadfast', 'Inner Focus'],
+            poison: ['Poison Point', 'Poison Touch', 'Effect Spore'],
+            ground: ['Sand Veil', 'Arena Trap', 'Sand Force'],
+            flying: ['Keen Eye', 'Tinted Lens', 'Big Pecks'],
+            psychic: ['Synchronize', 'Inner Focus', 'Magic Bounce'],
+            bug: ['Swarm', 'Compound Eyes', 'Tinted Lens'],
+            rock: ['Rock Head', 'Sturdy', 'Sand Stream'],
+            ghost: ['Levitate', 'Cursed Body', 'Insomnia'],
+            dragon: ['Shed Skin', 'Marvel Scale', 'Multiscale'],
+            dark: ['Intimidate', 'Keen Eye', 'Pickpocket'],
+            steel: ['Battle Armor', 'Clear Body', 'Light Metal'],
+            fairy: ['Cute Charm', 'Fairy Charm', 'Natural Cure']
+        };
+
+        const primaryType = pokemonData.types?.[0]?.toLowerCase() || 'normal';
+        const abilities = TYPE_ABILITIES[primaryType] || ['Run Away'];
+
+        for (const name of abilities) {
+            const opt = document.createElement('option');
+            opt.value = name.toLowerCase().replace(/\s+/g, '_');
+            opt.textContent = name;
+            select.appendChild(opt);
         }
     }
 
@@ -1139,7 +1154,7 @@ class PokeFuryGame {
         const container = document.getElementById('donate-poke-moves');
         container.innerHTML = '';
 
-        if (!pokemonData?.moveNames && !pokemonData?.id) return;
+        if (!pokemonData?.id) return;
 
         this._donateMoveOptions = [];
         this._donateSelectedMoves = [];
@@ -1154,12 +1169,27 @@ class PokeFuryGame {
         const pokeId = this._donateSelectedPokemon;
         if (!pokeId) return;
 
-        const { data } = await window.db.from('pokemon_moves').select('move_id').eq('pokemon_id', pokeId);
-        if (!data) return;
+        let moves = [];
 
-        const moveIds = data.map(r => r.move_id);
-        const moveResults = await Promise.all(moveIds.slice(0, 20).map(id => window.db.from('moves').select('id, name, type').eq('id', id).single()));
-        const moves = moveResults.map(r => r.data).filter(Boolean);
+        try {
+            const { data, error } = await window.db.from('pokemon_moves').select('move_id').eq('pokemon_id', pokeId);
+            if (!error && data && data.length > 0) {
+                const moveIds = data.map(r => r.move_id);
+                const results = await Promise.all(moveIds.map(id =>
+                    window.db.from('moves').select('id, name, type, category, power').eq('id', id).single()
+                ));
+                moves = results.map(r => r.data).filter(Boolean);
+            }
+        } catch (e) {
+            console.warn('[Donate] Error loading pokemon moves:', e);
+        }
+
+        if (moves.length === 0) {
+            try {
+                const { data } = await window.db.from('moves').select('id, name, type, category, power').limit(50);
+                if (data) moves = data;
+            } catch (e) {}
+        }
 
         const wrapper = document.createElement('div');
         wrapper.style.cssText = 'display:flex;gap:6px;align-items:center';
@@ -1175,7 +1205,7 @@ class PokeFuryGame {
         for (const m of moves) {
             const opt = document.createElement('option');
             opt.value = m.id;
-            opt.textContent = `${m.name} (${m.type})`;
+            opt.textContent = `${m.name} (${m.type})${m.power ? ' ' + m.power + 'pw' : ''}`;
             select.appendChild(opt);
         }
 
