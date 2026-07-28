@@ -116,12 +116,17 @@ export class Overworld2D {
 
     setupInput() {
         document.addEventListener('keydown', (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
             this.keys[e.key] = true;
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
                 e.preventDefault();
             }
         });
         document.addEventListener('keyup', (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             this.keys[e.key] = false;
         });
         this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
