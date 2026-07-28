@@ -136,10 +136,13 @@ export function showEffectivenessText(effectiveness) {
 }
 
 const bgCache = new Map();
+const videoCache = new Map();
+let currentBattleVideo = null;
 
 export function preloadBattleBgImage(url) {
     return new Promise((resolve) => {
         if (!url) { resolve(); return; }
+        if (/\.(mp4|webm|ogg)$/i.test(url)) { resolve(); return; }
         let img = bgCache.get(url);
         if (img && img.complete && img.naturalWidth > 0) { resolve(); return; }
         img = new Image();
@@ -155,28 +158,60 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     const h = canvas.height;
 
     if (backgroundUrl) {
-        let img = bgCache.get(backgroundUrl);
-        if (!img) {
-            img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = backgroundUrl;
-            bgCache.set(backgroundUrl, img);
-        }
-        
-        if (img.complete && img.naturalWidth > 0) {
-            ctx.drawImage(img, 0, 0, w, h);
-        } else if (img.complete) {
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
-            skyGrad.addColorStop(0, '#0f3460');
-            skyGrad.addColorStop(1, '#16213e');
-            ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, w, h * 0.5);
+        const isVideo = /\.(mp4|webm|ogg)$/i.test(backgroundUrl);
 
-            const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
-            groundGrad.addColorStop(0, '#1a3a1a');
-            groundGrad.addColorStop(1, '#0d1f0d');
-            ctx.fillStyle = groundGrad;
-            ctx.fillRect(0, h * 0.5, w, h * 0.5);
+        if (isVideo) {
+            let video = videoCache.get(backgroundUrl);
+            if (!video) {
+                video = document.createElement('video');
+                video.src = backgroundUrl;
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.crossOrigin = 'anonymous';
+                videoCache.set(backgroundUrl, video);
+            }
+
+            if (currentBattleVideo && currentBattleVideo !== video) {
+                currentBattleVideo.pause();
+                currentBattleVideo.currentTime = 0;
+            }
+            currentBattleVideo = video;
+
+            if (video.readyState >= 2) {
+                ctx.drawImage(video, 0, 0, w, h);
+            } else {
+                if (video.paused) video.play().catch(() => {});
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+                skyGrad.addColorStop(0, '#0f3460');
+                skyGrad.addColorStop(1, '#16213e');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, w, h);
+            }
+        } else {
+            let img = bgCache.get(backgroundUrl);
+            if (!img) {
+                img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.src = backgroundUrl;
+                bgCache.set(backgroundUrl, img);
+            }
+
+            if (img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, 0, 0, w, h);
+            } else if (img.complete) {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+                skyGrad.addColorStop(0, '#0f3460');
+                skyGrad.addColorStop(1, '#16213e');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, w, h * 0.5);
+
+                const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
+                groundGrad.addColorStop(0, '#1a3a1a');
+                groundGrad.addColorStop(1, '#0d1f0d');
+                ctx.fillStyle = groundGrad;
+                ctx.fillRect(0, h * 0.5, w, h * 0.5);
+            }
         }
     } else {
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
@@ -210,6 +245,14 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
 
     drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 1.2);
     drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 1.0);
+}
+
+export function stopBattleVideo() {
+    if (currentBattleVideo) {
+        currentBattleVideo.pause();
+        currentBattleVideo.currentTime = 0;
+        currentBattleVideo = null;
+    }
 }
 
 function ensureBattlePokemonContainer() {
