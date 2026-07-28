@@ -331,9 +331,15 @@ export class Overworld2D {
             console.error('[Overworld] Loop error:', e);
         }
 
-        requestAnimationFrame(() => {
-            try { this.loop(); } catch (e) { console.error('[Overworld] rAF error:', e); }
-        });
+        try {
+            if (this.game.state === 'battle') {
+                setTimeout(() => { try { this.loop(); } catch (e) {} }, 16);
+            } else {
+                requestAnimationFrame(() => { try { this.loop(); } catch (e) {} });
+            }
+        } catch (e) {
+            setTimeout(() => { try { this.loop(); } catch (e2) {} }, 16);
+        }
     }
 
     handleInput() {
