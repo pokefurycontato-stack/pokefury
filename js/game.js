@@ -512,7 +512,13 @@ class PokeFuryGame {
         if (!playerPokemon || !enemyPokemon) return;
 
         showMoveSelection(playerPokemon.moves, async (move) => {
-            await this.executeBattleTurn(playerPokemon, enemyPokemon, move);
+            try {
+                await this.executeBattleTurn(playerPokemon, enemyPokemon, move);
+            } catch (e) {
+                console.error('[Battle] Turn error:', e);
+                drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
+                updateBattleUI(this.playerTeam, this.enemyTeam);
+            }
         });
     }
 
