@@ -44,6 +44,8 @@ export class Overworld2D {
         };
 
         this.camera = { x: 0, y: 0 };
+        this.mapOffsetX = 0;
+        this.mapOffsetY = 0;
         this.keys = {};
         this.moveCooldown = 0;
         this.encounterCooldown = 0;
@@ -96,6 +98,10 @@ export class Overworld2D {
         }
         this.tileW = 32;
         this.tileH = 32;
+        const mapW = this.worldCols * this.tileW;
+        const mapH = this.worldRows * this.tileH;
+        this.mapOffsetX = Math.max(0, Math.floor((this.canvas.width - mapW) / 2));
+        this.mapOffsetY = Math.max(0, Math.floor((this.canvas.height - mapH) / 2));
     }
 
     setupInput() {
@@ -370,14 +376,19 @@ export class Overworld2D {
         const halfW = this.canvas.width / 2;
         const halfH = this.canvas.height / 2;
 
-        this.camera.x = Math.max(0, Math.min(
-            this.player.x * this.tileW + this.tileW / 2 - halfW,
-            Math.max(0, this.worldCols * this.tileW - this.canvas.width)
-        ));
-        this.camera.y = Math.max(0, Math.min(
-            this.player.y * this.tileH + this.tileH / 2 - halfH,
-            Math.max(0, this.worldRows * this.tileH - this.canvas.height)
-        ));
+        const mapW = this.worldCols * this.tileW;
+        const mapH = this.worldRows * this.tileH;
+        const canScrollX = mapW > this.canvas.width;
+        const canScrollY = mapH > this.canvas.height;
+
+        this.camera.x = canScrollX ? Math.max(0, Math.min(
+            this.player.x * this.tileW + this.tileW / 2 - halfW + this.mapOffsetX,
+            mapW - this.canvas.width + this.mapOffsetX * 2
+        )) : 0;
+        this.camera.y = canScrollY ? Math.max(0, Math.min(
+            this.player.y * this.tileH + this.tileH / 2 - halfH + this.mapOffsetY,
+            mapH - this.canvas.height + this.mapOffsetY * 2
+        )) : 0;
     }
 
     updatePokemonFollow() {
@@ -637,7 +648,7 @@ export class Overworld2D {
 
             ctx.drawImage(
                 this.currentMapImage,
-                -this.camera.x, -this.camera.y,
+                this.mapOffsetX - this.camera.x, this.mapOffsetY - this.camera.y,
                 mapDrawW, mapDrawH
             );
 
@@ -667,8 +678,8 @@ export class Overworld2D {
         ctx.lineWidth = 0.5;
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
-                const sx = x * this.tileW - this.camera.x;
-                const sy = y * this.tileH - this.camera.y;
+                const sx = x * this.tileW - this.camera.x + this.mapOffsetX;
+                const sy = y * this.tileH - this.camera.y + this.mapOffsetY;
                 ctx.strokeRect(sx, sy, this.tileW, this.tileH);
             }
         }
@@ -696,8 +707,8 @@ export class Overworld2D {
             activeIds.add(p.entityId);
 
             // Coordenadas FIXAS (sem movimento)
-            const drawX = p.x * this.tileW - this.camera.x;
-            const drawY = p.y * this.tileH - this.camera.y;
+            const drawX = p.x * this.tileW - this.camera.x + this.mapOffsetX;
+            const drawY = p.y * this.tileH - this.camera.y + this.mapOffsetY;
 
             // Efeito de balanço (Bobbing) preservado
             const bobY = Math.sin(Date.now() / 400 + p.x * 3 + p.y * 7) * 3;
@@ -731,7 +742,7 @@ export class Overworld2D {
 
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
-            ctx.ellipse(drawX + this.tileW / 2, p.y * this.tileH - this.camera.y + this.tileH - 1, this.tileW / 4, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(drawX + this.tileW / 2, p.y * this.tileH - this.camera.y + this.mapOffsetY + this.tileH - 1, this.tileW / 4, 3, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -747,11 +758,11 @@ export class Overworld2D {
 
         if (this.player.moving) {
             const t = this.player.moveProgress;
-            drawX = (this.player.fromX + (this.player.x - this.player.fromX) * t) * this.tileW - this.camera.x;
-            drawY = (this.player.fromY + (this.player.y - this.player.fromY) * t) * this.tileH - this.camera.y;
+            drawX = (this.player.fromX + (this.player.x - this.player.fromX) * t) * this.tileW - this.camera.x + this.mapOffsetX;
+            drawY = (this.player.fromY + (this.player.y - this.player.fromY) * t) * this.tileH - this.camera.y + this.mapOffsetY;
         } else {
-            drawX = this.player.x * this.tileW - this.camera.x;
-            drawY = this.player.y * this.tileH - this.camera.y;
+            drawX = this.player.x * this.tileW - this.camera.x + this.mapOffsetX;
+            drawY = this.player.y * this.tileH - this.camera.y + this.mapOffsetY;
         }
 
         let sprite;
@@ -780,8 +791,8 @@ export class Overworld2D {
         ctx.fill();
 
         if (this.pokemonFollowing && this.pokemonFollowSprite && this.pokemonFollowSprite.complete) {
-            const px = this.pokemonFollowPos.x * this.tileW - this.camera.x;
-            const py = this.pokemonFollowPos.y * this.tileH - this.camera.y;
+            const px = this.pokemonFollowPos.x * this.tileW - this.camera.x + this.mapOffsetX;
+            const py = this.pokemonFollowPos.y * this.tileH - this.camera.y + this.mapOffsetY;
             ctx.drawImage(this.pokemonFollowSprite, px, py, this.tileW, this.tileH);
         }
     }
