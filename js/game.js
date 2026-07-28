@@ -1180,16 +1180,24 @@ class PokeFuryGame {
         try {
             const { data, error } = await window.db
                 .from('pokemon_moves_v2')
-                .select('move_id, learn_method, level_learned, moves(name, type, category, power)')
+                .select('move_id, learn_method, level_learned')
                 .eq('pokemon_id', pokeId)
                 .order('level_learned');
 
             if (!error && data && data.length > 0) {
+                const moveIds = [...new Set(data.map(r => r.move_id))];
+                const { data: moveDetails } = await window.db
+                    .from('moves')
+                    .select('id, name, type, category, power')
+                    .in('id', moveIds);
+                const moveMap = {};
+                if (moveDetails) moveDetails.forEach(m => { moveMap[m.id] = m; });
+
                 moves = data.map(r => ({
                     id: r.move_id,
-                    name: r.moves?.name || `Move ${r.move_id}`,
-                    type: r.moves?.type || '?',
-                    power: r.moves?.power,
+                    name: moveMap[r.move_id]?.name || `Move ${r.move_id}`,
+                    type: moveMap[r.move_id]?.type || '?',
+                    power: moveMap[r.move_id]?.power,
                     method: r.learn_method,
                     level: r.level_learned
                 }));

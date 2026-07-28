@@ -141,19 +141,28 @@ export async function learnLevelUpMoves(pokemon, fromLevel, toLevel) {
     try {
         const { data } = await window.db
             .from('pokemon_moves_v2')
-            .select('move_id, moves(name)')
+            .select('move_id, level_learned')
             .eq('pokemon_id', pokemon.id)
             .eq('learn_method', 'level-up')
             .gte('level_learned', fromLevel + 1)
             .lte('level_learned', toLevel);
 
         if (data && data.length > 0) {
+            const moveIds = data.map(m => m.move_id);
+            const { data: moveDetails } = await window.db
+                .from('moves')
+                .select('id, name')
+                .in('id', moveIds);
+            const moveMap = {};
+            if (moveDetails) moveDetails.forEach(m => { moveMap[m.id] = m.name; });
+
             for (const m of data) {
+                const moveName = moveMap[m.move_id] || `Move ${m.move_id}`;
                 if (pokemon.moves.length < 4) {
-                    pokemon.moves.push({ id: String(m.move_id), name: m.moves?.name || `Move ${m.move_id}`, currentPp: 35 });
-                    messages.push(`${pokemon.name} aprendeu ${m.moves?.name}!`);
+                    pokemon.moves.push({ id: String(m.move_id), name: moveName, currentPp: 35 });
+                    messages.push(`${pokemon.name} aprendeu ${moveName}!`);
                 } else {
-                    messages.push(`${pokemon.name} quer aprender ${m.moves?.name}, mas já tem 4 movimentos!`);
+                    messages.push(`${pokemon.name} quer aprender ${moveName}, mas já tem 4 movimentos!`);
                 }
             }
         }
