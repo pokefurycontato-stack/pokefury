@@ -1,6 +1,6 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
 import { randomInt, loadTypeEffectiveness } from './utils.js';
-import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive } from './battle.js';
+import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel } from './battle.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo
@@ -147,10 +147,41 @@ class PokeFuryGame {
         console.log('[PokeFury] startGame called with:', starterSpecies);
 
         try {
-            const pokemonData = await PokeAPI.ensurePokemon(starterSpecies);
-            console.log('[PokeFury] Starter Pokemon loaded:', pokemonData.name);
-            this.playerTeam = [await createPokemon(pokemonData, 5)];
-            console.log('[PokeFury] Team created');
+            const savedTeam = await window.GameData.getTeam();
+
+            if (savedTeam.length > 0) {
+                this.playerTeam = [];
+                for (const row of savedTeam) {
+                    const pokemonData = await PokeAPI.ensurePokemon(row.pokemon_id || row.species);
+                    if (!pokemonData) continue;
+                    const pokemon = await createPokemon(pokemonData, row.level, {
+                        hp: row.iv_hp, attack: row.iv_attack, defense: row.iv_defense,
+                        spAtk: row.iv_sp_atk, spDef: row.iv_sp_def, speed: row.iv_speed
+                    }, {
+                        hp: row.ev_hp, attack: row.ev_attack, defense: row.ev_defense,
+                        spAtk: row.ev_sp_atk, spDef: row.ev_sp_def, speed: row.ev_speed
+                    }, row.nature, row.is_shiny);
+                    pokemon.currentHp = row.current_hp || pokemon.stats.hp;
+                    pokemon.experience = row.experience || expForLevel(row.level);
+                    pokemon.happiness = row.happiness ?? 70;
+                    pokemon.isMega = row.is_mega || false;
+                    pokemon.heldItemId = row.held_item_id || null;
+                    if (row.moves && Array.isArray(row.moves)) {
+                        for (const savedMove of row.moves) {
+                            const move = pokemon.moves.find(m => m.id === savedMove.id || m.id === String(savedMove.id));
+                            if (move && savedMove.pp !== undefined) move.currentPp = savedMove.pp;
+                        }
+                    }
+                    this.playerTeam.push(pokemon);
+                }
+                console.log('[PokeFury] Team restored from DB:', this.playerTeam.map(p => p.name).join(', '));
+            } else {
+                const pokemonData = await PokeAPI.ensurePokemon(starterSpecies);
+                console.log('[PokeFury] Starter Pokemon loaded:', pokemonData.name);
+                this.playerTeam = [await createPokemon(pokemonData, 5)];
+                console.log('[PokeFury] Team created');
+            }
+
             this.updatePartyPanel();
         } catch (e) {
             console.error('[PokeFury] Error creating team:', e);
@@ -710,6 +741,15 @@ class PokeFuryGame {
             });
         }
 
+        if (result === 'win' && this.playerTeam && this.enemyTeam.length > 0) {
+            const enemyLevel = this.enemyTeam[0].level;
+            const levelMsgs = awardExp(this.playerTeam, enemyLevel);
+            for (const msg of levelMsgs) {
+                await showBattleMessage(msg);
+            }
+            await this.checkEvolutions();
+        }
+
         if (result === 'lose' && this.playerTeam) {
             this.playerTeam.forEach(p => {
                 if (p.fainted) {
@@ -729,6 +769,49 @@ class PokeFuryGame {
         this.updatePartyPanel();
         document.getElementById('location-name').textContent = 'Área Selvagem';
         if (this.overworld2d) this.overworld2d.show();
+    }
+
+    async checkEvolutions() {
+        if (!this.playerTeam) return;
+
+        for (const pokemon of this.playerTeam) {
+            if (pokemon.fainted) continue;
+
+            const { data: evolutions } = await window.db
+                .from('pokemon_evolutions')
+                .select('*')
+                .eq('from_pokemon_id', pokemon.id);
+
+            if (!evolutions || evolutions.length === 0) continue;
+
+            for (const evo of evolutions) {
+                let canEvolve = false;
+
+                if (evo.evolution_method === 'level' && pokemon.level >= evo.min_level) {
+                    canEvolve = true;
+                }
+
+                if (canEvolve) {
+                    const newPokemonData = await PokeAPI.ensurePokemon(evo.to_pokemon_id);
+                    if (!newPokemonData) continue;
+
+                    const oldLevel = pokemon.level;
+                    const oldExp = pokemon.experience || 0;
+                    const oldMoves = pokemon.moves;
+                    const oldIvs = pokemon.ivs;
+                    const oldEvs = pokemon.evs;
+                    const oldNature = pokemon.nature;
+                    const oldShiny = pokemon.isShiny;
+
+                    Object.assign(pokemon, await createPokemon(newPokemonData, oldLevel, oldIvs, oldEvs, oldNature, oldShiny));
+                    pokemon.experience = oldExp;
+                    pokemon.currentHp = pokemon.stats.hp;
+
+                    await showBattleMessage(`${pokemon.name} evoluiu para ${newPokemonData.name}!`);
+                    break;
+                }
+            }
+        }
     }
 
     getNormalizedBattleBg() {
@@ -759,7 +842,9 @@ class PokeFuryGame {
                 const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
                 const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
-                const expPct = 50;
+                const expNeeded = expForLevel(p.level + 1);
+                const expPrev = expForLevel(p.level);
+                const expPct = p.level >= 100 ? 100 : Math.max(0, Math.min(100, ((p.experience || 0) - expPrev) / (expNeeded - expPrev) * 100));
 
                 slot.innerHTML = `
                     <div style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15)">
@@ -771,7 +856,7 @@ class PokeFuryGame {
                         <div style="width:100%;height:8px;background:rgba(0,0,0,0.6);border-radius:4px;overflow:hidden"><div style="height:100%;border-radius:4px;width:${hpPct}%;background:${hpColor}"></div></div>
                         <div style="font-family:Inter,sans-serif;font-size:9px;color:rgba(255,255,255,0.7);line-height:1">HP ${p.currentHp}/${p.stats.hp}</div>
                         <div style="width:100%;height:8px;background:rgba(0,0,0,0.6);border-radius:4px;overflow:hidden"><div style="height:100%;border-radius:4px;width:${expPct}%;background:linear-gradient(90deg,#2196f3,#03a9f4)"></div></div>
-                        <div style="font-family:Inter,sans-serif;font-size:9px;color:rgba(255,255,255,0.7);line-height:1">EXP</div>
+                        <div style="font-family:Inter,sans-serif;font-size:9px;color:rgba(255,255,255,0.7);line-height:1">EXP ${p.level >= 100 ? 'MAX' : Math.floor(p.experience || 0) + '/' + expNeeded}</div>
                     </div>
                 `;
             } else {

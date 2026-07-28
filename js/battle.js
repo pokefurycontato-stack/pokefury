@@ -39,6 +39,7 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         level,
         currentHp: stats.hp,
         stats,
+        baseStats: { ...apiData.baseStats },
         ivs,
         evs,
         nature,
@@ -54,7 +55,8 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         spriteUrls: apiData.spriteUrls,
         shinySpriteUrls: apiData.shinySpriteUrls,
         type: apiData.types[0],
-        fainted: false
+        fainted: false,
+        experience: expForLevel(1) + (level - 1) * 50
     };
 }
 
@@ -126,4 +128,39 @@ export function getEffectivenessText(effectiveness) {
     if (effectiveness < 1 && effectiveness > 0) return 'Não é muito efetivo...';
     if (effectiveness === 0) return 'Não afetou o oponente!';
     return '';
+}
+
+export function expForLevel(level) {
+    return Math.floor(Math.pow(level, 3) * 0.8);
+}
+
+export function awardExp(team, enemyLevel) {
+    const alive = team.filter(p => !p.fainted);
+    if (alive.length === 0) return [];
+
+    const messages = [];
+    const baseExp = Math.floor((enemyLevel * 50) / alive.length);
+
+    for (const p of alive) {
+        const prevLevel = p.level;
+        p.experience = (p.experience || 0) + baseExp;
+
+        while (p.level < 100) {
+            const needed = expForLevel(p.level + 1);
+            if (p.experience >= needed) {
+                p.level++;
+                const oldMaxHp = p.stats.hp;
+                recalculateStats(p, p.baseStats || p.stats);
+                p.currentHp = Math.min(p.stats.hp, p.currentHp + (p.stats.hp - oldMaxHp));
+            } else {
+                break;
+            }
+        }
+
+        if (p.level > prevLevel) {
+            messages.push(`${p.name} subiu para Nv. ${p.level}!`);
+        }
+    }
+
+    return messages;
 }

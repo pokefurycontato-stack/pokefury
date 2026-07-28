@@ -107,6 +107,7 @@ const GameData = {
             level: pokemon.level,
             current_hp: pokemon.currentHp,
             max_hp: pokemon.stats.hp,
+            experience: pokemon.experience || 0,
             moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
             is_active: i === 0,
             slot: i + 1,
