@@ -161,7 +161,8 @@ class PokeFuryGame {
                         hp: row.ev_hp, attack: row.ev_attack, defense: row.ev_defense,
                         spAtk: row.ev_sp_atk, spDef: row.ev_sp_def, speed: row.ev_speed
                     }, row.nature, row.is_shiny);
-                    pokemon.currentHp = row.current_hp || pokemon.stats.hp;
+                    pokemon.currentHp = row.current_hp != null ? row.current_hp : pokemon.stats.hp;
+                    pokemon.fainted = pokemon.currentHp <= 0;
                     pokemon.experience = row.experience || expForLevel(row.level);
                     pokemon.happiness = row.happiness ?? 70;
                     pokemon.isMega = row.is_mega || false;
@@ -806,8 +807,7 @@ class PokeFuryGame {
         if (result === 'lose' && this.playerTeam) {
             this.playerTeam.forEach(p => {
                 if (p.fainted) {
-                    p.fainted = false;
-                    p.currentHp = Math.max(1, Math.floor(p.stats.hp * 0.5));
+                    p.currentHp = 0;
                 }
             });
         }

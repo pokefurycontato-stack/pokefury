@@ -134,7 +134,7 @@ export function recalculateStats(pokemon, baseStats) {
     const hpDiff = newStats.hp - pokemon.stats.hp;
     pokemon.stats = newStats;
     pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
-    if (pokemon.currentHp <= 0) pokemon.fainted = false;
+    if (pokemon.currentHp <= 0) pokemon.fainted = true;
 }
 
 export async function createTeam(apiDataList) {
