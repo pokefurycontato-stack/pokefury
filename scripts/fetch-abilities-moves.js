@@ -128,11 +128,22 @@ window.fetchAbilitiesAndMoves = async function() {
         await sleep(DELAY);
     }
 
+    const dedupeMoves = [];
+    const seenMoves = new Set();
+    for (const r of allMoveRows) {
+        const key = `${r.pokemon_id}|${r.move_id}|${r.learn_method}`;
+        if (!seenMoves.has(key)) {
+            seenMoves.add(key);
+            dedupeMoves.push(r);
+        }
+    }
+    console.log(`[Fetch] Deduped moves: ${allMoveRows.length} -> ${dedupeMoves.length}`);
+
     console.log(`[Fetch] Upserting ${allAbilityRows.length} pokemon abilities...`);
     await batchUpsert('pokemon_abilities', allAbilityRows, 'pokemon_id,ability_id');
-    console.log(`[Fetch] Upserting ${allMoveRows.length} pokemon moves...`);
-    await batchUpsert('pokemon_moves_v2', allMoveRows, 'pokemon_id,move_id,learn_method');
+    console.log(`[Fetch] Upserting ${dedupeMoves.length} pokemon moves...`);
+    await batchUpsert('pokemon_moves_v2', dedupeMoves, 'pokemon_id,move_id,learn_method');
 
-    console.log(`[Fetch] COMPLETE! ${processed} pokemon, ${abilityRows.length} abilities, ${allAbilityRows.length} pokemon abilities, ${allMoveRows.length} moves`);
+    console.log(`[Fetch] COMPLETE! ${processed} pokemon, ${abilityRows.length} abilities, ${allAbilityRows.length} pokemon abilities, ${dedupeMoves.length} moves`);
 };
 console.log('Script loaded. Execute: fetchAbilitiesAndMoves()');
