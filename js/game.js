@@ -1,6 +1,6 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
 import { randomInt, loadTypeEffectiveness, calculateAllStats } from './utils.js';
-import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel } from './battle.js';
+import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo
@@ -744,9 +744,24 @@ class PokeFuryGame {
         if (result === 'win' && this.playerTeam && this.enemyTeam.length > 0) {
             const enemyLevel = this.enemyTeam[0].level;
             const activePokemon = getFirstAlive(this.playerTeam);
-            const levelMsgs = awardExp(this.playerTeam, enemyLevel, activePokemon);
-            for (const msg of levelMsgs) {
-                await showBattleMessage(msg);
+
+            for (const p of this.playerTeam) {
+                if (p.fainted) continue;
+                const prevLevel = p.level;
+                const levelMsgs = awardExp([p], enemyLevel, p === activePokemon ? p : null);
+                for (const msg of levelMsgs) {
+                    await showBattleMessage(msg);
+                }
+                if (p.level > prevLevel) {
+                    const moveMsgs = await learnLevelUpMoves(p, prevLevel, p.level);
+                    for (const msg of moveMsgs) {
+                        await showBattleMessage(msg);
+                    }
+                    const abilityName = await checkAbilityChange(p);
+                    if (abilityName) {
+                        await showBattleMessage(`${p.name} agora tem a habilidade ${abilityName}!`);
+                    }
+                }
             }
             await this.checkEvolutions();
         }
@@ -1118,35 +1133,26 @@ class PokeFuryGame {
             return;
         }
 
-        const TYPE_ABILITIES = {
-            normal: ['Run Away', 'Guts', 'Scrappy'],
-            fire: ['Blaze', 'Flash Fire', 'Flame Body'],
-            water: ['Torrent', 'Rain Dish', 'Water Absorb'],
-            grass: ['Overgrow', 'Chlorophyll', 'Leaf Guard'],
-            electric: ['Static', 'Lightning Rod', 'Volt Absorb'],
-            ice: ['Ice Body', 'Snow Cloak', 'Refrigerator'],
-            fighting: ['Guts', 'Steadfast', 'Inner Focus'],
-            poison: ['Poison Point', 'Poison Touch', 'Effect Spore'],
-            ground: ['Sand Veil', 'Arena Trap', 'Sand Force'],
-            flying: ['Keen Eye', 'Tinted Lens', 'Big Pecks'],
-            psychic: ['Synchronize', 'Inner Focus', 'Magic Bounce'],
-            bug: ['Swarm', 'Compound Eyes', 'Tinted Lens'],
-            rock: ['Rock Head', 'Sturdy', 'Sand Stream'],
-            ghost: ['Levitate', 'Cursed Body', 'Insomnia'],
-            dragon: ['Shed Skin', 'Marvel Scale', 'Multiscale'],
-            dark: ['Intimidate', 'Keen Eye', 'Pickpocket'],
-            steel: ['Battle Armor', 'Clear Body', 'Light Metal'],
-            fairy: ['Cute Charm', 'Fairy Charm', 'Natural Cure']
-        };
+        try {
+            const { data, error } = await window.db
+                .from('pokemon_abilities')
+                .select('ability_id, is_hidden, slot, abilities(name)')
+                .eq('pokemon_id', pokemonData.id)
+                .order('slot');
 
-        const primaryType = pokemonData.types?.[0]?.toLowerCase() || 'normal';
-        const abilities = TYPE_ABILITIES[primaryType] || ['Run Away'];
-
-        for (const name of abilities) {
-            const opt = document.createElement('option');
-            opt.value = name.toLowerCase().replace(/\s+/g, '_');
-            opt.textContent = name;
-            select.appendChild(opt);
+            if (!error && data && data.length > 0) {
+                for (const a of data) {
+                    const opt = document.createElement('option');
+                    opt.value = a.ability_id;
+                    const hidden = a.is_hidden ? ' (Hidden)' : '';
+                    opt.textContent = `${a.abilities?.name || `Ability ${a.ability_id}`}${hidden}`;
+                    select.appendChild(opt);
+                }
+            } else {
+                select.innerHTML = '<option value="">Sem habilidades no banco</option>';
+            }
+        } catch (e) {
+            select.innerHTML = '<option value="">Erro ao carregar</option>';
         }
     }
 
@@ -1172,13 +1178,21 @@ class PokeFuryGame {
         let moves = [];
 
         try {
-            const { data, error } = await window.db.from('pokemon_moves').select('move_id').eq('pokemon_id', pokeId);
+            const { data, error } = await window.db
+                .from('pokemon_moves_v2')
+                .select('move_id, learn_method, level_learned, moves(name, type, category, power)')
+                .eq('pokemon_id', pokeId)
+                .order('level_learned');
+
             if (!error && data && data.length > 0) {
-                const moveIds = data.map(r => r.move_id);
-                const results = await Promise.all(moveIds.map(id =>
-                    window.db.from('moves').select('id, name, type, category, power').eq('id', id).single()
-                ));
-                moves = results.map(r => r.data).filter(Boolean);
+                moves = data.map(r => ({
+                    id: r.move_id,
+                    name: r.moves?.name || `Move ${r.move_id}`,
+                    type: r.moves?.type || '?',
+                    power: r.moves?.power,
+                    method: r.learn_method,
+                    level: r.level_learned
+                }));
             }
         } catch (e) {
             console.warn('[Donate] Error loading pokemon moves:', e);
@@ -1187,7 +1201,7 @@ class PokeFuryGame {
         if (moves.length === 0) {
             try {
                 const { data } = await window.db.from('moves').select('id, name, type, category, power').limit(50);
-                if (data) moves = data;
+                if (data) moves = data.map(m => ({ ...m, method: '?', level: 0 }));
             } catch (e) {}
         }
 
@@ -1205,7 +1219,8 @@ class PokeFuryGame {
         for (const m of moves) {
             const opt = document.createElement('option');
             opt.value = m.id;
-            opt.textContent = `${m.name} (${m.type})${m.power ? ' ' + m.power + 'pw' : ''}`;
+            const methodLabel = m.method === 'level-up' ? `Lv${m.level}` : m.method === 'machine' ? 'TM' : m.method === 'egg' ? 'Egg' : m.method === 'tutor' ? 'Tutor' : '';
+            opt.textContent = `${m.name} (${m.type})${m.power ? ' ' + m.power + 'pw' : ''} [${methodLabel}]`;
             select.appendChild(opt);
         }
 

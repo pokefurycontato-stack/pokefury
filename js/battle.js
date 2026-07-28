@@ -134,6 +134,58 @@ export function expForLevel(level) {
     return Math.floor(Math.pow(level, 3) * 0.8);
 }
 
+export async function learnLevelUpMoves(pokemon, fromLevel, toLevel) {
+    if (!window.db || !pokemon.id) return [];
+
+    const messages = [];
+    try {
+        const { data } = await window.db
+            .from('pokemon_moves_v2')
+            .select('move_id, moves(name)')
+            .eq('pokemon_id', pokemon.id)
+            .eq('learn_method', 'level-up')
+            .gte('level_learned', fromLevel + 1)
+            .lte('level_learned', toLevel);
+
+        if (data && data.length > 0) {
+            for (const m of data) {
+                if (pokemon.moves.length < 4) {
+                    pokemon.moves.push({ id: String(m.move_id), name: m.moves?.name || `Move ${m.move_id}`, currentPp: 35 });
+                    messages.push(`${pokemon.name} aprendeu ${m.moves?.name}!`);
+                } else {
+                    messages.push(`${pokemon.name} quer aprender ${m.moves?.name}, mas já tem 4 movimentos!`);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[Battle] Error learning level-up moves:', e);
+    }
+
+    return messages;
+}
+
+export async function checkAbilityChange(pokemon) {
+    if (!window.db || !pokemon.id) return null;
+
+    try {
+        const { data } = await window.db
+            .from('pokemon_abilities')
+            .select('ability_id, is_hidden, abilities(name)')
+            .eq('pokemon_id', pokemon.id)
+            .order('slot');
+
+        if (data && data.length > 0) {
+            const normalAbilities = data.filter(a => !a.is_hidden);
+            if (normalAbilities.length > 0 && !pokemon.currentAbility) {
+                pokemon.currentAbility = normalAbilities[0].ability_id;
+                return normalAbilities[0].abilities?.name;
+            }
+        }
+    } catch (e) {}
+
+    return null;
+}
+
 export function awardExp(team, enemyLevel, activePokemon) {
     const messages = [];
     const baseExp = Math.floor((enemyLevel * 15) / 3);

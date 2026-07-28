@@ -1,0 +1,44 @@
+-- Abilities table
+CREATE TABLE IF NOT EXISTS abilities (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    generation INTEGER,
+    effect TEXT
+);
+ALTER TABLE abilities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "abilities_select" ON abilities;
+CREATE POLICY "abilities_select" ON abilities FOR SELECT USING (true);
+
+-- Pokemon Abilities junction table
+CREATE TABLE IF NOT EXISTS pokemon_abilities (
+    pokemon_id INTEGER REFERENCES pokemon(id) ON DELETE CASCADE,
+    ability_id INTEGER REFERENCES abilities(id) ON DELETE CASCADE,
+    is_hidden BOOLEAN DEFAULT false,
+    slot INTEGER DEFAULT 1,
+    PRIMARY KEY (pokemon_id, ability_id)
+);
+ALTER TABLE pokemon_abilities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "pa_select" ON pokemon_abilities;
+CREATE POLICY "pa_select" ON pokemon_abilities FOR SELECT USING (true);
+DROP POLICY IF EXISTS "pa_insert" ON pokemon_abilities;
+CREATE POLICY "pa_insert" ON pokemon_abilities FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+-- Pokemon Moves with level and learn method
+CREATE TABLE IF NOT EXISTS pokemon_moves_v2 (
+    pokemon_id INTEGER REFERENCES pokemon(id) ON DELETE CASCADE,
+    move_id INTEGER REFERENCES moves(id) ON DELETE CASCADE,
+    learn_method TEXT DEFAULT 'level-up',
+    level_learned INTEGER DEFAULT 0,
+    PRIMARY KEY (pokemon_id, move_id, learn_method)
+);
+ALTER TABLE pokemon_moves_v2 ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "pmv2_select" ON pokemon_moves_v2;
+CREATE POLICY "pmv2_select" ON pokemon_moves_v2 FOR SELECT USING (true);
+DROP POLICY IF EXISTS "pmv2_insert" ON pokemon_moves_v2;
+CREATE POLICY "pmv2_insert" ON pokemon_moves_v2 FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_pa_pokemon ON pokemon_abilities(pokemon_id);
+CREATE INDEX IF NOT EXISTS idx_pa_ability ON pokemon_abilities(ability_id);
+CREATE INDEX IF NOT EXISTS idx_pmv2_pokemon ON pokemon_moves_v2(pokemon_id);
+CREATE INDEX IF NOT EXISTS idx_pmv2_learn ON pokemon_moves_v2(learn_method, level_learned);
