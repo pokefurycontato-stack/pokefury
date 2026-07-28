@@ -26,14 +26,14 @@ export class Overworld2D {
         this.tileSize = 32;
         this.tileW = 32;
         this.tileH = 32;
-        this.worldCols = 40;
-        this.worldRows = 30;
+        this.worldCols = 32;
+        this.worldRows = 24;
         this.gridCols = this.worldCols;
         this.gridRows = this.worldRows;
 
         this.player = {
-            x: 20,
-            y: 15,
+            x: 16,
+            y: 12,
             direction: 'down',
             frame: 0,
             frameTimer: 0,
@@ -57,7 +57,7 @@ export class Overworld2D {
 
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
-        this.pokemonFollowPos = { x: 20, y: 15 };
+        this.pokemonFollowPos = { x: 16, y: 12 };
 
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = [];

@@ -3,8 +3,8 @@ export class MapEditor {
         this.canvas = document.getElementById('editor-canvas');
         this.ctx = this.canvas.getContext('2d');
         this.displayTileSize = 32;
-        this.gridW = 40;
-        this.gridH = 30;
+        this.gridW = 32;
+        this.gridH = 24;
         this.tool = 'paint';
         this.activeLayer = 'ground';
         this.selectedColor = '#2d5a27';

@@ -4,8 +4,8 @@ export class MapZoneEditor {
         this.ctx = this.canvas.getContext('2d');
         this.mapImage = null;
         this.mapData = null;
-        this.gridW = 40;
-        this.gridH = 30;
+        this.gridW = 32;
+        this.gridH = 24;
         this.displayTileSize = 32;
         this.camera = { x: 0, y: 0 };
         this.tool = 'collision';
@@ -304,8 +304,8 @@ export class MapZoneEditor {
 
     open(mapData, imageLoader) {
         this.mapData = mapData;
-        this.gridW = mapData.gridW || 40;
-        this.gridH = mapData.gridH || 30;
+        this.gridW = mapData.gridW || 32;
+        this.gridH = mapData.gridH || 24;
         this.collisionZones = mapData.collision_zones ? [...mapData.collision_zones] : [];
         this.spawnZones = mapData.spawn_zones ? [...mapData.spawn_zones] : [];
         this.playerSpawn = (mapData.player_spawn_x != null && mapData.player_spawn_y != null)

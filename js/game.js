@@ -1046,8 +1046,8 @@ class PokeFuryGame {
         this.zoneEditor.open({
             name: map.name,
             image_url: map.image_url,
-            gridW: this.overworld2d ? this.overworld2d.worldCols : 40,
-            gridH: this.overworld2d ? this.overworld2d.worldRows : 30,
+            gridW: this.overworld2d ? this.overworld2d.worldCols : 32,
+            gridH: this.overworld2d ? this.overworld2d.worldRows : 24,
             collision_zones: map.collision_zones || [],
             spawn_zones: map.spawn_zones || [],
             player_spawn_x: map.player_spawn_x,
