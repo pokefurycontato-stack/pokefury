@@ -587,5 +587,15 @@
     <script type="module" src="js/map-editor.js"></script>
     <script type="module" src="js/zone-editor.js"></script>
     <script type="module" src="js/region-manager.js"></script>
+    <script>
+    (function(){
+        var _sentryRAF = window.requestAnimationFrame;
+        window.requestAnimationFrame = function(cb){
+            return _sentryRAF.call(window, function(ts){
+                try { cb(ts); } catch(e) { console.error('[rAF-guard]', e); }
+            });
+        };
+    })();
+    </script>
 </body>
 </html>
