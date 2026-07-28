@@ -99,6 +99,10 @@ export async function calculateDamage(attacker, defender, move) {
     if (!attacker?.stats || !defender?.stats) {
         return { damage: 0, effectiveness: 1, critical: false, missed: true };
     }
+    if (move.category === 'status' || !move.power) {
+        const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
+        return { damage: 0, effectiveness: 1, critical: false, missed: !accuracyCheck };
+    }
     const chart = await loadTypeEffectiveness();
     const level = attacker.level || 50;
     let attack = move.category === 'physical' ? attacker.stats.attack : attacker.stats.spAtk;

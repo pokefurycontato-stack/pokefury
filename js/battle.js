@@ -163,6 +163,11 @@ export async function executeTurn(attacker, defender, move) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
 
+    if (move.category === 'status') {
+        applyStatusEffect(attacker, defender, move);
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true };
+    }
+
     defender.currentHp = Math.max(0, defender.currentHp - result.damage);
     if (defender.currentHp <= 0) {
         defender.fainted = true;
@@ -178,6 +183,28 @@ export async function executeTurn(attacker, defender, move) {
         missed: false,
         fainted: defender.fainted
     };
+}
+
+function applyStatusEffect(attacker, defender, move) {
+    const name = (move.name || '').toLowerCase();
+    attacker._statStages = attacker._statStages || { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 };
+    defender._statStages = defender._statStages || { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 };
+
+    if (name.includes('harden') || name.includes('withdraw') || name.includes('iron defense')) {
+        attacker._statStages.defense = Math.min(6, attacker._statStages.defense + 1);
+    } else if (name.includes('tail whip') || name.includes('leer') || name.includes('screech')) {
+        defender._statStages.defense = Math.max(-6, defender._statStages.defense - 1);
+    } else if (name.includes('growl') || name.includes('string shot')) {
+        defender._statStages.attack = Math.max(-6, defender._statStages.attack - 1);
+    } else if (name.includes('swords dance')) {
+        attacker._statStages.attack = Math.min(6, attacker._statStages.attack + 1);
+    } else if (name.includes('agility')) {
+        attacker._statStages.speed = Math.min(6, attacker._statStages.speed + 1);
+    } else if (name.includes('double team')) {
+        attacker._statStages.speed = Math.min(6, attacker._statStages.speed + 1);
+    } else if (name.includes('smokescreen') || name.includes('sand attack')) {
+        defender._statStages.speed = Math.max(-6, defender._statStages.speed - 1);
+    }
 }
 
 export function determineTurnOrder(pokemon1, pokemon2) {

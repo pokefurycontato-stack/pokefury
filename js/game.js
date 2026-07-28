@@ -668,6 +668,8 @@ class PokeFuryGame {
 
             if (result.missed) {
                 await showBattleMessage(`${attacker.name} errou ${move.name}!`);
+            } else if (result.statusMove) {
+                await showBattleMessage(`${attacker.name} usou ${move.name}!`);
             } else {
                 await showBattleMessage(`${attacker.name} usou ${move.name}!`);
 
@@ -723,12 +725,16 @@ class PokeFuryGame {
                 if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
             });
 
-            await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`);
+            if (result.statusMove) {
+                await showBattleMessage(`${enemyPokemon.name} usou ${move.name}!`);
+            } else {
+                await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`);
 
-            const effText = getEffectivenessText(result.effectiveness);
-            if (effText) await showBattleMessage(effText);
+                const effText = getEffectivenessText(result.effectiveness);
+                if (effText) await showBattleMessage(effText);
 
-            await showBattleMessage(updateHpBar(playerPokemon));
+                await showBattleMessage(updateHpBar(playerPokemon));
+            }
 
             drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
             updateBattleUI(this.playerTeam, this.enemyTeam);
