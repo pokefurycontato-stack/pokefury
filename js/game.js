@@ -45,6 +45,8 @@ class PokeFuryGame {
         await this.preloadStarters();
         this.render();
 
+        this.setupEventListeners();
+
         // Auto-login: check for existing session + saved character
         if (window.GameData.userId && window.GameData.currentCharacterId) {
             try {
@@ -72,7 +74,9 @@ class PokeFuryGame {
                 console.log('[PokeFury] Auto-login failed:', e);
             }
         }
+    }
 
+    setupEventListeners() {
         document.querySelectorAll('.section-header[data-toggle]').forEach(header => {
             header.addEventListener('click', () => {
                 header.classList.toggle('open');
@@ -93,8 +97,20 @@ class PokeFuryGame {
             logoutBtn.addEventListener('click', async () => {
                 localStorage.removeItem('pokefury_userId');
                 localStorage.removeItem('pokefury_characterId');
-                await window.db.auth.signOut();
-                location.reload();
+                try {
+                    await window.db.auth.signOut({ scope: 'global' });
+                } catch (e) {
+                    console.warn('[PokeFury] signOut error:', e);
+                }
+                // Force clear all supabase auth keys
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('sb-') || key.includes('supabase')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                window.GameData.userId = null;
+                window.GameData.currentCharacterId = null;
+                window.location.reload();
             });
         }
 

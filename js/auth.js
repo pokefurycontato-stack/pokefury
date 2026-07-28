@@ -287,7 +287,16 @@ async function loadCharacterScreen() {
     };
 
     document.getElementById('btn-logout-char').onclick = async () => {
-        await window.db.auth.signOut();
+        localStorage.removeItem('pokefury_userId');
+        localStorage.removeItem('pokefury_characterId');
+        try {
+            await window.db.auth.signOut({ scope: 'global' });
+        } catch (e) {}
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+                localStorage.removeItem(key);
+            }
+        });
         location.reload();
     };
 
