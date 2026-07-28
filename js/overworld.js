@@ -68,7 +68,7 @@ export class Overworld2D {
         this.pokemonSpriteElements = new Map();
 
         this.wallpaperImg = new Image();
-        this.wallpaperImg.src = 'assets/wallpapergrid.jpg';
+        this.wallpaperImg.src = 'assets/wallpapergrid.jpeg';
 
         this.playerSprites = {};
         this.loaded = false;
