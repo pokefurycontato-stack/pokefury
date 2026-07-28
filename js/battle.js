@@ -28,34 +28,43 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
             .lte('level_learned', level)
             .order('level_learned');
 
-        console.log(`[Battle] pokemon_moves_v2 for ${apiData.name} (id=${apiData.id}, level=${level}):`, data?.length || 0, 'rows');
-
         if (data && data.length > 0) {
             const moveIds = data.map(m => m.move_id);
+
             const { data: moveDetails } = await window.db
                 .from('moves')
                 .select('id, name, type, category, power, accuracy, pp')
                 .in('id', moveIds);
 
-            console.log(`[Battle] moves table matched:`, moveDetails?.length || 0, 'of', moveIds.length);
+            const foundIds = new Set((moveDetails || []).map(m => m.id));
+            const missingIds = moveIds.filter(id => !foundIds.has(id));
 
-            if (moveDetails) {
-                levelMoves = moveDetails.slice(0, 4).map(m => ({
-                    id: m.id,
-                    name: m.name,
-                    type: m.type,
-                    category: m.category || 'physical',
-                    power: m.power || 0,
-                    accuracy: m.accuracy || 100,
-                    pp: m.pp || 35
-                }));
+            const dbMoves = (moveDetails || []).map(m => ({
+                id: m.id, name: m.name, type: m.type,
+                category: m.category || 'physical', power: m.power || 0,
+                accuracy: m.accuracy || 100, pp: m.pp || 35
+            }));
+
+            for (const mid of missingIds.slice(0, 4)) {
+                try {
+                    const res = await fetch(`https://pokeapi.co/api/v2/move/${mid}`);
+                    if (!res.ok) continue;
+                    const api = await res.json();
+                    const cat = api.damage_class?.name || 'physical';
+                    dbMoves.push({
+                        id: api.id, name: api.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                        type: api.type?.name || 'normal',
+                        category: cat === 'special' ? 'special' : cat === 'status' ? 'status' : 'physical',
+                        power: api.power || 0, accuracy: api.accuracy || 100, pp: api.pp || 35
+                    });
+                } catch (e) {}
             }
+
+            levelMoves = dbMoves.slice(0, 4);
         }
     } catch (e) {
         console.warn('[Battle] Error fetching level-up moves:', e);
     }
-
-    console.log(`[Battle] Path 1 moves for ${apiData.name}:`, levelMoves.map(m => m.name));
 
     if (levelMoves.length === 0) {
         try {
@@ -63,23 +72,17 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
                 .from('pokemon_moves')
                 .select('move_id')
                 .eq('pokemon_id', apiData.id);
-            console.log(`[Battle] Fallback pokemon_moves for ${apiData.name}:`, data?.length || 0, 'rows');
             if (data && data.length > 0) {
                 const moveIds = data.map(r => r.move_id);
                 const { data: moveDetails } = await window.db
                     .from('moves')
                     .select('id, name, type, category, power, accuracy, pp')
                     .in('id', moveIds);
-                console.log(`[Battle] Fallback moves matched:`, moveDetails?.length || 0);
                 if (moveDetails) {
                     levelMoves = moveDetails.slice(0, 4).map(m => ({
-                        id: m.id,
-                        name: m.name,
-                        type: m.type,
-                        category: m.category || 'physical',
-                        power: m.power || 0,
-                        accuracy: m.accuracy || 100,
-                        pp: m.pp || 35
+                        id: m.id, name: m.name, type: m.type,
+                        category: m.category || 'physical', power: m.power || 0,
+                        accuracy: m.accuracy || 100, pp: m.pp || 35
                     }));
                 }
             }
@@ -87,8 +90,6 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
             console.warn('[Battle] Error in fallback move load:', e);
         }
     }
-
-    console.log(`[Battle] Final moves for ${apiData.name} Lv.${level}:`, levelMoves.map(m => m.name));
 
     if (levelMoves.length === 0) {
         levelMoves.push({
@@ -222,20 +223,34 @@ export async function learnLevelUpMoves(pokemon, fromLevel, toLevel) {
                 .select('id, name, type, category, power, accuracy, pp')
                 .in('id', moveIds);
 
-            if (moveDetails) {
-                for (const m of moveDetails) {
-                    const alreadyKnows = pokemon.moves.some(pm => Number(pm.id) === m.id);
-                    if (!alreadyKnows) {
-                        learnable.push({
-                            id: m.id,
-                            name: m.name,
-                            type: m.type,
-                            category: m.category || 'physical',
-                            power: m.power || 0,
-                            accuracy: m.accuracy || 100,
-                            pp: m.pp || 35
-                        });
-                    }
+            const foundIds = new Set((moveDetails || []).map(m => m.id));
+            const missingIds = moveIds.filter(id => !foundIds.has(id));
+
+            const dbMoves = (moveDetails || []).map(m => ({
+                id: m.id, name: m.name, type: m.type,
+                category: m.category || 'physical', power: m.power || 0,
+                accuracy: m.accuracy || 100, pp: m.pp || 35
+            }));
+
+            for (const mid of missingIds) {
+                try {
+                    const res = await fetch(`https://pokeapi.co/api/v2/move/${mid}`);
+                    if (!res.ok) continue;
+                    const api = await res.json();
+                    const cat = api.damage_class?.name || 'physical';
+                    dbMoves.push({
+                        id: api.id, name: api.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                        type: api.type?.name || 'normal',
+                        category: cat === 'special' ? 'special' : cat === 'status' ? 'status' : 'physical',
+                        power: api.power || 0, accuracy: api.accuracy || 100, pp: api.pp || 35
+                    });
+                } catch (e) {}
+            }
+
+            for (const m of dbMoves) {
+                const alreadyKnows = pokemon.moves.some(pm => Number(pm.id) === m.id);
+                if (!alreadyKnows) {
+                    learnable.push(m);
                 }
             }
         }
