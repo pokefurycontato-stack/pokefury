@@ -18,9 +18,44 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
     const nature = savedNature || randomNature();
     const isShiny = savedShiny || false;
 
-    const allMoves = await PokeAPI.ensurePokemonMoves(apiData.id);
-    const learnedMoves = allMoves.filter(m => m.power > 0);
-    const levelMoves = learnedMoves.slice(0, 4);
+    let levelMoves = [];
+    try {
+        const { data } = await window.db
+            .from('pokemon_moves_v2')
+            .select('move_id, level_learned')
+            .eq('pokemon_id', apiData.id)
+            .eq('learn_method', 'level-up')
+            .lte('level_learned', level)
+            .order('level_learned');
+
+        if (data && data.length > 0) {
+            const moveIds = data.map(m => m.move_id);
+            const { data: moveDetails } = await window.db
+                .from('moves')
+                .select('id, name, type, category, power, accuracy, pp')
+                .in('id', moveIds);
+            if (moveDetails) {
+                const validMoves = moveDetails.filter(m => m.power > 0);
+                levelMoves = validMoves.slice(0, 4).map(m => ({
+                    id: m.id,
+                    name: m.name,
+                    type: m.type,
+                    category: m.category,
+                    power: m.power,
+                    accuracy: m.accuracy,
+                    pp: m.pp
+                }));
+            }
+        }
+    } catch (e) {
+        console.warn('[Battle] Error fetching level-up moves:', e);
+    }
+
+    if (levelMoves.length === 0) {
+        const allMoves = await PokeAPI.ensurePokemonMoves(apiData.id);
+        const learnedMoves = allMoves.filter(m => m.power > 0);
+        levelMoves = learnedMoves.slice(0, 4);
+    }
 
     if (levelMoves.length === 0) {
         levelMoves.push({
