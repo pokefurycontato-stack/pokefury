@@ -392,3 +392,81 @@ export function showBagSelection(items, onSelect) {
         hideMoveSelection();
     };
 }
+
+const TYPE_COLORS_MOVELEARN = {
+    normal:'#A8A878',fire:'#F08030',water:'#6890F0',electric:'#F8D030',
+    grass:'#78C850',ice:'#98D8D8',fighting:'#C03028',poison:'#A040A0',
+    ground:'#E0C068',flying:'#A890F0',psychic:'#F85888',bug:'#A8B820',
+    rock:'#B8A038',ghost:'#705898',dragon:'#7038F8',dark:'#705848',
+    steel:'#B8B8D0',fairy:'#EE99AC'
+};
+
+export function showMoveLearnPopup(pokemon, newMove, currentMoves) {
+    return new Promise(resolve => {
+        const popup = $('#move-learn-popup');
+        const nameEl = $('#learn-pokemon-name');
+        const msgEl = $('#learn-msg');
+        const infoEl = $('#learn-move-info');
+        const btnsEl = $('#learn-buttons');
+
+        popup.classList.remove('hidden');
+        nameEl.textContent = pokemon.name;
+        msgEl.textContent = `quer aprender ${newMove.name}!`;
+
+        const typeColor = TYPE_COLORS_MOVELEARN[newMove.type] || '#686868';
+        const catLabel = newMove.category === 'status' ? 'Status' : newMove.category === 'special' ? 'Especial' : 'Físico';
+        const powerText = newMove.power > 0 ? newMove.power : '—';
+        infoEl.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;">
+                <span style="background:${typeColor};color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;">${newMove.type}</span>
+                <span style="color:rgba(255,255,255,0.6);font-size:11px;">${catLabel}</span>
+            </div>
+            <div style="color:#fff;font-size:14px;font-weight:600;">${newMove.name}</div>
+            <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;">Poder: ${powerText} | Precisão: ${newMove.accuracy || '—'}</div>
+        `;
+
+        btnsEl.innerHTML = '';
+
+        if (currentMoves.length < 4) {
+            const teachBtn = document.createElement('button');
+            teachBtn.className = 'action-btn';
+            teachBtn.style.cssText = 'width:100%;margin-bottom:8px;';
+            teachBtn.textContent = 'ENSINAR';
+            teachBtn.addEventListener('click', () => {
+                popup.classList.add('hidden');
+                resolve({ teach: true, replaceIndex: -1 });
+            });
+            btnsEl.appendChild(teachBtn);
+        } else {
+            const subMsg = document.createElement('div');
+            subMsg.style.cssText = 'color:rgba(255,255,255,0.6);font-size:12px;margin-bottom:10px;';
+            subMsg.textContent = 'Escolha qual movimento substituir:';
+            btnsEl.appendChild(subMsg);
+
+            currentMoves.forEach((m, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'action-btn';
+                btn.style.cssText = 'width:100%;margin-bottom:6px;text-align:left;padding:10px 14px;';
+                const mTypeColor = TYPE_COLORS_MOVELEARN[m.type] || '#686868';
+                const mCat = m.category === 'status' ? 'Status' : m.category === 'special' ? 'Esp' : 'Fís';
+                const mPow = m.power > 0 ? m.power : '—';
+                btn.innerHTML = `<span style="color:${mTypeColor};font-weight:700;text-transform:uppercase;font-size:11px;">[${m.type}]</span> <span style="color:#fff;font-weight:600;">${m.name}</span> <span style="color:rgba(255,255,255,0.4);font-size:11px;">${mCat} | Poder: ${mPow}</span>`;
+                btn.addEventListener('click', () => {
+                    popup.classList.add('hidden');
+                    resolve({ teach: true, replaceIndex: idx });
+                });
+                btnsEl.appendChild(btn);
+            });
+        }
+
+        const skipBtn = document.createElement('button');
+        skipBtn.className = 'action-btn';
+        skipBtn.style.cssText = 'width:100%;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);';
+        skipBtn.textContent = 'NÃO ENSINAR';
+        skipBtn.addEventListener('click', () => {
+            popup.classList.add('hidden');
+            resolve({ teach: false });
+        });
+        btnsEl.appendChild(skipBtn);
+    });
+}

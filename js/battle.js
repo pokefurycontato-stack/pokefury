@@ -34,18 +34,17 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
                 .from('moves')
                 .select('id, name, type, category, power, accuracy, pp')
                 .in('id', moveIds);
-        if (moveDetails) {
-            const validMoves = moveDetails.filter(m => m.power > 0);
-            levelMoves = validMoves.slice(0, 4).map(m => ({
-                id: m.id,
-                name: m.name,
-                type: m.type,
-                category: m.category || 'physical',
-                power: m.power || 40,
-                accuracy: m.accuracy || 100,
-                pp: m.pp || 35
-            }));
-        }
+            if (moveDetails) {
+                levelMoves = moveDetails.slice(0, 4).map(m => ({
+                    id: m.id,
+                    name: m.name,
+                    type: m.type,
+                    category: m.category || 'physical',
+                    power: m.power || 0,
+                    accuracy: m.accuracy || 100,
+                    pp: m.pp || 35
+                }));
+            }
         }
     } catch (e) {
         console.warn('[Battle] Error fetching level-up moves:', e);
@@ -53,8 +52,7 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
 
     if (levelMoves.length === 0) {
         const allMoves = await PokeAPI.ensurePokemonMoves(apiData.id);
-        const learnedMoves = allMoves.filter(m => m.power > 0);
-        levelMoves = learnedMoves.slice(0, 4);
+        levelMoves = allMoves.slice(0, 4);
     }
 
     if (levelMoves.length === 0) {
@@ -172,7 +170,7 @@ export function expForLevel(level) {
 export async function learnLevelUpMoves(pokemon, fromLevel, toLevel) {
     if (!window.db || !pokemon.id) return [];
 
-    const messages = [];
+    const learnable = [];
     try {
         const { data } = await window.db
             .from('pokemon_moves_v2')
@@ -186,26 +184,31 @@ export async function learnLevelUpMoves(pokemon, fromLevel, toLevel) {
             const moveIds = data.map(m => m.move_id);
             const { data: moveDetails } = await window.db
                 .from('moves')
-                .select('id, name')
+                .select('id, name, type, category, power, accuracy, pp')
                 .in('id', moveIds);
-            const moveMap = {};
-            if (moveDetails) moveDetails.forEach(m => { moveMap[m.id] = m.name; });
 
-            for (const m of data) {
-                const moveName = moveMap[m.move_id] || `Move ${m.move_id}`;
-                if (pokemon.moves.length < 4) {
-                    pokemon.moves.push({ id: String(m.move_id), name: moveName, currentPp: 35 });
-                    messages.push(`${pokemon.name} aprendeu ${moveName}!`);
-                } else {
-                    messages.push(`${pokemon.name} quer aprender ${moveName}, mas já tem 4 movimentos!`);
+            if (moveDetails) {
+                for (const m of moveDetails) {
+                    const alreadyKnows = pokemon.moves.some(pm => Number(pm.id) === m.id);
+                    if (!alreadyKnows) {
+                        learnable.push({
+                            id: m.id,
+                            name: m.name,
+                            type: m.type,
+                            category: m.category || 'physical',
+                            power: m.power || 0,
+                            accuracy: m.accuracy || 100,
+                            pp: m.pp || 35
+                        });
+                    }
                 }
             }
         }
     } catch (e) {
-        console.warn('[Battle] Error learning level-up moves:', e);
+        console.warn('[Battle] Error checking level-up moves:', e);
     }
 
-    return messages;
+    return learnable;
 }
 
 export async function checkAbilityChange(pokemon) {

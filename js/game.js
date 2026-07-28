@@ -3,7 +3,7 @@ import { randomInt, loadTypeEffectiveness, calculateAllStats } from './utils.js'
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
-    drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo
+    drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -759,9 +759,30 @@ class PokeFuryGame {
                     await showBattleMessage(msg);
                 }
                 if (p.level > prevLevel) {
-                    const moveMsgs = await learnLevelUpMoves(p, prevLevel, p.level);
-                    for (const msg of moveMsgs) {
-                        await showBattleMessage(msg);
+                    const learnableMoves = await learnLevelUpMoves(p, prevLevel, p.level);
+                    for (const newMove of learnableMoves) {
+                        await showBattleMessage(`${p.name} quer aprender ${newMove.name}!`);
+                        const result = await showMoveLearnPopup(p, newMove, p.moves);
+                        if (result.teach) {
+                            if (result.replaceIndex >= 0) {
+                                const oldName = p.moves[result.replaceIndex].name;
+                                p.moves[result.replaceIndex] = {
+                                    ...newMove,
+                                    id: newMove.id,
+                                    currentPp: newMove.pp || 35
+                                };
+                                await showBattleMessage(`${p.name} esqueceu ${oldName} e aprendeu ${newMove.name}!`);
+                            } else {
+                                p.moves.push({
+                                    ...newMove,
+                                    id: newMove.id,
+                                    currentPp: newMove.pp || 35
+                                });
+                                await showBattleMessage(`${p.name} aprendeu ${newMove.name}!`);
+                            }
+                        } else {
+                            await showBattleMessage(`${p.name} não aprendeu ${newMove.name}.`);
+                        }
                     }
                     const abilityName = await checkAbilityChange(p);
                     if (abilityName) {
