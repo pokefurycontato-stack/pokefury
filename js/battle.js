@@ -164,8 +164,8 @@ export async function executeTurn(attacker, defender, move) {
     }
 
     if (move.category === 'status') {
-        applyStatusEffect(attacker, defender, move);
-        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true };
+        const statusMessages = applyStatusEffect(attacker, defender, move);
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true, statusMessages };
     }
 
     defender.currentHp = Math.max(0, defender.currentHp - result.damage);
@@ -185,26 +185,52 @@ export async function executeTurn(attacker, defender, move) {
     };
 }
 
+function getStatName(stat) {
+    const names = { attack: 'Ataque', defense: 'Defesa', spAtk: 'Sp.Atk', spDef: 'Sp.Def', speed: 'Velocidade' };
+    return names[stat] || stat;
+}
+
+function getStageText(stages) {
+    if (stages === 1) return 'em 1 estágio';
+    if (stages === -1) return 'em 1 estágio';
+    if (stages > 0) return `em ${stages} estágios`;
+    return `em ${Math.abs(stages)} estágios`;
+}
+
 function applyStatusEffect(attacker, defender, move) {
     const name = (move.name || '').toLowerCase();
     attacker._statStages = attacker._statStages || { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 };
     defender._statStages = defender._statStages || { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 };
+    const messages = [];
 
     if (name.includes('harden') || name.includes('withdraw') || name.includes('iron defense')) {
         attacker._statStages.defense = Math.min(6, attacker._statStages.defense + 1);
+        messages.push(`A Defesa de ${attacker.name} aumentou ${getStageText(1)}!`);
     } else if (name.includes('tail whip') || name.includes('leer') || name.includes('screech')) {
         defender._statStages.defense = Math.max(-6, defender._statStages.defense - 1);
+        messages.push(`A Defesa de ${defender.name} diminuiu ${getStageText(-1)}!`);
     } else if (name.includes('growl') || name.includes('string shot')) {
         defender._statStages.attack = Math.max(-6, defender._statStages.attack - 1);
+        messages.push(`O Ataque de ${defender.name} diminuiu ${getStageText(-1)}!`);
     } else if (name.includes('swords dance')) {
         attacker._statStages.attack = Math.min(6, attacker._statStages.attack + 1);
+        messages.push(`O Ataque de ${attacker.name} aumentou ${getStageText(1)}!`);
     } else if (name.includes('agility')) {
         attacker._statStages.speed = Math.min(6, attacker._statStages.speed + 1);
+        messages.push(`A Velocidade de ${attacker.name} aumentou ${getStageText(1)}!`);
     } else if (name.includes('double team')) {
         attacker._statStages.speed = Math.min(6, attacker._statStages.speed + 1);
+        messages.push(`A Velocidade de ${attacker.name} aumentou ${getStageText(1)}!`);
     } else if (name.includes('smokescreen') || name.includes('sand attack')) {
         defender._statStages.speed = Math.max(-6, defender._statStages.speed - 1);
+        messages.push(`A Velocidade de ${defender.name} diminuiu ${getStageText(-1)}!`);
+    } else if (name.includes('smog') || name.includes('poison powder') || name.includes('stun spore') || name.includes('sleep powder')) {
+        messages.push(`${attacker.name} usou ${move.name}!`);
+    } else {
+        messages.push(`${attacker.name} usou ${move.name}!`);
     }
+
+    return messages;
 }
 
 export function determineTurnOrder(pokemon1, pokemon2) {

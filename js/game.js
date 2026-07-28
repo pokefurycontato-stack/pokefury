@@ -669,7 +669,9 @@ class PokeFuryGame {
             if (result.missed) {
                 await showBattleMessage(`${attacker.name} errou ${move.name}!`);
             } else if (result.statusMove) {
-                await showBattleMessage(`${attacker.name} usou ${move.name}!`);
+                for (const msg of (result.statusMessages || [])) {
+                    await showBattleMessage(msg);
+                }
             } else {
                 await showBattleMessage(`${attacker.name} usou ${move.name}!`);
 
@@ -726,7 +728,9 @@ class PokeFuryGame {
             });
 
             if (result.statusMove) {
-                await showBattleMessage(`${enemyPokemon.name} usou ${move.name}!`);
+                for (const msg of (result.statusMessages || [])) {
+                    await showBattleMessage(msg);
+                }
             } else {
                 await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`);
 
