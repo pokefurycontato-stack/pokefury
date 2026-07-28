@@ -50,7 +50,8 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
                     const res = await fetch(`https://pokeapi.co/api/v2/move/${mid}`);
                     if (!res.ok) continue;
                     const api = await res.json();
-                    const cat = api.damage_class?.name || 'physical';
+                    const cat = api.damage_class?.name || null;
+                    if (!cat) continue;
                     dbMoves.push({
                         id: api.id, name: api.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
                         type: api.type?.name || 'normal',
@@ -292,7 +293,8 @@ export async function learnLevelUpMoves(pokemon, fromLevel, toLevel) {
                     const res = await fetch(`https://pokeapi.co/api/v2/move/${mid}`);
                     if (!res.ok) continue;
                     const api = await res.json();
-                    const cat = api.damage_class?.name || 'physical';
+                    const cat = api.damage_class?.name || null;
+                    if (!cat) continue;
                     dbMoves.push({
                         id: api.id, name: api.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
                         type: api.type?.name || 'normal',
