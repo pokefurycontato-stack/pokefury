@@ -67,6 +67,9 @@ export class Overworld2D {
         this.pokemonSpriteContainer = null;
         this.pokemonSpriteElements = new Map();
 
+        this.wallpaperImg = new Image();
+        this.wallpaperImg.src = 'assets/wallpapergrid.jpg';
+
         this.playerSprites = {};
         this.loaded = false;
         this.frameCount = 0;
@@ -641,6 +644,10 @@ export class Overworld2D {
 
         ctx.fillStyle = '#0d1117';
         ctx.fillRect(0, 0, w, h);
+
+        if (this.wallpaperImg.complete && this.wallpaperImg.naturalWidth > 0) {
+            ctx.drawImage(this.wallpaperImg, 0, 0, w, h);
+        }
 
         if (this.currentMapImage && this.currentMapImage.complete) {
             const mapDrawW = this.worldCols * this.tileW;
