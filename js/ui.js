@@ -56,32 +56,43 @@ function updateTeamIndicators(selector, team) {
 
 export function showBattleMessage(message) {
     return new Promise(resolve => {
-        const msgEl = $('#battle-message');
+        try {
+            const msgEl = $('#battle-message');
+            if (!msgEl) { resolve(); return; }
 
-        if (battleMessageInterval) {
-            clearInterval(battleMessageInterval);
-            battleMessageInterval = null;
-        }
-        if (battleMessageResolve) {
-            battleMessageResolve();
-            battleMessageResolve = null;
-        }
-
-        msgEl.textContent = '';
-        if (!message) { resolve(); return; }
-
-        let i = 0;
-        battleMessageInterval = setInterval(() => {
-            if (i < message.length) {
-                msgEl.textContent += message[i];
-                i++;
-            } else {
+            if (battleMessageInterval) {
                 clearInterval(battleMessageInterval);
                 battleMessageInterval = null;
-                setTimeout(resolve, 600);
             }
-        }, 25);
-        battleMessageResolve = resolve;
+            if (battleMessageResolve) {
+                battleMessageResolve();
+                battleMessageResolve = null;
+            }
+
+            if (!message) { resolve(); return; }
+
+            let i = 0;
+            const fullText = String(message);
+            battleMessageInterval = setInterval(() => {
+                try {
+                    if (i < fullText.length) {
+                        i++;
+                        msgEl.innerText = fullText.substring(0, i);
+                    } else {
+                        clearInterval(battleMessageInterval);
+                        battleMessageInterval = null;
+                        setTimeout(resolve, 600);
+                    }
+                } catch (e) {
+                    clearInterval(battleMessageInterval);
+                    battleMessageInterval = null;
+                    resolve();
+                }
+            }, 25);
+            battleMessageResolve = resolve;
+        } catch (e) {
+            resolve();
+        }
     });
 }
 

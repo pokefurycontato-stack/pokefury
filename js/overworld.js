@@ -331,7 +331,9 @@ export class Overworld2D {
             console.error('[Overworld] Loop error:', e);
         }
 
-        requestAnimationFrame(() => this.loop());
+        requestAnimationFrame(() => {
+            try { this.loop(); } catch (e) { console.error('[Overworld] rAF error:', e); }
+        });
     }
 
     handleInput() {
