@@ -806,7 +806,7 @@ body {
 #party-panel {
     position: absolute;
     top: 50%;
-    right: 12px;
+    left: 12px;
     transform: translateY(-50%);
     width: 180px;
     background: rgba(10, 10, 30, 0.85);
