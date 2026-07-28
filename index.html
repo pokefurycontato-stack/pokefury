@@ -236,6 +236,7 @@
                         <div class="sidebar-section-items">
                             <button class="item-btn admin-btn" id="admin-btn-regions">Regioes</button>
                             <button class="item-btn admin-btn" id="admin-btn-maps">Mapas</button>
+                            <button class="item-btn admin-btn" id="admin-btn-donate">Doar</button>
                         </div>
                     </div>
 
@@ -431,6 +432,135 @@
                 <button id="map-image-modal-close" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
             </div>
             <div id="map-image-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px"></div>
+        </div>
+    </div>
+
+    <!-- Donate Screen (Admin Only) -->
+    <div id="donate-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto">
+        <div style="max-width:900px;margin:0 auto;padding:24px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+                <h2 style="color:#e94560;margin:0;font-family:Inter,sans-serif">Doar Itens e Pokemon</h2>
+                <button id="donate-close" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer">✕</button>
+            </div>
+
+            <!-- Character Search -->
+            <div style="margin-bottom:20px;position:relative">
+                <label style="color:rgba(255,255,255,0.6);font-size:12px;font-family:Inter,sans-serif;display:block;margin-bottom:4px">Buscar Personagem</label>
+                <input id="donate-search" type="text" placeholder="Digite o nome do personagem..." style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                <div id="donate-search-results" style="position:absolute;top:100%;left:0;right:0;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:10;display:none"></div>
+            </div>
+
+            <!-- Character Info (hidden until selected) -->
+            <div id="donate-char-info" class="hidden">
+                <div style="background:#1a1a2e;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                        <div>
+                            <span id="donate-char-name" style="color:#fff;font-size:18px;font-weight:700;font-family:Inter,sans-serif"></span>
+                            <span id="donate-char-level" style="color:rgba(255,255,255,0.5);font-size:13px;margin-left:8px;font-family:Inter,sans-serif"></span>
+                        </div>
+                    </div>
+                    <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:8px;font-family:Inter,sans-serif">Time Atual:</div>
+                    <div id="donate-char-team" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+                </div>
+
+                <!-- Donate Items -->
+                <div style="background:#1a1a2e;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08)">
+                    <div style="color:#e94560;font-size:14px;font-weight:700;margin-bottom:12px;font-family:Inter,sans-serif">Doar Item</div>
+                    <div style="display:flex;gap:8px;align-items:flex-end">
+                        <div style="flex:2;position:relative">
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nome do Item</label>
+                            <input id="donate-item-name" type="text" placeholder="Ex: Potion" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <div id="donate-item-results" style="position:absolute;top:100%;left:0;right:0;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:0 0 6px 6px;max-height:150px;overflow-y:auto;z-index:10;display:none"></div>
+                        </div>
+                        <div style="flex:1">
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Qtd</label>
+                            <input id="donate-item-qty" type="number" min="1" value="1" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                        </div>
+                        <button id="donate-item-btn" style="padding:8px 16px;background:#e94560;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Doar</button>
+                    </div>
+                </div>
+
+                <!-- Donate Pokemon -->
+                <div style="background:#1a1a2e;border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.08)">
+                    <div style="color:#e94560;font-size:14px;font-weight:700;margin-bottom:12px;font-family:Inter,sans-serif">Doar Pokemon</div>
+
+                    <!-- Pokemon Name + Preview -->
+                    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+                        <div style="flex:1;position:relative">
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nome do Pokemon</label>
+                            <input id="donate-poke-name" type="text" placeholder="Ex: Charmander" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <div id="donate-poke-results" style="position:absolute;top:100%;left:0;right:0;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:0 0 6px 6px;max-height:150px;overflow-y:auto;z-index:10;display:none"></div>
+                        </div>
+                        <div id="donate-poke-preview" style="width:80px;height:80px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                            <span style="color:rgba(255,255,255,0.2);font-size:10px;font-family:Inter,sans-serif">Preview</span>
+                        </div>
+                    </div>
+
+                    <!-- Level -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nivel</label>
+                        <input id="donate-poke-level" type="number" min="1" max="100" value="5" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                    </div>
+
+                    <!-- IVs -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">IVs (0-31)</label>
+                        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">HP</label><input class="donate-iv" data-stat="hp" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Atk</label><input class="donate-iv" data-stat="attack" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Def</label><input class="donate-iv" data-stat="defense" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpA</label><input class="donate-iv" data-stat="spAtk" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpD</label><input class="donate-iv" data-stat="spDef" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Spe</label><input class="donate-iv" data-stat="speed" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                        </div>
+                    </div>
+
+                    <!-- EVs -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">EVs (0-252, total max 510)</label>
+                        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">HP</label><input class="donate-ev" data-stat="hp" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Atk</label><input class="donate-ev" data-stat="attack" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Def</label><input class="donate-ev" data-stat="defense" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpA</label><input class="donate-ev" data-stat="spAtk" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpD</label><input class="donate-ev" data-stat="spDef" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Spe</label><input class="donate-ev" data-stat="speed" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                        </div>
+                    </div>
+
+                    <!-- Nature -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nature</label>
+                        <select id="donate-poke-nature" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <option value="hardy">Hardy</option><option value="lonely">Lonely</option><option value="brave">Brave</option><option value="adamant">Adamant</option><option value="naughty">Naughty</option>
+                            <option value="bold">Bold</option><option value="docile">Docile</option><option value="relaxed">Relaxed</option><option value="impish">Impish</option><option value="lax">Lax</option>
+                            <option value="timid">Timid</option><option value="hasty">Hasty</option><option value="serious">Serious</option><option value="jolly">Jolly</option><option value="naive">Naive</option>
+                            <option value="modest">Modest</option><option value="mild">Mild</option><option value="quiet">Quiet</option><option value="bashful">Bashful</option><option value="rash">Rash</option>
+                            <option value="calm">Calm</option><option value="gentle">Gentle</option><option value="sassy">Sassy</option><option value="careful">Careful</option><option value="quirky">Quirky</option>
+                        </select>
+                    </div>
+
+                    <!-- Ability -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Habilidade</label>
+                        <select id="donate-poke-ability" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <option value="">Selecione um pokemon primeiro</option>
+                        </select>
+                    </div>
+
+                    <!-- Moves -->
+                    <div style="margin-bottom:16px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Movimentos (max 4)</label>
+                        <div id="donate-poke-moves" style="display:flex;flex-direction:column;gap:6px"></div>
+                        <button id="donate-add-move" style="margin-top:6px;padding:4px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;font-family:Inter,sans-serif">+ Adicionar Movimento</button>
+                    </div>
+
+                    <button id="donate-poke-btn" style="width:100%;padding:10px;background:#e94560;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Doar Pokemon</button>
+                </div>
+            </div>
+
+            <!-- Donate Result -->
+            <div id="donate-result" class="hidden" style="margin-top:16px;padding:12px;border-radius:8px;font-family:Inter,sans-serif;font-size:13px;text-align:center"></div>
         </div>
     </div>
 

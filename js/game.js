@@ -1,5 +1,5 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
-import { randomInt, loadTypeEffectiveness } from './utils.js';
+import { randomInt, loadTypeEffectiveness, calculateAllStats } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel } from './battle.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
@@ -907,6 +907,355 @@ class PokeFuryGame {
                 this.loadSavedMapsList();
             };
         }
+
+        const donateBtn = document.getElementById('admin-btn-donate');
+        if (donateBtn) {
+            donateBtn.onclick = () => this.openDonateScreen();
+        }
+    }
+
+    openDonateScreen() {
+        const screen = document.getElementById('donate-screen');
+        screen.classList.remove('hidden');
+
+        document.getElementById('donate-close').onclick = () => screen.classList.add('hidden');
+
+        this._donateSelectedChar = null;
+        this._donateSelectedPokemon = null;
+        this._donateSelectedPokemonData = null;
+        document.getElementById('donate-search').value = '';
+        document.getElementById('donate-char-info').classList.add('hidden');
+        document.getElementById('donate-result').classList.add('hidden');
+
+        this.setupDonateSearch();
+        this.setupDonateItemSearch();
+        this.setupDonatePokemonSearch();
+        this.setupDonatePokemonForm();
+    }
+
+    setupDonateSearch() {
+        const input = document.getElementById('donate-search');
+        const results = document.getElementById('donate-search-results');
+        let debounce = null;
+
+        input.oninput = () => {
+            clearTimeout(debounce);
+            const q = input.value.trim();
+            if (q.length < 2) { results.style.display = 'none'; return; }
+
+            debounce = setTimeout(async () => {
+                const { data } = await window.db.from('game_saves').select('id, player_name, starter_pokemon').ilike('player_name', `%${q}%`).limit(10);
+                if (!data || data.length === 0) { results.style.display = 'none'; return; }
+
+                results.innerHTML = '';
+                results.style.display = 'block';
+                for (const char of data) {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:8px 12px;cursor:pointer;color:#fff;font-size:13px;font-family:Inter,sans-serif;border-bottom:1px solid rgba(255,255,255,0.05)';
+                    div.textContent = char.player_name;
+                    div.onmouseenter = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseleave = () => div.style.background = 'transparent';
+                    div.onclick = () => this.selectDonateChar(char);
+                    results.appendChild(div);
+                }
+            }, 300);
+        };
+
+        input.onblur = () => setTimeout(() => results.style.display = 'none', 200);
+    }
+
+    async selectDonateChar(char) {
+        this._donateSelectedChar = char;
+        document.getElementById('donate-search').value = char.player_name;
+        document.getElementById('donate-search-results').style.display = 'none';
+        document.getElementById('donate-char-info').classList.remove('hidden');
+
+        document.getElementById('donate-char-name').textContent = char.player_name;
+
+        const { data: team } = await window.db.from('pokemon_team').select('*').eq('character_id', char.id).order('slot');
+        const teamContainer = document.getElementById('donate-char-team');
+        teamContainer.innerHTML = '';
+
+        if (team && team.length > 0) {
+            const maxLevel = Math.max(...team.map(t => t.level));
+            document.getElementById('donate-char-level').textContent = `Nv. ${maxLevel} | ${team.length} pokemon`;
+
+            for (const p of team) {
+                const pokeData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
+                const spriteUrl = pokeData ? (pokeData.spriteUrls.front || pokeData.spriteUrls.home || '') : '';
+                const hpPct = p.max_hp > 0 ? ((p.current_hp / p.max_hp) * 100) : 0;
+                const expForNext = Math.floor(Math.pow(p.level + 1, 3) * 0.8);
+                const expForPrev = Math.floor(Math.pow(p.level, 3) * 0.8);
+                const expPct = p.level >= 100 ? 100 : Math.max(0, Math.min(100, ((p.experience || 0) - expForPrev) / (expForNext - expForPrev) * 100));
+
+                const card = document.createElement('div');
+                card.style.cssText = 'background:#0d1117;border-radius:8px;padding:8px;width:140px;border:1px solid rgba(255,255,255,0.08)';
+                card.innerHTML = `
+                    <div style="text-align:center;margin-bottom:4px"><img src="${spriteUrl}" style="width:48px;height:48px;image-rendering:pixelated" onerror="this.style.display='none'"></div>
+                    <div style="color:#fff;font-size:11px;font-weight:600;text-align:center;font-family:Inter,sans-serif">${p.nickname || p.species} Lv${p.level}</div>
+                    <div style="width:100%;height:5px;background:rgba(0,0,0,0.5);border-radius:3px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${hpPct}%;background:${hpPct<=25?'#f44336':hpPct<=50?'#ff9800':'#4caf50'};border-radius:3px"></div></div>
+                    <div style="color:rgba(255,255,255,0.4);font-size:8px;text-align:center;font-family:Inter,sans-serif">HP ${p.current_hp}/${p.max_hp}</div>
+                    <div style="width:100%;height:4px;background:rgba(0,0,0,0.5);border-radius:2px;margin-top:2px;overflow:hidden"><div style="height:100%;width:${expPct}%;background:#2196f3;border-radius:2px"></div></div>
+                    <div style="color:rgba(255,255,255,0.3);font-size:7px;text-align:center;font-family:Inter,sans-serif">EXP ${p.experience||0}/${expForNext}</div>
+                `;
+                teamContainer.appendChild(card);
+            }
+        } else {
+            document.getElementById('donate-char-level').textContent = 'Sem pokemon';
+        }
+    }
+
+    setupDonateItemSearch() {
+        const input = document.getElementById('donate-item-name');
+        const results = document.getElementById('donate-item-results');
+        let debounce = null;
+
+        input.oninput = () => {
+            clearTimeout(debounce);
+            const q = input.value.trim().toLowerCase();
+            if (q.length < 1) { results.style.display = 'none'; return; }
+
+            debounce = setTimeout(() => {
+                const matches = ITEMS_DATA.filter(i => i.name.toLowerCase().includes(q)).slice(0, 10);
+                if (matches.length === 0) { results.style.display = 'none'; return; }
+
+                results.innerHTML = '';
+                results.style.display = 'block';
+                for (const item of matches) {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:6px 12px;cursor:pointer;color:#fff;font-size:12px;font-family:Inter,sans-serif;border-bottom:1px solid rgba(255,255,255,0.05)';
+                    div.textContent = `${item.name} (ID: ${item.id})`;
+                    div.onmouseenter = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseleave = () => div.style.background = 'transparent';
+                    div.onclick = () => {
+                        input.value = item.name;
+                        input.dataset.itemId = item.id;
+                        results.style.display = 'none';
+                    };
+                    results.appendChild(div);
+                }
+            }, 200);
+        };
+
+        input.onblur = () => setTimeout(() => results.style.display = 'none', 200);
+
+        document.getElementById('donate-item-btn').onclick = async () => {
+            if (!this._donateSelectedChar) return;
+            const itemId = parseInt(input.dataset.itemId);
+            const qty = parseInt(document.getElementById('donate-item-qty').value) || 1;
+            if (!itemId) return;
+
+            const { error } = await window.db.rpc('add_item', { p_item_id: itemId, p_qty: qty });
+            const result = document.getElementById('donate-result');
+            result.classList.remove('hidden');
+            if (error) {
+                result.style.background = 'rgba(244,67,54,0.2)';
+                result.style.color = '#f44336';
+                result.textContent = `Erro: ${error.message}`;
+            } else {
+                result.style.background = 'rgba(76,175,80,0.2)';
+                result.style.color = '#4caf50';
+                result.textContent = `${qty}x ${input.value} doado para ${this._donateSelectedChar.player_name}!`;
+                input.value = '';
+                delete input.dataset.itemId;
+            }
+        };
+    }
+
+    setupDonatePokemonSearch() {
+        const input = document.getElementById('donate-poke-name');
+        const results = document.getElementById('donate-poke-results');
+        const preview = document.getElementById('donate-poke-preview');
+        let debounce = null;
+
+        input.oninput = () => {
+            clearTimeout(debounce);
+            const q = input.value.trim().toLowerCase();
+            if (q.length < 1) { results.style.display = 'none'; return; }
+
+            debounce = setTimeout(async () => {
+                const { data } = await window.db.from('pokemon').select('id, name').ilike('name', `%${q}%`).limit(10);
+                if (!data || data.length === 0) { results.style.display = 'none'; return; }
+
+                results.innerHTML = '';
+                results.style.display = 'block';
+                for (const poke of data) {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:6px 12px;cursor:pointer;color:#fff;font-size:12px;font-family:Inter,sans-serif;border-bottom:1px solid rgba(255,255,255,0.05)';
+                    div.textContent = `${poke.name} (#${poke.id})`;
+                    div.onmouseenter = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseleave = () => div.style.background = 'transparent';
+                    div.onclick = async () => {
+                        input.value = poke.name;
+                        results.style.display = 'none';
+                        this._donateSelectedPokemon = poke.id;
+
+                        const pokemonData = await PokeAPI.ensurePokemon(poke.id);
+                        this._donateSelectedPokemonData = pokemonData;
+
+                        const spriteUrl = pokemonData?.spriteUrls?.front || pokemonData?.spriteUrls?.home || '';
+                        preview.innerHTML = spriteUrl
+                            ? `<img src="${spriteUrl}" style="width:72px;height:72px;image-rendering:pixelated" onerror="this.parentElement.innerHTML='Erro'">`
+                            : '<span style="color:rgba(255,255,255,0.3)">Sem sprite</span>';
+
+                        this.loadPokemonAbilities(pokemonData);
+                        this.loadPokemonMoves(pokemonData);
+                    };
+                    results.appendChild(div);
+                }
+            }, 300);
+        };
+
+        input.onblur = () => setTimeout(() => results.style.display = 'none', 200);
+    }
+
+    async loadPokemonAbilities(pokemonData) {
+        const select = document.getElementById('donate-poke-ability');
+        select.innerHTML = '';
+
+        if (!pokemonData?.id) {
+            select.innerHTML = '<option value="">Selecione um pokemon</option>';
+            return;
+        }
+
+        try {
+            const { data } = await window.db.from('pokemon_abilities').select('ability_id, abilities(name)').eq('pokemon_id', pokemonData.id);
+            if (data && data.length > 0) {
+                for (const a of data) {
+                    const opt = document.createElement('option');
+                    opt.value = a.ability_id;
+                    opt.textContent = a.abilities?.name || `Ability ${a.ability_id}`;
+                    select.appendChild(opt);
+                }
+            } else {
+                select.innerHTML = '<option value="">Sem habilidades</option>';
+            }
+        } catch (e) {
+            select.innerHTML = '<option value="">Erro ao carregar</option>';
+        }
+    }
+
+    loadPokemonMoves(pokemonData) {
+        const container = document.getElementById('donate-poke-moves');
+        container.innerHTML = '';
+
+        if (!pokemonData?.moveNames && !pokemonData?.id) return;
+
+        this._donateMoveOptions = [];
+        this._donateSelectedMoves = [];
+
+        this.addDonateMoveSlot();
+    }
+
+    async addDonateMoveSlot() {
+        const container = document.getElementById('donate-poke-moves');
+        if (container.children.length >= 4) return;
+
+        const pokeId = this._donateSelectedPokemon;
+        if (!pokeId) return;
+
+        const { data } = await window.db.from('pokemon_moves').select('move_id').eq('pokemon_id', pokeId);
+        if (!data) return;
+
+        const moveIds = data.map(r => r.move_id);
+        const moveResults = await Promise.all(moveIds.slice(0, 20).map(id => window.db.from('moves').select('id, name, type').eq('id', id).single()));
+        const moves = moveResults.map(r => r.data).filter(Boolean);
+
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:flex;gap:6px;align-items:center';
+
+        const select = document.createElement('select');
+        select.style.cssText = 'flex:1;padding:6px 8px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none';
+
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = 'Nenhum';
+        select.appendChild(emptyOpt);
+
+        for (const m of moves) {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `${m.name} (${m.type})`;
+            select.appendChild(opt);
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '✕';
+        removeBtn.style.cssText = 'background:none;border:none;color:#f44336;font-size:14px;cursor:pointer;padding:4px';
+        removeBtn.onclick = () => {
+            wrapper.remove();
+            this._donateSelectedMoves = this._donateSelectedMoves.filter(s => s !== select);
+        };
+
+        this._donateSelectedMoves.push(select);
+        wrapper.appendChild(select);
+        wrapper.appendChild(removeBtn);
+        container.appendChild(wrapper);
+    }
+
+    setupDonatePokemonForm() {
+        document.getElementById('donate-add-move').onclick = () => this.addDonateMoveSlot();
+
+        document.getElementById('donate-poke-btn').onclick = async () => {
+            if (!this._donateSelectedChar || !this._donateSelectedPokemon) return;
+
+            const level = parseInt(document.getElementById('donate-poke-level').value) || 5;
+            const ivs = {};
+            document.querySelectorAll('.donate-iv').forEach(el => { ivs[el.dataset.stat] = parseInt(el.value) || 0; });
+            const evs = {};
+            document.querySelectorAll('.donate-ev').forEach(el => { evs[el.dataset.stat] = parseInt(el.value) || 0; });
+            const nature = document.getElementById('donate-poke-nature').value;
+            const abilityId = document.getElementById('donate-poke-ability').value;
+
+            const moveIds = this._donateSelectedMoves.map(sel => parseInt(sel.value)).filter(Boolean);
+
+            const pokemonData = await PokeAPI.ensurePokemon(this._donateSelectedPokemon);
+            if (!pokemonData) return;
+
+            const stats = calculateAllStats(pokemonData.baseStats, level, ivs, evs, nature);
+
+            const { data: existingTeam } = await window.db.from('pokemon_team').select('slot').eq('character_id', this._donateSelectedChar.id).order('slot', { ascending: false }).limit(1);
+            const nextSlot = existingTeam && existingTeam.length > 0 ? existingTeam[0].slot + 1 : 1;
+
+            const insertData = {
+                user_id: this._donateSelectedChar.user_id || null,
+                character_id: this._donateSelectedChar.id,
+                species: pokemonData.species,
+                nickname: pokemonData.name,
+                level,
+                current_hp: stats.hp,
+                max_hp: stats.hp,
+                experience: Math.floor(Math.pow(level, 3) * 0.8),
+                moves: moveIds.map(id => ({ id: String(id), pp: 35 })),
+                is_active: false,
+                slot: nextSlot,
+                pokemon_id: pokemonData.id,
+                iv_hp: ivs.hp || 0, iv_attack: ivs.attack || 0, iv_defense: ivs.defense || 0,
+                iv_sp_atk: ivs.spAtk || 0, iv_sp_def: ivs.spDef || 0, iv_speed: ivs.speed || 0,
+                ev_hp: evs.hp || 0, ev_attack: evs.attack || 0, ev_defense: evs.defense || 0,
+                ev_sp_atk: evs.spAtk || 0, ev_sp_def: evs.spDef || 0, ev_speed: evs.speed || 0,
+                nature,
+                happiness: 70,
+                is_shiny: false,
+                is_mega: false,
+                held_item_id: null
+            };
+
+            const { error } = await window.db.from('pokemon_team').insert(insertData);
+
+            const result = document.getElementById('donate-result');
+            result.classList.remove('hidden');
+            if (error) {
+                result.style.background = 'rgba(244,67,54,0.2)';
+                result.style.color = '#f44336';
+                result.textContent = `Erro: ${error.message}`;
+            } else {
+                result.style.background = 'rgba(76,175,80,0.2)';
+                result.style.color = '#4caf50';
+                result.textContent = `${pokemonData.name} Lv${level} doado para ${this._donateSelectedChar.player_name}!`;
+                this.selectDonateChar(this._donateSelectedChar);
+            }
+        };
     }
 
     async openRegionManager() {
