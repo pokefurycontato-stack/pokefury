@@ -808,14 +808,21 @@ body {
     top: 50%;
     left: 12px;
     transform: translateY(-50%);
-    width: 180px;
-    background: rgba(10, 10, 30, 0.85);
+    width: 200px;
+    background: rgba(10, 10, 30, 0.9);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px;
     padding: 8px;
     z-index: 15;
     pointer-events: auto;
     backdrop-filter: blur(4px);
+    overflow-y: auto;
+    max-height: 80vh;
+}
+#party-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 .party-title {
     font-family: 'Inter', sans-serif;
@@ -831,16 +838,16 @@ body {
 }
 .party-slot {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
     padding: 4px;
     margin-bottom: 3px;
     border-radius: 6px;
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.05);
     transition: background 0.2s;
 }
 .party-slot:hover {
-    background: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.1);
 }
 .party-slot.fainted {
     opacity: 0.45;
@@ -881,6 +888,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    overflow: hidden;
 }
 .party-slot-name {
     font-family: 'Inter', sans-serif;
