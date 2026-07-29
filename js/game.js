@@ -461,9 +461,10 @@ class PokeFuryGame {
                 for (const enc of pool) {
                     roll -= enc.weight;
                     if (roll <= 0) {
-                        const encMin = enc.min_level || this.currentMap.min_level || minLevel;
-                        const encMax = enc.max_level || this.currentMap.max_level || maxLevel;
-                        const level = encMin + Math.floor(Math.random() * (encMax - encMin + 1));
+                        const highestLevel = this.playerTeam.reduce((max, p) => Math.max(max, p.level || 1), 1);
+                        const maxWild = Math.min(highestLevel + 2, 100);
+                        const minWild = Math.max(maxWild - 2, 1);
+                        const level = minWild + Math.floor(Math.random() * (maxWild - minWild + 1));
                         const pokemonData = await PokeAPI.ensurePokemon(enc.pokemon_name);
                         const isShiny = Math.random() < (1 / SHINY_CHANCE);
                         pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);

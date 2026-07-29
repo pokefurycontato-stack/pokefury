@@ -639,7 +639,10 @@ export class Overworld2D {
 
         const enc = entity.encounter;
 
-        const level = enc.min_level + Math.floor(Math.random() * ((enc.max_level || enc.min_level + 3) - enc.min_level + 1));
+        const highestLevel = this.game.playerTeam.reduce((max, p) => Math.max(max, p.level || 1), 1);
+        const maxWild = Math.min(highestLevel + 2, 100);
+        const minWild = Math.max(maxWild - 2, 1);
+        const level = minWild + Math.floor(Math.random() * (maxWild - minWild + 1));
         await this.game.startBattleWithPokemon(enc.pokemon_name, level, entity.spriteUrl);
 
         if (this.game.state === 'battle') {
