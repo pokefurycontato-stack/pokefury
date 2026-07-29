@@ -2142,14 +2142,28 @@ class PokeFuryGame {
         try {
             const { data: abils } = await window.db
                 .from('pokemon_abilities')
-                .select('is_hidden, slot, abilities(name, effect)')
+                .select('is_hidden, slot, abilities(name, effect, id)')
                 .eq('pokemon_id', p.id)
                 .order('slot');
             if (abils && abils.length > 0) {
                 const normal = abils.find(a => !a.is_hidden);
                 if (normal && normal.abilities) {
                     abilityName = normal.abilities.name || '?';
-                    abilityEffect = normal.abilities.effect || '';
+                    const abilityId = normal.abilities.id;
+                    if (abilityId) {
+                        try {
+                            const resp = await fetch(`https://pokeapi.co/api/v2/ability/${abilityId}`);
+                            if (resp.ok) {
+                                const abData = await resp.json();
+                                const ptEntry = (abData.flavor_text_entries || []).find(e => e.language?.name === 'pt');
+                                const ptEffect = (abData.effect_entries || []).find(e => e.language?.name === 'pt');
+                                abilityEffect = ptEntry?.flavor_text || ptEffect?.short_effect || ptEffect?.effect || normal.abilities.effect || '';
+                                abilityEffect = abilityEffect.replace(/\n/g, ' ').replace(/\f/g, ' ');
+                            }
+                        } catch (e) {
+                            abilityEffect = normal.abilities.effect || '';
+                        }
+                    }
                 }
             }
         } catch (e) {}
