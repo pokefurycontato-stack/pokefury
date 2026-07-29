@@ -36,5 +36,25 @@ trainer-sprites-manifest.json
 node_modules/
 assets/trainers/
 tmp-shiny/
+assets/sprites/pokemon-animated/
+assets/sprites/pokemon-animated-shiny/
+assets/sprites/pokemon-animated-back/
+assets/sprites/pokemon-animated-back-shiny/
+assets/sprites/pokemon-home/
+assets/sprites/pokemon-home-shiny/
+special-forms-sprite-report.json
+download-missing-forms.js
+download-missing-forms-v2.js
+download-special-forms-sprites.js
+generate-special-forms.js
+supabase-insert-special-forms.sql
+supabase-insert-variants.sql
+supabase-insert-evolutions.sql
+supabase-fix-all-variants.sql
+supabase-fix-pokemon-rls.sql
+supabase-fix-evolutions-rls.sql
+supabase-fix-evo-duplicates.sql
+supabase-create-evolutions.sql
+back-sprite-report.json
 
 .vercel
