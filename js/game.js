@@ -2121,6 +2121,7 @@ class PokeFuryGame {
         `;
 
         let height = '?', weight = '?', genderRate = '?';
+        let abilityName = '?', abilityEffect = '';
         try {
             const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${p.id}`);
             if (resp.ok) {
@@ -2136,6 +2137,20 @@ class PokeFuryGame {
                 const gr = sData.gender_rate;
                 if (gr === -1) genderRate = 'Sem gênero';
                 else { const f = (gr / 8) * 100; genderRate = `♂ ${100 - f}% / ♀ ${f}%`; }
+            }
+        } catch (e) {}
+        try {
+            const { data: abils } = await window.db
+                .from('pokemon_abilities')
+                .select('is_hidden, slot, abilities(name, effect)')
+                .eq('pokemon_id', p.id)
+                .order('slot');
+            if (abils && abils.length > 0) {
+                const normal = abils.find(a => !a.is_hidden);
+                if (normal && normal.abilities) {
+                    abilityName = normal.abilities.name || '?';
+                    abilityEffect = normal.abilities.effect || '';
+                }
             }
         } catch (e) {}
 
@@ -2165,6 +2180,11 @@ class PokeFuryGame {
                     <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Peso</div>
                     <div style="font-size:13px;color:#c9d1d9;font-weight:500">${weight}</div>
                 </div>
+            </div>
+            <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:12px;position:relative" id="ability-container">
+                <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Habilidade</div>
+                <div style="font-size:13px;color:#ffd700;font-weight:600;cursor:help" id="ability-name">${abilityName}</div>
+                <div id="ability-tooltip" style="display:none;position:absolute;left:0;right:0;bottom:100%;background:#1c2333;border:1px solid rgba(255,215,0,0.3);border-radius:6px;padding:8px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.5)">${abilityEffect || 'Sem descrição disponível'}</div>
             </div>
             <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:12px">
                 <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">Poder Total</div>
@@ -2206,6 +2226,13 @@ class PokeFuryGame {
                 </div>
             </div>
         `;
+
+        const abilityNameEl = document.getElementById('ability-name');
+        const abilityTooltip = document.getElementById('ability-tooltip');
+        if (abilityNameEl && abilityTooltip) {
+            abilityNameEl.onmouseenter = () => { abilityTooltip.style.display = 'block'; };
+            abilityNameEl.onmouseleave = () => { abilityTooltip.style.display = 'none'; };
+        }
     }
 
     async openRegionManager() {
