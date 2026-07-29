@@ -1884,27 +1884,30 @@ class PokeFuryGame {
                     if (!chainIds.has(id)) { chainIds.add(id); chainOrder.push(id); }
                 }
 
-                addChain(pokemon.id);
-                let curId = pokemon.id;
+                let prevIds = [];
+                curId = pokemon.id;
                 for (let i = 0; i < 10; i++) {
                     const { data: prev } = await window.db.from('pokemon_evolutions').select('from_pokemon_id').eq('to_pokemon_id', curId);
                     if (prev && prev.length > 0) {
                         curId = prev[0].from_pokemon_id;
-                        addChain(curId);
-                        chainOrder.unshift(curId);
+                        prevIds.unshift(curId);
                     } else break;
                 }
+                chainOrder.length = 0;
+                chainIds.clear();
+                for (const id of prevIds) addChain(id);
+                addChain(pokemon.id);
+
                 curId = pokemon.id;
                 for (let i = 0; i < 10; i++) {
                     const { data: next } = await window.db.from('pokemon_evolutions').select('to_pokemon_id, evolution_method, evolution_value, min_level, min_happiness').eq('from_pokemon_id', curId);
                     if (next && next.length > 0) {
-                        for (const evo of next) {
-                            if (!chainIds.has(evo.to_pokemon_id)) {
-                                addChain(evo.to_pokemon_id);
-                                chainOrder.push(evo.to_pokemon_id);
-                            }
+                        const nextId = next[0].to_pokemon_id;
+                        if (!chainIds.has(nextId)) {
+                            addChain(nextId);
+                            chainOrder.push(nextId);
                         }
-                        curId = chainOrder[chainOrder.indexOf(curId) + 1] || next[0].to_pokemon_id;
+                        curId = nextId;
                     } else break;
                 }
 
