@@ -187,10 +187,27 @@ class PokeFuryGame {
                     pokemon.isMega = row.is_mega || false;
                     pokemon.heldItemId = row.held_item_id || null;
                     pokemon.statusEffect = row.status_effect || null;
-                    if (row.moves && Array.isArray(row.moves)) {
-                        for (const savedMove of row.moves) {
-                            const move = pokemon.moves.find(m => m.id === savedMove.id || m.id === String(savedMove.id));
-                            if (move && savedMove.pp !== undefined) move.currentPp = savedMove.pp;
+                    if (row.moves && Array.isArray(row.moves) && row.moves.length > 0) {
+                        const savedMoveIds = row.moves.map(m => Number(m.id)).filter(Boolean);
+                        if (savedMoveIds.length > 0) {
+                            const { data: moveDetails } = await window.db
+                                .from('moves')
+                                .select('id, name, type, category, power, accuracy, pp')
+                                .in('id', savedMoveIds);
+                            if (moveDetails && moveDetails.length > 0) {
+                                const moveMap = {};
+                                moveDetails.forEach(m => { moveMap[m.id] = m; });
+                                pokemon.moves = row.moves.map(sm => {
+                                    const full = moveMap[Number(sm.id)];
+                                    if (!full) return null;
+                                    return {
+                                        id: full.id, name: full.name, type: full.type,
+                                        category: full.category || 'physical', power: full.power || 0,
+                                        accuracy: full.accuracy || 100, pp: full.pp || 35,
+                                        currentPp: sm.pp ?? full.pp ?? 35
+                                    };
+                                }).filter(Boolean);
+                            }
                         }
                     }
                     this.playerTeam.push(pokemon);
@@ -1228,10 +1245,27 @@ class PokeFuryGame {
         pokemon.fainted = pokemon.currentHp <= 0;
         pokemon.experience = boxData.experience;
         pokemon.statusEffect = boxData.status_effect || null;
-        if (boxData.moves && Array.isArray(boxData.moves)) {
-            for (const savedMove of boxData.moves) {
-                const move = pokemon.moves.find(m => m.id === savedMove.id || m.id === String(savedMove.id));
-                if (move && savedMove.pp !== undefined) move.currentPp = savedMove.pp;
+        if (boxData.moves && Array.isArray(boxData.moves) && boxData.moves.length > 0) {
+            const savedMoveIds = boxData.moves.map(m => Number(m.id)).filter(Boolean);
+            if (savedMoveIds.length > 0) {
+                const { data: moveDetails } = await window.db
+                    .from('moves')
+                    .select('id, name, type, category, power, accuracy, pp')
+                    .in('id', savedMoveIds);
+                if (moveDetails && moveDetails.length > 0) {
+                    const moveMap = {};
+                    moveDetails.forEach(m => { moveMap[m.id] = m; });
+                    pokemon.moves = boxData.moves.map(sm => {
+                        const full = moveMap[Number(sm.id)];
+                        if (!full) return null;
+                        return {
+                            id: full.id, name: full.name, type: full.type,
+                            category: full.category || 'physical', power: full.power || 0,
+                            accuracy: full.accuracy || 100, pp: full.pp || 35,
+                            currentPp: sm.pp ?? full.pp ?? 35
+                        };
+                    }).filter(Boolean);
+                }
             }
         }
 
