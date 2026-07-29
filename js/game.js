@@ -1706,8 +1706,8 @@ class PokeFuryGame {
     }
 
     renderPokedexTabs() {
-        const list = document.getElementById('pokedex-list');
-        const tabsHtml = `<div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid #21262d;position:sticky;top:0;background:#161b22;z-index:1">
+        const tabs = document.getElementById('pokedex-tabs');
+        tabs.innerHTML = `
             <button class="pokedex-tab active" data-filter="all">Todos</button>
             <button class="pokedex-tab" data-filter="normal">Normal</button>
             <button class="pokedex-tab" data-filter="mega">Mega</button>
@@ -1716,12 +1716,10 @@ class PokeFuryGame {
             <button class="pokedex-tab" data-filter="galar">Galar</button>
             <button class="pokedex-tab" data-filter="hisui">Hisui</button>
             <button class="pokedex-tab" data-filter="paldea">Paldea</button>
-        </div>`;
-        list.innerHTML = tabsHtml;
-
-        list.querySelectorAll('.pokedex-tab').forEach(tab => {
+        `;
+        tabs.querySelectorAll('.pokedex-tab').forEach(tab => {
             tab.onclick = () => {
-                list.querySelectorAll('.pokedex-tab').forEach(t => t.classList.remove('active'));
+                tabs.querySelectorAll('.pokedex-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 this._pokedexFilter = tab.dataset.filter;
                 this.filterPokedex();
@@ -1743,8 +1741,7 @@ class PokeFuryGame {
 
     renderPokedexList(pokemonList) {
         const list = document.getElementById('pokedex-list');
-        const tabsHtml = list.querySelector('div')?.outerHTML || '';
-        list.innerHTML = tabsHtml;
+        list.innerHTML = '';
         const variantColors = { mega: '#9c27b0', gmax: '#f44336', alola: '#2196f3', galar: '#ff9800', hisui: '#4caf50', paldea: '#00bcd4' };
         const variantLabels = { mega: 'MEGA', gmax: 'G-MAX', alola: 'ALOLA', galar: 'GALAR', hisui: 'HISUI', paldea: 'PALDEA' };
         pokemonList.forEach(p => {

@@ -12,8 +12,8 @@
     const VARIANTS = [
         // === MEGA EVOLUTIONS (custom IDs 10001-10046) ===
         {id:10001,name:'venusaur-mega',base:'venusaur',variant:'mega',baseId:3},
-        {id:10002,name:'charizard-megax',base:'charizard',variant:'mega',baseId:6},
-        {id:10003,name:'charizard-megay',base:'charizard',variant:'mega',baseId:6},
+        {id:10002,name:'charizard-mega-x',base:'charizard',variant:'mega',baseId:6},
+        {id:10003,name:'charizard-mega-y',base:'charizard',variant:'mega',baseId:6},
         {id:10004,name:'blastoise-mega',base:'blastoise',variant:'mega',baseId:9},
         {id:10005,name:'alakazam-mega',base:'alakazam',variant:'mega',baseId:65},
         {id:10006,name:'gengar-mega',base:'gengar',variant:'mega',baseId:94},
@@ -21,8 +21,8 @@
         {id:10008,name:'pinsir-mega',base:'pinsir',variant:'mega',baseId:127},
         {id:10009,name:'gyarados-mega',base:'gyarados',variant:'mega',baseId:130},
         {id:10010,name:'aerodactyl-mega',base:'aerodactyl',variant:'mega',baseId:142},
-        {id:10011,name:'mewtwo-megax',base:'mewtwo',variant:'mega',baseId:150},
-        {id:10012,name:'mewtwo-megay',base:'mewtwo',variant:'mega',baseId:150},
+        {id:10011,name:'mewtwo-mega-x',base:'mewtwo',variant:'mega',baseId:150},
+        {id:10012,name:'mewtwo-mega-y',base:'mewtwo',variant:'mega',baseId:150},
         {id:10013,name:'scizor-mega',base:'scizor',variant:'mega',baseId:212},
         {id:10014,name:'heracross-mega',base:'heracross',variant:'mega',baseId:214},
         {id:10015,name:'houndoom-mega',base:'houndoom',variant:'mega',baseId:229},
@@ -158,7 +158,7 @@
             const spriteOfficial = data.sprites.other?.['official-artwork']?.front_default || '';
             const spriteHome = data.sprites.other?.home?.front_default || '';
 
-            const { error } = await db.from('pokemon').insert({
+            const { error } = await db.from('pokemon').upsert({
                 id: v.id,
                 name: v.base.charAt(0).toUpperCase() + v.base.slice(1) + ` (${v.variant.charAt(0).toUpperCase() + v.variant.slice(1)})`,
                 types,
@@ -174,7 +174,7 @@
                 sprite_home: spriteHome,
                 variant: v.variant,
                 base_pokemon_id: v.baseId
-            });
+            }, { onConflict: 'id' });
 
             if (!error) { inserted++; console.log(`  ${v.name} ✓ (${types.join('/')})`); }
             else { errors++; console.error(`  ${v.name} ERROR:`, error.message); }
