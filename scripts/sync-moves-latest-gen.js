@@ -97,6 +97,20 @@ window.syncMovesLatestGen = async function() {
     // PHASE 2: FETCH MOVE LEARN DATA FOR ALL POKEMON
     // ============================================================
     console.log('[Sync] Phase 2: Fetching move learn data for all pokemon...');
+    const VG_ORDER = [
+        'red-blue','yellow','gold-silver','crystal',
+        'ruby-sapphire','emerald','firered-leafgreen',
+        'diamond-pearl','platinum','heartgold-soulsilver',
+        'black-white','black-2-white-2',
+        'x-y','omega-ruby-alpha-sapphire',
+        'sun-moon','ultra-sun-ultra-moon',
+        'lets-go-pikachu-lets-go-eevee',
+        'sword-shield','the-isle-of-armor','the-crown-tundra',
+        'brilliant-diamond-shining-pearl','legends-arceus',
+        'scarlet-violet','the-teal-mask','the-indigo-disk'
+    ];
+    function vgIndex(name) { const i = VG_ORDER.indexOf(name); return i >= 0 ? i : -1; }
+
     const allMoveRows = [];
     let processed = 0;
 
@@ -114,10 +128,9 @@ window.syncMovesLatestGen = async function() {
             const moveId = parseInt(m.move.url.split('/').filter(Boolean).pop());
             const details = m.version_group_details || [];
 
-            // Find the latest version group (latest generation)
             let bestDetail = null;
             for (const d of details) {
-                if (!bestDetail || d.version_group.name > bestDetail.version_group.name) {
+                if (!bestDetail || vgIndex(d.version_group.name) > vgIndex(bestDetail.version_group.name)) {
                     bestDetail = d;
                 }
             }
