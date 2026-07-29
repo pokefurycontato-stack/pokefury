@@ -31,6 +31,8 @@ class PokeFuryGame {
         this.overworld2d = null;
         this._starting = false;
         this.chat = new Chat();
+        this.trainerLevel = 1;
+        this.trainerExp = 0;
 
         this.regionManager = new RegionManager();
         this.currentRegion = null;
@@ -156,7 +158,64 @@ class PokeFuryGame {
         this.playerName = save.player_name || 'Treinador';
         this.playerGender = save.player_gender || 'male';
         this.avatarUrl = save.avatar_url || null;
+        this.trainerLevel = save.trainer_level || 1;
+        this.trainerExp = save.trainer_exp || 0;
         await this.startGame(save.starter_pokemon);
+    }
+
+    trainerExpForLevel(level) {
+        if (level >= 91) return 100000;
+        if (level >= 81) return 40000;
+        if (level >= 71) return 25000;
+        if (level >= 61) return 15000;
+        if (level >= 51) return 10000;
+        if (level >= 41) return 5000;
+        if (level >= 31) return 2000;
+        if (level >= 21) return 1000;
+        if (level >= 11) return 400;
+        if (level >= 7) return 200;
+        if (level >= 4) return 100;
+        if (level >= 2) return 50;
+        return 50;
+    }
+
+    async awardTrainerExp(amount) {
+        this.trainerExp += amount;
+        let leveled = false;
+        while (this.trainerLevel < 100 && this.trainerExp >= this.trainerExpForLevel(this.trainerLevel)) {
+            this.trainerExp -= this.trainerExpForLevel(this.trainerLevel);
+            this.trainerLevel++;
+            leveled = true;
+        }
+        if (this.trainerLevel >= 100) {
+            this.trainerLevel = 100;
+            this.trainerExp = 0;
+        }
+        this.updateTrainerLevelUI();
+        if (leveled) {
+            this.saveTrainerLevel();
+        } else {
+            this.saveTrainerExp();
+        }
+    }
+
+    updateTrainerLevelUI() {
+        const el = document.getElementById('profile-level');
+        if (el) el.textContent = `Nv. ${this.trainerLevel}`;
+    }
+
+    async saveTrainerLevel() {
+        if (!this.currentCharacterId || !window.db) return;
+        await window.db.from('game_saves')
+            .update({ trainer_level: this.trainerLevel, trainer_exp: this.trainerExp })
+            .eq('id', this.currentCharacterId);
+    }
+
+    async saveTrainerExp() {
+        if (!this.currentCharacterId || !window.db) return;
+        await window.db.from('game_saves')
+            .update({ trainer_exp: this.trainerExp })
+            .eq('id', this.currentCharacterId);
     }
 
     async startGame(starterSpecies) {
@@ -253,6 +312,7 @@ class PokeFuryGame {
         if (profileAvatarEl && this.avatarUrl) {
             profileAvatarEl.innerHTML = `<img src="${this.avatarUrl}" class="profile-avatar-img" alt="${this.playerName}">`;
         }
+        this.updateTrainerLevelUI();
 
         if (window.GameData.userId && !this.chat._initialized) {
             this.chat.init(window.GameData.userId, this.playerName);
@@ -871,6 +931,9 @@ class PokeFuryGame {
                 }
             }
             await this.checkEvolutions();
+            if (this.enemyTeam.length > 0) {
+                await this.awardTrainerExp(1);
+            }
         }
 
         if (result === 'lose' && this.playerTeam) {
