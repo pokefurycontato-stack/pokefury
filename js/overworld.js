@@ -85,9 +85,6 @@ export class Overworld2D {
         this.mapThumbnails = {};
         this.mapNavigatorRects = [];
 
-        this.borderImg = new Image();
-        this.borderImg.src = 'assets/bordas.png';
-
         this.init();
     }
 
@@ -110,36 +107,12 @@ export class Overworld2D {
             this.canvas.height = window.innerHeight - 48;
         }
 
-        if (!this.borderEl) {
-            this.borderEl = document.createElement('img');
-            this.borderEl.src = 'assets/bordas.png';
-            this.borderEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;object-fit:contain;';
-            this.canvas.parentElement.appendChild(this.borderEl);
-        }
-
-        const bw = 1920, bh = 1080;
-        const innerLeft = 68, innerTop = 63, innerW = 1784, innerH = 940;
-        const scale = Math.min(this.canvas.width / bw, this.canvas.height / bh);
-        const borderW = bw * scale;
-        const borderH = bh * scale;
-        const borderX = (this.canvas.width - borderW) / 2;
-        const borderY = (this.canvas.height - borderH) / 2;
-        const innerAreaX = borderX + innerLeft * scale;
-        const innerAreaY = borderY + innerTop * scale;
-        const innerAreaW = innerW * scale;
-        const innerAreaH = innerH * scale;
-
-        this.borderEl.style.left = borderX + 'px';
-        this.borderEl.style.top = borderY + 'px';
-        this.borderEl.style.width = borderW + 'px';
-        this.borderEl.style.height = borderH + 'px';
-
         this.tileW = 32;
         this.tileH = 32;
         const mapW = this.worldCols * this.tileW;
         const mapH = this.worldRows * this.tileH;
-        this.mapOffsetX = Math.floor((innerAreaW - mapW) / 2 + innerAreaX);
-        this.mapOffsetY = Math.floor((innerAreaH - mapH) / 2 + innerAreaY);
+        this.mapOffsetX = Math.max(0, Math.floor((this.canvas.width - mapW) / 2));
+        this.mapOffsetY = Math.max(0, Math.floor((this.canvas.height - mapH) / 2));
     }
 
     setupInput() {
@@ -699,7 +672,8 @@ export class Overworld2D {
 
         if (this.bgVideo.readyState >= 2) {
             ctx.drawImage(this.bgVideo, 0, 0, w, h);
-        } else if (this.wallpaperImg.complete && this.wallpaperImg.naturalWidth > 0) {
+            this._lastBgDrawn = 'video';
+        } else if (this._lastBgDrawn !== 'video' && this.wallpaperImg.complete && this.wallpaperImg.naturalWidth > 0) {
             ctx.drawImage(this.wallpaperImg, 0, 0, w, h);
         }
 
@@ -1039,12 +1013,10 @@ export class Overworld2D {
         if (!this.loaded) return;
         this.canvas.style.display = 'block';
         if (this.pokemonSpriteContainer) this.pokemonSpriteContainer.style.display = 'block';
-        if (this.borderEl) this.borderEl.style.display = 'block';
         this.resize();
     }
 
     hide() {
         if (this.pokemonSpriteContainer) this.pokemonSpriteContainer.style.display = 'none';
-        if (this.borderEl) this.borderEl.style.display = 'none';
     }
 }
