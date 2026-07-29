@@ -849,8 +849,11 @@ export class Overworld2D {
             sprite = this.playerSprites[this.player.direction];
         }
 
+        const playerSize = this.tileW * 1.3;
+        const playerOffset = (this.tileW - playerSize) / 2;
+
         if (sprite && sprite.complete) {
-            ctx.drawImage(sprite, drawX, drawY, this.tileW, this.tileH);
+            ctx.drawImage(sprite, drawX + playerOffset, drawY + playerOffset, playerSize, playerSize);
         } else {
             ctx.fillStyle = '#3498db';
             ctx.fillRect(drawX + 4, drawY + 4, this.tileW - 8, this.tileH - 8);
