@@ -593,10 +593,12 @@ class PokeFuryGame {
             if (caught) {
                 await showBattleMessage(`Capturou ${enemyPokemon.name}!`);
                 const added = await window.GameData.addPokemonToTeam(enemyPokemon);
-                if (added) {
+                if (added === 'team') {
                     await showBattleMessage(`${enemyPokemon.name} foi adicionado a equipe!`);
+                } else if (added === 'pc') {
+                    await showBattleMessage(`Equipe cheia! ${enemyPokemon.name} foi enviado ao PC Pokemon.`);
                 } else {
-                    await showBattleMessage('Equipe cheia! Pokemon perdido.');
+                    await showBattleMessage('Equipe cheia e PC lotado! Pokemon perdido.');
                 }
                 this.endBattle('win');
                 return;
@@ -1617,7 +1619,8 @@ class PokeFuryGame {
             const stats = calculateAllStats(pokemonData.baseStats, level, ivs, evs, nature);
 
             const { data: existingTeam } = await window.db.from('pokemon_team').select('slot').eq('character_id', this._donateSelectedChar.id).order('slot', { ascending: false }).limit(1);
-            const nextSlot = existingTeam && existingTeam.length > 0 ? existingTeam[0].slot + 1 : 1;
+            const teamCount = existingTeam && existingTeam.length > 0 ? existingTeam[0].slot : 0;
+            const nextSlot = teamCount + 1;
 
             const insertData = {
                 user_id: this._donateSelectedChar.user_id || this.userId,
@@ -1643,18 +1646,27 @@ class PokeFuryGame {
                 held_item_id: null
             };
 
-            const { error } = await window.db.from('pokemon_team').insert(insertData);
+            let donateError;
+            let donatedTo = 'equipe';
+            if (teamCount >= 6) {
+                const stored = await window.GameData.autoStoreRawPokemonToPC(insertData, this._donateSelectedChar.id);
+                if (!stored) donateError = { message: 'PC lotado!' };
+                donatedTo = 'PC Pokemon';
+            } else {
+                const { error } = await window.db.from('pokemon_team').insert(insertData);
+                donateError = error;
+            }
 
             const result = document.getElementById('donate-result');
             result.classList.remove('hidden');
-            if (error) {
+            if (donateError) {
                 result.style.background = 'rgba(244,67,54,0.2)';
                 result.style.color = '#f44336';
-                result.textContent = `Erro: ${error.message}`;
+                result.textContent = `Erro: ${donateError.message}`;
             } else {
                 result.style.background = 'rgba(76,175,80,0.2)';
                 result.style.color = '#4caf50';
-                result.textContent = `${pokemonData.name} Lv${level} doado para ${this._donateSelectedChar.player_name}!`;
+                result.textContent = `${pokemonData.name} Lv${level} doado para ${this._donateSelectedChar.player_name} (${donatedTo})!`;
                 this.selectDonateChar(this._donateSelectedChar);
             }
         };

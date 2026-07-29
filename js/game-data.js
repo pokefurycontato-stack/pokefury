@@ -139,7 +139,10 @@ const GameData = {
 
     async addPokemonToTeam(pokemon) {
         const team = await this.getTeam();
-        if (team.length >= 6) return false;
+        if (team.length >= 6) {
+            const pcResult = await this.autoStorePokemonToPC(pokemon);
+            return pcResult ? 'pc' : false;
+        }
 
         const { error } = await window.db
             .from('pokemon_team')
@@ -167,14 +170,70 @@ const GameData = {
                 ev_sp_atk: pokemon.evs?.spAtk ?? 0,
                 ev_sp_def: pokemon.evs?.spDef ?? 0,
                 ev_speed: pokemon.evs?.speed ?? 0,
-            nature: pokemon.nature || 'hardy',
-            status_effect: pokemon.statusEffect || null,
+                nature: pokemon.nature || 'hardy',
+                status_effect: pokemon.statusEffect || null,
                 happiness: pokemon.happiness ?? 70,
                 is_shiny: pokemon.isShiny || false,
                 is_mega: pokemon.isMega || false,
                 held_item_id: pokemon.heldItemId || null
             });
-        return !error;
+        return !error ? 'team' : false;
+    },
+
+    async autoStorePokemonToPC(pokemon) {
+        if (!this.currentCharacterId || !this.userId) return false;
+        for (let box = 1; box <= 20; box++) {
+            const boxPokemon = await this.getBoxPokemon(box);
+            for (let slot = 0; slot < 30; slot++) {
+                if (!boxPokemon.find(p => p.slot_index === slot)) {
+                    const { error } = await window.db
+                        .from('pokemon_pc')
+                        .insert({
+                            user_id: this.userId,
+                            character_id: this.currentCharacterId,
+                            box_number: box,
+                            slot_index: slot,
+                            species: pokemon.species,
+                            nickname: pokemon.nickname || pokemon.name,
+                            level: pokemon.level,
+                            current_hp: pokemon.currentHp,
+                            max_hp: pokemon.stats.hp,
+                            moves: pokemon.moves.map(m => ({ id: String(m.id), pp: m.currentPp })),
+                            pokemon_id: pokemon.id || null,
+                            iv_hp: pokemon.ivs?.hp ?? 15, iv_attack: pokemon.ivs?.attack ?? 15, iv_defense: pokemon.ivs?.defense ?? 15,
+                            iv_sp_atk: pokemon.ivs?.spAtk ?? 15, iv_sp_def: pokemon.ivs?.spDef ?? 15, iv_speed: pokemon.ivs?.speed ?? 15,
+                            ev_hp: pokemon.evs?.hp ?? 0, ev_attack: pokemon.evs?.attack ?? 0, ev_defense: pokemon.evs?.defense ?? 0,
+                            ev_sp_atk: pokemon.evs?.spAtk ?? 0, ev_sp_def: pokemon.evs?.spDef ?? 0, ev_speed: pokemon.evs?.speed ?? 0,
+                            nature: pokemon.nature || 'hardy',
+                            status_effect: pokemon.statusEffect || null,
+                            happiness: pokemon.happiness ?? 70,
+                            is_shiny: pokemon.isShiny || false,
+                            is_mega: pokemon.isMega || false,
+                            held_item_id: pokemon.heldItemId || null
+                        });
+                    if (!error) return { box, slot };
+                    return false;
+                }
+            }
+        }
+        return false;
+    },
+
+    async autoStoreRawPokemonToPC(insertData, characterId) {
+        if (!characterId || !this.userId) return false;
+        for (let box = 1; box <= 20; box++) {
+            const boxPokemon = await this.getBoxPokemon(box);
+            for (let slot = 0; slot < 30; slot++) {
+                if (!boxPokemon.find(p => p.slot_index === slot)) {
+                    const { error } = await window.db
+                        .from('pokemon_pc')
+                        .insert({ ...insertData, user_id: this.userId, character_id: characterId, box_number: box, slot_index: slot });
+                    if (!error) return true;
+                    return false;
+                }
+            }
+        }
+        return false;
     },
 
     async recordBattle(battleData) {
