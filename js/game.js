@@ -1006,7 +1006,7 @@ class PokeFuryGame {
                 const expPct = p.level >= 100 ? 100 : Math.max(0, Math.min(100, ((p.experience || 0) - expPrev) / (expNeeded - expPrev) * 100));
 
                 slot.innerHTML = `
-                    <div style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15)">
+                    <div onclick="event.stopPropagation();window.pokefury.openPokemonInfo(${i})" style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);cursor:pointer" title="Ver detalhes">
                         <img src="assets/pokeballsil.png" style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:22px;height:22px;opacity:0.3" alt="">
                         <img src="${spriteUrl}" style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:38px;height:38px;object-fit:contain" alt="${p.name}" onerror="this.style.display='none'">
                     </div>
@@ -1969,6 +1969,125 @@ class PokeFuryGame {
                         <div class="pokedex-info-title">Status Base</div>
                         ${statsHtml}
                     </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async openPokemonInfo(index) {
+        const p = this.playerTeam[index];
+        if (!p) return;
+
+        const popup = document.getElementById('pokemon-info-popup');
+        const content = document.getElementById('pokemon-info-content');
+        popup.classList.remove('hidden');
+
+        document.getElementById('pokemon-info-close').onclick = () => popup.classList.add('hidden');
+        popup.onclick = (e) => { if (e.target === popup) popup.classList.add('hidden'); };
+
+        const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+        const spriteAnimated = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front/${p.id}.gif`;
+
+        const typeColors = {
+            normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
+            grass: '#78C850', ice: '#98D8D8', fighting: '#C03028', poison: '#A040A0',
+            ground: '#E0C068', flying: '#A890F0', psychic: '#F85888', bug: '#A8B820',
+            rock: '#B8A038', ghost: '#705898', dragon: '#7038F8', dark: '#705848',
+            steel: '#B8B8D0', fairy: '#EE99AC'
+        };
+
+        const typesHtml = (p.types || []).map(t =>
+            `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;background:${typeColors[t] || '#68a090'}">${t.toUpperCase()}</span>`
+        ).join(' ');
+
+        const natureNames = {
+            hardy: 'Hardy', lonely: 'Lonely', brave: 'Brave', adamant: 'Adamant', naughty: 'Naughty',
+            bold: 'Bold', relaxed: 'Relaxed', impish: 'Impish', lax: 'Lax', quiet: 'Quiet',
+            modest: 'Modest', mild: 'Mild', rash: 'Rash', calm: 'Calm', gentle: 'Gentle',
+            sassy: 'Sassy', careful: 'Careful', quirky: 'Quirky', serious: 'Serious', jolly: 'Jolly',
+            naive: 'Naive', timid: 'Timid', hasty: 'Hasty', bold: 'Bold', impish: 'Impish'
+        };
+
+        content.innerHTML = `
+            <div style="text-align:center;margin-bottom:12px">
+                <img src="${spriteAnimated}" style="width:120px;height:120px;image-rendering:pixelated" onerror="this.src='${spriteUrl}';this.style.width='100px';this.style.height='100px'">
+                <div style="margin-top:8px">${typesHtml}</div>
+            </div>
+            <div style="text-align:center;margin-bottom:12px">
+                <div style="font-size:18px;font-weight:700;color:#fff">${p.name}</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4)">#${String(p.id).padStart(3, '0')}</div>
+            </div>
+            <div id="pokemon-info-extra"><div style="color:rgba(255,255,255,0.3);text-align:center;padding:10px">Carregando...</div></div>
+        `;
+
+        let height = '?', weight = '?', genderRate = '?';
+        try {
+            const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${p.id}`);
+            if (resp.ok) {
+                const pData = await resp.json();
+                height = `${(pData.height / 10).toFixed(1)} m`;
+                weight = `${(pData.weight / 10).toFixed(1)} kg`;
+            }
+        } catch (e) {}
+        try {
+            const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${p.id}`);
+            if (resp.ok) {
+                const sData = await resp.json();
+                const gr = sData.gender_rate;
+                if (gr === -1) genderRate = 'Sem gênero';
+                else { const f = (gr / 8) * 100; genderRate = `♂ ${100 - f}% / ♀ ${f}%`; }
+            }
+        } catch (e) {}
+
+        const ivTotal = (p.ivs?.hp || 0) + (p.ivs?.attack || 0) + (p.ivs?.defense || 0) + (p.ivs?.spAtk || 0) + (p.ivs?.spDef || 0) + (p.ivs?.speed || 0);
+        const evTotal = (p.evs?.hp || 0) + (p.evs?.attack || 0) + (p.evs?.defense || 0) + (p.evs?.spAtk || 0) + (p.evs?.spDef || 0) + (p.evs?.speed || 0);
+
+        const makeBar = (val, max, color) => `<div style="display:flex;align-items:center;gap:6px"><span style="min-width:24px;text-align:right;font-size:11px;color:#c9d1d9;font-weight:500">${val}</span><div style="flex:1;height:5px;background:#21262d;border-radius:3px;overflow:hidden"><div style="height:100%;width:${(val / max) * 100}%;background:${color};border-radius:3px"></div></div></div>`;
+
+        const extra = document.getElementById('pokemon-info-extra');
+        extra.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                <div style="background:#0d1117;border-radius:6px;padding:8px">
+                    <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Natureza</div>
+                    <div style="font-size:13px;color:#c9d1d9;font-weight:500">${p.nature || 'Hardy'}</div>
+                </div>
+                <div style="background:#0d1117;border-radius:6px;padding:8px">
+                    <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Gênero</div>
+                    <div style="font-size:13px;color:#c9d1d9;font-weight:500">${genderRate}</div>
+                </div>
+                <div style="background:#0d1117;border-radius:6px;padding:8px">
+                    <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Tamanho</div>
+                    <div style="font-size:13px;color:#c9d1d9;font-weight:500">${height}</div>
+                </div>
+                <div style="background:#0d1117;border-radius:6px;padding:8px">
+                    <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Peso</div>
+                    <div style="font-size:13px;color:#c9d1d9;font-weight:500">${weight}</div>
+                </div>
+            </div>
+            <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:12px">
+                <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">Poder Total</div>
+                <div style="font-size:20px;font-weight:700;color:#58a6ff">0</div>
+            </div>
+            <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:8px">
+                <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">IVs (Total: ${ivTotal})</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">HP</span>${makeBar(p.ivs?.hp || 0, 31, '#4caf50')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Ataque</span>${makeBar(p.ivs?.attack || 0, 31, '#f44336')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Defesa</span>${makeBar(p.ivs?.defense || 0, 31, '#2196f3')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Sp.Atk</span>${makeBar(p.ivs?.spAtk || 0, 31, '#9c27b0')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Sp.Def</span>${makeBar(p.ivs?.spDef || 0, 31, '#00bcd4')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Velocidade</span>${makeBar(p.ivs?.speed || 0, 31, '#ff9800')}</div>
+                </div>
+            </div>
+            <div style="background:#0d1117;border-radius:6px;padding:8px">
+                <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">EVs (Total: ${evTotal})</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">HP</span>${makeBar(p.evs?.hp || 0, 252, '#4caf50')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Ataque</span>${makeBar(p.evs?.attack || 0, 252, '#f44336')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Defesa</span>${makeBar(p.evs?.defense || 0, 252, '#2196f3')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Sp.Atk</span>${makeBar(p.evs?.spAtk || 0, 252, '#9c27b0')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Sp.Def</span>${makeBar(p.evs?.spDef || 0, 252, '#00bcd4')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Velocidade</span>${makeBar(p.evs?.speed || 0, 252, '#ff9800')}</div>
                 </div>
             </div>
         `;

@@ -620,6 +620,13 @@
     })();
     </script>
 
+    <div id="pokemon-info-popup" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:950;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7)">
+        <div id="pokemon-info-box" style="background:#161b22;border:1px solid #30363d;border-radius:12px;width:340px;max-height:85vh;overflow-y:auto;padding:16px;position:relative">
+            <button id="pokemon-info-close" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#f44336;font-size:18px;cursor:pointer;z-index:1">✕</button>
+            <div id="pokemon-info-content"></div>
+        </div>
+    </div>
+
     <div id="pokedex-overlay" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;display:flex;flex-direction:column">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
             <div style="display:flex;align-items:center;gap:12px">
