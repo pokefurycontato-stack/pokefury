@@ -126,7 +126,7 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         shinySpriteUrls: apiData.shinySpriteUrls,
         type: apiData.types[0],
         fainted: false,
-        experience: expForLevel(1) + (level - 1) * 50,
+        experience: 0,
         statusEffect: null,
         _statStages: { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 }
     };
@@ -358,6 +358,7 @@ export function awardExp(team, enemyLevel, activePokemon) {
         while (p.level < 100) {
             const needed = expForLevel(p.level + 1);
             if (p.experience >= needed) {
+                p.experience = p.experience - needed;
                 p.level++;
                 const oldMaxHp = p.stats.hp;
                 recalculateStats(p, p.baseStats || p.stats);

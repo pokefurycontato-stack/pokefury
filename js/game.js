@@ -182,7 +182,7 @@ class PokeFuryGame {
                     }, row.nature, row.is_shiny);
                     pokemon.currentHp = row.current_hp != null ? row.current_hp : pokemon.stats.hp;
                     pokemon.fainted = pokemon.currentHp <= 0;
-                    pokemon.experience = row.experience || expForLevel(row.level);
+                    pokemon.experience = row.experience || 0;
                     pokemon.happiness = row.happiness ?? 70;
                     pokemon.isMega = row.is_mega || false;
                     pokemon.heldItemId = row.held_item_id || null;
@@ -1025,8 +1025,7 @@ class PokeFuryGame {
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
                 const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
                 const expNeeded = expForLevel(p.level + 1);
-                const expPrev = expForLevel(p.level);
-                const expPct = p.level >= 100 ? 100 : Math.max(0, Math.min(100, ((p.experience || 0) - expPrev) / (expNeeded - expPrev) * 100));
+                const expPct = p.level >= 100 ? 100 : Math.max(0, Math.min(100, ((p.experience || 0) / expNeeded) * 100));
 
                 slot.innerHTML = `
                     <div onclick="event.stopPropagation();window.pokefury.openPokemonInfo(${i})" style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);cursor:pointer" title="Ver detalhes">
@@ -1398,8 +1397,7 @@ class PokeFuryGame {
                 const spriteUrl = pokeData ? (pokeData.spriteUrls.front || pokeData.spriteUrls.home || '') : '';
                 const hpPct = p.max_hp > 0 ? ((p.current_hp / p.max_hp) * 100) : 0;
                 const expForNext = Math.floor(Math.pow(p.level + 1, 3) * 0.8);
-                const expForPrev = Math.floor(Math.pow(p.level, 3) * 0.8);
-                const expPct = p.level >= 100 ? 100 : Math.max(0, Math.min(100, ((p.experience || 0) - expForPrev) / (expForNext - expForPrev) * 100));
+                const expPct = p.level >= 100 ? 100 : Math.max(0, Math.min(100, ((p.experience || 0) / expForNext) * 100));
 
                 const card = document.createElement('div');
                 card.style.cssText = 'background:#0d1117;border-radius:8px;padding:8px;width:140px;border:1px solid rgba(255,255,255,0.08)';
