@@ -1874,64 +1874,55 @@ class PokeFuryGame {
 
         let evolutionsHtml = '';
         try {
-            const { data: evos } = await window.db.from('pokemon_evolutions').select('*').eq('from_pokemon_id', pokemon.id);
-            if (evos && evos.length > 0) {
-                const evoItems = await window.db.from('items').select('id, name').in('id', evos.filter(e => e.evolution_value && !isNaN(e.evolution_value)).map(e => parseInt(e.evolution_value)).filter(Boolean));
-                const itemMap = {};
-                if (evoItems.data) evoItems.data.forEach(i => { itemMap[i.id] = i.name; });
-
-                const evoParts = await Promise.all(evos.map(async evo => {
-                    const { data: toPoke } = await window.db.from('pokemon').select('id, name').eq('id', evo.to_pokemon_id).single();
-                    if (!toPoke) return null;
-                    let method = '';
-                    if (evo.evolution_method === 'level') method = `Nível ${evo.min_level || '?'}`;
-                    else if (evo.evolution_method === 'stone') {
-                        const stoneName = itemMap[parseInt(evo.evolution_value)] || evo.evolution_value || 'Pedra';
-                        method = stoneName;
+            const { data: evoCheck } = await window.db.from('pokemon_evolutions').select('id').limit(1);
+            if (evoCheck) {
+                let chain = [pokemon.id];
+                let curId = pokemon.id;
+                for (let i = 0; i < 10; i++) {
+                    const { data: prev } = await window.db.from('pokemon_evolutions').select('from_pokemon_id').eq('to_pokemon_id', curId);
+                    if (prev && prev.length > 0) { curId = prev[0].from_pokemon_id; chain.unshift(curId); }
+                    else break;
+                }
+                curId = pokemon.id;
+                for (let i = 0; i < 10; i++) {
+                    const { data: next } = await window.db.from('pokemon_evolutions').select('to_pokemon_id, evolution_method, evolution_value, min_level, min_happiness, held_item').eq('from_pokemon_id', curId);
+                    if (next && next.length > 0) {
+                        for (const evo of next) { chain.push(evo.to_pokemon_id); }
+                        curId = next[0].to_pokemon_id;
+                    } else break;
+                }
+                if (chain.length > 1) {
+                    const parts = [];
+                    for (let i = 0; i < chain.length; i++) {
+                        const { data: poke } = await window.db.from('pokemon').select('id, name').eq('id', chain[i]).single();
+                        if (!poke) continue;
+                        if (i > 0) {
+                            const { data: evoRow } = await window.db.from('pokemon_evolutions').select('evolution_method, evolution_value, min_level, min_happiness').eq('from_pokemon_id', chain[i-1]).eq('to_pokemon_id', chain[i]).single();
+                            let method = '';
+                            if (evoRow) {
+                                if (evoRow.evolution_method === 'level-up' || evoRow.evolution_method === 'level') method = `Nv.${evoRow.min_level || '?'}`;
+                                else if (evoRow.evolution_method === 'use-item') { const it = await window.db.from('items').select('name').eq('id', parseInt(evoRow.evolution_value)).single(); method = it?.data?.name || evoRow.evolution_value || '?'; }
+                                else if (evoRow.evolution_method === 'happiness') method = 'Felicidade';
+                                else if (evoRow.evolution_method === 'trade') method = 'Troca';
+                                else method = evoRow.evolution_method || '?';
+                            }
+                            parts.push(`<span class="pokedex-evo-arrow">${method} →</span>`);
+                        }
+                        const sprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${poke.id}.png`;
+                        const isCurrent = poke.id === pokemon.id;
+                        const style = isCurrent ? 'border:2px solid #4caf50;background:#1a3a1a' : 'background:#1c2333';
+                        parts.push(`<div class="pokedex-evo-pokemon" style="${style}" onclick="window.pokefury.selectPokedexPokemon(${poke.id})">
+                            <img src="${sprite}" onerror="this.style.display='none'">
+                            <span>${poke.name}</span>
+                        </div>`);
                     }
-                    else if (evo.evolution_method === 'happiness') method = `Felicidade ${evo.min_happiness || '?'}`;
-                    else if (evo.evolution_method === 'trade') method = 'Troca';
-                    else method = evo.evolution_method || '?';
-
-                    const sprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${toPoke.id}.png`;
-                    return `<div class="pokedex-evo-pokemon" onclick="window.pokefury.selectPokedexPokemon(${toPoke.id})">
-                        <img src="${sprite}" onerror="this.style.display='none'">
-                        <span>${toPoke.name}</span>
-                        <span style="font-size:9px;color:rgba(255,255,255,0.4)">${method}</span>
-                    </div>`;
-                }));
-                const validParts = evoParts.filter(Boolean);
-                if (validParts.length > 0) {
                     evolutionsHtml = `<div class="pokedex-info-block">
                         <div class="pokedex-info-title">Evoluções</div>
-                        <div class="pokedex-evo-chain">${validParts.join('<span class="pokedex-evo-arrow">→</span>')}</div>
+                        <div class="pokedex-evo-chain">${parts.join('')}</div>
                     </div>`;
                 }
             }
-
-            const { data: prevEvo } = await window.db.from('pokemon_evolutions').select('from_pokemon_id').eq('to_pokemon_id', pokemon.id).single();
-            if (prevEvo) {
-                const { data: fromPoke } = await window.db.from('pokemon').select('id, name').eq('id', prevEvo.from_pokemon_id).single();
-                if (fromPoke) {
-                    const prevSprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${fromPoke.id}.png`;
-                    evolutionsHtml = `<div class="pokedex-info-block">
-                        <div class="pokedex-info-title">Evoluções</div>
-                        <div class="pokedex-evo-chain">
-                            <div class="pokedex-evo-pokemon" onclick="window.pokefury.selectPokedexPokemon(${fromPoke.id})">
-                                <img src="${prevSprite}" onerror="this.style.display='none'">
-                                <span>${fromPoke.name}</span>
-                            </div>
-                            <span class="pokedex-evo-arrow">→</span>
-                            <div class="pokedex-evo-pokemon" style="background:#1c2333;border:1px solid #30363d">
-                                <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${pokemon.id}.png" onerror="this.style.display='none'">
-                                <span>${pokemon.name}</span>
-                            </div>
-                            ${evolutionsHtml}
-                        </div>
-                    </div>`;
-                }
-            }
-        } catch (e) {}
+        } catch (e) { console.warn('[Pokedex] Evolutions error:', e.message); }
 
         let locationsHtml = '';
         try {
