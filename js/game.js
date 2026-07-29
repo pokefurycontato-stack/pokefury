@@ -1686,7 +1686,9 @@ class PokeFuryGame {
         list.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.4);text-align:center">Carregando Pokédex...</div>';
 
         try {
-            const { data } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id');
+            const { data, error } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id');
+            if (error) console.error('[Pokedex] Query error:', error);
+            console.log(`[Pokedex] Loaded ${data?.length || 0} pokemon, variants: ${data?.filter(p => p.variant && p.variant !== 'normal').length || 0}`);
             if (data) {
                 this._pokedexPokemon = data;
                 this._pokedexFilter = 'all';
@@ -1701,6 +1703,17 @@ class PokeFuryGame {
         const searchInput = document.getElementById('pokedex-search');
         searchInput.value = '';
         searchInput.oninput = () => this.filterPokedex();
+
+        window._pokedexDiag = async () => {
+            const { data, error } = await window.db.from('pokemon').select('id, name, variant').order('id');
+            if (error) { console.error('DIAG ERROR:', error); return; }
+            const variants = (data || []).filter(p => p.variant && p.variant !== 'normal');
+            console.log(`[DIAG] Total rows: ${data?.length}, Variants: ${variants.length}`);
+            console.log('[DIAG] First 5 variants:', variants.slice(0, 5));
+            const { data: v2 } = await window.db.from('pokemon').select('id, name, variant').eq('variant', 'mega').limit(5);
+            console.log('[DIAG] Mega query result:', v2);
+        };
+        console.log('[Pokedex] Type _pokedexDiag() in console to run diagnostics');
     }
 
     renderPokedexTabs() {
@@ -1728,6 +1741,7 @@ class PokeFuryGame {
     filterPokedex() {
         const q = (document.getElementById('pokedex-search')?.value || '').toLowerCase().trim();
         let filtered = this._pokedexPokemon || [];
+        console.log(`[Pokedex] Filter: ${this._pokedexFilter}, total: ${filtered.length}, variant matches: ${filtered.filter(p => p.variant === this._pokedexFilter).length}`);
         if (this._pokedexFilter && this._pokedexFilter !== 'all') {
             filtered = filtered.filter(p => p.variant === this._pokedexFilter);
         }
