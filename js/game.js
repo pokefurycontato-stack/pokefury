@@ -1728,6 +1728,7 @@ class PokeFuryGame {
             <button class="pokedex-tab" data-filter="galar">Galar</button>
             <button class="pokedex-tab" data-filter="hisui">Hisui</button>
             <button class="pokedex-tab" data-filter="paldea">Paldea</button>
+            <button class="pokedex-tab" data-filter="form">Formas</button>
         `;
         tabs.querySelectorAll('.pokedex-tab').forEach(tab => {
             tab.onclick = () => {
@@ -1755,8 +1756,8 @@ class PokeFuryGame {
     renderPokedexList(pokemonList) {
         const list = document.getElementById('pokedex-list');
         list.innerHTML = '';
-        const variantColors = { mega: '#9c27b0', gmax: '#f44336', alola: '#2196f3', galar: '#ff9800', hisui: '#4caf50', paldea: '#00bcd4' };
-        const variantLabels = { mega: 'MEGA', gmax: 'G-MAX', alola: 'ALOLA', galar: 'GALAR', hisui: 'HISUI', paldea: 'PALDEA' };
+        const variantColors = { mega: '#9c27b0', gmax: '#f44336', alola: '#2196f3', galar: '#ff9800', hisui: '#4caf50', paldea: '#00bcd4', form: '#e91e63' };
+        const variantLabels = { mega: 'MEGA', gmax: 'G-MAX', alola: 'ALOLA', galar: 'GALAR', hisui: 'HISUI', paldea: 'PALDEA', form: 'FORMA' };
         pokemonList.forEach(p => {
             const item = document.createElement('div');
             item.className = 'pokedex-item' + (this._pokedexSelected === p.id ? ' active' : '');
