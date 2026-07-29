@@ -101,13 +101,13 @@ class PokeFuryGame {
         if (pcClose) {
             pcClose.addEventListener('click', () => this.closePC());
         }
-        const pcPrev = document.getElementById('pc-prev');
-        if (pcPrev) {
-            pcPrev.addEventListener('click', () => this.navigatePC(-1));
+        const pcArrowLeft = document.getElementById('pc-arrow-left');
+        if (pcArrowLeft) {
+            pcArrowLeft.addEventListener('click', () => this.navigatePC(-1));
         }
-        const pcNext = document.getElementById('pc-next');
-        if (pcNext) {
-            pcNext.addEventListener('click', () => this.navigatePC(1));
+        const pcArrowRight = document.getElementById('pc-arrow-right');
+        if (pcArrowRight) {
+            pcArrowRight.addEventListener('click', () => this.navigatePC(1));
         }
 
         const logoutBtn = document.getElementById('btn-logout');
@@ -1121,7 +1121,7 @@ class PokeFuryGame {
 
         for (let i = 0; i < 30; i++) {
             const slot = document.createElement('div');
-            slot.style.cssText = 'border-radius:4px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s,transform 0.15s;position:relative;min-height:0;overflow:hidden;';
+            slot.style.cssText = 'border-radius:3px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s,transform 0.15s;position:relative;min-height:0;overflow:hidden;';
             slot.dataset.slot = i;
 
             const p = boxMap[i];
