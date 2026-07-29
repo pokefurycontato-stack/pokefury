@@ -743,11 +743,9 @@ export class Overworld2D {
             const drawX = p.x * this.tileW - this.camera.x + this.mapOffsetX;
             const drawY = p.y * this.tileH - this.camera.y + this.mapOffsetY;
 
-            // Efeito de balanço (Bobbing) preservado
-            const bobY = Math.sin(Date.now() / 400 + p.x * 3 + p.y * 7) * 3;
             const spriteSize = this.tileW * 1.4;
 
-            const finalY = drawY - this.tileH * 0.4 + bobY;
+            const finalY = drawY - this.tileH * 0.4;
 
             if (drawX + spriteSize < -50 || drawX > this.canvas.width + 50 ||
                 finalY + spriteSize < -50 || finalY > this.canvas.height + 50) {
