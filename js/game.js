@@ -1686,10 +1686,11 @@ class PokeFuryGame {
         list.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.4);text-align:center">Carregando Pokédex...</div>';
 
         try {
-            const { data, error } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id').range(0, 9999);
-            if (error) console.error('[Pokedex] Query error:', error);
-            console.log(`[Pokedex] Loaded ${data?.length || 0} pokemon, variants: ${data?.filter(p => p.variant && p.variant !== 'normal').length || 0}`);
-            if (data) {
+            const { data: baseData } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').lte('id', 1025).order('id');
+            const { data: variantData } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').gt('id', 1025).order('id');
+            const data = [...(baseData || []), ...(variantData || [])];
+            console.log(`[Pokedex] Loaded ${data.length} pokemon (${baseData?.length || 0} base + ${variantData?.length || 0} variants)`);
+            if (data.length > 0) {
                 this._pokedexPokemon = data;
                 this._pokedexFilter = 'all';
                 this.renderPokedexTabs();
