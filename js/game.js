@@ -92,6 +92,24 @@ class PokeFuryGame {
             });
         });
 
+        const pcBtn = document.getElementById('btn-pc-pokemon');
+        if (pcBtn) {
+            pcBtn.addEventListener('click', () => this.openPC());
+        }
+
+        const pcClose = document.getElementById('pc-close');
+        if (pcClose) {
+            pcClose.addEventListener('click', () => this.closePC());
+        }
+        const pcPrev = document.getElementById('pc-prev');
+        if (pcPrev) {
+            pcPrev.addEventListener('click', () => this.navigatePC(-1));
+        }
+        const pcNext = document.getElementById('pc-next');
+        if (pcNext) {
+            pcNext.addEventListener('click', () => this.navigatePC(1));
+        }
+
         const logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
@@ -1067,6 +1085,158 @@ class PokeFuryGame {
         this.playerTeam.splice(newIndex, 0, pokemon);
         this.saveTeam();
         this.updatePartyPanel();
+    }
+
+    openPC() {
+        this._pcBox = 1;
+        this._pcOpen = true;
+        document.getElementById('pc-overlay').classList.remove('hidden');
+        if (this.overworld2d) this.overworld2d.hide();
+        this.renderPCBox();
+    }
+
+    closePC() {
+        this._pcOpen = false;
+        document.getElementById('pc-overlay').classList.add('hidden');
+        if (this.overworld2d) this.overworld2d.show();
+    }
+
+    navigatePC(dir) {
+        this._pcBox = Math.max(1, Math.min(20, this._pcBox + dir));
+        this.renderPCBox();
+    }
+
+    async renderPCBox() {
+        const boxNum = this._pcBox;
+        document.getElementById('pc-box-name').textContent = `Box ${boxNum}`;
+        const slotsContainer = document.getElementById('pc-slots');
+        slotsContainer.innerHTML = '';
+
+        const boxPokemon = await window.GameData.getBoxPokemon(boxNum);
+        const countEl = document.getElementById('pc-header').querySelector('div:last-child');
+        if (countEl) countEl.textContent = `${boxPokemon.length}/30 Pokemon`;
+
+        const boxMap = {};
+        boxPokemon.forEach(p => { boxMap[p.slot_index] = p; });
+
+        for (let i = 0; i < 30; i++) {
+            const slot = document.createElement('div');
+            slot.style.cssText = 'border-radius:4px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s,transform 0.15s;position:relative;min-height:0;overflow:hidden;';
+            slot.dataset.slot = i;
+
+            const p = boxMap[i];
+            if (p) {
+                const pokeData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
+                const spriteUrl = pokeData?.spriteUrls?.front || pokeData?.spriteUrls?.home || '';
+                slot.innerHTML = `<img src="${spriteUrl}" style="width:80%;height:80%;object-fit:contain;" alt="${p.nickname || p.species}" onerror="this.style.display='none'">`;
+                slot.title = `${p.nickname || p.species} Lv.${p.level}`;
+                slot.style.borderColor = p.is_shiny ? '#ffd700' : 'rgba(255,255,255,0.2)';
+
+                slot.onclick = () => this.withdrawFromPC(p);
+
+                slot.ondragover = (e) => { e.preventDefault(); slot.style.background = 'rgba(233,69,96,0.3)'; };
+                slot.ondragleave = () => { slot.style.background = 'rgba(0,0,0,0.4)'; };
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    slot.style.background = 'rgba(0,0,0,0.4)';
+                    const partyIndex = parseInt(e.dataTransfer.getData('text/party-index'));
+                    if (!isNaN(partyIndex)) {
+                        this.storeToPC(partyIndex, boxNum, i);
+                    }
+                };
+            } else {
+                slot.innerHTML = '<div style="width:60%;height:60%;border:1px dashed rgba(255,255,255,0.15);border-radius:4px;"></div>';
+                slot.ondragover = (e) => { e.preventDefault(); slot.style.background = 'rgba(76,175,80,0.2)'; };
+                slot.ondragleave = () => { slot.style.background = 'rgba(0,0,0,0.4)'; };
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    slot.style.background = 'rgba(0,0,0,0.4)';
+                    const partyIndex = parseInt(e.dataTransfer.getData('text/party-index'));
+                    if (!isNaN(partyIndex)) {
+                        this.storeToPC(partyIndex, boxNum, i);
+                    }
+                };
+            }
+
+            slot.onmouseenter = () => { slot.style.transform = 'scale(1.05)'; };
+            slot.onmouseleave = () => { slot.style.transform = ''; };
+            slotsContainer.appendChild(slot);
+        }
+
+        this.renderPCPartyBar();
+    }
+
+    async renderPCPartyBar() {
+        const bar = document.getElementById('pc-party-bar');
+        bar.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+            const p = this.playerTeam[i];
+            if (!p) continue;
+            const slot = document.createElement('div');
+            slot.draggable = true;
+            slot.dataset.partyIndex = i;
+            slot.style.cssText = 'width:48px;height:48px;border-radius:6px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:grab;transition:transform 0.15s,opacity 0.15s;position:relative;';
+            if (p.fainted) slot.style.opacity = '0.4';
+
+            const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+            slot.innerHTML = `<img src="${spriteUrl}" style="width:80%;height:80%;object-fit:contain;" alt="${p.name}" onerror="this.style.display='none'">`;
+            slot.title = `${p.name} Lv.${p.level} - Arraste para a box`;
+
+            slot.ondragstart = (e) => {
+                e.dataTransfer.setData('text/party-index', i);
+                e.dataTransfer.effectAllowed = 'move';
+                slot.style.opacity = '0.4';
+            };
+            slot.ondragend = () => { slot.style.opacity = p.fainted ? '0.4' : '1'; };
+            slot.onmouseenter = () => { slot.style.transform = 'scale(1.1)'; };
+            slot.onmouseleave = () => { slot.style.transform = ''; };
+            bar.appendChild(slot);
+        }
+    }
+
+    async storeToPC(partyIndex, boxNumber, slotIndex) {
+        const pokemon = this.playerTeam[partyIndex];
+        if (!pokemon) return;
+        const success = await window.GameData.storePokemon(pokemon, boxNumber, slotIndex);
+        if (success) {
+            this.playerTeam.splice(partyIndex, 1);
+            await this.saveTeam();
+            this.updatePartyPanel();
+            this.renderPCBox();
+        }
+    }
+
+    async withdrawFromPC(boxData) {
+        if (this.playerTeam.length >= 6) {
+            this.showTransitionBanner('Time cheio! Máximo 6 Pokemon.');
+            return;
+        }
+        const pokemonData = await PokeAPI.ensurePokemon(boxData.pokemon_id || boxData.species);
+        if (!pokemonData) return;
+        const pokemon = await createPokemon(pokemonData, boxData.level, {
+            hp: boxData.iv_hp, attack: boxData.iv_attack, defense: boxData.iv_defense,
+            spAtk: boxData.iv_sp_atk, spDef: boxData.iv_sp_def, speed: boxData.iv_speed
+        }, {
+            hp: boxData.ev_hp, attack: boxData.ev_attack, defense: boxData.ev_defense,
+            spAtk: boxData.ev_sp_atk, spDef: boxData.ev_sp_def, speed: boxData.ev_speed
+        }, boxData.nature, boxData.is_shiny);
+
+        pokemon.currentHp = boxData.current_hp;
+        pokemon.fainted = pokemon.currentHp <= 0;
+        pokemon.experience = boxData.experience;
+        pokemon.statusEffect = boxData.status_effect || null;
+        if (boxData.moves && Array.isArray(boxData.moves)) {
+            for (const savedMove of boxData.moves) {
+                const move = pokemon.moves.find(m => m.id === savedMove.id || m.id === String(savedMove.id));
+                if (move && savedMove.pp !== undefined) move.currentPp = savedMove.pp;
+            }
+        }
+
+        await window.GameData.deleteBoxPokemon(boxData.id);
+        this.playerTeam.push(pokemon);
+        await this.saveTeam();
+        this.updatePartyPanel();
+        this.renderPCBox();
     }
 
     switchCharacter() {
