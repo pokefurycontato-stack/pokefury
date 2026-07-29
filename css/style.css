@@ -837,6 +837,23 @@ body {
 
 /* ===== PARTY PANEL ===== */
 #party-panel {
+    box-shadow:
+        0 0 8px var(--neon-color, #00ff88),
+        0 0 16px var(--neon-dim, rgba(0,255,136,0.3));
+    animation: panelNeonPulse 2s ease-in-out infinite;
+}
+@keyframes panelNeonPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 8px var(--neon-color, #00ff88),
+            0 0 16px var(--neon-dim, rgba(0,255,136,0.3));
+    }
+    50% {
+        box-shadow:
+            0 0 14px var(--neon-color, #00ff88),
+            0 0 28px var(--neon-dim, rgba(0,255,136,0.4));
+    }
+}
     position: absolute;
     top: 50%;
     left: 12px;
