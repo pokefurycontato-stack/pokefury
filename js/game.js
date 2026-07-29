@@ -202,6 +202,12 @@ class PokeFuryGame {
     updateTrainerLevelUI() {
         const el = document.getElementById('profile-level');
         if (el) el.textContent = `Nv. ${this.trainerLevel}`;
+        const fill = document.getElementById('trainer-exp-fill');
+        if (fill) {
+            const needed = this.trainerExpForLevel(this.trainerLevel);
+            const pct = this.trainerLevel >= 100 ? 100 : Math.min(100, (this.trainerExp / needed) * 100);
+            fill.style.width = pct + '%';
+        }
     }
 
     async saveTrainerLevel() {
