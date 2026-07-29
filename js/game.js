@@ -1686,7 +1686,7 @@ class PokeFuryGame {
         list.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.4);text-align:center">Carregando Pokédex...</div>';
 
         try {
-            const { data, error } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id');
+            const { data, error } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id').range(0, 9999);
             if (error) console.error('[Pokedex] Query error:', error);
             console.log(`[Pokedex] Loaded ${data?.length || 0} pokemon, variants: ${data?.filter(p => p.variant && p.variant !== 'normal').length || 0}`);
             if (data) {
