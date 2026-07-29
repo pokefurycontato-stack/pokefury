@@ -1679,25 +1679,23 @@ class PokeFuryGame {
 
         document.getElementById('pokedex-close').onclick = () => overlay.classList.add('hidden');
 
-        if (!this._pokedexLoaded) {
-            this._pokedexLoaded = true;
-            this._pokedexPokemon = [];
-            this._pokedexSelected = null;
-            const list = document.getElementById('pokedex-list');
-            list.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.4);text-align:center">Carregando Pokédex...</div>';
+        this._pokedexLoaded = false;
+        this._pokedexPokemon = [];
+        this._pokedexSelected = null;
+        const list = document.getElementById('pokedex-list');
+        list.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.4);text-align:center">Carregando Pokédex...</div>';
 
-            try {
-                const { data } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id');
-                if (data) {
-                    this._pokedexPokemon = data;
-                    this._pokedexFilter = 'all';
-                    this.renderPokedexTabs();
-                    this.renderPokedexList(this._pokedexPokemon);
-                }
-            } catch (e) {
-                console.warn('[Pokedex] Error loading pokemon:', e);
-                list.innerHTML = '<div style="padding:20px;color:#f44336;text-align:center">Erro ao carregar Pokédex</div>';
+        try {
+            const { data } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id');
+            if (data) {
+                this._pokedexPokemon = data;
+                this._pokedexFilter = 'all';
+                this.renderPokedexTabs();
+                this.renderPokedexList(this._pokedexPokemon);
             }
+        } catch (e) {
+            console.warn('[Pokedex] Error loading pokemon:', e);
+            list.innerHTML = '<div style="padding:20px;color:#f44336;text-align:center">Erro ao carregar Pokédex</div>';
         }
 
         const searchInput = document.getElementById('pokedex-search');
