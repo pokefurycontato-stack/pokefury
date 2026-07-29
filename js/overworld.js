@@ -85,6 +85,19 @@ export class Overworld2D {
         this.mapThumbnails = {};
         this.mapNavigatorRects = [];
 
+        this.neonEl = null;
+        this.biomeColors = {
+            'floresta':   { main: '#00cc44', dim: 'rgba(0,204,68,0.3)',  bright: '#66ff99' },
+            'montanha':   { main: '#cc8800', dim: 'rgba(204,136,0,0.3)', bright: '#ffbb44' },
+            'torre':      { main: '#aa44ff', dim: 'rgba(170,68,255,0.3)',bright: '#cc88ff' },
+            'industrial': { main: '#8899aa', dim: 'rgba(136,153,170,0.3)',bright: '#bbccdd' },
+            'penhasco':   { main: '#6644ff', dim: 'rgba(102,68,255,0.3)',bright: '#9988ff' },
+            'praia':      { main: '#00aaff', dim: 'rgba(0,170,255,0.3)', bright: '#66ccff' },
+            'vulcao':     { main: '#ff4400', dim: 'rgba(255,68,0,0.3)',  bright: '#ff8844' },
+            'geleira':    { main: '#00dddd', dim: 'rgba(0,221,221,0.3)', bright: '#66ffff' },
+            'centro pokemon': { main: '#ff2255', dim: 'rgba(255,34,85,0.3)', bright: '#ff6688' },
+        };
+
         this.init();
     }
 
@@ -107,12 +120,27 @@ export class Overworld2D {
             this.canvas.height = window.innerHeight - 48;
         }
 
+        if (!this.neonEl) {
+            this.neonEl = document.createElement('div');
+            this.neonEl.id = 'neon-border';
+            this.canvas.parentElement.appendChild(this.neonEl);
+        }
+
         this.tileW = 32;
         this.tileH = 32;
         const mapW = this.worldCols * this.tileW;
         const mapH = this.worldRows * this.tileH;
         this.mapOffsetX = Math.max(0, Math.floor((this.canvas.width - mapW) / 2));
         this.mapOffsetY = Math.max(0, Math.floor((this.canvas.height - mapH) / 2));
+    }
+
+    setNeonColor(mapName) {
+        if (!this.neonEl) return;
+        const key = (mapName || '').toLowerCase().trim();
+        const colors = this.biomeColors[key] || { main: '#00ff88', dim: 'rgba(0,255,136,0.3)', bright: '#66ffbb' };
+        this.neonEl.style.setProperty('--neon-color', colors.main);
+        this.neonEl.style.setProperty('--neon-dim', colors.dim);
+        this.neonEl.style.setProperty('--neon-bright', colors.bright);
     }
 
     setupInput() {
@@ -252,6 +280,8 @@ export class Overworld2D {
     async setCurrentMap(mapData) {
         this.currentMapData = mapData;
         this.currentMapImage = await this.loadMapImage(mapData.image_url);
+
+        this.setNeonColor(mapData.name);
 
         this.encounterZones = [];
         this.transitionCooldown = 0;
@@ -1013,10 +1043,12 @@ export class Overworld2D {
         if (!this.loaded) return;
         this.canvas.style.display = 'block';
         if (this.pokemonSpriteContainer) this.pokemonSpriteContainer.style.display = 'block';
+        if (this.neonEl) this.neonEl.style.display = 'block';
         this.resize();
     }
 
     hide() {
         if (this.pokemonSpriteContainer) this.pokemonSpriteContainer.style.display = 'none';
+        if (this.neonEl) this.neonEl.style.display = 'none';
     }
 }
