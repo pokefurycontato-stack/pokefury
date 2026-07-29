@@ -743,9 +743,9 @@ export class Overworld2D {
             const drawX = p.x * this.tileW - this.camera.x + this.mapOffsetX;
             const drawY = p.y * this.tileH - this.camera.y + this.mapOffsetY;
 
-            const spriteSize = this.tileW * 1.4;
+            const spriteSize = this.tileW * 1.2;
 
-            const finalY = drawY - this.tileH * 0.4;
+            const finalY = drawY - this.tileH * 0.3;
 
             if (drawX + spriteSize < -50 || drawX > this.canvas.width + 50 ||
                 finalY + spriteSize < -50 || finalY > this.canvas.height + 50) {
@@ -767,13 +767,13 @@ export class Overworld2D {
 
             el.style.display = 'block';
             el.style.left = (offsetX + drawX + (this.tileW - spriteSize) / 2) + 'px';
-            el.style.top = (offsetY + finalY - spriteSize * 0.15) + 'px';
+            el.style.top = (offsetY + finalY) + 'px';
             el.style.width = spriteSize + 'px';
             el.style.height = spriteSize + 'px';
 
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
-            ctx.ellipse(drawX + this.tileW / 2, p.y * this.tileH - this.camera.y + this.mapOffsetY + this.tileH - 1, this.tileW / 4, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(drawX + this.tileW / 2, finalY + spriteSize - 2, this.tileW / 4, 3, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 
