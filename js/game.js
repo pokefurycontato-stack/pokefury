@@ -2042,7 +2042,9 @@ class PokeFuryGame {
         const ivTotal = (p.ivs?.hp || 0) + (p.ivs?.attack || 0) + (p.ivs?.defense || 0) + (p.ivs?.spAtk || 0) + (p.ivs?.spDef || 0) + (p.ivs?.speed || 0);
         const evTotal = (p.evs?.hp || 0) + (p.evs?.attack || 0) + (p.evs?.defense || 0) + (p.evs?.spAtk || 0) + (p.evs?.spDef || 0) + (p.evs?.speed || 0);
 
-        const makeBar = (val, max, color) => `<div style="display:flex;align-items:center;gap:6px"><span style="min-width:24px;text-align:right;font-size:11px;color:#c9d1d9;font-weight:500">${val}</span><div style="flex:1;height:5px;background:#21262d;border-radius:3px;overflow:hidden"><div style="height:100%;width:${(val / max) * 100}%;background:${color};border-radius:3px"></div></div></div>`;
+        const currentStats = p.baseStats ? calculateAllStats(p.baseStats, p.level, p.ivs || { hp:15,attack:15,defense:15,spAtk:15,spDef:15,speed:15 }, p.evs || { hp:0,attack:0,defense:0,spAtk:0,spDef:0,speed:0 }, p.nature || 'hardy') : null;
+
+        const makeBar = (val, max, color) => `<div style="display:flex;align-items:center;gap:6px"><span style="min-width:24px;text-align:right;font-size:11px;color:#c9d1d9;font-weight:500">${val}</span><div style="flex:1;height:5px;background:#21262d;border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(100, (val / max) * 100)}%;background:${color};border-radius:3px"></div></div></div>`;
 
         const extra = document.getElementById('pokemon-info-extra');
         extra.innerHTML = `
@@ -2068,6 +2070,19 @@ class PokeFuryGame {
                 <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">Poder Total</div>
                 <div style="font-size:20px;font-weight:700;color:#58a6ff">0</div>
             </div>
+            ${currentStats ? `
+            <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:8px">
+                <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">Status Atuais (Nv.${p.level})</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">HP</span>${makeBar(currentStats.hp, 714, '#4caf50')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Ataque</span>${makeBar(currentStats.attack, 460, '#f44336')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Defesa</span>${makeBar(currentStats.defense, 460, '#2196f3')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Sp.Atk</span>${makeBar(currentStats.spAtk, 460, '#9c27b0')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Sp.Def</span>${makeBar(currentStats.spDef, 460, '#00bcd4')}</div>
+                    <div style="display:flex;align-items:center;gap:6px"><span style="min-width:44px;font-size:11px;color:rgba(255,255,255,0.5)">Velocidade</span>${makeBar(currentStats.speed, 460, '#ff9800')}</div>
+                </div>
+            </div>
+            ` : ''}
             <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:8px">
                 <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">IVs (Total: ${ivTotal})</div>
                 <div style="display:flex;flex-direction:column;gap:4px">
