@@ -929,10 +929,54 @@ class PokeFuryGame {
         for (let i = 0; i < 6; i++) {
             const p = this.playerTeam[i];
             const slot = document.createElement('div');
-            slot.style.cssText = 'display:flex;align-items:flex-start;gap:6px;padding:4px;margin-bottom:3px;border-radius:6px;background:rgba(255,255,255,0.05);';
+            slot.style.cssText = 'display:flex;align-items:flex-start;gap:6px;padding:4px;margin-bottom:3px;border-radius:6px;background:rgba(255,255,255,0.05);transition:opacity 0.15s,transform 0.15s,background 0.15s;';
             if (p && p.fainted) slot.style.opacity = '0.45';
 
             if (p) {
+                slot.draggable = true;
+                slot.dataset.index = i;
+                slot.style.cursor = 'grab';
+
+                slot.ondragstart = (e) => {
+                    e.dataTransfer.setData('text/plain', i);
+                    e.dataTransfer.effectAllowed = 'move';
+                    slot.style.opacity = '0.4';
+                    slot.style.transform = 'scale(0.95)';
+                };
+                slot.ondragend = () => {
+                    slot.style.opacity = p && p.fainted ? '0.45' : '1';
+                    slot.style.transform = '';
+                    list.querySelectorAll('[data-drop]').forEach(s => {
+                        s.style.borderTop = '';
+                        s.style.borderBottom = '';
+                    });
+                };
+                slot.ondragover = (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const rect = slot.getBoundingClientRect();
+                    const mid = rect.top + rect.height / 2;
+                    slot.style.borderTop = e.clientY < mid ? '2px solid #e94560' : '';
+                    slot.style.borderBottom = e.clientY >= mid ? '2px solid #e94560' : '';
+                };
+                slot.ondragleave = () => {
+                    slot.style.borderTop = '';
+                    slot.style.borderBottom = '';
+                };
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    slot.style.borderTop = '';
+                    slot.style.borderBottom = '';
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = i;
+                    if (fromIndex === toIndex) return;
+                    const rect = slot.getBoundingClientRect();
+                    const mid = rect.top + rect.height / 2;
+                    const insertBefore = e.clientY < mid;
+                    const actualTo = insertBefore ? toIndex : toIndex;
+                    this.reorderTeam(fromIndex, actualTo, insertBefore);
+                };
+
                 const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
                 const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
@@ -1006,6 +1050,23 @@ class PokeFuryGame {
             this.updatePartyPanel();
             this.showTransitionBanner('Seus Pokemon foram curados!');
         }
+    }
+
+    reorderTeam(fromIndex, toIndex, insertBefore) {
+        const pokemon = this.playerTeam[fromIndex];
+        if (!pokemon) return;
+        this.playerTeam.splice(fromIndex, 1);
+        let newIndex = toIndex;
+        if (fromIndex < toIndex) newIndex = insertBefore ? toIndex : toIndex;
+        else newIndex = insertBefore ? toIndex : toIndex;
+        if (fromIndex < toIndex) {
+            newIndex = insertBefore ? toIndex - 1 : toIndex;
+        } else {
+            newIndex = insertBefore ? toIndex : toIndex + 1;
+        }
+        this.playerTeam.splice(newIndex, 0, pokemon);
+        this.saveTeam();
+        this.updatePartyPanel();
     }
 
     switchCharacter() {
