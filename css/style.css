@@ -837,23 +837,23 @@ body {
 
 /* ===== PARTY PANEL ===== */
 #party-panel {
-    --neon-color: #e94560;
-    --neon-dim: rgba(233,69,96,0.3);
+    --neon-color: #2244aa;
+    --neon-dim: rgba(34,68,170,0.3);
     box-shadow:
-        0 0 8px #e94560,
-        0 0 16px rgba(233,69,96,0.3);
+        0 0 8px #2244aa,
+        0 0 16px rgba(34,68,170,0.3);
     animation: panelNeonPulse 2s ease-in-out infinite;
 }
 @keyframes panelNeonPulse {
     0%, 100% {
         box-shadow:
-            0 0 8px #e94560,
-            0 0 16px rgba(233,69,96,0.3);
+            0 0 8px #2244aa,
+            0 0 16px rgba(34,68,170,0.3);
     }
     50% {
         box-shadow:
-            0 0 14px #e94560,
-            0 0 28px rgba(233,69,96,0.4);
+            0 0 14px #3366cc,
+            0 0 28px rgba(51,102,204,0.4);
     }
 }
     position: absolute;
@@ -1058,7 +1058,7 @@ body {
     width: 340px;
     height: 280px;
     background: rgba(10,10,30,0.94);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(34,68,170,0.3);
     border-radius: 10px;
     display: flex;
     flex-direction: column;
@@ -1066,6 +1066,27 @@ body {
     pointer-events: auto;
     overflow: hidden;
     backdrop-filter: blur(8px);
+    box-shadow:
+        0 0 8px rgba(34,68,170,0.4),
+        0 0 16px rgba(34,68,170,0.2),
+        inset 0 0 12px rgba(34,68,170,0.1);
+    animation: chatNeonPulse 2s ease-in-out infinite;
+}
+@keyframes chatNeonPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 8px rgba(34,68,170,0.4),
+            0 0 16px rgba(34,68,170,0.2),
+            inset 0 0 12px rgba(34,68,170,0.1);
+        border-color: rgba(34,68,170,0.3);
+    }
+    50% {
+        box-shadow:
+            0 0 14px rgba(51,102,204,0.5),
+            0 0 28px rgba(51,102,204,0.3),
+            inset 0 0 20px rgba(51,102,204,0.15);
+        border-color: rgba(51,102,204,0.5);
+    }
 }
 #chat-tabs {
     display: flex;
