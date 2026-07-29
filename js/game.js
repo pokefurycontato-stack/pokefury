@@ -2161,12 +2161,30 @@ class PokeFuryGame {
 
         const makeBar = (val, max, color) => `<div style="display:flex;align-items:center;gap:6px"><span style="min-width:24px;text-align:right;font-size:11px;color:#c9d1d9;font-weight:500">${val}</span><div style="flex:1;height:5px;background:#21262d;border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(100, (val / max) * 100)}%;background:${color};border-radius:3px"></div></div></div>`;
 
+        const natureEffects = {
+            hardy: null, lonely: { up: 'Ataque', down: 'Defesa' }, brave: { up: 'Ataque', down: 'Velocidade' },
+            adamant: { up: 'Ataque', down: 'Sp.Atk' }, naughty: { up: 'Ataque', down: 'Sp.Def' },
+            bold: { up: 'Defesa', down: 'Ataque' }, relaxed: { up: 'Defesa', down: 'Velocidade' },
+            impish: { up: 'Defesa', down: 'Sp.Atk' }, lax: { up: 'Defesa', down: 'Sp.Def' },
+            timid: { up: 'Velocidade', down: 'Ataque' }, hasty: { up: 'Velocidade', down: 'Defesa' },
+            serious: null, jolly: { up: 'Velocidade', down: 'Sp.Atk' }, naive: { up: 'Velocidade', down: 'Sp.Def' },
+            modest: { up: 'Sp.Atk', down: 'Ataque' }, mild: { up: 'Sp.Atk', down: 'Defesa' },
+            quiet: { up: 'Sp.Atk', down: 'Velocidade' }, rash: { up: 'Sp.Atk', down: 'Sp.Def' },
+            calm: { up: 'Sp.Def', down: 'Ataque' }, gentle: { up: 'Sp.Def', down: 'Defesa' },
+            sassy: { up: 'Sp.Def', down: 'Velocidade' }, careful: { up: 'Sp.Def', down: 'Sp.Atk' },
+            quirky: null
+        };
+        const nature = p.nature || 'hardy';
+        const ne = natureEffects[nature];
+        const natureText = ne ? `↑${ne.up} / ↓${ne.down}` : 'Sem efeito';
+
         const extra = document.getElementById('pokemon-info-extra');
         extra.innerHTML = `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-                <div style="background:#0d1117;border-radius:6px;padding:8px">
+                <div style="background:#0d1117;border-radius:6px;padding:8px;position:relative" id="nature-container">
                     <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Natureza</div>
-                    <div style="font-size:13px;color:#c9d1d9;font-weight:500">${p.nature || 'Hardy'}</div>
+                    <div style="font-size:13px;color:#c9d1d9;font-weight:500;cursor:help" id="nature-name">${nature}</div>
+                    <div id="nature-tooltip" style="display:none;position:absolute;left:0;right:0;bottom:100%;background:#1c2333;border:1px solid rgba(255,215,0,0.3);border-radius:6px;padding:8px;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.5)">${natureText}</div>
                 </div>
                 <div style="background:#0d1117;border-radius:6px;padding:8px">
                     <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Gênero</div>
@@ -2232,6 +2250,12 @@ class PokeFuryGame {
         if (abilityNameEl && abilityTooltip) {
             abilityNameEl.onmouseenter = () => { abilityTooltip.style.display = 'block'; };
             abilityNameEl.onmouseleave = () => { abilityTooltip.style.display = 'none'; };
+        }
+        const natureNameEl = document.getElementById('nature-name');
+        const natureTooltip = document.getElementById('nature-tooltip');
+        if (natureNameEl && natureTooltip) {
+            natureNameEl.onmouseenter = () => { natureTooltip.style.display = 'block'; };
+            natureNameEl.onmouseleave = () => { natureTooltip.style.display = 'none'; };
         }
     }
 
