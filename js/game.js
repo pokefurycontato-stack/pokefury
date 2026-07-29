@@ -1874,40 +1874,57 @@ class PokeFuryGame {
 
         let evolutionsHtml = '';
         try {
-            const { data: evoCheck } = await window.db.from('pokemon_evolutions').select('id').limit(1);
-            if (evoCheck) {
-                let chain = [pokemon.id];
+            const { data: evoCheck, error: evoErr } = await window.db.from('pokemon_evolutions').select('id').limit(1);
+            if (!evoErr && evoCheck) {
+                const chainIds = new Set();
+                const chainOrder = [];
+
+                function addChain(id) {
+                    if (!chainIds.has(id)) { chainIds.add(id); chainOrder.push(id); }
+                }
+
+                addChain(pokemon.id);
                 let curId = pokemon.id;
                 for (let i = 0; i < 10; i++) {
                     const { data: prev } = await window.db.from('pokemon_evolutions').select('from_pokemon_id').eq('to_pokemon_id', curId);
-                    if (prev && prev.length > 0) { curId = prev[0].from_pokemon_id; chain.unshift(curId); }
-                    else break;
+                    if (prev && prev.length > 0) {
+                        curId = prev[0].from_pokemon_id;
+                        addChain(curId);
+                        chainOrder.unshift(curId);
+                    } else break;
                 }
                 curId = pokemon.id;
                 for (let i = 0; i < 10; i++) {
-                    const { data: next } = await window.db.from('pokemon_evolutions').select('to_pokemon_id, evolution_method, evolution_value, min_level, min_happiness, held_item').eq('from_pokemon_id', curId);
+                    const { data: next } = await window.db.from('pokemon_evolutions').select('to_pokemon_id, evolution_method, evolution_value, min_level, min_happiness').eq('from_pokemon_id', curId);
                     if (next && next.length > 0) {
-                        for (const evo of next) { chain.push(evo.to_pokemon_id); }
-                        curId = next[0].to_pokemon_id;
+                        for (const evo of next) {
+                            if (!chainIds.has(evo.to_pokemon_id)) {
+                                addChain(evo.to_pokemon_id);
+                                chainOrder.push(evo.to_pokemon_id);
+                            }
+                        }
+                        curId = chainOrder[chainOrder.indexOf(curId) + 1] || next[0].to_pokemon_id;
                     } else break;
                 }
-                if (chain.length > 1) {
+
+                if (chainOrder.length > 1) {
                     const parts = [];
-                    for (let i = 0; i < chain.length; i++) {
-                        const { data: poke } = await window.db.from('pokemon').select('id, name').eq('id', chain[i]).single();
-                        if (!poke) continue;
+                    for (let i = 0; i < chainOrder.length; i++) {
                         if (i > 0) {
-                            const { data: evoRow } = await window.db.from('pokemon_evolutions').select('evolution_method, evolution_value, min_level, min_happiness').eq('from_pokemon_id', chain[i-1]).eq('to_pokemon_id', chain[i]).single();
+                            const { data: evoRow } = await window.db.from('pokemon_evolutions').select('evolution_method, evolution_value, min_level').eq('from_pokemon_id', chainOrder[i-1]).eq('to_pokemon_id', chainOrder[i]).maybeSingle();
                             let method = '';
                             if (evoRow) {
                                 if (evoRow.evolution_method === 'level-up' || evoRow.evolution_method === 'level') method = `Nv.${evoRow.min_level || '?'}`;
-                                else if (evoRow.evolution_method === 'use-item') { const it = await window.db.from('items').select('name').eq('id', parseInt(evoRow.evolution_value)).single(); method = it?.data?.name || evoRow.evolution_value || '?'; }
+                                else if (evoRow.evolution_method === 'use-item') { const it = await window.db.from('items').select('name').eq('id', parseInt(evoRow.evolution_value)).maybeSingle(); method = it?.data?.name || evoRow.evolution_value || '?'; }
                                 else if (evoRow.evolution_method === 'happiness') method = 'Felicidade';
                                 else if (evoRow.evolution_method === 'trade') method = 'Troca';
                                 else method = evoRow.evolution_method || '?';
                             }
                             parts.push(`<span class="pokedex-evo-arrow">${method} →</span>`);
                         }
+                        const pokeId = chainOrder[i];
+                        const { data: poke } = await window.db.from('pokemon').select('id, name').eq('id', pokeId).single();
+                        if (!poke) continue;
                         const sprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${poke.id}.png`;
                         const isCurrent = poke.id === pokemon.id;
                         const style = isCurrent ? 'border:2px solid #4caf50;background:#1a3a1a' : 'background:#1c2333';
