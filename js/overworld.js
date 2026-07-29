@@ -146,12 +146,6 @@ export class Overworld2D {
         this.neonEl.style.setProperty('--neon-color', colors.main);
         this.neonEl.style.setProperty('--neon-dim', colors.dim);
         this.neonEl.style.setProperty('--neon-bright', colors.bright);
-
-        const partyPanel = document.getElementById('party-panel');
-        if (partyPanel) {
-            partyPanel.style.setProperty('--neon-color', colors.main);
-            partyPanel.style.setProperty('--neon-dim', colors.dim);
-        }
     }
 
     setupInput() {
