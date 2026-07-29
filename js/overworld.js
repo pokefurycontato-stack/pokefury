@@ -132,6 +132,11 @@ export class Overworld2D {
         const mapH = this.worldRows * this.tileH;
         this.mapOffsetX = Math.max(0, Math.floor((this.canvas.width - mapW) / 2));
         this.mapOffsetY = Math.max(0, Math.floor((this.canvas.height - mapH) / 2));
+
+        this.neonEl.style.left = this.mapOffsetX + 'px';
+        this.neonEl.style.top = this.mapOffsetY + 'px';
+        this.neonEl.style.width = mapW + 'px';
+        this.neonEl.style.height = mapH + 'px';
     }
 
     setNeonColor(mapName) {
