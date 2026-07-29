@@ -619,6 +619,7 @@ class PokeFuryGame {
                 : itemData.effect_value;
             playerPokemon.currentHp = Math.min(playerPokemon.stats.hp, playerPokemon.currentHp + heal);
             await showBattleMessage(`Usou ${itemData.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
+            this.updatePartyPanel();
         } else if (itemData.category === 'pokeball') {
             const catchRate = this.calculateCatchRate(enemyPokemon, itemData);
             const caught = Math.random() < catchRate;
@@ -687,6 +688,7 @@ class PokeFuryGame {
                 await preloadBattleSprites(megaPokemon, getFirstAlive(this.enemyTeam));
                 drawBattleScene(this.ctx, this.canvas, megaPokemon, getFirstAlive(this.enemyTeam), this.currentBattleBg);
                 updateBattleUI(this.playerTeam, this.enemyTeam);
+                this.updatePartyPanel();
                 await showBattleMessage(`${playerPokemon.name} mega evoluiu para ${megaPokemon.name}!`);
                 return;
             }
@@ -739,6 +741,7 @@ class PokeFuryGame {
 
             drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
             updateBattleUI(this.playerTeam, this.enemyTeam);
+            this.updatePartyPanel();
 
             if (defender.fainted) {
                 await showBattleMessage(`${defender.name} desmaiou!`);
@@ -797,6 +800,7 @@ class PokeFuryGame {
 
             drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
             updateBattleUI(this.playerTeam, this.enemyTeam);
+            this.updatePartyPanel();
 
             if (playerPokemon.fainted) {
                 await showBattleMessage(`${playerPokemon.name} desmaiou!`);
