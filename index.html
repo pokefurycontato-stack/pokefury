@@ -619,5 +619,25 @@
         };
     })();
     </script>
+
+    <div id="pokedex-overlay" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:12px">
+                <span style="font-size:22px">📖</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Pokédex</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <input id="pokedex-search" type="text" placeholder="Buscar por nome ou número..." style="padding:6px 12px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;width:260px;outline:none">
+                <button id="pokedex-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+            </div>
+        </div>
+        <div style="display:flex;flex:1;overflow:hidden">
+            <div id="pokedex-list" style="width:280px;overflow-y:auto;background:#161b22;border-right:1px solid #30363d;flex-shrink:0"></div>
+            <div id="pokedex-detail" style="flex:1;overflow-y:auto;padding:20px;color:#fff">
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);font-size:15px">Selecione um Pokémon para ver os detalhes</div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

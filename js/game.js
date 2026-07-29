@@ -89,6 +89,7 @@ class PokeFuryGame {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                if (btn.dataset.screen === 'pokedex') this.openPokedex();
             });
         });
 
@@ -1670,6 +1671,307 @@ class PokeFuryGame {
                 this.selectDonateChar(this._donateSelectedChar);
             }
         };
+    }
+
+    async openPokedex() {
+        const overlay = document.getElementById('pokedex-overlay');
+        overlay.classList.remove('hidden');
+
+        document.getElementById('pokedex-close').onclick = () => overlay.classList.add('hidden');
+
+        if (!this._pokedexLoaded) {
+            this._pokedexLoaded = true;
+            this._pokedexPokemon = [];
+            this._pokedexSelected = null;
+            const list = document.getElementById('pokedex-list');
+            list.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.4);text-align:center">Carregando Pokédex...</div>';
+
+            try {
+                const { data } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id');
+                if (data) {
+                    this._pokedexPokemon = data.filter(p => p.variant === 'normal' || !p.variant);
+                    this.renderPokedexList(this._pokedexPokemon);
+                }
+            } catch (e) {
+                console.warn('[Pokedex] Error loading pokemon:', e);
+                list.innerHTML = '<div style="padding:20px;color:#f44336;text-align:center">Erro ao carregar Pokédex</div>';
+            }
+        }
+
+        const searchInput = document.getElementById('pokedex-search');
+        searchInput.value = '';
+        searchInput.oninput = () => {
+            const q = searchInput.value.toLowerCase().trim();
+            if (!q) {
+                this.renderPokedexList(this._pokedexPokemon);
+                return;
+            }
+            const filtered = this._pokedexPokemon.filter(p =>
+                p.name.toLowerCase().includes(q) || String(p.id) === q
+            );
+            this.renderPokedexList(filtered);
+        };
+    }
+
+    renderPokedexList(pokemonList) {
+        const list = document.getElementById('pokedex-list');
+        list.innerHTML = '';
+        pokemonList.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'pokedex-item' + (this._pokedexSelected === p.id ? ' active' : '');
+            const num = String(p.id).padStart(3, '0');
+            const sprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${p.id}.png`;
+            item.innerHTML = `
+                <span class="pokedex-item-num">#${num}</span>
+                <img class="pokedex-item-sprite" src="${sprite}" onerror="this.style.display='none'" loading="lazy">
+                <span class="pokedex-item-name">${p.name}</span>
+            `;
+            item.onclick = () => this.selectPokedexPokemon(p.id);
+            list.appendChild(item);
+        });
+    }
+
+    async selectPokedexPokemon(pokemonId) {
+        this._pokedexSelected = pokemonId;
+        document.querySelectorAll('.pokedex-item').forEach(el => el.classList.remove('active'));
+
+        const detail = document.getElementById('pokedex-detail');
+        const pokemon = this._pokedexPokemon.find(p => p.id === pokemonId);
+        if (!pokemon) return;
+
+        const num = String(pokemon.id).padStart(3, '0');
+        const spriteNormal = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front/${pokemon.id}.gif`;
+        const spriteShiny = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front-shiny/${pokemon.id}.gif`;
+
+        const typeColors = {
+            normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
+            grass: '#78C850', ice: '#98D8D8', fighting: '#C03028', poison: '#A040A0',
+            ground: '#E0C068', flying: '#A890F0', psychic: '#F85888', bug: '#A8B820',
+            rock: '#B8A038', ghost: '#705898', dragon: '#7038F8', dark: '#705848',
+            steel: '#B8B8D0', fairy: '#EE99AC'
+        };
+
+        const rarityColors = {
+            inicial: '#4caf50', common: '#9e9e9e', uncommon: '#2196f3',
+            rare: '#ff9800', legendary: '#f44336'
+        };
+
+        let rarity = 'common';
+        const bst = pokemon.hp + pokemon.attack + pokemon.defense + pokemon.sp_atk + pokemon.sp_def + pokemon.speed;
+        const starters = [1,4,7,10,13,16,152,155,158,252,255,258,387,390,393,495,498,501,650,653,656,722,725,728,810,813,816,906,909,912];
+        if (starters.includes(pokemon.id)) rarity = 'inicial';
+        else if (bst >= 600) rarity = 'legendary';
+        else if (bst >= 500) rarity = 'rare';
+        else if (bst >= 400) rarity = 'uncommon';
+
+        const typesHtml = (pokemon.types || []).map(t =>
+            `<span class="pokedex-type-badge" style="background:${typeColors[t] || '#68a090'}">${t.toUpperCase()}</span>`
+        ).join('');
+
+        detail.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+                <span style="font-size:24px;font-weight:800;color:rgba(255,255,255,0.15)">#${num}</span>
+                <span style="font-size:22px;font-weight:700">${pokemon.name}</span>
+                <span class="pokedex-type-badge" style="background:${rarityColors[rarity]};margin-left:8px">${rarity.toUpperCase()}</span>
+            </div>
+            <div class="pokedex-detail-header">
+                <div class="pokedex-sprites">
+                    <div>
+                        <div class="pokedex-sprite-box"><img src="${spriteNormal}" onerror="this.src='https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${pokemon.id}.png'"></div>
+                        <div class="pokedex-sprite-label">Normal</div>
+                    </div>
+                    <div>
+                        <div class="pokedex-sprite-box" style="border-color:#ff9800"><img src="${spriteShiny}" onerror="this.src='https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front-shiny/${pokemon.id}.png'"></div>
+                        <div class="pokedex-sprite-label">Shiny</div>
+                    </div>
+                </div>
+                <div style="flex:1">
+                    <div class="pokedex-info-block">
+                        <div class="pokedex-info-title">Tipos</div>
+                        <div>${typesHtml || '<span style="color:rgba(255,255,255,0.3)">?</span>'}</div>
+                    </div>
+                </div>
+            </div>
+            <div id="pokedex-extra-info"><div style="color:rgba(255,255,255,0.3);padding:10px">Carregando detalhes...</div></div>
+        `;
+
+        this.loadPokedexExtraInfo(pokemon);
+    }
+
+    async loadPokedexExtraInfo(pokemon) {
+        const container = document.getElementById('pokedex-extra-info');
+        if (!container) return;
+
+        let speciesData = null;
+        let height = '?', weight = '?', genderRate = '?', baseHappiness = '?';
+
+        try {
+            const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemon.id}`);
+            if (resp.ok) speciesData = await resp.json();
+        } catch (e) {}
+
+        if (speciesData) {
+            baseHappiness = speciesData.base_happiness ?? '?';
+            const gr = speciesData.gender_rate;
+            if (gr === -1) genderRate = 'Sem gênero';
+            else {
+                const female = (gr / 8) * 100;
+                const male = 100 - female;
+                genderRate = `♂ ${male}% / ♀ ${female}%`;
+            }
+        }
+
+        try {
+            const resp2 = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon.id}`);
+            if (resp2.ok) {
+                const pData = await resp2.json();
+                height = `${(pData.height / 10).toFixed(1)} m`;
+                weight = `${(pData.weight / 10).toFixed(1)} kg`;
+            }
+        } catch (e) {}
+
+        let evolutionsHtml = '';
+        try {
+            const { data: evos } = await window.db.from('pokemon_evolutions').select('*').eq('from_pokemon_id', pokemon.id);
+            if (evos && evos.length > 0) {
+                const evoItems = await window.db.from('items').select('id, name').in('id', evos.filter(e => e.evolution_value && !isNaN(e.evolution_value)).map(e => parseInt(e.evolution_value)).filter(Boolean));
+                const itemMap = {};
+                if (evoItems.data) evoItems.data.forEach(i => { itemMap[i.id] = i.name; });
+
+                const evoParts = await Promise.all(evos.map(async evo => {
+                    const { data: toPoke } = await window.db.from('pokemon').select('id, name').eq('id', evo.to_pokemon_id).single();
+                    if (!toPoke) return null;
+                    let method = '';
+                    if (evo.evolution_method === 'level') method = `Nível ${evo.min_level || '?'}`;
+                    else if (evo.evolution_method === 'stone') {
+                        const stoneName = itemMap[parseInt(evo.evolution_value)] || evo.evolution_value || 'Pedra';
+                        method = stoneName;
+                    }
+                    else if (evo.evolution_method === 'happiness') method = `Felicidade ${evo.min_happiness || '?'}`;
+                    else if (evo.evolution_method === 'trade') method = 'Troca';
+                    else method = evo.evolution_method || '?';
+
+                    const sprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${toPoke.id}.png`;
+                    return `<div class="pokedex-evo-pokemon" onclick="window.pokefury.selectPokedexPokemon(${toPoke.id})">
+                        <img src="${sprite}" onerror="this.style.display='none'">
+                        <span>${toPoke.name}</span>
+                        <span style="font-size:9px;color:rgba(255,255,255,0.4)">${method}</span>
+                    </div>`;
+                }));
+                const validParts = evoParts.filter(Boolean);
+                if (validParts.length > 0) {
+                    evolutionsHtml = `<div class="pokedex-info-block">
+                        <div class="pokedex-info-title">Evoluções</div>
+                        <div class="pokedex-evo-chain">${validParts.join('<span class="pokedex-evo-arrow">→</span>')}</div>
+                    </div>`;
+                }
+            }
+
+            const { data: prevEvo } = await window.db.from('pokemon_evolutions').select('from_pokemon_id').eq('to_pokemon_id', pokemon.id).single();
+            if (prevEvo) {
+                const { data: fromPoke } = await window.db.from('pokemon').select('id, name').eq('id', prevEvo.from_pokemon_id).single();
+                if (fromPoke) {
+                    const prevSprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${fromPoke.id}.png`;
+                    evolutionsHtml = `<div class="pokedex-info-block">
+                        <div class="pokedex-info-title">Evoluções</div>
+                        <div class="pokedex-evo-chain">
+                            <div class="pokedex-evo-pokemon" onclick="window.pokefury.selectPokedexPokemon(${fromPoke.id})">
+                                <img src="${prevSprite}" onerror="this.style.display='none'">
+                                <span>${fromPoke.name}</span>
+                            </div>
+                            <span class="pokedex-evo-arrow">→</span>
+                            <div class="pokedex-evo-pokemon" style="background:#1c2333;border:1px solid #30363d">
+                                <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${pokemon.id}.png" onerror="this.style.display='none'">
+                                <span>${pokemon.name}</span>
+                            </div>
+                            ${evolutionsHtml}
+                        </div>
+                    </div>`;
+                }
+            }
+        } catch (e) {}
+
+        let locationsHtml = '';
+        try {
+            const { data: encounters } = await window.db
+                .from('map_encounters')
+                .select('pokemon_name, map_id, region_maps(name, region_id, regions(name))')
+                .eq('pokemon_id', pokemon.id);
+            if (encounters && encounters.length > 0) {
+                const locMap = {};
+                encounters.forEach(enc => {
+                    const mapName = enc.region_maps?.name || 'Desconhecido';
+                    const regionName = enc.region_maps?.regions?.name || 'Desconhecida';
+                    const key = `${regionName} - ${mapName}`;
+                    if (!locMap[key]) locMap[key] = regionName;
+                });
+                const locs = Object.keys(locMap).map(loc => `<span class="pokedex-location-tag">${loc}</span>`);
+                locationsHtml = `<div class="pokedex-info-block">
+                    <div class="pokedex-info-title">Localização Favorita</div>
+                    <div>${locs.join('')}</div>
+                </div>`;
+            }
+        } catch (e) {}
+
+        let abilitiesHtml = '';
+        try {
+            const { data: abils } = await window.db
+                .from('pokemon_abilities')
+                .select('is_hidden, slot, abilities(name)')
+                .eq('pokemon_id', pokemon.id)
+                .order('slot');
+            if (abils && abils.length > 0) {
+                const tags = abils.map(a => {
+                    const name = a.abilities?.name || '?';
+                    const cls = a.is_hidden ? 'pokedex-ability-tag pokedex-ability-hidden' : 'pokedex-ability-tag';
+                    const label = a.is_hidden ? `${name} (Oculta)` : name;
+                    return `<span class="${cls}">${label}</span>`;
+                });
+                abilitiesHtml = `<div class="pokedex-info-block">
+                    <div class="pokedex-info-title">Habilidades</div>
+                    <div>${tags.join('')}</div>
+                </div>`;
+            }
+        } catch (e) {}
+
+        const statMax = 255;
+        const statColors = { hp: '#4caf50', attack: '#f44336', defense: '#2196f3', spAtk: '#9c27b0', spDef: '#00bcd4', speed: '#ff9800' };
+        const statsHtml = [
+            { label: 'HP', val: pokemon.hp, key: 'hp' },
+            { label: 'Ataque', val: pokemon.attack, key: 'attack' },
+            { label: 'Defesa', val: pokemon.defense, key: 'defense' },
+            { label: 'Sp.Atk', val: pokemon.sp_atk, key: 'spAtk' },
+            { label: 'Sp.Def', val: pokemon.sp_def, key: 'spDef' },
+            { label: 'Velocidade', val: pokemon.speed, key: 'speed' }
+        ].map(s => `<div class="pokedex-info-row">
+            <span class="pokedex-info-label">${s.label}</span>
+            <span class="pokedex-info-value">${s.val}</span>
+            <div class="pokedex-stat-bar-bg" style="width:100px"><div class="pokedex-stat-bar" style="width:${(s.val / statMax) * 100}%;background:${statColors[s.key]}"></div></div>
+        </div>`).join('');
+
+        container.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div>
+                    <div class="pokedex-info-block">
+                        <div class="pokedex-info-title">Dados Gerais</div>
+                        <div class="pokedex-info-row"><span class="pokedex-info-label">Tamanho</span><span class="pokedex-info-value">${height}</span></div>
+                        <div class="pokedex-info-row"><span class="pokedex-info-label">Peso</span><span class="pokedex-info-value">${weight}</span></div>
+                        <div class="pokedex-info-row"><span class="pokedex-info-label">Gênero</span><span class="pokedex-info-value">${genderRate}</span></div>
+                        <div class="pokedex-info-row"><span class="pokedex-info-label">Felicidade Base</span><span class="pokedex-info-value">${baseHappiness}</span></div>
+                        <div class="pokedex-info-row"><span class="pokedex-info-label">BST</span><span class="pokedex-info-value">${pokemon.hp + pokemon.attack + pokemon.defense + pokemon.sp_atk + pokemon.sp_def + pokemon.speed}</span></div>
+                    </div>
+                    ${evolutionsHtml}
+                </div>
+                <div>
+                    ${locationsHtml}
+                    ${abilitiesHtml}
+                    <div class="pokedex-info-block">
+                        <div class="pokedex-info-title">Status Base</div>
+                        ${statsHtml}
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     async openRegionManager() {
