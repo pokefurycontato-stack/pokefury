@@ -1689,7 +1689,9 @@ class PokeFuryGame {
             try {
                 const { data } = await window.db.from('pokemon').select('id, name, types, hp, attack, defense, sp_atk, sp_def, speed, sprite_official, sprite_home, variant, base_pokemon_id').order('id');
                 if (data) {
-                    this._pokedexPokemon = data.filter(p => p.variant === 'normal' || !p.variant);
+                    this._pokedexPokemon = data;
+                    this._pokedexFilter = 'all';
+                    this.renderPokedexTabs();
                     this.renderPokedexList(this._pokedexPokemon);
                 }
             } catch (e) {
@@ -1700,31 +1702,61 @@ class PokeFuryGame {
 
         const searchInput = document.getElementById('pokedex-search');
         searchInput.value = '';
-        searchInput.oninput = () => {
-            const q = searchInput.value.toLowerCase().trim();
-            if (!q) {
-                this.renderPokedexList(this._pokedexPokemon);
-                return;
-            }
-            const filtered = this._pokedexPokemon.filter(p =>
-                p.name.toLowerCase().includes(q) || String(p.id) === q
-            );
-            this.renderPokedexList(filtered);
-        };
+        searchInput.oninput = () => this.filterPokedex();
+    }
+
+    renderPokedexTabs() {
+        const list = document.getElementById('pokedex-list');
+        const tabsHtml = `<div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid #21262d;position:sticky;top:0;background:#161b22;z-index:1">
+            <button class="pokedex-tab active" data-filter="all">Todos</button>
+            <button class="pokedex-tab" data-filter="normal">Normal</button>
+            <button class="pokedex-tab" data-filter="mega">Mega</button>
+            <button class="pokedex-tab" data-filter="gmax">G-Max</button>
+            <button class="pokedex-tab" data-filter="alola">Alola</button>
+            <button class="pokedex-tab" data-filter="galar">Galar</button>
+            <button class="pokedex-tab" data-filter="hisui">Hisui</button>
+            <button class="pokedex-tab" data-filter="paldea">Paldea</button>
+        </div>`;
+        list.innerHTML = tabsHtml;
+
+        list.querySelectorAll('.pokedex-tab').forEach(tab => {
+            tab.onclick = () => {
+                list.querySelectorAll('.pokedex-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this._pokedexFilter = tab.dataset.filter;
+                this.filterPokedex();
+            };
+        });
+    }
+
+    filterPokedex() {
+        const q = (document.getElementById('pokedex-search')?.value || '').toLowerCase().trim();
+        let filtered = this._pokedexPokemon || [];
+        if (this._pokedexFilter && this._pokedexFilter !== 'all') {
+            filtered = filtered.filter(p => p.variant === this._pokedexFilter);
+        }
+        if (q) {
+            filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || String(p.id) === q);
+        }
+        this.renderPokedexList(filtered);
     }
 
     renderPokedexList(pokemonList) {
         const list = document.getElementById('pokedex-list');
-        list.innerHTML = '';
+        const tabsHtml = list.querySelector('div')?.outerHTML || '';
+        list.innerHTML = tabsHtml;
+        const variantColors = { mega: '#9c27b0', gmax: '#f44336', alola: '#2196f3', galar: '#ff9800', hisui: '#4caf50', paldea: '#00bcd4' };
+        const variantLabels = { mega: 'MEGA', gmax: 'G-MAX', alola: 'ALOLA', galar: 'GALAR', hisui: 'HISUI', paldea: 'PALDEA' };
         pokemonList.forEach(p => {
             const item = document.createElement('div');
             item.className = 'pokedex-item' + (this._pokedexSelected === p.id ? ' active' : '');
             const num = String(p.id).padStart(3, '0');
             const sprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${p.id}.png`;
+            const badge = p.variant && p.variant !== 'normal' ? `<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:${variantColors[p.variant] || '#666'};color:#fff;font-weight:700;margin-left:4px">${variantLabels[p.variant] || p.variant}</span>` : '';
             item.innerHTML = `
                 <span class="pokedex-item-num">#${num}</span>
                 <img class="pokedex-item-sprite" src="${sprite}" onerror="this.style.display='none'" loading="lazy">
-                <span class="pokedex-item-name">${p.name}</span>
+                <span class="pokedex-item-name">${p.name}${badge}</span>
             `;
             item.onclick = () => this.selectPokedexPokemon(p.id);
             list.appendChild(item);
