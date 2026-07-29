@@ -945,18 +945,18 @@ body {
 .pokedex-detail-header { display: flex; gap: 20px; margin-bottom: 20px; }
 .pokedex-sprites { display: flex; gap: 12px; align-items: flex-start; }
 .pokedex-sprite-box {
-    width: 150px; height: 150px; border-radius: 10px;
+    width: 120px; height: 120px; border-radius: 8px;
     background: #161b22; border: 2px solid #30363d;
     display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
-.pokedex-sprite-box img { width: 120px; height: 120px; image-rendering: pixelated; }
+.pokedex-sprite-box img { width: 96px; height: 96px; image-rendering: pixelated; }
 .pokedex-sprite-label { font-size: 10px; color: rgba(255,255,255,0.4); text-align: center; margin-top: 4px; }
 
-.pokedex-info-block { margin-bottom: 16px; }
-.pokedex-info-title { font-size: 12px; font-weight: 700; color: #58a6ff; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #21262d; padding-bottom: 4px; }
-.pokedex-info-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
-.pokedex-info-label { color: rgba(255,255,255,0.5); }
-.pokedex-info-value { color: #c9d1d9; font-weight: 500; }
+.pokedex-info-block { margin-bottom: 10px; }
+.pokedex-info-title { font-size: 12px; font-weight: 700; color: #58a6ff; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #21262d; padding-bottom: 3px; }
+.pokedex-info-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; font-size: 12px; }
+.pokedex-info-label { color: rgba(255,255,255,0.5); min-width: 70px; }
+.pokedex-info-value { color: #c9d1d9; font-weight: 500; min-width: 30px; text-align: right; }
 
 .pokedex-type-badge {
     display: inline-block; padding: 2px 10px; border-radius: 4px;
@@ -964,7 +964,7 @@ body {
 }
 
 .pokedex-stat-bar-bg {
-    width: 100%; height: 8px; background: #21262d; border-radius: 4px; overflow: hidden;
+    width: 80px; height: 6px; background: #21262d; border-radius: 3px; overflow: hidden; flex-shrink: 0;
 }
 .pokedex-stat-bar {
     height: 100%; border-radius: 4px; transition: width 0.3s;

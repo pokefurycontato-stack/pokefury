@@ -1950,7 +1950,7 @@ class PokeFuryGame {
         </div>`).join('');
 
         container.innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div>
                     <div class="pokedex-info-block">
                         <div class="pokedex-info-title">Dados Gerais</div>
