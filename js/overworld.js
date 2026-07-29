@@ -472,7 +472,7 @@ export class Overworld2D {
         this.mapPokemonEncounters = encounters || [];
         if (encounters.length === 0) return;
 
-        const count = Math.min(4, Math.max(1, Math.floor(encounters.length * 1.5)));
+        const count = Math.min(10, Math.max(1, Math.floor(encounters.length * 1.5)));
 
         // Weighted random selection based on encounter weight (rarity)
         const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50), 0);
