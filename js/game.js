@@ -9,6 +9,7 @@ import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
 import { RegionManager } from './region-manager.js';
 import { MapZoneEditor } from './zone-editor.js';
+import { Chat } from './chat.js';
 
 const SHINY_CHANCE = 128;
 
@@ -29,6 +30,7 @@ class PokeFuryGame {
         this.starterDataCache = [];
         this.overworld2d = null;
         this._starting = false;
+        this.chat = new Chat();
 
         this.regionManager = new RegionManager();
         this.currentRegion = null;
@@ -250,6 +252,11 @@ class PokeFuryGame {
         const profileAvatarEl = document.getElementById('profile-avatar');
         if (profileAvatarEl && this.avatarUrl) {
             profileAvatarEl.innerHTML = `<img src="${this.avatarUrl}" class="profile-avatar-img" alt="${this.playerName}">`;
+        }
+
+        if (window.GameData.userId && !this.chat._initialized) {
+            this.chat.init(window.GameData.userId, this.playerName);
+            this.chat._initialized = true;
         }
 
         try {
