@@ -197,7 +197,7 @@ class PokeFuryGame {
                             if (moveDetails && moveDetails.length > 0) {
                                 const moveMap = {};
                                 moveDetails.forEach(m => { moveMap[m.id] = m; });
-                                pokemon.moves = row.moves.map(sm => {
+                                const savedMoves = row.moves.map(sm => {
                                     const full = moveMap[Number(sm.id)];
                                     if (!full) return null;
                                     return {
@@ -207,6 +207,12 @@ class PokeFuryGame {
                                         currentPp: sm.pp ?? full.pp ?? 35
                                     };
                                 }).filter(Boolean);
+                                for (const newMove of pokemon.moves) {
+                                    if (!savedMoves.some(m => m.id === newMove.id)) {
+                                        savedMoves.push(newMove);
+                                    }
+                                }
+                                pokemon.moves = savedMoves.slice(0, 4);
                             }
                         }
                     }
@@ -1255,7 +1261,7 @@ class PokeFuryGame {
                 if (moveDetails && moveDetails.length > 0) {
                     const moveMap = {};
                     moveDetails.forEach(m => { moveMap[m.id] = m; });
-                    pokemon.moves = boxData.moves.map(sm => {
+                    const savedMoves = boxData.moves.map(sm => {
                         const full = moveMap[Number(sm.id)];
                         if (!full) return null;
                         return {
@@ -1265,6 +1271,12 @@ class PokeFuryGame {
                             currentPp: sm.pp ?? full.pp ?? 35
                         };
                     }).filter(Boolean);
+                    for (const newMove of pokemon.moves) {
+                        if (!savedMoves.some(m => m.id === newMove.id)) {
+                            savedMoves.push(newMove);
+                        }
+                    }
+                    pokemon.moves = savedMoves.slice(0, 4);
                 }
             }
         }
