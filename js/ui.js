@@ -270,9 +270,6 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5);
     updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45);
 
-    drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 0.5);
-    drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 0.45);
-
     if (clipRect) ctx.restore();
 }
 
