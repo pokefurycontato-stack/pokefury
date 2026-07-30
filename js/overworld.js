@@ -473,16 +473,16 @@ export class Overworld2D {
         this.mapPokemonEncounters = encounters || [];
         if (encounters.length === 0) return;
 
-        const count = Math.min(10, Math.max(1, Math.floor(encounters.length * 1.5)));
+        const count = 10;
 
-        // Weighted random selection based on encounter weight (rarity)
-        const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50), 0);
+        const TIER_WEIGHT = { common: 1, uncommon: 1, rare: 1, legendary: 0.00001, inicial: 0.00001 };
+        const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50) * (TIER_WEIGHT[e.rarity] ?? 1), 0);
 
         for (let i = 0; i < count; i++) {
             let roll = Math.random() * totalWeight;
             let enc = encounters[0];
             for (const e of encounters) {
-                roll -= (e.weight || 50);
+                roll -= (e.weight || 50) * (TIER_WEIGHT[e.rarity] ?? 1);
                 if (roll <= 0) { enc = e; break; }
             }
 
@@ -540,14 +540,15 @@ export class Overworld2D {
 
         if (encounters.length === 0) return;
 
-        const count = Math.min(4, Math.max(1, Math.floor(encounters.length * 1.5)));
-        const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50), 0);
+        const count = 10;
+        const TIER_WEIGHT = { common: 1, uncommon: 1, rare: 1, legendary: 0.00001, inicial: 0.00001 };
+        const totalWeight = encounters.reduce((sum, e) => sum + (e.weight || 50) * (TIER_WEIGHT[e.rarity] ?? 1), 0);
 
         for (let i = 0; i < count; i++) {
             let roll = Math.random() * totalWeight;
             let enc = encounters[0];
             for (const e of encounters) {
-                roll -= (e.weight || 50);
+                roll -= (e.weight || 50) * (TIER_WEIGHT[e.rarity] ?? 1);
                 if (roll <= 0) { enc = e; break; }
             }
 

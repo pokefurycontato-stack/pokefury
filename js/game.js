@@ -521,7 +521,7 @@ class PokeFuryGame {
             const encounters = await this.regionManager.loadMapEncounters(this.currentMap.id);
             if (encounters.length > 0) {
                 // Rarity tier spawn rates (configurable)
-                const TIER_RATES = { common: 57, uncommon: 25, rare: 12, legendary: 3, inicial: 3 };
+                const TIER_RATES = { common: 58.998, uncommon: 25, rare: 12, legendary: 0.001, inicial: 0.001 };
                 const tiers = ['common', 'uncommon', 'rare', 'legendary', 'inicial'];
 
                 // Step 1: Pick rarity tier
