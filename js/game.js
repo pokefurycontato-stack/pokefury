@@ -523,6 +523,9 @@ class PokeFuryGame {
             this._lastBattleEnemy = activeEnemy;
             drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg, this.getBattleClipRect());
             if (!this._playerSpriteReady) removePlayerSprite();
+            if (this._captureInProgress && getBattlePokemonSprites().enemy) {
+                getBattlePokemonSprites().enemy.style.setProperty('display', 'none', 'important');
+            }
         }
     }
 
@@ -1189,7 +1192,8 @@ class PokeFuryGame {
             if (sprites.player) sprites.player.style.display = 'none';
 
             const ballSpriteUrl = itemData.sprite_url || '';
-            const result = await this.battleAnimations.playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY, sprites.enemy);
+            this._captureInProgress = true;
+            const result = await this.battleAnimations.playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY);
 
             if (caught) {
                 await this.battleAnimations.playShake(result.ball, result.hitX, result.hitY, 3);
@@ -1199,6 +1203,7 @@ class PokeFuryGame {
                 await new Promise(r => setTimeout(r, 600));
                 await this.battleAnimations.playCaptureFail(result.ball, result.hitX, result.hitY, targetX, targetY, sprites.enemy);
             }
+            this._captureInProgress = false;
         }
 
         if (caught) {
