@@ -496,6 +496,7 @@ class PokeFuryGame {
             hideBattlePokemonSprites();
             return;
         }
+        this.isWildBattle = true;
 
         this.currentBattleBg = this.getNormalizedBattleBg();
         if (this.currentBattleBg) {
@@ -598,6 +599,7 @@ class PokeFuryGame {
             console.warn('[PokeFury] No alive pokemon, skipping battle');
             return;
         }
+        this.isWildBattle = true;
 
         try {
             const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
@@ -846,6 +848,11 @@ class PokeFuryGame {
 
                 if (isTeamFainted(this.enemyTeam)) {
                     await showBattleMessage('Você venceu a batalha!');
+                    if (this.isWildBattle && this.enemyTeam.length === 1) {
+                        const captured = await this.showCapturePrompt();
+                        if (!captured) this.endBattle('win');
+                        return;
+                    }
                     this.endBattle('win');
                     return;
                 }
@@ -907,6 +914,151 @@ class PokeFuryGame {
                     this.endBattle('lose');
                 }
             }
+        }
+    }
+
+    showCapturePrompt() {
+        return new Promise(async (resolve) => {
+            const enemyPokemon = this.enemyTeam[0];
+            if (!enemyPokemon) { resolve(false); return; }
+
+            const inventory = await window.GameData.getInventory();
+            const balls = inventory.filter(inv => inv.items && inv.items.category === 'pokeball' && inv.quantity > 0);
+
+            if (balls.length === 0) {
+                await showBattleMessage('Você não tem nenhuma Pokébola!');
+                resolve(false);
+                return;
+            }
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
+
+            const popup = document.createElement('div');
+            popup.style.cssText = 'background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.4);border-radius:16px;padding:24px 28px;max-width:360px;width:90%;text-align:center;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(233,69,96,0.2);';
+
+            const spriteUrl = enemyPokemon.spriteUrls?.front || enemyPokemon.spriteUrl || '';
+            popup.innerHTML = `
+                <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Pokémon derrotado!</div>
+                <div style="display:flex;justify-content:center;margin:10px 0">
+                    <img src="${spriteUrl}" style="width:80px;height:80px;image-rendering:pixelated;filter:drop-shadow(0 0 8px rgba(233,69,96,0.4))" onerror="this.style.display='none'">
+                </div>
+                <div style="font-size:16px;color:#fff;font-weight:700;margin-bottom:4px">${enemyPokemon.name}</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:16px">Lv. ${enemyPokemon.level}</div>
+                <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-bottom:18px">Quer capturar este Pokémon?</div>
+                <div style="display:flex;gap:10px;justify-content:center">
+                    <button id="cap-yes" style="padding:10px 28px;border:none;border-radius:10px;background:linear-gradient(135deg,#e94560,#c23152);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:transform 0.15s">Sim</button>
+                    <button id="cap-no" style="padding:10px 28px;border:1px solid rgba(255,255,255,0.2);border-radius:10px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;transition:transform 0.15s">Não</button>
+                </div>
+            `;
+
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+
+            popup.querySelectorAll('button').forEach(b => {
+                b.onmouseenter = () => { b.style.transform = 'scale(1.05)'; };
+                b.onmouseleave = () => { b.style.transform = 'scale(1)'; };
+            });
+
+            document.getElementById('cap-yes').onclick = () => {
+                overlay.remove();
+                this.showPokeballSelection().then(captured => resolve(captured));
+            };
+            document.getElementById('cap-no').onclick = () => {
+                overlay.remove();
+                resolve(false);
+            };
+        });
+    }
+
+    showPokeballSelection() {
+        return new Promise(async (resolve) => {
+            const enemyPokemon = this.enemyTeam[0];
+            if (!enemyPokemon) { resolve(false); return; }
+
+            const inventory = await window.GameData.getInventory();
+            const balls = inventory.filter(inv => inv.items && inv.items.category === 'pokeball' && inv.quantity > 0);
+
+            if (balls.length === 0) {
+                await showBattleMessage('Você não tem nenhuma Pokébola!');
+                resolve(false);
+                return;
+            }
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
+
+            const popup = document.createElement('div');
+            popup.style.cssText = 'background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.4);border-radius:16px;padding:24px 28px;max-width:380px;width:90%;text-align:center;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(233,69,96,0.2);';
+
+            let html = `<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">Escolha uma Pokébola</div>`;
+            html += `<div style="display:flex;flex-direction:column;gap:8px">`;
+
+            for (const inv of balls) {
+                const item = inv.items;
+                const multiplier = item.effect_value || 1;
+                const label = multiplier >= 100 ? '100%' : `x${multiplier}`;
+                html += `
+                    <button class="cap-ball-btn" data-ball-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.04);cursor:pointer;transition:all 0.15s;text-align:left">
+                        <img src="${item.sprite}" style="width:36px;height:36px" onerror="this.style.display='none'">
+                        <div style="flex:1">
+                            <div style="color:#fff;font-size:13px;font-weight:700">${item.name}</div>
+                            <div style="color:rgba(255,255,255,0.4);font-size:11px">x${inv.quantity} • Chance: ${label}</div>
+                        </div>
+                    </button>
+                `;
+            }
+            html += `</div>`;
+            html += `<button id="cap-cancel" style="margin-top:12px;padding:8px 20px;border:1px solid rgba(255,255,255,0.15);border-radius:8px;background:transparent;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;font-family:Inter,sans-serif">Cancelar</button>`;
+
+            popup.innerHTML = html;
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+
+            popup.querySelectorAll('.cap-ball-btn').forEach(btn => {
+                btn.onmouseenter = () => { btn.style.borderColor = '#e94560'; btn.style.background = 'rgba(233,69,96,0.1)'; };
+                btn.onmouseleave = () => { btn.style.borderColor = 'rgba(255,255,255,0.1)'; btn.style.background = 'rgba(255,255,255,0.04)'; };
+                btn.onclick = async () => {
+                    const ballId = parseInt(btn.dataset.ballId);
+                    const ballItem = balls.find(b => b.items.id === ballId);
+                    if (!ballItem) return;
+                    overlay.remove();
+                    const captured = await this.attemptCapture(ballItem);
+                    resolve(captured);
+                };
+            });
+
+            document.getElementById('cap-cancel').onclick = () => {
+                overlay.remove();
+                resolve(false);
+            };
+        });
+    }
+
+    async attemptCapture(ballInventory) {
+        const itemData = ballInventory.items;
+        const enemyPokemon = this.enemyTeam[0];
+        if (!enemyPokemon) return false;
+
+        await window.GameData.removeItem(ballInventory.item_id, 1);
+
+        const catchRate = this.calculateCatchRate(enemyPokemon, itemData);
+        const caught = Math.random() < catchRate;
+
+        if (caught) {
+            await showBattleMessage(`Capturou ${enemyPokemon.name} com ${itemData.name}!`);
+            const added = await window.GameData.addPokemonToTeam(enemyPokemon);
+            if (added === 'team') {
+                await showBattleMessage(`${enemyPokemon.name} foi adicionado à equipe!`);
+            } else if (added === 'pc') {
+                await showBattleMessage(`Equipe cheia! ${enemyPokemon.name} foi enviado ao PC.`);
+            } else {
+                await showBattleMessage('Equipe e PC lotados! Pokémon perdido.');
+            }
+            return true;
+        } else {
+            await showBattleMessage(`O Pokémon escapou da ${itemData.name}!`);
+            return false;
         }
     }
 
