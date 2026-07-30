@@ -404,7 +404,7 @@ body {
     position: absolute;
     background: transparent;
     z-index: 20;
-    overflow: hidden;
+    overflow: visible;
 }
 #battle-ui { display: flex; flex-direction: column; height: 100%; padding: 12px; }
 .trainer-info {
@@ -458,8 +458,12 @@ body {
 }
 
 #battle-actions {
+    position: absolute;
+    bottom: -70px;
+    left: 50%;
+    transform: translateX(-50%);
     display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-    padding: 12px; max-width: 500px; margin: 0 auto; width: 100%;
+    padding: 12px; max-width: 500px; width: 100%;
 }
 .action-btn {
     padding: 14px 16px; border: none; border-radius: 12px;
@@ -471,8 +475,61 @@ body {
 .action-btn:hover { background: rgba(233,69,96,0.4); border-color: #e94560; transform: scale(1.02); }
 .action-btn.small { padding: 10px; font-size: 12px; grid-column: 1 / -1; }
 
-#move-selection { padding: 12px; max-width: 500px; margin: 0 auto; width: 100%; }
-#move-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+#move-selection {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 0;
+}
+#move-buttons {
+    display: contents;
+}
+.move-btn {
+    padding: 8px 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: Inter, sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.move-btn:hover {
+    background: rgba(233,69,96,0.3);
+    border-color: #e94560;
+    transform: scale(1.03);
+}
+.move-btn .move-type {
+    font-size: 8px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+.move-btn .move-pp {
+    font-size: 8px;
+    color: rgba(255,255,255,0.4);
+    font-weight: 600;
+}
+#btn-back {
+    grid-column: 1 / -1;
+    padding: 6px;
+    font-size: 10px;
+}
 .move-btn {
     padding: 12px; border: none; border-radius: 10px; color: #fff;
     font-size: 13px; font-weight: 700; font-family: inherit;
@@ -500,9 +557,6 @@ body {
 .party-slot:hover { border-color: #e94560; }
 .party-slot img { width: 32px; height: 32px; object-fit: contain; }
 .party-slot.fainted { opacity: 0.4; }
-
-/* ===== MOVE SELECTION OVERLAY ===== */
-#move-selection { padding: 16px; }
 
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 6px; }

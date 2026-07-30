@@ -126,12 +126,11 @@ export function showMoveSelection(moves, onSelect) {
         const btn = document.createElement('button');
         btn.className = `move-btn type-${move.type}`;
         const typeColor = TYPE_COLORS[move.type] || '#686868';
-        btn.style.borderColor = typeColor + '60';
+        btn.style.borderColor = typeColor + '40';
         btn.innerHTML = `
-            <span class="move-name">${move.name}</span>
-            <span class="move-type">${move.type.toUpperCase()}</span>
-            <span class="move-pp">PP: ${move.currentPp}/${move.pp}</span>
-            <span class="move-pp">Poder: ${move.power || '—'}</span>
+            <span style="font-size:11px">${move.name}</span>
+            <span class="move-type" style="background:${typeColor}">${move.type.toUpperCase()}</span>
+            <span class="move-pp">PP ${move.currentPp}/${move.pp}</span>
         `;
         btn.addEventListener('click', () => {
             onSelect(move);
@@ -269,16 +268,16 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    const playerX = w * 0.22 + 30;
-    const playerY = h * 0.58 + 150;
-    const enemyX = w * 0.73;
+    const playerX = w * 0.22 + 180;
+    const playerY = h * 0.58 + 100;
+    const enemyX = w * 0.73 - 150;
     const enemyY = h * 0.32 + 80;
 
-    updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 1.2);
-    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 1.0);
+    updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.8);
+    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.7);
 
-    drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 1.2);
-    drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 1.0);
+    drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 0.8);
+    drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 0.7);
 
     if (clipRect) ctx.restore();
 }

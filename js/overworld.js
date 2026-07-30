@@ -357,6 +357,7 @@ export class Overworld2D {
 
         try {
             if (this.game.state === 'battle') {
+                this.render();
                 this.game.render();
             } else {
                 this.handleInput();
@@ -699,7 +700,7 @@ export class Overworld2D {
     }
 
     render() {
-        if (!this.loaded || this.game.state !== 'overworld') return;
+        if (!this.loaded) return;
 
         const ctx = this.ctx;
         const w = this.canvas.width;
@@ -714,6 +715,8 @@ export class Overworld2D {
         } else if (this._lastBgDrawn !== 'video' && this.wallpaperImg.complete && this.wallpaperImg.naturalWidth > 0) {
             ctx.drawImage(this.wallpaperImg, 0, 0, w, h);
         }
+
+        if (this.game.state !== 'overworld') return;
 
         if (this.currentMapImage && this.currentMapImage.complete) {
             const mapDrawW = this.worldCols * this.tileW;

@@ -478,9 +478,10 @@ class PokeFuryGame {
 
     renderBattle() {
         if (this.state !== 'battle') return;
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillStyle = '#0d1117';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        const clip = this.getBattleClipRect();
+        if (clip) {
+            this.ctx.clearRect(clip.x, clip.y, clip.w, clip.h);
+        }
         const activePlayer = getFirstAlive(this.playerTeam) || this._lastBattlePlayer;
         const activeEnemy = getFirstAlive(this.enemyTeam) || this._lastBattleEnemy;
         if (activePlayer && activeEnemy) {
