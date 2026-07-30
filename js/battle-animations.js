@@ -1,0 +1,265 @@
+export class BattleAnimations {
+    constructor(gameContainer) {
+        this.container = gameContainer;
+        this.overlay = null;
+        this._ensureOverlay();
+    }
+
+    _ensureOverlay() {
+        if (this.overlay && this.container.contains(this.overlay)) return;
+        this.overlay = document.createElement('div');
+        this.overlay.id = 'battle-anim-overlay';
+        this.container.appendChild(this.overlay);
+    }
+
+    _clear() {
+        if (this.overlay) this.overlay.innerHTML = '';
+    }
+
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    _createBall() {
+        const ball = document.createElement('div');
+        ball.className = 'battle-pokeball';
+        this.overlay.appendChild(ball);
+        return ball;
+    }
+
+    _createLightBeam(x, y, size) {
+        const beam = document.createElement('div');
+        beam.className = 'battle-light-beam';
+        beam.style.left = (x - size / 2) + 'px';
+        beam.style.top = (y - size / 2) + 'px';
+        beam.style.width = size + 'px';
+        beam.style.height = size + 'px';
+        this.overlay.appendChild(beam);
+        return beam;
+    }
+
+    _createStar(x, y) {
+        const star = document.createElement('div');
+        star.className = 'capture-star';
+        star.style.left = x + 'px';
+        star.style.top = y + 'px';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 30 + Math.random() * 40;
+        star.style.setProperty('--star-x', Math.cos(angle) * dist + 'px');
+        star.style.setProperty('--star-y', Math.sin(angle) * dist + 'px');
+        this.overlay.appendChild(star);
+        return star;
+    }
+
+    _getBoundingClientRect() {
+        return this.container.getBoundingClientRect();
+    }
+
+    async playWildEntrance(enemySpriteEl) {
+        this._ensureOverlay();
+        this._clear();
+
+        const containerRect = this._getBoundingClientRect();
+        const cw = this.container.offsetWidth;
+        const ch = this.container.offsetHeight;
+
+        const enemyX = cw * 0.72;
+        const enemyY = ch * 0.32;
+
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position:absolute; left:${enemyX - 60}px; top:${enemyY - 60}px;
+            width:120px; height:120px; border-radius:50%;
+            background:radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(229,57,53,0.7) 40%, transparent 70%);
+            opacity:0; z-index:18; pointer-events:none;
+            animation: wildFlash 0.8s ease-out forwards;
+        `;
+        this.overlay.appendChild(flash);
+
+        await this._sleep(300);
+
+        const beam = this._createLightBeam(enemyX, enemyY, 100);
+        beam.style.animation = 'ballOpenGlow 0.6s ease-out forwards';
+        beam.style.animationDelay = '0.1s';
+
+        await this._sleep(400);
+
+        if (enemySpriteEl) {
+            enemySpriteEl.style.animation = 'pokemonEntrance 0.6s ease-out forwards';
+        }
+
+        await this._sleep(700);
+        this._clear();
+    }
+
+    async playTrainerEntrance(side, pokemonSpriteEl) {
+        this._ensureOverlay();
+        this._clear();
+
+        const cw = this.container.offsetWidth;
+        const ch = this.container.offsetHeight;
+
+        const isPlayer = (side === 'player');
+        const startX = isPlayer ? cw * 0.05 : cw * 0.85;
+        const startY = isPlayer ? ch * 0.75 : ch * 0.15;
+        const endX = isPlayer ? cw * 0.28 : cw * 0.72;
+        const endY = isPlayer ? ch * 0.45 : ch * 0.32;
+        const midX = (startX + endX) / 2;
+        const midY = Math.min(startY, endY) - 60;
+
+        const ball = this._createBall();
+        ball.style.left = startX + 'px';
+        ball.style.top = startY + 'px';
+
+        const dx = endX - startX;
+        const dy = endY - startY;
+
+        ball.animate([
+            { opacity: 0, transform: 'translate(0,0) scale(0.5) rotate(0deg)' },
+            { opacity: 1, offset: 0.1 },
+            { transform: `translate(${midX - startX}px, ${midY - startY}px) scale(1) rotate(180deg)`, offset: 0.5 },
+            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(360deg)`, opacity: 1, offset: 0.85 },
+            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(400deg)`, opacity: 1 }
+        ], {
+            duration: 600, easing: 'ease-out', fill: 'forwards'
+        });
+
+        await this._sleep(550);
+
+        const beam = this._createLightBeam(endX, endY, 90);
+        beam.style.animation = 'ballOpenGlow 0.5s ease-out forwards';
+
+        ball.animate([
+            { opacity: 1 },
+            { opacity: 0, offset: 0.3 }
+        ], { duration: 400, fill: 'forwards' });
+
+        await this._sleep(200);
+
+        if (pokemonSpriteEl) {
+            pokemonSpriteEl.style.animation = 'pokemonEntrance 0.5s ease-out forwards';
+        }
+
+        await this._sleep(600);
+        this._clear();
+    }
+
+    async playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY) {
+        this._ensureOverlay();
+        this._clear();
+
+        const cw = this.container.offsetWidth;
+        const ch = this.container.offsetHeight;
+        const groundY = ch * 0.82;
+
+        const ball = this._createBall();
+        if (ballSpriteUrl) {
+            const img = document.createElement('img');
+            img.src = ballSpriteUrl;
+            img.style.cssText = 'width:28px;height:28px;position:absolute;top:-2px;left:-2px;border-radius:50%;';
+            ball.appendChild(img);
+            ball.style.background = 'none';
+            ball.style.border = 'none';
+        }
+
+        const dx = targetX - startX;
+        const dy = targetY - startY;
+        const midX = (startX + targetX) / 2;
+        const midY = Math.min(startY, targetY) - 80;
+
+        ball.style.left = startX + 'px';
+        ball.style.top = startY + 'px';
+
+        ball.animate([
+            { opacity: 0, transform: 'translate(0,0) scale(0.5) rotate(0deg)' },
+            { opacity: 1, offset: 0.08 },
+            { transform: `translate(${midX - startX}px, ${midY - startY}px) scale(1) rotate(270deg)`, offset: 0.45 },
+            { transform: `translate(${dx}px, ${dy}px) scale(0.85) rotate(540deg)`, opacity: 1, offset: 0.8 },
+            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(630deg)`, opacity: 1 }
+        ], {
+            duration: 700, easing: 'ease-out', fill: 'forwards'
+        });
+
+        await this._sleep(680);
+
+        const impactFlash = this._createLightBeam(targetX, targetY, 70);
+        impactFlash.style.animation = 'ballOpenGlow 0.3s ease-out forwards';
+
+        await this._sleep(300);
+
+        ball.animate([
+            { transform: `translate(${dx}px, ${dy}px) scale(0.8)` },
+            { transform: `translate(${dx}px, ${groundY}px) scale(0.9)`, offset: 0.6 },
+            { transform: `translate(${dx}px, ${groundY - 6}px) scale(0.85)`, offset: 0.8 },
+            { transform: `translate(${dx}px, ${groundY}px) scale(0.9)` }
+        ], {
+            duration: 400, easing: 'ease-in', fill: 'forwards'
+        });
+
+        await this._sleep(420);
+
+        return { ball, groundY, endX: dx, endY: groundY };
+    }
+
+    async playShake(ball, endX, groundY, count) {
+        for (let i = 0; i < count; i++) {
+            ball.animate([
+                { transform: `translate(${endX}px, ${groundY}px) rotate(0deg)` },
+                { transform: `translate(${endX - 12}px, ${groundY}px) rotate(-25deg)`, offset: 0.2 },
+                { transform: `translate(${endX + 12}px, ${groundY}px) rotate(25deg)`, offset: 0.45 },
+                { transform: `translate(${endX - 8}px, ${groundY}px) rotate(-12deg)`, offset: 0.65 },
+                { transform: `translate(${endX + 8}px, ${groundY}px) rotate(12deg)`, offset: 0.85 },
+                { transform: `translate(${endX}px, ${groundY}px) rotate(0deg)` }
+            ], {
+                duration: 500, easing: 'ease-in-out', fill: 'forwards'
+            });
+            await this._sleep(550);
+        }
+    }
+
+    async playCaptureSuccess(ball, endX, groundY, enemyPokemonName) {
+        ball.animate([
+            { transform: `translate(${endX}px, ${groundY}px) scale(0.9)`, boxShadow: '0 0 5px rgba(255,215,0,0.5)' },
+            { transform: `translate(${endX}px, ${groundY}px) scale(1.1)`, boxShadow: '0 0 40px rgba(255,215,0,1), 0 0 80px rgba(255,215,0,0.5)', offset: 0.4 },
+            { transform: `translate(${endX}px, ${groundY}px) scale(0.95)`, boxShadow: '0 0 10px rgba(255,215,0,0.6)', offset: 0.7 },
+            { transform: `translate(${endX}px, ${groundY}px) scale(1)`, boxShadow: '0 0 15px rgba(255,215,0,0.7)' }
+        ], {
+            duration: 800, fill: 'forwards'
+        });
+
+        for (let i = 0; i < 8; i++) {
+            const star = this._createStar(endX + 14, groundY + 14);
+            star.style.animation = `starBurst 0.6s ease-out ${i * 0.08}s forwards`;
+        }
+
+        await this._sleep(1000);
+        this._clear();
+    }
+
+    async playCaptureFail(ball, endX, groundY, targetX, targetY, pokemonSpriteEl) {
+        ball.animate([
+            { transform: `translate(${endX}px, ${groundY}px) scale(0.9) rotate(0deg)` },
+            { transform: `translate(${endX}px, ${groundY - 5}px) scale(1.05) rotate(5deg)`, offset: 0.2 },
+            { transform: `translate(${endX - 20}px, ${groundY - 15}px) scale(1) rotate(-40deg)`, opacity: 0.8, offset: 0.5 },
+            { transform: `translate(${endX + 10}px, ${groundY + 5}px) scale(0.8) rotate(20deg)`, opacity: 0.4, offset: 0.8 },
+            { transform: `translate(${endX}px, ${groundY + 10}px) scale(0.6) rotate(0deg)`, opacity: 0 }
+        ], {
+            duration: 700, easing: 'ease-out', fill: 'forwards'
+        });
+
+        await this._sleep(350);
+
+        const flash2 = this._createLightBeam(targetX, targetY, 80);
+        flash2.style.background = 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 50%, transparent 70%)';
+        flash2.style.animation = 'ballOpenGlow 0.5s ease-out forwards';
+
+        await this._sleep(150);
+
+        if (pokemonSpriteEl) {
+            pokemonSpriteEl.style.animation = 'pokemonReappear 0.5s ease-out forwards';
+        }
+
+        await this._sleep(600);
+        this._clear();
+    }
+}

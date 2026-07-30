@@ -4,13 +4,14 @@ import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, 
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
-    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST
+    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
 import { RegionManager } from './region-manager.js';
 import { MapZoneEditor } from './zone-editor.js';
 import { Chat } from './chat.js';
+import { BattleAnimations } from './battle-animations.js';
 
 const SHINY_CHANCE = 128;
 
@@ -37,6 +38,7 @@ class PokeFuryGame {
         this.mochilaCategory = 'pocoes';
 
         this.regionManager = new RegionManager();
+        this.battleAnimations = null;
         this.currentRegion = null;
         this.currentMap = null;
         this.currentRegionMaps = [];
@@ -331,6 +333,10 @@ class PokeFuryGame {
         document.getElementById('character-screen').classList.add('hidden');
         document.getElementById('game-wrapper').classList.remove('hidden');
 
+        if (!this.battleAnimations) {
+            this.battleAnimations = new BattleAnimations(document.getElementById('game-wrapper'));
+        }
+
         try {
             if (!this.overworld2d) {
                 console.log('[PokeFury] Creating Overworld2D...');
@@ -618,6 +624,12 @@ class PokeFuryGame {
         let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
         if (isShinyBattle) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
         if (pokemon.variant !== 'normal') introMsg = `Um ${pokemon.name} (${pokemon.variant}) selvagem apareceu!`;
+
+        if (this.battleAnimations) {
+            const sprites = getBattlePokemonSprites();
+            await this.battleAnimations.playWildEntrance(sprites.enemy);
+        }
+
         await showBattleMessage(introMsg);
     }
 
@@ -680,6 +692,12 @@ class PokeFuryGame {
 
             let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
             if (isShiny) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
+
+            if (this.battleAnimations) {
+                const sprites = getBattlePokemonSprites();
+                await this.battleAnimations.playWildEntrance(sprites.enemy);
+            }
+
             await showBattleMessage(introMsg);
         } catch (e) {
             console.error('[PokeFury] Error starting battle:', e);
@@ -1072,6 +1090,30 @@ class PokeFuryGame {
 
         const catchRate = this.calculateCatchRate(enemyPokemon, itemData);
         const caught = Math.random() < catchRate;
+
+        if (this.battleAnimations) {
+            const sprites = getBattlePokemonSprites();
+            const cw = this.canvas.offsetWidth;
+            const ch = this.canvas.offsetHeight;
+            const startX = cw * 0.25;
+            const startY = ch * 0.55;
+            const targetX = cw * 0.72;
+            const targetY = ch * 0.35;
+
+            if (sprites.enemy) sprites.enemy.style.display = 'none';
+
+            const ballSpriteUrl = itemData.sprite_url || '';
+            const result = await this.battleAnimations.playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY);
+
+            if (caught) {
+                await this.battleAnimations.playShake(result.ball, result.endX, result.groundY, 3);
+                await this.battleAnimations.playCaptureSuccess(result.ball, result.endX, result.groundY, enemyPokemon.name);
+            } else {
+                await this.battleAnimations.playShake(result.ball, result.endX, result.groundY, 1);
+                await this.battleAnimations.playCaptureFail(result.ball, result.endX, result.groundY, targetX, targetY, sprites.enemy);
+                if (sprites.enemy) sprites.enemy.style.display = 'block';
+            }
+        }
 
         if (caught) {
             await showBattleMessage(`Capturou ${enemyPokemon.name} com ${itemData.name}!`);

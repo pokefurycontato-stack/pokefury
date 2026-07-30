@@ -723,6 +723,10 @@ export function showBattlePokemonSprites() {
     if (battlePokemonSprites.enemy) battlePokemonSprites.enemy.style.display = 'block';
 }
 
+export function getBattlePokemonSprites() {
+    return battlePokemonSprites;
+}
+
 export function initBattleUI(onFight, onBag, onMega, onRun) {
     $$('.battle-action-zone[data-action]').forEach(zone => {
         zone.addEventListener('click', () => {
