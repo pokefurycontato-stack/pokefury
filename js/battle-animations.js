@@ -144,7 +144,7 @@ export class BattleAnimations {
         this._clear();
     }
 
-    async playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY) {
+    async playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY, enemyEl) {
         this._ensureOverlay();
         this._clear();
 
@@ -179,6 +179,8 @@ export class BattleAnimations {
 
         const impactFlash = this._createLightBeam(targetX, targetY, 70);
         impactFlash.style.animation = 'ballOpenGlow 0.3s ease-out forwards';
+
+        if (enemyEl) enemyEl.style.setProperty('display', 'none', 'important');
 
         await this._sleep(350);
 

@@ -1189,9 +1189,7 @@ class PokeFuryGame {
             if (sprites.player) sprites.player.style.display = 'none';
 
             const ballSpriteUrl = itemData.sprite_url || '';
-            const result = await this.battleAnimations.playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY);
-
-            if (sprites.enemy) sprites.enemy.style.display = 'none';
+            const result = await this.battleAnimations.playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY, sprites.enemy);
 
             if (caught) {
                 await this.battleAnimations.playShake(result.ball, result.hitX, result.hitY, 3);
