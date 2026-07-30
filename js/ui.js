@@ -394,6 +394,37 @@ export function initBattleUI(onFight, onBag, onMega, onRun) {
             else if (action === 'run') onRun();
         });
     });
+
+    const img = document.querySelector('.battle-actions-img');
+    if (img && !img.dataset.processed) {
+        img.dataset.processed = '1';
+        const processImg = new Image();
+        processImg.crossOrigin = 'anonymous';
+        processImg.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = processImg.naturalWidth;
+            c.height = processImg.naturalHeight;
+            const cx = c.getContext('2d');
+            cx.drawImage(processImg, 0, 0);
+            const data = cx.getImageData(0, 0, c.width, c.height);
+            const px = data.data;
+            for (let i = 0; i < px.length; i += 4) {
+                const r = px[i], g = px[i+1], b = px[i+2];
+                const avg = (r + g + b) / 3;
+                const maxC = Math.max(r, g, b);
+                const minC = Math.min(r, g, b);
+                const sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+                if (avg > 160 && sat < 0.15) {
+                    px[i+3] = 0;
+                } else if (avg > 130 && avg < 190 && sat < 0.12) {
+                    px[i+3] = Math.round(Math.max(0, (avg - 130) / 60) * 40);
+                }
+            }
+            cx.putImageData(data, 0, 0);
+            img.src = c.toDataURL('image/png');
+        };
+        processImg.src = img.src;
+    }
 }
 
 export function showBagSelection(items, onSelect) {
