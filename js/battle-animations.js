@@ -75,7 +75,7 @@ export class BattleAnimations {
         enemySpriteEl.style.filter = '';
     }
 
-    async playPlayerEntrance(playerSpriteEl) {
+    async playPlayerEntrance(playerSpriteEl, endX, endY) {
         if (!playerSpriteEl) return;
 
         this._ensureOverlay();
@@ -83,12 +83,6 @@ export class BattleAnimations {
 
         playerSpriteEl.style.display = 'none';
 
-        const containerRect = this._getBoundingClientRect();
-        const cw = containerRect.width;
-        const ch = containerRect.height;
-
-        const endX = cw * 0.25;
-        const endY = ch * 0.55;
         const startX = -30;
         const startY = endY + 30;
 

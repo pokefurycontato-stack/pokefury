@@ -613,6 +613,18 @@ class PokeFuryGame {
 
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
 
+        let playerEndX = this.canvas.offsetWidth * 0.25;
+        let playerEndY = this.canvas.offsetHeight * 0.55;
+        const spritesBeforeHide = getBattlePokemonSprites();
+        if (spritesBeforeHide.player) {
+            const pRect = spritesBeforeHide.player.getBoundingClientRect();
+            const overlayRect = this.battleAnimations ? this.battleAnimations._getBoundingClientRect() : null;
+            if (overlayRect) {
+                playerEndX = pRect.left - overlayRect.left + pRect.width * 0.5;
+                playerEndY = pRect.top - overlayRect.top + pRect.height * 0.5;
+            }
+        }
+
         hideBattlePokemonSprites();
 
         initBattleUI(
@@ -630,7 +642,7 @@ class PokeFuryGame {
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
             await this.battleAnimations.playWildEntrance(sprites.enemy);
-            await this.battleAnimations.playPlayerEntrance(sprites.player);
+            await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY);
         }
 
         await showBattleMessage(introMsg);
@@ -686,6 +698,18 @@ class PokeFuryGame {
 
             drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
 
+            let playerEndX = this.canvas.offsetWidth * 0.25;
+            let playerEndY = this.canvas.offsetHeight * 0.55;
+            const spritesBeforeHide2 = getBattlePokemonSprites();
+            if (spritesBeforeHide2.player) {
+                const pRect = spritesBeforeHide2.player.getBoundingClientRect();
+                const overlayRect2 = this.battleAnimations ? this.battleAnimations._getBoundingClientRect() : null;
+                if (overlayRect2) {
+                    playerEndX = pRect.left - overlayRect2.left + pRect.width * 0.5;
+                    playerEndY = pRect.top - overlayRect2.top + pRect.height * 0.5;
+                }
+            }
+
             hideBattlePokemonSprites();
 
             initBattleUI(
@@ -701,7 +725,7 @@ class PokeFuryGame {
             if (this.battleAnimations) {
                 const sprites = getBattlePokemonSprites();
                 await this.battleAnimations.playWildEntrance(sprites.enemy);
-                await this.battleAnimations.playPlayerEntrance(sprites.player);
+                await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY);
             }
 
             await showBattleMessage(introMsg);
