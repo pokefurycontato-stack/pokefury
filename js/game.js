@@ -721,7 +721,7 @@ class PokeFuryGame {
 
     async onBag() {
         const items = await window.GameData.getInventory();
-        const usableItems = items.filter(inv => inv.items && (inv.items.usable_in_battle || inv.items.category === 'pokeball'));
+        const usableItems = items.filter(inv => inv.items && inv.items.usable_in_battle && inv.items.category !== 'pokeball');
 
         if (usableItems.length === 0) {
             await showBattleMessage('Mochila vazia!');
@@ -776,22 +776,20 @@ class PokeFuryGame {
     }
 
     calculateCatchRate(pokemon, pokeball) {
-        const maxHp = pokemon.stats.hp;
-        const currentHp = pokemon.currentHp;
-        const hpFactor = (3 * maxHp - 2 * currentHp) / (3 * maxHp);
-        let rate = hpFactor;
-
         if (pokeball.effect === 'catch_100x') return 1.0;
-        else if (pokeball.effect === 'catch_2x') rate *= 1.5;
-        else if (pokeball.effect === 'catch_1.5x') rate *= 1.2;
-        else rate *= 0.8;
 
-        const levelPenalty = Math.max(0.15, 1 - (pokemon.level * 0.025));
-        rate *= levelPenalty;
+        const level = pokemon.level || 1;
+        const levelFactor = Math.max(0.1, 1 - (level * 0.035));
 
-        if (pokemon.isShiny) rate *= 0.3;
+        let baseRate = 0.25;
+        if (pokeball.effect === 'catch_2x') baseRate = 0.50;
+        else if (pokeball.effect === 'catch_1.5x') baseRate = 0.35;
 
-        return Math.min(rate, 1.0);
+        let rate = baseRate * levelFactor;
+
+        if (pokemon.isShiny) rate *= 0.25;
+
+        return Math.min(Math.max(rate, 0.02), 1.0);
     }
 
     async onMega() {
