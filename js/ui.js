@@ -374,10 +374,26 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     let playerX, playerY, enemyX, enemyY;
 
     if (cached) {
-        playerX = cached.player.x * w;
-        playerY = cached.player.y * h;
-        enemyX = cached.enemy.x * w;
-        enemyY = cached.enemy.y * h;
+        const dw = clipRect ? clipRect.w : w;
+        const dh = clipRect ? clipRect.h : h;
+        const dx = clipRect ? clipRect.x : 0;
+        const dy = clipRect ? clipRect.y : 0;
+        const imgRatio = cached.imgW / cached.imgH;
+        const areaRatio = dw / dh;
+        let sx = 0, sy = 0, sw, sh;
+        if (imgRatio > areaRatio) {
+            sh = cached.imgH;
+            sw = sh * areaRatio;
+            sx = (cached.imgW - sw) / 2;
+        } else {
+            sw = cached.imgW;
+            sh = sw / areaRatio;
+            sy = (cached.imgH - sh) / 2;
+        }
+        playerX = dx + (cached.player.x * cached.imgW - sx) / sw * dw;
+        playerY = dy + (cached.player.y * cached.imgH - sy) / sh * dh;
+        enemyX = dx + (cached.enemy.x * cached.imgW - sx) / sw * dw;
+        enemyY = dy + (cached.enemy.y * cached.imgH - sy) / sh * dh;
     } else {
         playerX = w * 0.22 + 500;
         playerY = h * 0.58 + 40;
