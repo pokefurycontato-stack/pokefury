@@ -1187,19 +1187,19 @@ class PokeFuryGame {
             }
 
             if (sprites.player) sprites.player.style.display = 'none';
-            if (sprites.enemy) sprites.enemy.style.display = 'none';
 
             const ballSpriteUrl = itemData.sprite_url || '';
             const result = await this.battleAnimations.playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY);
 
+            if (sprites.enemy) sprites.enemy.style.display = 'none';
+
             if (caught) {
-                await this.battleAnimations.playShake(result.ball, result.endX, result.groundY, 3);
-                await this.battleAnimations.playCaptureSuccess(result.ball, result.endX, result.groundY, enemyPokemon.name);
+                await this.battleAnimations.playShake(result.ball, result.hitX, result.hitY, 3);
+                await this.battleAnimations.playCaptureSuccess(result.ball, result.hitX, result.hitY, enemyPokemon.name);
             } else {
-                await this.battleAnimations.playShake(result.ball, result.endX, result.groundY, 1);
+                await this.battleAnimations.playShake(result.ball, result.hitX, result.hitY, 1);
                 await new Promise(r => setTimeout(r, 600));
-                await this.battleAnimations.playCaptureFail(result.ball, result.endX, result.groundY, targetX, targetY, sprites.enemy);
-                if (sprites.enemy) sprites.enemy.style.display = 'block';
+                await this.battleAnimations.playCaptureFail(result.ball, result.hitX, result.hitY, targetX, targetY, sprites.enemy);
             }
         }
 

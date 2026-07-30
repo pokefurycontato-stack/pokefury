@@ -148,8 +148,6 @@ export class BattleAnimations {
         this._ensureOverlay();
         this._clear();
 
-        const groundY = targetY + 40;
-
         const ball = this._createBall();
         if (ballSpriteUrl) {
             const img = document.createElement('img');
@@ -172,7 +170,7 @@ export class BattleAnimations {
             { transform: 'translate(0,0) scale(0.5) rotate(0deg)' },
             { transform: `translate(${midX - startX}px, ${midY - startY}px) scale(1) rotate(270deg)`, offset: 0.45 },
             { transform: `translate(${dx}px, ${dy}px) scale(0.85) rotate(540deg)`, offset: 0.8 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(630deg)` }
+            { transform: `translate(${dx}px, ${dy}px) scale(0.9) rotate(630deg)` }
         ], {
             duration: 700, easing: 'ease-out', fill: 'forwards'
         });
@@ -182,20 +180,9 @@ export class BattleAnimations {
         const impactFlash = this._createLightBeam(targetX, targetY, 70);
         impactFlash.style.animation = 'ballOpenGlow 0.3s ease-out forwards';
 
-        await this._sleep(300);
+        await this._sleep(350);
 
-        ball.animate([
-            { transform: `translate(${dx}px, ${dy}px) scale(0.8)` },
-            { transform: `translate(${dx}px, ${groundY}px) scale(0.9)`, offset: 0.6 },
-            { transform: `translate(${dx}px, ${groundY - 6}px) scale(0.85)`, offset: 0.8 },
-            { transform: `translate(${dx}px, ${groundY}px) scale(0.9)` }
-        ], {
-            duration: 400, easing: 'ease-in', fill: 'forwards'
-        });
-
-        await this._sleep(420);
-
-        return { ball, groundY, endX: dx, endY: groundY };
+        return { ball, hitX: dx, hitY: dy };
     }
 
     async playShake(ball, endX, groundY, count) {
