@@ -721,7 +721,7 @@ class PokeFuryGame {
 
     async onBag() {
         const items = await window.GameData.getInventory();
-        const usableItems = items.filter(inv => inv.items && inv.items.usable_in_battle);
+        const usableItems = items.filter(inv => inv.items && (inv.items.usable_in_battle || inv.items.category === 'pokeball'));
 
         if (usableItems.length === 0) {
             await showBattleMessage('Mochila vazia!');
@@ -951,8 +951,7 @@ class PokeFuryGame {
             if (!enemyPokemon) { resolve(false); return; }
 
             const inventory = await window.GameData.getInventory();
-            const POKEBALL_IDS = [10, 11, 12, 13];
-            const balls = inventory.filter(inv => inv.quantity > 0 && ((inv.items && inv.items.category === 'pokeball') || POKEBALL_IDS.includes(inv.item_id)));
+            const balls = inventory.filter(inv => inv.quantity > 0 && inv.items && inv.items.category === 'pokeball');
 
             if (balls.length === 0) {
                 await showBattleMessage('Você não tem nenhuma Pokébola!');
@@ -1029,7 +1028,7 @@ class PokeFuryGame {
                 const label = multiplier >= 100 ? '100%' : `x${multiplier}`;
                 html += `
                     <button class="cap-ball-btn" data-ball-id="${item.id}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.04);cursor:pointer;transition:all 0.15s;text-align:left">
-                        <img src="${item.sprite}" style="width:36px;height:36px" onerror="this.style.display='none'">
+                        <img src="${item.sprite_url || ''}" style="width:36px;height:36px" onerror="this.style.display='none'">
                         <div style="flex:1">
                             <div style="color:#fff;font-size:13px;font-weight:700">${item.name}</div>
                             <div style="color:rgba(255,255,255,0.4);font-size:11px">x${inv.quantity} • Chance: ${label}</div>
@@ -1508,7 +1507,6 @@ class PokeFuryGame {
 
         const inventory = await window.GameData.getInventory();
         const search = (document.getElementById('mochila-search-input')?.value || '').toLowerCase().trim();
-        const allItems = window.ALL_ITEMS || [];
 
         const CATEGORY_MAP = {
             pocoes: ['medicine', 'battle_item'],
@@ -1520,19 +1518,11 @@ class PokeFuryGame {
         const allowedCats = CATEGORY_MAP[this.mochilaCategory] || [];
 
         let filtered = inventory.filter(inv => {
-            if (inv.quantity <= 0) return false;
-            const dbItem = inv.items;
-            const localItem = allItems.find(ai => ai.id === inv.item_id);
-            const item = dbItem || localItem;
-            if (!item) return false;
-            const cat = item.category || '';
+            if (inv.quantity <= 0 || !inv.items) return false;
+            const cat = inv.items.category || '';
             if (!allowedCats.includes(cat)) return false;
-            if (search && !(item.name || '').toLowerCase().includes(search)) return false;
+            if (search && !(inv.items.name || '').toLowerCase().includes(search)) return false;
             return true;
-        }).map(inv => {
-            const dbItem = inv.items;
-            const localItem = allItems.find(ai => ai.id === inv.item_id);
-            return { ...inv, resolved: dbItem || localItem || { id: inv.item_id, name: `Item #${inv.item_id}`, sprite: '' } };
         });
 
         grid.innerHTML = '';
@@ -1549,11 +1539,11 @@ class PokeFuryGame {
         let tooltipEl = null;
 
         for (const inv of filtered) {
-            const item = inv.resolved;
+            const item = inv.items;
             const slot = document.createElement('div');
             slot.className = 'mochila-slot';
 
-            const spriteSrc = item.sprite || '';
+            const spriteSrc = item.sprite_url || '';
             const img = document.createElement('img');
             img.src = spriteSrc;
             img.alt = item.name || '';

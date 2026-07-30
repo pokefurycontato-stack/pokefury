@@ -281,20 +281,13 @@ const GameData = {
     },
 
     async getInventory() {
-        if (!this.currentCharacterId) { console.log('[Inv] No characterId'); return []; }
-        console.log('[Inv] Querying inventory for character:', this.currentCharacterId);
+        if (!this.currentCharacterId) return [];
         const { data, error } = await window.db
             .from('player_inventory')
-            .select('item_id, quantity')
+            .select('item_id, quantity, items(*)')
             .eq('character_id', this.currentCharacterId);
         if (error) { console.error('[Inv] Query error:', error); return []; }
-        console.log('[Inv] Raw rows:', data?.length);
-        if (!data) return [];
-        const ALL = window.ALL_ITEMS || [];
-        return data.map(row => {
-            const itemData = ALL.find(ai => ai.id === row.item_id) || null;
-            return { ...row, items: itemData };
-        });
+        return data || [];
     },
 
     async addItem(itemId, quantity = 1) {
