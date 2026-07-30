@@ -408,16 +408,30 @@ export function initBattleUI(onFight, onBag, onMega, onRun) {
             cx.drawImage(processImg, 0, 0);
             const data = cx.getImageData(0, 0, c.width, c.height);
             const px = data.data;
-            for (let i = 0; i < px.length; i += 4) {
-                const r = px[i], g = px[i+1], b = px[i+2];
-                const avg = (r + g + b) / 3;
-                const maxC = Math.max(r, g, b);
-                const minC = Math.min(r, g, b);
-                const sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
-                if (avg > 160 && sat < 0.15) {
-                    px[i+3] = 0;
-                } else if (avg > 130 && avg < 190 && sat < 0.12) {
-                    px[i+3] = Math.round(Math.max(0, (avg - 130) / 60) * 40);
+            const w = c.width, h = c.height;
+            const edge = Math.round(Math.min(w, h) * 0.12);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const i = (y * w + x) * 4;
+                    const nearLeft = x < edge;
+                    const nearRight = x > w - edge;
+                    const nearTop = y < edge;
+                    const nearBottom = y > h - edge;
+                    if (!nearLeft && !nearRight && !nearTop && !nearBottom) continue;
+                    const r = px[i], g = px[i+1], b = px[i+2];
+                    const avg = (r + g + b) / 3;
+                    const maxC = Math.max(r, g, b);
+                    const minC = Math.min(r, g, b);
+                    const sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+                    if (avg > 150 && sat < 0.12) {
+                        let dist = 0;
+                        if (nearLeft) dist = x / edge;
+                        else if (nearRight) dist = (w - 1 - x) / edge;
+                        else if (nearTop) dist = y / edge;
+                        else if (nearBottom) dist = (h - 1 - y) / edge;
+                        const fade = Math.min(1, dist * 1.5);
+                        px[i+3] = Math.round(px[i+3] * (1 - fade * (avg - 120) / 135));
+                    }
                 }
             }
             cx.putImageData(data, 0, 0);
