@@ -924,7 +924,9 @@ class PokeFuryGame {
 
             const inventory = await window.GameData.getInventory();
             const POKEBALL_IDS = [10, 11, 12, 13];
+            console.log('[Capture] Full inventory:', JSON.stringify(inventory));
             const balls = inventory.filter(inv => inv.quantity > 0 && ((inv.items && inv.items.category === 'pokeball') || POKEBALL_IDS.includes(inv.item_id)));
+            console.log('[Capture] Filtered balls:', JSON.stringify(balls));
 
             if (balls.length === 0) {
                 await showBattleMessage('Você não tem nenhuma Pokébola!');

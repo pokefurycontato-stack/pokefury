@@ -281,12 +281,14 @@ const GameData = {
     },
 
     async getInventory() {
-        if (!this.currentCharacterId) return [];
+        if (!this.currentCharacterId) { console.log('[Inv] No characterId'); return []; }
+        console.log('[Inv] Querying inventory for character:', this.currentCharacterId);
         const { data, error } = await window.db
             .from('player_inventory')
             .select('item_id, quantity, items(*)')
             .eq('character_id', this.currentCharacterId);
-        if (error) return [];
+        if (error) { console.error('[Inv] Query error:', error); return []; }
+        console.log('[Inv] Raw rows:', data?.length, JSON.stringify(data));
         if (!data) return [];
         const POKEBALL_LOCAL = {
             10: { id: 10, name: 'Poké Ball', category: 'pokeball', effect: 'catch_1x', effect_value: 1, sprite: 'assets/sprites/items/poke-ball.png' },
@@ -296,6 +298,7 @@ const GameData = {
         };
         return data.map(row => {
             if (!row.items && POKEBALL_LOCAL[row.item_id]) {
+                console.log('[Inv] Patching item_id', row.item_id, 'with local data');
                 row.items = POKEBALL_LOCAL[row.item_id];
             }
             return row;
