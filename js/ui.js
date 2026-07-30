@@ -18,6 +18,8 @@ export const BATTLE_FX_LIST = [
     { id: 'dirt', name: 'Terra', icon: '🟤' },
     { id: 'snow', name: 'Neve', icon: '❄️' },
     { id: 'purple', name: 'Terra Roxa', icon: '🟣' },
+    { id: 'electric', name: 'Elétrica', icon: '⚡' },
+    { id: 'fire', name: 'Fogo', icon: '🔥' },
 ];
 
 export function setBattleEffects(playerFx, enemyFx) {
@@ -69,6 +71,22 @@ function createParticle(type, cx, cy, i) {
             base.vy = -0.4 - Math.random() * 1;
             base.size = 1.5 + Math.random() * 2.5;
             base.color = `rgba(${130 + Math.random() * 40},${50 + Math.random() * 20},${160 + Math.random() * 40},0.55)`;
+            break;
+        case 'electric':
+            base.vx = (Math.random() - 0.5) * 2;
+            base.vy = -1 - Math.random() * 2;
+            base.size = 1 + Math.random() * 2;
+            base.boltAngle = Math.random() * Math.PI * 2;
+            base.boltLen = 8 + Math.random() * 14;
+            base.maxAge = 25 + Math.random() * 20;
+            base.age = Math.random() * base.maxAge;
+            break;
+        case 'fire':
+            base.vx = (Math.random() - 0.5) * 1.5;
+            base.vy = -1.5 - Math.random() * 2;
+            base.size = 3 + Math.random() * 5;
+            base.maxAge = 30 + Math.random() * 25;
+            base.age = Math.random() * base.maxAge;
             break;
     }
     return base;
@@ -141,6 +159,61 @@ export function drawBattleFx(ctx, side, type, x, y, dt) {
                 ctx.beginPath();
                 ctx.arc(sx, sy, p.size * 1.8, 0, Math.PI * 2);
                 ctx.fill();
+                break;
+            }
+            case 'electric': {
+                const ex = p.x + p.vx * p.age * 0.3;
+                const ey = baseY + p.vy * p.age * 0.4;
+                const alpha4 = progress < 0.15 ? progress / 0.15 : progress > 0.7 ? (1 - progress) / 0.3 : 1;
+                const flicker = Math.random() > 0.3 ? 1 : 0.3;
+                ctx.strokeStyle = `rgba(255,255,100,${alpha4 * 0.9 * flicker})`;
+                ctx.lineWidth = 1.5 + Math.random();
+                ctx.shadowColor = 'rgba(255,255,0,0.8)';
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                let bx = ex, by = ey;
+                ctx.moveTo(bx, by);
+                const segments = 3 + Math.floor(Math.random() * 2);
+                for (let s = 0; s < segments; s++) {
+                    const nextX = bx + (Math.random() - 0.5) * 12;
+                    const nextY = by - p.boltLen / segments + (Math.random() - 0.5) * 6;
+                    ctx.lineTo(nextX, nextY);
+                    bx = nextX;
+                    by = nextY;
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                const sparkSize = 1.5 + Math.random() * 2;
+                ctx.fillStyle = `rgba(255,255,200,${alpha4 * flicker})`;
+                ctx.beginPath();
+                ctx.arc(ex + (Math.random() - 0.5) * 6, ey - Math.random() * 8, sparkSize, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+            case 'fire': {
+                const fx = p.x + p.vx * p.age * 0.25;
+                const fy = baseY + p.vy * p.age * 0.35;
+                const shrink = 1 - progress * 0.5;
+                const r = p.size * shrink;
+                const alpha5 = progress < 0.1 ? progress / 0.1 : progress > 0.6 ? (1 - progress) / 0.4 : 1;
+                const innerR = r * 0.4;
+                const grad = ctx.createRadialGradient(fx, fy, innerR, fx, fy, r);
+                grad.addColorStop(0, `rgba(255,255,180,${alpha5 * 0.9})`);
+                grad.addColorStop(0.3, `rgba(255,160,30,${alpha5 * 0.7})`);
+                grad.addColorStop(0.7, `rgba(255,60,10,${alpha5 * 0.4})`);
+                grad.addColorStop(1, `rgba(180,20,0,0)`);
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.ellipse(fx, fy, r, r * 1.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                if (Math.random() > 0.5) {
+                    const sparkX = fx + (Math.random() - 0.5) * r * 1.5;
+                    const sparkY = fy - r * 0.8 - Math.random() * r;
+                    ctx.fillStyle = `rgba(255,220,100,${alpha5 * 0.6})`;
+                    ctx.beginPath();
+                    ctx.arc(sparkX, sparkY, 1 + Math.random() * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 break;
             }
         }
