@@ -9,6 +9,149 @@ const battlePokemonState = { player: null, enemy: null };
 let battleMessageInterval = null;
 let battleMessageResolve = null;
 let battlePositions = null;
+let battleEffects = { player: 'none', enemy: 'none' };
+
+export const BATTLE_FX_LIST = [
+    { id: 'none', name: 'Nenhum', icon: '❌' },
+    { id: 'grass', name: 'Grama', icon: '🌿' },
+    { id: 'water', name: 'Água', icon: '💧' },
+    { id: 'dirt', name: 'Terra', icon: '🟤' },
+    { id: 'snow', name: 'Neve', icon: '❄️' },
+    { id: 'purple', name: 'Terra Roxa', icon: '🟣' },
+];
+
+export function setBattleEffects(playerFx, enemyFx) {
+    battleEffects.player = playerFx || 'none';
+    battleEffects.enemy = enemyFx || 'none';
+}
+
+const fxParticles = { player: [], enemy: [] };
+
+function initFxParticles(side, type, x, y) {
+    const particles = [];
+    const count = type === 'water' ? 8 : 12;
+    for (let i = 0; i < count; i++) {
+        particles.push(createParticle(type, x, y, i));
+    }
+    fxParticles[side] = particles;
+}
+
+function createParticle(type, cx, cy, i) {
+    const spread = 50;
+    const base = { x: cx + (Math.random() - 0.5) * spread, y: cy, type, age: Math.random() * 60, maxAge: 60 + Math.random() * 40 };
+    switch (type) {
+        case 'grass':
+            base.color = `hsl(${100 + Math.random() * 30}, ${60 + Math.random() * 20}%, ${30 + Math.random() * 15}%)`;
+            base.h = 6 + Math.random() * 10;
+            base.w = 2 + Math.random() * 2;
+            base.sway = Math.random() * Math.PI * 2;
+            base.growDir = -1;
+            break;
+        case 'water':
+            base.radius = 3 + Math.random() * 5;
+            base.maxRadius = base.radius + 8 + Math.random() * 6;
+            base.color = 'rgba(80,160,255,0.4)';
+            break;
+        case 'dirt':
+            base.vx = (Math.random() - 0.5) * 1.5;
+            base.vy = -0.5 - Math.random() * 1.2;
+            base.size = 1.5 + Math.random() * 2.5;
+            base.color = `rgba(${140 + Math.random() * 40},${90 + Math.random() * 30},${50 + Math.random() * 20},0.6)`;
+            break;
+        case 'snow':
+            base.vx = (Math.random() - 0.5) * 0.3;
+            base.vy = 0.2 + Math.random() * 0.4;
+            base.size = 1.5 + Math.random() * 3;
+            base.wobble = Math.random() * Math.PI * 2;
+            break;
+        case 'purple':
+            base.vx = (Math.random() - 0.5) * 1.2;
+            base.vy = -0.4 - Math.random() * 1;
+            base.size = 1.5 + Math.random() * 2.5;
+            base.color = `rgba(${130 + Math.random() * 40},${50 + Math.random() * 20},${160 + Math.random() * 40},0.55)`;
+            break;
+    }
+    return base;
+}
+
+export function drawBattleFx(ctx, side, type, x, y, dt) {
+    if (type === 'none') return;
+
+    if (fxParticles[side].length === 0) {
+        initFxParticles(side, type, x, y);
+    }
+
+    const particles = fxParticles[side];
+    const baseY = y + 10;
+
+    for (const p of particles) {
+        p.age += dt * 0.06;
+        if (p.age >= p.maxAge) {
+            Object.assign(p, createParticle(type, x, baseY, Math.random() * 100));
+        }
+
+        const progress = p.age / p.maxAge;
+        ctx.save();
+
+        switch (type) {
+            case 'grass': {
+                const sway = Math.sin(p.age * 0.08 + p.sway) * 4;
+                const growProgress = Math.min(1, progress * 3);
+                const h = p.h * growProgress;
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = p.w;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(p.x, baseY);
+                ctx.quadraticCurveTo(p.x + sway, baseY - h * 0.6, p.x + sway * 1.2, baseY - h);
+                ctx.stroke();
+                break;
+            }
+            case 'water': {
+                const r = p.radius + (p.maxRadius - p.radius) * progress;
+                const alpha = 0.4 * (1 - progress);
+                ctx.strokeStyle = `rgba(80,180,255,${alpha})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.ellipse(p.x, baseY, r, r * 0.35, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                break;
+            }
+            case 'dirt':
+            case 'purple': {
+                const dx = p.x + p.vx * p.age * 0.5;
+                const dy = baseY + p.vy * p.age * 0.5 + 0.02 * p.age * p.age * 0.3;
+                const alpha2 = 1 - progress;
+                const col = p.color.replace(/[\d.]+\)$/, (alpha2 * 0.6).toFixed(2) + ')');
+                ctx.fillStyle = col;
+                ctx.beginPath();
+                ctx.arc(dx, dy, p.size * (1 - progress * 0.3), 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+            case 'snow': {
+                const sx = p.x + p.vx * p.age * 0.5 + Math.sin(p.age * 0.05 + p.wobble) * 3;
+                const sy = baseY - 15 + p.vy * p.age * 0.5;
+                const alpha3 = progress < 0.1 ? progress * 10 : progress > 0.8 ? (1 - progress) * 5 : 1;
+                ctx.fillStyle = `rgba(240,248,255,${alpha3 * 0.8})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = `rgba(200,230,255,${alpha3 * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy, p.size * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+        }
+        ctx.restore();
+    }
+}
+
+export function resetBattleFx() {
+    fxParticles.player = [];
+    fxParticles.enemy = [];
+}
 
 const battleCircleCache = new Map();
 
@@ -396,6 +539,11 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5);
     updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45);
 
+    const now = performance.now();
+    const dt = 16;
+    drawBattleFx(ctx, 'player', battleEffects.player, playerX, playerY + 50, dt);
+    drawBattleFx(ctx, 'enemy', battleEffects.enemy, enemyX, enemyY + 50, dt);
+
     if (clipRect) ctx.restore();
 }
 
@@ -494,6 +642,7 @@ export function hideBattlePokemonSprites() {
     }
     if (battlePokemonSprites.player) battlePokemonSprites.player.style.display = 'none';
     if (battlePokemonSprites.enemy) battlePokemonSprites.enemy.style.display = 'none';
+    resetBattleFx();
 }
 
 export function showBattlePokemonSprites() {

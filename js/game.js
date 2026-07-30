@@ -4,7 +4,7 @@ import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, 
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
-    detectBattleCircles, setBattlePositions
+    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -509,8 +509,10 @@ class PokeFuryGame {
                 enemyX: this.currentMap.battle_enemy_x,
                 enemyY: this.currentMap.battle_enemy_y
             });
+            setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
         } else {
             setBattlePositions(null);
+            setBattleEffects('none', 'none');
         }
 
         let pokemon = null;
@@ -623,8 +625,10 @@ class PokeFuryGame {
                     enemyX: this.currentMap.battle_enemy_x,
                     enemyY: this.currentMap.battle_enemy_y
                 });
+                setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
             } else {
                 setBattlePositions(null);
+                setBattleEffects('none', 'none');
             }
             this.state = 'battle';
             this._lastBattlePlayer = activePlayer;
@@ -2639,13 +2643,15 @@ class PokeFuryGame {
         const py = map.battle_player_y != null ? map.battle_player_y : 0.75;
         const ex = map.battle_enemy_x != null ? map.battle_enemy_x : 0.72;
         const ey = map.battle_enemy_y != null ? map.battle_enemy_y : 0.4;
+        const initPlayerFx = map.battle_player_fx || 'none';
+        const initEnemyFx = map.battle_enemy_fx || 'none';
 
         grid.innerHTML = '';
         grid.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;';
 
         const label = document.createElement('div');
         label.style.cssText = 'color:rgba(255,255,255,0.6);font-size:12px;text-align:center;';
-        label.textContent = 'Arraste os pokemons para posição desejada no circulo';
+        label.textContent = 'Arraste os pokemons para posição desejada e escolha o efeito nos pés';
         grid.appendChild(label);
 
         const preview = document.createElement('div');
@@ -2695,6 +2701,52 @@ class PokeFuryGame {
 
         grid.appendChild(preview);
 
+        const fxSection = document.createElement('div');
+        fxSection.style.cssText = 'width:100%;max-width:700px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;';
+
+        function createFxSelector(title, initVal, onChange) {
+            const col = document.createElement('div');
+            col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;min-width:120px;';
+            const titleEl = document.createElement('div');
+            titleEl.style.cssText = 'color:rgba(255,255,255,0.5);font-size:10px;font-weight:700;text-transform:uppercase;';
+            titleEl.textContent = title;
+            col.appendChild(titleEl);
+
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
+            let current = initVal;
+
+            BATTLE_FX_LIST.forEach(fx => {
+                const btn = document.createElement('button');
+                btn.style.cssText = `width:36px;height:36px;border-radius:8px;border:2px solid ${fx.id === current ? '#e94560' : 'rgba(255,255,255,0.15)'};background:${fx.id === current ? 'rgba(233,69,96,0.3)' : 'rgba(0,0,0,0.4)'};cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;`;
+                btn.textContent = fx.icon;
+                btn.title = fx.name;
+                btn.onmouseenter = () => { btn.style.transform = 'scale(1.1)'; };
+                btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; };
+                btn.onclick = () => {
+                    current = fx.id;
+                    row.querySelectorAll('button').forEach(b => {
+                        b.style.borderColor = 'rgba(255,255,255,0.15)';
+                        b.style.background = 'rgba(0,0,0,0.4)';
+                    });
+                    btn.style.borderColor = '#e94560';
+                    btn.style.background = 'rgba(233,69,96,0.3)';
+                    onChange(fx.id);
+                };
+                row.appendChild(btn);
+            });
+            col.appendChild(row);
+            return { col, getCurrent: () => current };
+        }
+
+        let finalPlayerFx = initPlayerFx;
+        let finalEnemyFx = initEnemyFx;
+        const playerFxSel = createFxSelector('Efeito Treinador', initPlayerFx, (v) => { finalPlayerFx = v; });
+        const enemyFxSel = createFxSelector('Efeito Inimigo', initEnemyFx, (v) => { finalEnemyFx = v; });
+        fxSection.appendChild(playerFxSel.col);
+        fxSection.appendChild(enemyFxSel.col);
+        grid.appendChild(fxSection);
+
         const btnRow = document.createElement('div');
         btnRow.style.cssText = 'display:flex;gap:10px;margin-top:8px;';
 
@@ -2715,14 +2767,20 @@ class PokeFuryGame {
                     battle_player_x: finalPx,
                     battle_player_y: finalPy,
                     battle_enemy_x: finalEx,
-                    battle_enemy_y: finalEy
+                    battle_enemy_y: finalEy,
+                    battle_player_fx: finalPlayerFx,
+                    battle_enemy_fx: finalEnemyFx
                 });
                 if (this.currentMap && this.currentMap.id === map.id) {
-                    this.currentMap.battle_bg_url = bgUrl;
-                    this.currentMap.battle_player_x = finalPx;
-                    this.currentMap.battle_player_y = finalPy;
-                    this.currentMap.battle_enemy_x = finalEx;
-                    this.currentMap.battle_enemy_y = finalEy;
+                    Object.assign(this.currentMap, {
+                        battle_bg_url: bgUrl,
+                        battle_player_x: finalPx,
+                        battle_player_y: finalPy,
+                        battle_enemy_x: finalEx,
+                        battle_enemy_y: finalEy,
+                        battle_player_fx: finalPlayerFx,
+                        battle_enemy_fx: finalEnemyFx
+                    });
                 }
                 modal.classList.add('hidden');
                 grid.style.cssText = '';
