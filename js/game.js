@@ -3,7 +3,8 @@ import { randomInt, loadTypeEffectiveness, calculateAllStats } from './utils.js'
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
-    drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup
+    drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
+    detectBattleCircles
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -500,6 +501,7 @@ class PokeFuryGame {
         if (this.currentBattleBg) {
             await preloadBattleBgImage(this.currentBattleBg);
             this.applyBattleNeonFromBg(this.currentBattleBg);
+            detectBattleCircles(this.currentBattleBg);
         }
 
         let pokemon = null;
@@ -604,6 +606,7 @@ class PokeFuryGame {
             if (this.currentBattleBg) {
                 await preloadBattleBgImage(this.currentBattleBg);
                 this.applyBattleNeonFromBg(this.currentBattleBg);
+                detectBattleCircles(this.currentBattleBg);
             }
             this.state = 'battle';
             this._lastBattlePlayer = activePlayer;

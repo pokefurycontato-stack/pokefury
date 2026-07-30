@@ -9,6 +9,96 @@ const battlePokemonState = { player: null, enemy: null };
 let battleMessageInterval = null;
 let battleMessageResolve = null;
 
+const battleCircleCache = new Map();
+
+export async function detectBattleCircles(imgUrl) {
+    if (battleCircleCache.has(imgUrl)) return battleCircleCache.get(imgUrl);
+
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const sw = 160, sh = 120;
+            const c = document.createElement('canvas');
+            c.width = sw; c.height = sh;
+            const cx = c.getContext('2d');
+            cx.drawImage(img, 0, 0, sw, sh);
+            const data = cx.getImageData(0, 0, sw, sh).data;
+
+            const gridSize = 8;
+            const cellW = Math.floor(sw / gridSize);
+            const cellH = Math.floor(sh / gridSize);
+            const cells = [];
+
+            for (let gy = 0; gy < gridSize; gy++) {
+                for (let gx = 0; gx < gridSize; gx++) {
+                    let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                    let rVar = 0;
+                    const samples = [];
+                    for (let py = gy * cellH; py < (gy + 1) * cellH; py += 2) {
+                        for (let px = gx * cellW; px < (gx + 1) * cellW; px += 2) {
+                            const i = (py * sw + px) * 4;
+                            samples.push([data[i], data[i+1], data[i+2]]);
+                            rSum += data[i]; gSum += data[i+1]; bSum += data[i+2];
+                            count++;
+                        }
+                    }
+                    if (count === 0) continue;
+                    const mr = rSum / count, mg = gSum / count, mb = bSum / count;
+                    for (const [r, g, b] of samples) {
+                        rVar += (r - mr) ** 2 + (g - mg) ** 2 + (b - mb) ** 2;
+                    }
+                    rVar /= count;
+                    const brightness = (mr + mg + mb) / 3;
+                    const saturation = (Math.max(mr, mg, mb) - Math.min(mr, mg, mb)) / Math.max(1, Math.max(mr, mg, mb));
+                    cells.push({
+                        gx, gy,
+                        cx: (gx + 0.5) * cellW / sw,
+                        cy: (gy + 0.5) * cellH / sh,
+                        variance: rVar,
+                        brightness,
+                        saturation,
+                        mr, mg, mb
+                    });
+                }
+            }
+
+            const sorted = [...cells].sort((a, b) => a.variance - b.variance);
+            const smoothCells = sorted.slice(0, Math.floor(cells.length * 0.35));
+
+            const leftBottom = smoothCells.filter(c => c.cx < 0.55 && c.cy > 0.45);
+            const rightTop = smoothCells.filter(c => c.cx > 0.4 && c.cy < 0.6);
+
+            function centroid(group) {
+                if (group.length === 0) return null;
+                let sx = 0, sy = 0;
+                for (const c of group) { sx += c.cx; sy += c.cy; }
+                return { x: sx / group.length, y: sy / group.length };
+            }
+
+            let playerCircle = centroid(leftBottom);
+            let enemyCircle = centroid(rightTop);
+
+            if (!playerCircle) playerCircle = { x: 0.25, y: 0.75 };
+            if (!enemyCircle) enemyCircle = { x: 0.72, y: 0.4 };
+
+            if (playerCircle.y < enemyCircle.y) {
+                [playerCircle, enemyCircle] = [enemyCircle, playerCircle];
+            }
+
+            const result = { player: playerCircle, enemy: enemyCircle, imgW: img.naturalWidth, imgH: img.naturalHeight };
+            battleCircleCache.set(imgUrl, result);
+            resolve(result);
+        };
+        img.onerror = () => {
+            const fallback = { player: { x: 0.25, y: 0.75 }, enemy: { x: 0.72, y: 0.4 }, imgW: 1, imgH: 1 };
+            battleCircleCache.set(imgUrl, fallback);
+            resolve(fallback);
+        };
+        img.src = imgUrl;
+    });
+}
+
 export function showScreen(screenId) {
     const screens = ['battle-screen', 'hud'];
     screens.forEach(id => {
@@ -262,10 +352,20 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    const playerX = w * 0.22 + 500;
-    const playerY = h * 0.58 + 40;
-    const enemyX = w * 0.73 - 350;
-    const enemyY = h * 0.32 + 180;
+    const cached = battleCircleCache.get(backgroundUrl);
+    let playerX, playerY, enemyX, enemyY;
+
+    if (cached) {
+        playerX = cached.player.x * w;
+        playerY = cached.player.y * h;
+        enemyX = cached.enemy.x * w;
+        enemyY = cached.enemy.y * h;
+    } else {
+        playerX = w * 0.22 + 500;
+        playerY = h * 0.58 + 40;
+        enemyX = w * 0.73 - 350;
+        enemyY = h * 0.32 + 180;
+    }
 
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5);
     updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45);
