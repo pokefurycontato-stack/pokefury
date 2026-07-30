@@ -478,12 +478,15 @@ class PokeFuryGame {
 
     renderBattle() {
         if (this.state !== 'battle') return;
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = '#0d1117';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         const activePlayer = getFirstAlive(this.playerTeam) || this._lastBattlePlayer;
         const activeEnemy = getFirstAlive(this.enemyTeam) || this._lastBattleEnemy;
         if (activePlayer && activeEnemy) {
             this._lastBattlePlayer = activePlayer;
             this._lastBattleEnemy = activeEnemy;
-            drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg);
+            drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg, this.getBattleClipRect());
         }
     }
 
@@ -556,9 +559,11 @@ class PokeFuryGame {
         if (this.overworld2d) this.overworld2d.hide();
         this.battleStartTime = Date.now();
         showScreen('battle-screen');
+        this.positionBattleScreen();
+
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
-        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
 
         initBattleUI(
             () => this.onFight(),
@@ -605,9 +610,10 @@ class PokeFuryGame {
             if (this.overworld2d) this.overworld2d.hide();
             this.battleStartTime = Date.now();
             showScreen('battle-screen');
+            this.positionBattleScreen();
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
-            drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg);
+            drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
 
             initBattleUI(
                 () => this.onFight(),
@@ -638,7 +644,7 @@ class PokeFuryGame {
                 await this.executeBattleTurn(playerPokemon, enemyPokemon, move);
             } catch (e) {
                 console.error('[Battle] Turn error:', e);
-                drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
+                drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                 updateBattleUI(this.playerTeam, this.enemyTeam);
             }
         });
@@ -708,7 +714,7 @@ class PokeFuryGame {
             await showBattleMessage(`${playerPokemon.name} foi curado de status!`);
         }
 
-        drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
+        drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
         updateBattleUI(this.playerTeam, this.enemyTeam);
         await this.enemyTurn();
     }
@@ -752,7 +758,7 @@ class PokeFuryGame {
                 if (idx >= 0) this.playerTeam[idx] = megaPokemon;
 
                 await preloadBattleSprites(megaPokemon, getFirstAlive(this.enemyTeam));
-                drawBattleScene(this.ctx, this.canvas, megaPokemon, getFirstAlive(this.enemyTeam), this.currentBattleBg);
+                drawBattleScene(this.ctx, this.canvas, megaPokemon, getFirstAlive(this.enemyTeam), this.currentBattleBg, this.getBattleClipRect());
                 updateBattleUI(this.playerTeam, this.enemyTeam);
                 this.updatePartyPanel();
                 await showBattleMessage(`${playerPokemon.name} mega evoluiu para ${megaPokemon.name}!`);
@@ -805,7 +811,7 @@ class PokeFuryGame {
                 await showBattleMessage(updateHpBar(defender));
             }
 
-            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
+            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
             updateBattleUI(this.playerTeam, this.enemyTeam);
             this.updatePartyPanel();
 
@@ -826,7 +832,7 @@ class PokeFuryGame {
         }
         } catch (e) {
             console.error('[Battle] executeBattleTurn error:', e);
-            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
+            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
             updateBattleUI(this.playerTeam, this.enemyTeam);
         }
     }
@@ -864,7 +870,7 @@ class PokeFuryGame {
                 await showBattleMessage(updateHpBar(playerPokemon));
             }
 
-            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg);
+            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
             updateBattleUI(this.playerTeam, this.enemyTeam);
             this.updatePartyPanel();
 
@@ -1031,6 +1037,26 @@ class PokeFuryGame {
                 }
             }
         }
+    }
+
+    positionBattleScreen() {
+        const battleEl = document.getElementById('battle-screen');
+        if (battleEl && this.overworld2d) {
+            battleEl.style.left = this.overworld2d.mapOffsetX + 'px';
+            battleEl.style.top = this.overworld2d.mapOffsetY + 'px';
+            battleEl.style.width = (this.overworld2d.worldCols * this.overworld2d.tileW) + 'px';
+            battleEl.style.height = (this.overworld2d.worldRows * this.overworld2d.tileH) + 'px';
+        }
+    }
+
+    getBattleClipRect() {
+        if (!this.overworld2d) return null;
+        return {
+            x: this.overworld2d.mapOffsetX,
+            y: this.overworld2d.mapOffsetY,
+            w: this.overworld2d.worldCols * this.overworld2d.tileW,
+            h: this.overworld2d.worldRows * this.overworld2d.tileH
+        };
     }
 
     getNormalizedBattleBg() {

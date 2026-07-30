@@ -180,9 +180,16 @@ export function preloadBattleBgImage(url) {
     });
 }
 
-export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgroundUrl = null) {
+export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgroundUrl = null, clipRect = null) {
     const w = canvas.width;
     const h = canvas.height;
+
+    if (clipRect) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(clipRect.x, clipRect.y, clipRect.w, clipRect.h);
+        ctx.clip();
+    }
 
     if (backgroundUrl) {
         const isVideo = /\.(mp4|webm|ogg)$/i.test(backgroundUrl);
@@ -272,6 +279,8 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
 
     drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 1.2);
     drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 1.0);
+
+    if (clipRect) ctx.restore();
 }
 
 export function stopBattleVideo() {
