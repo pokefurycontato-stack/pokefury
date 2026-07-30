@@ -5,7 +5,7 @@ import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
-    getPlayerSpriteSrc, setPlayerSpriteSrc
+    getPlayerSpriteSrc, removePlayerSprite
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -625,8 +625,8 @@ class PokeFuryGame {
                 playerEndY = pRect.top - overlayRect.top + pRect.height * 0.5;
             }
             this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
-            spritesBeforeHide.player.style.display = 'none';
         }
+        removePlayerSprite();
 
         hideBattlePokemonSprites();
 
@@ -644,9 +644,8 @@ class PokeFuryGame {
 
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
-            if (sprites.player) sprites.player.style.display = 'none';
             await this.battleAnimations.playWildEntrance(sprites.enemy);
-            await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY, this._savedPlayerSpriteSrc);
+            await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc);
         }
 
         await showBattleMessage(introMsg);
@@ -713,8 +712,8 @@ class PokeFuryGame {
                     playerEndY = pRect.top - overlayRect2.top + pRect.height * 0.5;
                 }
                 this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
-                spritesBeforeHide2.player.style.display = 'none';
             }
+            removePlayerSprite();
 
             hideBattlePokemonSprites();
 
@@ -731,7 +730,7 @@ class PokeFuryGame {
             if (this.battleAnimations) {
                 const sprites = getBattlePokemonSprites();
                 await this.battleAnimations.playWildEntrance(sprites.enemy);
-                await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY, this._savedPlayerSpriteSrc);
+                await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc);
             }
 
             await showBattleMessage(introMsg);

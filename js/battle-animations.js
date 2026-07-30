@@ -75,13 +75,9 @@ export class BattleAnimations {
         enemySpriteEl.style.filter = '';
     }
 
-    async playPlayerEntrance(playerSpriteEl, endX, endY, spriteUrl) {
-        if (!playerSpriteEl) return;
-
+    async playPlayerEntrance(endX, endY, spriteUrl) {
         this._ensureOverlay();
         this._clear();
-
-        playerSpriteEl.style.display = 'none';
 
         const startX = -30;
         const startY = endY + 30;
@@ -114,22 +110,28 @@ export class BattleAnimations {
 
         await this._sleep(200);
 
-        if (spriteUrl) playerSpriteEl.src = spriteUrl;
-        playerSpriteEl.style.display = 'block';
-        playerSpriteEl.style.opacity = '0';
-        playerSpriteEl.style.transform = 'scale(0.3)';
-        playerSpriteEl.style.filter = 'brightness(3) blur(6px)';
+        if (spriteUrl) {
+            const container = document.getElementById('battle-pokemon-sprites');
+            if (container) {
+                const img = document.createElement('img');
+                img.src = spriteUrl;
+                img.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;display:block;opacity:0;transform:scale(0.3);filter:brightness(3) blur(6px);';
+                container.appendChild(img);
+                window.__playerSpriteEl = img;
 
-        await this._sleep(50);
+                await this._sleep(50);
 
-        playerSpriteEl.style.transition = 'all 0.4s ease-out';
-        playerSpriteEl.style.opacity = '1';
-        playerSpriteEl.style.transform = 'scale(1)';
-        playerSpriteEl.style.filter = 'brightness(1) blur(0px)';
+                img.style.transition = 'all 0.4s ease-out';
+                img.style.opacity = '1';
+                img.style.transform = 'scale(1)';
+                img.style.filter = 'brightness(1) blur(0px)';
 
-        await this._sleep(500);
-        playerSpriteEl.style.transition = '';
-        playerSpriteEl.style.filter = '';
+                await this._sleep(500);
+                img.style.transition = '';
+                img.style.filter = '';
+            }
+        }
+
         this._clear();
     }
 
