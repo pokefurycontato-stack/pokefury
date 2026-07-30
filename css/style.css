@@ -460,10 +460,26 @@ body {
 #battle-actions {
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-    padding: 12px 0; max-width: 500px; margin: 0 auto; width: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    padding: 10px 0;
+    user-select: none;
+}
+.battle-actions-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    pointer-events: none;
+}
+.battle-action-zone {
+    position: absolute;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: background 0.15s;
+}
+.battle-action-zone:hover {
+    background: rgba(255,255,255,0.12);
 }
 .action-btn {
     padding: 14px 16px; border: none; border-radius: 12px;

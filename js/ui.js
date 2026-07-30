@@ -268,8 +268,8 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    const playerX = w * 0.22 + 580;
-    const playerY = h * 0.58 - 60;
+    const playerX = w * 0.22 + 500;
+    const playerY = h * 0.58 + 40;
     const enemyX = w * 0.73 - 350;
     const enemyY = h * 0.32 + 180;
 
@@ -385,9 +385,9 @@ export function showBattlePokemonSprites() {
 }
 
 export function initBattleUI(onFight, onBag, onMega, onRun) {
-    $$('.action-btn[data-action]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const action = btn.dataset.action;
+    $$('.battle-action-zone[data-action]').forEach(zone => {
+        zone.addEventListener('click', () => {
+            const action = zone.dataset.action;
             if (action === 'fight') onFight();
             else if (action === 'bag') onBag();
             else if (action === 'pokemon') onMega();
