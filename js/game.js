@@ -674,7 +674,7 @@ class PokeFuryGame {
         }
         this._playerSpriteReady = true;
 
-        await showBattleMessage(introMsg);
+        await showBattleMessage(introMsg, 2000);
     }
 
     async startBattleWithPokemon(pokemonName, level, spriteUrl) {
@@ -781,7 +781,7 @@ class PokeFuryGame {
             }
             this._playerSpriteReady = true;
 
-            await showBattleMessage(introMsg);
+            await showBattleMessage(introMsg, 2000);
         } catch (e) {
             console.error('[PokeFury] Error starting battle:', e);
             hideBattlePokemonSprites();

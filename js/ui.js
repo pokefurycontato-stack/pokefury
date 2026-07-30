@@ -375,7 +375,7 @@ function updateTeamIndicators(selector, team) {
     });
 }
 
-export function showBattleMessage(message) {
+export function showBattleMessage(message, autoHideMs = 0) {
     return new Promise(resolve => {
         try {
             const msgEl = $('#battle-message');
@@ -392,6 +392,8 @@ export function showBattleMessage(message) {
 
             if (!message) { resolve(); return; }
 
+            msgEl.classList.remove('visible');
+
             let i = 0;
             const fullText = String(message);
             battleMessageInterval = setInterval(() => {
@@ -399,10 +401,18 @@ export function showBattleMessage(message) {
                     if (i < fullText.length) {
                         i++;
                         msgEl.innerText = fullText.substring(0, i);
+                        if (i === 1) msgEl.classList.add('visible');
                     } else {
                         clearInterval(battleMessageInterval);
                         battleMessageInterval = null;
-                        setTimeout(resolve, 600);
+                        if (autoHideMs > 0) {
+                            setTimeout(() => {
+                                msgEl.classList.remove('visible');
+                                setTimeout(resolve, 300);
+                            }, autoHideMs);
+                        } else {
+                            setTimeout(resolve, 600);
+                        }
                     }
                 } catch (e) {
                     clearInterval(battleMessageInterval);

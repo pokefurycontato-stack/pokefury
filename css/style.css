@@ -458,14 +458,19 @@ body {
 }
 
 #battle-log {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    padding: 16px;
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    z-index: 50; pointer-events: none;
 }
 #battle-message {
-    color: #fff; font-size: 16px; font-weight: 600; text-align: center;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    background: rgba(0,0,0,0.5); padding: 12px 24px; border-radius: 12px;
-    backdrop-filter: blur(8px); max-width: 90%;
+    color: #fff; font-size: 11px; font-weight: 500; text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.55); padding: 5px 14px; border-radius: 6px;
+    backdrop-filter: blur(6px); max-width: 320px;
+    opacity: 0; transition: opacity 0.3s;
+    font-family: Inter, sans-serif; letter-spacing: 0.3px;
+}
+#battle-message.visible {
+    opacity: 1;
 }
 
 #battle-actions {
