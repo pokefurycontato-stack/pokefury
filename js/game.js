@@ -1784,7 +1784,7 @@ class PokeFuryGame {
             const qty = parseInt(document.getElementById('donate-item-qty').value) || 1;
             if (!itemId) return;
 
-            const { error } = await window.db.rpc('add_item', { p_item_id: itemId, p_qty: qty });
+            const { error } = await window.db.rpc('add_item', { p_item_id: itemId, p_qty: qty, p_character_id: this._donateSelectedChar.id });
             const result = document.getElementById('donate-result');
             result.classList.remove('hidden');
             if (error) {
