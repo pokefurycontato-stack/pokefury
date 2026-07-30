@@ -1973,30 +1973,33 @@ class PokeFuryGame {
         let speciesData = null;
         let height = '?', weight = '?', genderRate = '?', baseHappiness = '?';
 
-        try {
-            const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemon.id}`);
-            if (resp.ok) speciesData = await resp.json();
-        } catch (e) {}
+        const baseId = pokemon.base_id || pokemon.id;
+        if (baseId <= 1025) {
+            try {
+                const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${baseId}`);
+                if (resp.ok) speciesData = await resp.json();
+            } catch (e) {}
 
-        if (speciesData) {
-            baseHappiness = speciesData.base_happiness ?? '?';
-            const gr = speciesData.gender_rate;
-            if (gr === -1) genderRate = 'Sem gênero';
-            else {
-                const female = (gr / 8) * 100;
-                const male = 100 - female;
-                genderRate = `♂ ${male}% / ♀ ${female}%`;
+            if (speciesData) {
+                baseHappiness = speciesData.base_happiness ?? '?';
+                const gr = speciesData.gender_rate;
+                if (gr === -1) genderRate = 'Sem gênero';
+                else {
+                    const female = (gr / 8) * 100;
+                    const male = 100 - female;
+                    genderRate = `♂ ${male}% / ♀ ${female}%`;
+                }
             }
+
+            try {
+                const resp2 = await fetch(`https://pokeapi.co/api/v2/pokemon/${baseId}`);
+                if (resp2.ok) {
+                    const pData = await resp2.json();
+                    height = `${(pData.height / 10).toFixed(1)} m`;
+                    weight = `${(pData.weight / 10).toFixed(1)} kg`;
+                }
+            } catch (e) {}
         }
-
-        try {
-            const resp2 = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon.id}`);
-            if (resp2.ok) {
-                const pData = await resp2.json();
-                height = `${(pData.height / 10).toFixed(1)} m`;
-                weight = `${(pData.weight / 10).toFixed(1)} kg`;
-            }
-        } catch (e) {}
 
         let evolutionsHtml = '';
         try {
@@ -2010,7 +2013,7 @@ class PokeFuryGame {
                 }
 
                 let prevIds = [];
-                curId = pokemon.id;
+                let curId = pokemon.id;
                 for (let i = 0; i < 10; i++) {
                     const { data: prev } = await window.db.from('pokemon_evolutions').select('from_pokemon_id').eq('to_pokemon_id', curId);
                     if (prev && prev.length > 0) {
