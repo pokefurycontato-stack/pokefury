@@ -3,9 +3,10 @@ RETURNS VOID AS $$
 DECLARE
     target_char UUID;
 BEGIN
-    target_char := COALESCE(p_character_id, current_setting('request.jwt.claims', true)::json->>'character_id');
-    IF target_char IS NULL THEN
-        RAISE EXCEPTION 'No character_id provided';
+    IF p_character_id IS NOT NULL THEN
+        target_char := p_character_id;
+    ELSE
+        target_char := (current_setting('request.jwt.claims', true)::json->>'character_id')::uuid;
     END IF;
 
     INSERT INTO player_inventory (character_id, item_id, quantity)
