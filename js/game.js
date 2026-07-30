@@ -5,7 +5,7 @@ import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
-    getPlayerSpriteSrc, removePlayerSprite
+    removePlayerSprite
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -612,22 +612,30 @@ class PokeFuryGame {
 
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
-        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
-
-        let playerEndX = this.canvas.offsetWidth * 0.25;
-        let playerEndY = this.canvas.offsetHeight * 0.55;
-        const spritesBeforeHide = getBattlePokemonSprites();
-        if (spritesBeforeHide.player) {
-            const pRect = spritesBeforeHide.player.getBoundingClientRect();
-            const overlayRect = this.battleAnimations ? this.battleAnimations._getBoundingClientRect() : null;
-            if (overlayRect) {
-                playerEndX = pRect.left - overlayRect.left + pRect.width * 0.5;
-                playerEndY = pRect.top - overlayRect.top + pRect.height * 0.5;
-            }
-            this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
+        const clipRect = this.getBattleClipRect();
+        const dw = clipRect ? clipRect.w : this.canvas.offsetWidth;
+        const dh = clipRect ? clipRect.h : this.canvas.offsetHeight;
+        const dx = clipRect ? clipRect.x : 0;
+        const dy = clipRect ? clipRect.y : 0;
+        let playerEndX, playerEndY;
+        if (this.currentMap && this.currentMap.battle_player_x != null) {
+            playerEndX = dx + this.currentMap.battle_player_x * dw;
+            playerEndY = dy + this.currentMap.battle_player_y * dh;
+        } else {
+            playerEndX = dx + 0.25 * dw;
+            playerEndY = dy + 0.75 * dh;
         }
-        removePlayerSprite();
 
+        const isShinyPlayer = activePlayer.isShiny;
+        const spriteUrls = activePlayer.spriteUrls || {};
+        const shinyUrls = activePlayer.shinySpriteUrls || {};
+        this._savedPlayerSpriteSrc = isShinyPlayer
+            ? (shinyUrls.back || shinyUrls.front || spriteUrls.back || spriteUrls.front)
+            : (spriteUrls.back || spriteUrls.front);
+
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
+
+        removePlayerSprite();
         hideBattlePokemonSprites();
 
         initBattleUI(
@@ -699,22 +707,30 @@ class PokeFuryGame {
             this.positionBattleScreen();
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
-            drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
-
-            let playerEndX = this.canvas.offsetWidth * 0.25;
-            let playerEndY = this.canvas.offsetHeight * 0.55;
-            const spritesBeforeHide2 = getBattlePokemonSprites();
-            if (spritesBeforeHide2.player) {
-                const pRect = spritesBeforeHide2.player.getBoundingClientRect();
-                const overlayRect2 = this.battleAnimations ? this.battleAnimations._getBoundingClientRect() : null;
-                if (overlayRect2) {
-                    playerEndX = pRect.left - overlayRect2.left + pRect.width * 0.5;
-                    playerEndY = pRect.top - overlayRect2.top + pRect.height * 0.5;
-                }
-                this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
+            const clipRect2 = this.getBattleClipRect();
+            const dw2 = clipRect2 ? clipRect2.w : this.canvas.offsetWidth;
+            const dh2 = clipRect2 ? clipRect2.h : this.canvas.offsetHeight;
+            const dx2 = clipRect2 ? clipRect2.x : 0;
+            const dy2 = clipRect2 ? clipRect2.y : 0;
+            let playerEndX, playerEndY;
+            if (this.currentMap && this.currentMap.battle_player_x != null) {
+                playerEndX = dx2 + this.currentMap.battle_player_x * dw2;
+                playerEndY = dy2 + this.currentMap.battle_player_y * dh2;
+            } else {
+                playerEndX = dx2 + 0.25 * dw2;
+                playerEndY = dy2 + 0.75 * dh2;
             }
-            removePlayerSprite();
 
+            const isShinyP2 = activePlayer.isShiny;
+            const sUrls2 = activePlayer.spriteUrls || {};
+            const shUrls2 = activePlayer.shinySpriteUrls || {};
+            this._savedPlayerSpriteSrc = isShinyP2
+                ? (shUrls2.back || shUrls2.front || sUrls2.back || sUrls2.front)
+                : (sUrls2.back || sUrls2.front);
+
+            drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect2);
+
+            removePlayerSprite();
             hideBattlePokemonSprites();
 
             initBattleUI(
