@@ -139,46 +139,51 @@ const GameData = {
 
     async addPokemonToTeam(pokemon) {
         const team = await this.getTeam();
+        console.log('[AddToTeam] Current team size:', team.length);
         if (team.length >= 6) {
             const pcResult = await this.autoStorePokemonToPC(pokemon);
             return pcResult ? 'pc' : false;
         }
 
-        const { error } = await window.db
+        const insertData = {
+            user_id: this.userId,
+            character_id: this.currentCharacterId,
+            species: pokemon.species,
+            nickname: pokemon.nickname || pokemon.name,
+            level: pokemon.level,
+            current_hp: pokemon.currentHp,
+            max_hp: pokemon.stats.hp,
+            moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
+            is_active: false,
+            slot: team.length + 1,
+            pokemon_id: pokemon.id || null,
+            iv_hp: pokemon.ivs?.hp ?? 15,
+            iv_attack: pokemon.ivs?.attack ?? 15,
+            iv_defense: pokemon.ivs?.defense ?? 15,
+            iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
+            iv_sp_def: pokemon.ivs?.spDef ?? 15,
+            iv_speed: pokemon.ivs?.speed ?? 15,
+            ev_hp: pokemon.evs?.hp ?? 0,
+            ev_attack: pokemon.evs?.attack ?? 0,
+            ev_defense: pokemon.evs?.defense ?? 0,
+            ev_sp_atk: pokemon.evs?.spAtk ?? 0,
+            ev_sp_def: pokemon.evs?.spDef ?? 0,
+            ev_speed: pokemon.evs?.speed ?? 0,
+            nature: pokemon.nature || 'hardy',
+            status_effect: pokemon.statusEffect || null,
+            happiness: pokemon.happiness ?? 70,
+            is_shiny: pokemon.isShiny || false,
+            is_mega: pokemon.isMega || false,
+            held_item_id: pokemon.heldItemId || null
+        };
+        console.log('[AddToTeam] Inserting:', insertData.species, 'userId:', insertData.user_id, 'charId:', insertData.character_id);
+        const { data, error } = await window.db
             .from('pokemon_team')
-            .insert({
-                user_id: this.userId,
-                character_id: this.currentCharacterId,
-                species: pokemon.species,
-                nickname: pokemon.nickname || pokemon.name,
-                level: pokemon.level,
-                current_hp: pokemon.currentHp,
-                max_hp: pokemon.stats.hp,
-                moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
-                is_active: false,
-                slot: team.length + 1,
-                pokemon_id: pokemon.id || null,
-                iv_hp: pokemon.ivs?.hp ?? 15,
-                iv_attack: pokemon.ivs?.attack ?? 15,
-                iv_defense: pokemon.ivs?.defense ?? 15,
-                iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
-                iv_sp_def: pokemon.ivs?.spDef ?? 15,
-                iv_speed: pokemon.ivs?.speed ?? 15,
-                ev_hp: pokemon.evs?.hp ?? 0,
-                ev_attack: pokemon.evs?.attack ?? 0,
-                ev_defense: pokemon.evs?.defense ?? 0,
-                ev_sp_atk: pokemon.evs?.spAtk ?? 0,
-                ev_sp_def: pokemon.evs?.spDef ?? 0,
-                ev_speed: pokemon.evs?.speed ?? 0,
-                nature: pokemon.nature || 'hardy',
-                status_effect: pokemon.statusEffect || null,
-                happiness: pokemon.happiness ?? 70,
-                is_shiny: pokemon.isShiny || false,
-                is_mega: pokemon.isMega || false,
-                held_item_id: pokemon.heldItemId || null
-            });
-        if (error) console.error('[AddToTeam] Error:', error);
-        return !error ? 'team' : false;
+            .insert(insertData)
+            .select();
+        if (error) { console.error('[AddToTeam] INSERT ERROR:', error); return false; }
+        console.log('[AddToTeam] Insert OK, row:', data);
+        return 'team';
     },
 
     async autoStorePokemonToPC(pokemon) {

@@ -1077,6 +1077,7 @@ class PokeFuryGame {
             await showBattleMessage(`Capturou ${enemyPokemon.name} com ${itemData.name}!`);
             const added = await window.GameData.addPokemonToTeam(enemyPokemon);
             if (added === 'team') {
+                this.playerTeam.push(enemyPokemon);
                 await showBattleMessage(`${enemyPokemon.name} foi adicionado à equipe!`);
             } else if (added === 'pc') {
                 await showBattleMessage(`Equipe cheia! ${enemyPokemon.name} foi enviado ao PC.`);
@@ -1162,56 +1163,7 @@ class PokeFuryGame {
             });
         }
 
-        const freshTeam = await window.GameData.getTeam();
-        this.playerTeam = [];
-        for (const row of freshTeam) {
-            const pokemonData = await PokeAPI.ensurePokemon(row.pokemon_id || row.species);
-            if (!pokemonData) continue;
-            const pokemon = await createPokemon(pokemonData, row.level, {
-                hp: row.iv_hp, attack: row.iv_attack, defense: row.iv_defense,
-                spAtk: row.iv_sp_atk, spDef: row.iv_sp_def, speed: row.iv_speed
-            }, {
-                hp: row.ev_hp, attack: row.ev_attack, defense: row.ev_defense,
-                spAtk: row.ev_sp_atk, spDef: row.ev_sp_def, speed: row.ev_speed
-            }, row.nature, row.is_shiny);
-            pokemon.currentHp = row.current_hp != null ? row.current_hp : pokemon.stats.hp;
-            pokemon.fainted = pokemon.currentHp <= 0;
-            pokemon.experience = row.experience || 0;
-            pokemon.happiness = row.happiness ?? 70;
-            pokemon.isMega = row.is_mega || false;
-            pokemon.heldItemId = row.held_item_id || null;
-            pokemon.statusEffect = row.status_effect || null;
-            if (row.moves && Array.isArray(row.moves) && row.moves.length > 0) {
-                const savedMoveIds = row.moves.map(m => Number(m.id)).filter(Boolean);
-                if (savedMoveIds.length > 0) {
-                    const { data: moveDetails } = await window.db
-                        .from('moves')
-                        .select('id, name, type, category, power, accuracy, pp')
-                        .in('id', savedMoveIds);
-                    if (moveDetails && moveDetails.length > 0) {
-                        const moveMap = {};
-                        moveDetails.forEach(m => { moveMap[m.id] = m; });
-                        const savedMoves = row.moves.map(sm => {
-                            const full = moveMap[Number(sm.id)];
-                            if (!full) return null;
-                            return {
-                                id: full.id, name: full.name, type: full.type,
-                                category: full.category || 'physical', power: full.power || 0,
-                                accuracy: full.accuracy || 100, pp: full.pp || 35,
-                                currentPp: sm.pp ?? full.pp ?? 35
-                            };
-                        }).filter(Boolean);
-                        for (const newMove of pokemon.moves) {
-                            if (!savedMoves.some(m => m.id === newMove.id)) {
-                                savedMoves.push(newMove);
-                            }
-                        }
-                        pokemon.moves = savedMoves;
-                    }
-                }
-            }
-            this.playerTeam.push(pokemon);
-        }
+        await this.saveTeam();
 
         this.state = 'overworld';
         this._lastBattlePlayer = null;
