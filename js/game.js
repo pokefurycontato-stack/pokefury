@@ -1152,7 +1152,7 @@ class PokeFuryGame {
                 await this.battleAnimations.playCaptureSuccess(result.ball, result.endX, result.groundY, enemyPokemon.name);
             } else {
                 await this.battleAnimations.playShake(result.ball, result.endX, result.groundY, 1);
-                await this._sleep(600);
+                await new Promise(r => setTimeout(r, 600));
                 await this.battleAnimations.playCaptureFail(result.ball, result.endX, result.groundY, targetX, targetY, sprites.enemy);
                 if (sprites.enemy) sprites.enemy.style.display = 'block';
             }
