@@ -111,27 +111,40 @@ export class BattleAnimations {
         await this._sleep(200);
 
         if (spriteUrl) {
-            const container = document.getElementById('battle-pokemon-sprites');
-            if (container) {
-                const img = document.createElement('img');
-                img.src = spriteUrl;
-                img.style.cssText = `position:absolute;pointer-events:none;image-rendering:auto;display:block;opacity:0;transform:scale(0.3);filter:brightness(3) blur(6px);left:${endX - 35}px;top:${endY - 35}px;width:70px;height:70px;`;
-                container.appendChild(img);
-                window.__playerSpriteEl = img;
+            const img = document.createElement('img');
+            img.src = spriteUrl;
+            img.style.cssText = `position:absolute;pointer-events:none;image-rendering:auto;display:block;opacity:0;transform:scale(0.3);filter:brightness(3) blur(6px);left:${endX - 35}px;top:${endY - 35}px;width:70px;height:70px;z-index:18;`;
+            this.overlay.appendChild(img);
+            this._playerEntranceSprite = img;
 
-                await this._sleep(50);
+            await this._sleep(50);
 
-                img.style.transition = 'all 0.4s ease-out';
-                img.style.opacity = '1';
-                img.style.transform = 'scale(1)';
-                img.style.filter = 'brightness(1) blur(0px)';
+            img.style.transition = 'all 0.4s ease-out';
+            img.style.opacity = '1';
+            img.style.transform = 'scale(1)';
+            img.style.filter = 'brightness(1) blur(0px)';
 
-                await this._sleep(500);
-                img.style.transition = '';
-                img.style.filter = '';
+            await this._sleep(500);
+            img.style.transition = '';
+            img.style.filter = '';
+
+            const spriteContainer = document.getElementById('battle-pokemon-sprites');
+            if (spriteContainer) {
+                const overlayRect = this.overlay.getBoundingClientRect();
+                const containerRect = spriteContainer.getBoundingClientRect();
+                const offsetX = containerRect.left - overlayRect.left;
+                const offsetY = containerRect.top - overlayRect.top;
+                const newLeft = endX - 35 + offsetX;
+                const newTop = endY - 35 + offsetY;
+                img.style.left = newLeft + 'px';
+                img.style.top = newTop + 'px';
+                spriteContainer.appendChild(img);
             }
         }
+    }
 
+    cleanupEntrance() {
+        this._playerEntranceSprite = null;
         this._clear();
     }
 

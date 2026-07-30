@@ -741,6 +741,10 @@ export function removePlayerSprite() {
     }
 }
 
+export function setPlayerSpriteRef(el) {
+    battlePokemonSprites.player = el;
+}
+
 export function setPlayerSpriteSrc(url) {
     if (battlePokemonSprites.player) {
         battlePokemonSprites.player.src = url;

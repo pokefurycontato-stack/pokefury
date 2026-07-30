@@ -5,7 +5,7 @@ import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
-    removePlayerSprite
+    removePlayerSprite, setPlayerSpriteRef
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -656,6 +656,9 @@ class PokeFuryGame {
             const sprites = getBattlePokemonSprites();
             await this.battleAnimations.playWildEntrance(sprites.enemy);
             await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc);
+            if (this.battleAnimations._playerEntranceSprite) {
+                setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
+            }
         }
         this._playerSpriteReady = true;
 
@@ -751,6 +754,9 @@ class PokeFuryGame {
                 const sprites = getBattlePokemonSprites();
                 await this.battleAnimations.playWildEntrance(sprites.enemy);
                 await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc);
+                if (this.battleAnimations._playerEntranceSprite) {
+                    setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
+                }
             }
             this._playerSpriteReady = true;
 
@@ -1276,6 +1282,7 @@ class PokeFuryGame {
         this._lastBattleEnemy = null;
         showScreen('hud');
         hideBattlePokemonSprites();
+        if (this.battleAnimations) this.battleAnimations.cleanupEntrance();
         stopBattleVideo();
         this.enemyTeam = [];
         this.updatePartyPanel();
