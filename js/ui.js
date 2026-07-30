@@ -8,6 +8,8 @@ const battlePokemonSprites = { player: null, enemy: null };
 const battlePokemonState = { player: null, enemy: null };
 let battleMessageInterval = null;
 let battleMessageResolve = null;
+let skipPlayerRender = false;
+let skipEnemyRender = false;
 let battlePositions = null;
 let battleEffects = { player: 'none', enemy: 'none' };
 
@@ -668,6 +670,8 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     const container = ensureBattlePokemonContainer();
     if (!container) return;
     const isPlayer = side === 'player';
+    if (isPlayer && skipPlayerRender) return;
+    if (!isPlayer && skipEnemyRender) return;
     const url = getBattleSpriteUrl(pokemon, isPlayer);
 
     let el = battlePokemonSprites[side];
@@ -753,6 +757,14 @@ export function removePlayerSprite() {
 
 export function setPlayerSpriteRef(el) {
     battlePokemonSprites.player = el;
+}
+
+export function setSkipPlayerRender(val) {
+    skipPlayerRender = val;
+}
+
+export function setSkipEnemyRender(val) {
+    skipEnemyRender = val;
 }
 
 export function setPlayerSpriteSrc(url) {

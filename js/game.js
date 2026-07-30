@@ -5,7 +5,7 @@ import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
-    removePlayerSprite, setPlayerSpriteRef
+    removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -522,10 +522,6 @@ class PokeFuryGame {
             this._lastBattlePlayer = activePlayer;
             this._lastBattleEnemy = activeEnemy;
             drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg, this.getBattleClipRect());
-            if (!this._playerSpriteReady) removePlayerSprite();
-            if (this._captureInProgress && getBattlePokemonSprites().enemy) {
-                getBattlePokemonSprites().enemy.style.setProperty('display', 'none', 'important');
-            }
         }
     }
 
@@ -647,6 +643,7 @@ class PokeFuryGame {
             ? (shinyUrls.back || shinyUrls.front || spriteUrls.back || spriteUrls.front)
             : (spriteUrls.back || spriteUrls.front);
 
+        setSkipPlayerRender(true);
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
 
         removePlayerSprite();
@@ -672,6 +669,7 @@ class PokeFuryGame {
                 setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
             }
         }
+        setSkipPlayerRender(false);
         this._playerSpriteReady = true;
 
         await showBattleMessage(introMsg, 2000);
@@ -756,6 +754,7 @@ class PokeFuryGame {
                 ? (shUrls2.back || shUrls2.front || sUrls2.back || sUrls2.front)
                 : (sUrls2.back || sUrls2.front);
 
+            setSkipPlayerRender(true);
             drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect2);
 
             removePlayerSprite();
@@ -779,6 +778,7 @@ class PokeFuryGame {
                     setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
                 }
             }
+            setSkipPlayerRender(false);
             this._playerSpriteReady = true;
 
             await showBattleMessage(introMsg, 2000);
@@ -1193,6 +1193,7 @@ class PokeFuryGame {
 
             const ballSpriteUrl = itemData.sprite_url || '';
             this._captureInProgress = true;
+            setSkipEnemyRender(true);
             const result = await this.battleAnimations.playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY);
 
             if (caught) {
@@ -1204,6 +1205,7 @@ class PokeFuryGame {
                 await this.battleAnimations.playCaptureFail(result.ball, result.hitX, result.hitY, targetX, targetY, sprites.enemy);
             }
             this._captureInProgress = false;
+            setSkipEnemyRender(false);
         }
 
         if (caught) {
