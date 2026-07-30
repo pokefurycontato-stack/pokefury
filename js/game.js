@@ -4,7 +4,7 @@ import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, 
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
-    detectBattleCircles
+    detectBattleCircles, setBattlePositions
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -501,7 +501,16 @@ class PokeFuryGame {
         if (this.currentBattleBg) {
             await preloadBattleBgImage(this.currentBattleBg);
             this.applyBattleNeonFromBg(this.currentBattleBg);
-            detectBattleCircles(this.currentBattleBg);
+        }
+        if (this.currentMap && this.currentMap.battle_player_x != null) {
+            setBattlePositions({
+                playerX: this.currentMap.battle_player_x,
+                playerY: this.currentMap.battle_player_y,
+                enemyX: this.currentMap.battle_enemy_x,
+                enemyY: this.currentMap.battle_enemy_y
+            });
+        } else {
+            setBattlePositions(null);
         }
 
         let pokemon = null;
@@ -606,7 +615,16 @@ class PokeFuryGame {
             if (this.currentBattleBg) {
                 await preloadBattleBgImage(this.currentBattleBg);
                 this.applyBattleNeonFromBg(this.currentBattleBg);
-                detectBattleCircles(this.currentBattleBg);
+            }
+            if (this.currentMap && this.currentMap.battle_player_x != null) {
+                setBattlePositions({
+                    playerX: this.currentMap.battle_player_x,
+                    playerY: this.currentMap.battle_player_y,
+                    enemyX: this.currentMap.battle_enemy_x,
+                    enemyY: this.currentMap.battle_enemy_y
+                });
+            } else {
+                setBattlePositions(null);
             }
             this.state = 'battle';
             this._lastBattlePlayer = activePlayer;
@@ -2605,23 +2623,119 @@ class PokeFuryGame {
                 <img src="${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bg.name}" alt="${bg.name}" loading="lazy">
                 <div class="map-picker-item-name">${bg.name.replace(/\.(png|jpg|jpeg|gif)$/i, '').replace(/-/g, ' ')}</div>
             `;
-            item.onclick = async () => {
-                const bgName = bg.name;
-                const bgUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bgName}`;
-                try {
-                    await this.regionManager.updateMap(map.id, { battle_bg_url: bgUrl });
-                    if (this.currentMap && this.currentMap.id === map.id) {
-                        this.currentMap.battle_bg_url = bgUrl;
-                    }
-                    modal.classList.add('hidden');
-                    this.loadRegionDetail(region);
-                } catch (e) {
-                    console.error('[RegionManager] Error updating battle background:', e);
-                    alert('Erro ao salvar o background.');
-                }
+            item.onclick = () => {
+                const bgUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bg.name}`;
+                this.openBattlePositionEditor(map, region, bgUrl, bg.name);
             };
             grid.appendChild(item);
         });
+    }
+
+    openBattlePositionEditor(map, region, bgUrl, bgName) {
+        const modal = document.getElementById('map-picker-modal');
+        const grid = document.getElementById('map-picker-grid');
+
+        const px = map.battle_player_x != null ? map.battle_player_x : 0.25;
+        const py = map.battle_player_y != null ? map.battle_player_y : 0.75;
+        const ex = map.battle_enemy_x != null ? map.battle_enemy_x : 0.72;
+        const ey = map.battle_enemy_y != null ? map.battle_enemy_y : 0.4;
+
+        grid.innerHTML = '';
+        grid.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;';
+
+        const label = document.createElement('div');
+        label.style.cssText = 'color:rgba(255,255,255,0.6);font-size:12px;text-align:center;';
+        label.textContent = 'Arraste os pokemons para posição desejada no circulo';
+        grid.appendChild(label);
+
+        const preview = document.createElement('div');
+        preview.style.cssText = 'position:relative;width:100%;max-width:700px;aspect-ratio:16/10;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);cursor:crosshair;';
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = bgUrl;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;pointer-events:none;display:block;';
+        preview.appendChild(img);
+
+        function createMarker(label, color, initX, initY) {
+            const m = document.createElement('div');
+            m.className = 'battle-pos-marker';
+            m.style.cssText = `position:absolute;left:${initX*100}%;top:${initY*100}%;width:48px;height:48px;transform:translate(-50%,-80%);cursor:grab;z-index:2;`;
+            m.innerHTML = `<div style="width:40px;height:40px;border-radius:50%;background:${color};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 10px ${color}">${label === 'player' ? '🟢' : '🔴'}</div>
+                <div style="text-align:center;font-size:9px;color:#fff;font-weight:700;text-shadow:0 0 4px #000;margin-top:-2px">${label === 'player' ? 'TREINADOR' : 'INIMIGO'}</div>`;
+            return m;
+        }
+
+        const playerMarker = createMarker('player', 'rgba(34,150,34,0.8)', px, py);
+        const enemyMarker = createMarker('enemy', 'rgba(200,34,34,0.8)', ex, ey);
+        preview.appendChild(playerMarker);
+        preview.appendChild(enemyMarker);
+
+        function makeDraggable(marker, onUpdate) {
+            let dragging = false;
+            const onMove = (clientX, clientY) => {
+                const rect = preview.getBoundingClientRect();
+                const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+                marker.style.left = (x * 100) + '%';
+                marker.style.top = (y * 100) + '%';
+                onUpdate(x, y);
+            };
+            marker.addEventListener('mousedown', (e) => { e.preventDefault(); dragging = true; marker.style.cursor = 'grabbing'; });
+            marker.addEventListener('touchstart', (e) => { dragging = true; }, { passive: true });
+            window.addEventListener('mousemove', (e) => { if (dragging) onMove(e.clientX, e.clientY); });
+            window.addEventListener('touchmove', (e) => { if (dragging) onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+            window.addEventListener('mouseup', () => { dragging = false; marker.style.cursor = 'grab'; });
+            window.addEventListener('touchend', () => { dragging = false; marker.style.cursor = 'grab'; });
+        }
+
+        let finalPx = px, finalPy = py, finalEx = ex, finalEy = ey;
+        makeDraggable(playerMarker, (x, y) => { finalPx = x; finalPy = y; });
+        makeDraggable(enemyMarker, (x, y) => { finalEx = x; finalEy = y; });
+
+        grid.appendChild(preview);
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:10px;margin-top:8px;';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Voltar';
+        cancelBtn.className = 'action-btn small';
+        cancelBtn.style.cssText = 'grid-column:auto;';
+        cancelBtn.onclick = () => { this.openBattleBackgroundPicker(map, region); };
+
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Salvar BG + Posições';
+        saveBtn.className = 'action-btn small';
+        saveBtn.style.cssText = 'grid-column:auto;background:rgba(34,150,34,0.6);border:1px solid rgba(34,150,34,0.4);';
+        saveBtn.onclick = async () => {
+            try {
+                await this.regionManager.updateMap(map.id, {
+                    battle_bg_url: bgUrl,
+                    battle_player_x: finalPx,
+                    battle_player_y: finalPy,
+                    battle_enemy_x: finalEx,
+                    battle_enemy_y: finalEy
+                });
+                if (this.currentMap && this.currentMap.id === map.id) {
+                    this.currentMap.battle_bg_url = bgUrl;
+                    this.currentMap.battle_player_x = finalPx;
+                    this.currentMap.battle_player_y = finalPy;
+                    this.currentMap.battle_enemy_x = finalEx;
+                    this.currentMap.battle_enemy_y = finalEy;
+                }
+                modal.classList.add('hidden');
+                grid.style.cssText = '';
+                this.loadRegionDetail(region);
+            } catch (e) {
+                console.error('[BattlePos] Error saving:', e);
+                alert('Erro ao salvar.');
+            }
+        };
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(saveBtn);
+        grid.appendChild(btnRow);
     }
 
     async loadAllMapImages(folders, storageUrl, grid, region, modal) {

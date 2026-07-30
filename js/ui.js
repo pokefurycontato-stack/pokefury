@@ -8,8 +8,13 @@ const battlePokemonSprites = { player: null, enemy: null };
 const battlePokemonState = { player: null, enemy: null };
 let battleMessageInterval = null;
 let battleMessageResolve = null;
+let battlePositions = null;
 
 const battleCircleCache = new Map();
+
+export function setBattlePositions(positions) {
+    battlePositions = positions;
+}
 
 export async function detectBattleCircles(imgUrl) {
     if (battleCircleCache.has(imgUrl)) return battleCircleCache.get(imgUrl);
@@ -370,35 +375,22 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    const cached = battleCircleCache.get(backgroundUrl);
+    const dw = clipRect ? clipRect.w : w;
+    const dh = clipRect ? clipRect.h : h;
+    const dx = clipRect ? clipRect.x : 0;
+    const dy = clipRect ? clipRect.y : 0;
     let playerX, playerY, enemyX, enemyY;
 
-    if (cached) {
-        const dw = clipRect ? clipRect.w : w;
-        const dh = clipRect ? clipRect.h : h;
-        const dx = clipRect ? clipRect.x : 0;
-        const dy = clipRect ? clipRect.y : 0;
-        const imgRatio = cached.imgW / cached.imgH;
-        const areaRatio = dw / dh;
-        let sx = 0, sy = 0, sw, sh;
-        if (imgRatio > areaRatio) {
-            sh = cached.imgH;
-            sw = sh * areaRatio;
-            sx = (cached.imgW - sw) / 2;
-        } else {
-            sw = cached.imgW;
-            sh = sw / areaRatio;
-            sy = (cached.imgH - sh) / 2;
-        }
-        playerX = dx + (cached.player.x * cached.imgW - sx) / sw * dw;
-        playerY = dy + (cached.player.y * cached.imgH - sy) / sh * dh;
-        enemyX = dx + (cached.enemy.x * cached.imgW - sx) / sw * dw;
-        enemyY = dy + (cached.enemy.y * cached.imgH - sy) / sh * dh;
+    if (battlePositions) {
+        playerX = dx + battlePositions.playerX * dw;
+        playerY = dy + battlePositions.playerY * dh;
+        enemyX = dx + battlePositions.enemyX * dw;
+        enemyY = dy + battlePositions.enemyY * dh;
     } else {
-        playerX = w * 0.22 + 500;
-        playerY = h * 0.58 + 40;
-        enemyX = w * 0.73 - 350;
-        enemyY = h * 0.32 + 180;
+        playerX = dx + 0.25 * dw;
+        playerY = dy + 0.75 * dh;
+        enemyX = dx + 0.72 * dw;
+        enemyY = dy + 0.4 * dh;
     }
 
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5);
