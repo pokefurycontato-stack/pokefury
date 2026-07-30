@@ -628,6 +628,15 @@ class PokeFuryGame {
             playerEndY = dy + 0.75 * dh;
         }
 
+        const mainArea = document.getElementById('main-area');
+        const wrapper = document.getElementById('game-wrapper');
+        if (mainArea && wrapper) {
+            const mainRect = mainArea.getBoundingClientRect();
+            const wrapRect = wrapper.getBoundingClientRect();
+            playerEndX += mainRect.left - wrapRect.left;
+            playerEndY += mainRect.top - wrapRect.top;
+        }
+
         const isShinyPlayer = activePlayer.isShiny;
         const spriteUrls = activePlayer.spriteUrls || {};
         const shinyUrls = activePlayer.shinySpriteUrls || {};
@@ -726,6 +735,15 @@ class PokeFuryGame {
             } else {
                 playerEndX = dx2 + 0.25 * dw2;
                 playerEndY = dy2 + 0.75 * dh2;
+            }
+
+            const mainArea2 = document.getElementById('main-area');
+            const wrapper2 = document.getElementById('game-wrapper');
+            if (mainArea2 && wrapper2) {
+                const mainRect2 = mainArea2.getBoundingClientRect();
+                const wrapRect2 = wrapper2.getBoundingClientRect();
+                playerEndX += mainRect2.left - wrapRect2.left;
+                playerEndY += mainRect2.top - wrapRect2.top;
             }
 
             const isShinyP2 = activePlayer.isShiny;
