@@ -75,7 +75,7 @@ export class BattleAnimations {
         enemySpriteEl.style.filter = '';
     }
 
-    async playPlayerEntrance(playerSpriteEl, endX, endY) {
+    async playPlayerEntrance(playerSpriteEl, endX, endY, spriteUrl) {
         if (!playerSpriteEl) return;
 
         this._ensureOverlay();
@@ -114,6 +114,7 @@ export class BattleAnimations {
 
         await this._sleep(200);
 
+        if (spriteUrl) playerSpriteEl.src = spriteUrl;
         playerSpriteEl.style.display = 'block';
         playerSpriteEl.style.opacity = '0';
         playerSpriteEl.style.transform = 'scale(0.3)';

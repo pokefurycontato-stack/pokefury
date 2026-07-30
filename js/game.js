@@ -4,7 +4,8 @@ import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, 
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
-    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites
+    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
+    getPlayerSpriteSrc, setPlayerSpriteSrc
 } from './ui.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
@@ -623,6 +624,9 @@ class PokeFuryGame {
                 playerEndX = pRect.left - overlayRect.left + pRect.width * 0.5;
                 playerEndY = pRect.top - overlayRect.top + pRect.height * 0.5;
             }
+            this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
+            spritesBeforeHide.player.style.display = 'none';
+            spritesBeforeHide.player.removeAttribute('src');
         }
 
         hideBattlePokemonSprites();
@@ -642,7 +646,7 @@ class PokeFuryGame {
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
             await this.battleAnimations.playWildEntrance(sprites.enemy);
-            await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY);
+            await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY, this._savedPlayerSpriteSrc);
         }
 
         await showBattleMessage(introMsg);
@@ -708,6 +712,9 @@ class PokeFuryGame {
                     playerEndX = pRect.left - overlayRect2.left + pRect.width * 0.5;
                     playerEndY = pRect.top - overlayRect2.top + pRect.height * 0.5;
                 }
+                this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
+                spritesBeforeHide2.player.style.display = 'none';
+                spritesBeforeHide2.player.removeAttribute('src');
             }
 
             hideBattlePokemonSprites();
@@ -725,7 +732,7 @@ class PokeFuryGame {
             if (this.battleAnimations) {
                 const sprites = getBattlePokemonSprites();
                 await this.battleAnimations.playWildEntrance(sprites.enemy);
-                await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY);
+                await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY, this._savedPlayerSpriteSrc);
             }
 
             await showBattleMessage(introMsg);

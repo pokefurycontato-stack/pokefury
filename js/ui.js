@@ -727,6 +727,16 @@ export function getBattlePokemonSprites() {
     return battlePokemonSprites;
 }
 
+export function getPlayerSpriteSrc() {
+    return battlePokemonState.player;
+}
+
+export function setPlayerSpriteSrc(url) {
+    if (battlePokemonSprites.player) {
+        battlePokemonSprites.player.src = url;
+    }
+}
+
 export function initBattleUI(onFight, onBag, onMega, onRun) {
     $$('.battle-action-zone[data-action]').forEach(zone => {
         zone.addEventListener('click', () => {
