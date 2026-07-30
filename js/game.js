@@ -34,6 +34,7 @@ class PokeFuryGame {
         this.chat = new Chat();
         this.trainerLevel = 1;
         this.trainerExp = 0;
+        this.mochilaCategory = 'pocoes';
 
         this.regionManager = new RegionManager();
         this.currentRegion = null;
@@ -101,6 +102,33 @@ class PokeFuryGame {
         const pcBtn = document.getElementById('btn-pc-pokemon');
         if (pcBtn) {
             pcBtn.addEventListener('click', () => this.openPC());
+        }
+
+        const mochilaBtn = document.getElementById('btn-mochila');
+        if (mochilaBtn) {
+            mochilaBtn.addEventListener('click', () => this.openMochila());
+        }
+        const mochilaClose = document.getElementById('mochila-close');
+        if (mochilaClose) {
+            mochilaClose.addEventListener('click', () => this.closeMochila());
+        }
+        const mochilaOverlay = document.getElementById('mochila-overlay');
+        if (mochilaOverlay) {
+            mochilaOverlay.addEventListener('click', (e) => {
+                if (e.target === mochilaOverlay) this.closeMochila();
+            });
+        }
+        document.querySelectorAll('.mochila-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.mochila-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.mochilaCategory = tab.dataset.category;
+                this.renderMochila();
+            });
+        });
+        const mochilaSearch = document.getElementById('mochila-search-input');
+        if (mochilaSearch) {
+            mochilaSearch.addEventListener('input', () => this.renderMochila());
         }
 
         const pcClose = document.getElementById('pc-close');
@@ -1455,6 +1483,123 @@ class PokeFuryGame {
         this._pcOpen = false;
         document.getElementById('pc-overlay').classList.add('hidden');
         if (this.overworld2d) this.overworld2d.show();
+    }
+
+    async openMochila() {
+        this.mochilaCategory = 'pocoes';
+        document.querySelectorAll('.mochila-tab').forEach(t => t.classList.remove('active'));
+        const defaultTab = document.querySelector('.mochila-tab[data-category="pocoes"]');
+        if (defaultTab) defaultTab.classList.add('active');
+        const searchInput = document.getElementById('mochila-search-input');
+        if (searchInput) searchInput.value = '';
+        document.getElementById('mochila-overlay').classList.remove('hidden');
+        if (this.overworld2d) this.overworld2d.hide();
+        await this.renderMochila();
+    }
+
+    closeMochila() {
+        document.getElementById('mochila-overlay').classList.add('hidden');
+        if (this.overworld2d) this.overworld2d.show();
+    }
+
+    async renderMochila() {
+        const grid = document.getElementById('mochila-grid');
+        const empty = document.getElementById('mochila-empty');
+        const countEl = document.getElementById('mochila-count');
+        if (!grid) return;
+
+        const inventory = await window.GameData.getInventory();
+        const search = (document.getElementById('mochila-search-input')?.value || '').toLowerCase().trim();
+        const allItems = window.ALL_ITEMS || [];
+
+        const CATEGORY_MAP = {
+            pocoes: ['medicine', 'battle_item'],
+            pokebolas: ['pokeball'],
+            itens: ['field', 'evolution_stone', 'held', 'mega_stone', 'held_item'],
+            tm_hm: ['tm_hm']
+        };
+
+        const allowedCats = CATEGORY_MAP[this.mochilaCategory] || [];
+
+        let filtered = inventory.filter(inv => {
+            if (inv.quantity <= 0) return false;
+            const dbItem = inv.items;
+            const localItem = allItems.find(ai => ai.id === inv.item_id);
+            const item = dbItem || localItem;
+            if (!item) return false;
+            const cat = item.category || '';
+            if (!allowedCats.includes(cat)) return false;
+            if (search && !(item.name || '').toLowerCase().includes(search)) return false;
+            return true;
+        }).map(inv => {
+            const dbItem = inv.items;
+            const localItem = allItems.find(ai => ai.id === inv.item_id);
+            return { ...inv, resolved: dbItem || localItem || { id: inv.item_id, name: `Item #${inv.item_id}`, sprite: '' } };
+        });
+
+        grid.innerHTML = '';
+        if (filtered.length === 0) {
+            grid.style.display = 'none';
+            empty.style.display = 'block';
+        } else {
+            grid.style.display = 'grid';
+            empty.style.display = 'none';
+        }
+
+        countEl.textContent = `${filtered.length} item${filtered.length !== 1 ? 's' : ''}`;
+
+        let tooltipEl = null;
+
+        for (const inv of filtered) {
+            const item = inv.resolved;
+            const slot = document.createElement('div');
+            slot.className = 'mochila-slot';
+
+            const spriteSrc = item.sprite || '';
+            const img = document.createElement('img');
+            img.src = spriteSrc;
+            img.alt = item.name || '';
+            img.onerror = function() { this.style.display = 'none'; };
+            slot.appendChild(img);
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'slot-name';
+            nameEl.textContent = item.name || `#${item.id}`;
+            slot.appendChild(nameEl);
+
+            if (inv.quantity > 1) {
+                const qtyEl = document.createElement('div');
+                qtyEl.className = 'slot-qty';
+                qtyEl.textContent = `x${inv.quantity}`;
+                slot.appendChild(qtyEl);
+            }
+
+            slot.addEventListener('mouseenter', (e) => {
+                if (tooltipEl) tooltipEl.remove();
+                tooltipEl = document.createElement('div');
+                tooltipEl.className = 'mochila-tooltip';
+                const catLabel = { medicine: 'Poção', pokeball: 'Pokébola', battle_item: 'Item de Batalha', field: 'Campo', evolution_stone: 'Pedra Evolutiva', held: 'Item Retido', mega_stone: 'Mega Pedra', tm_hm: 'TM/HM' };
+                tooltipEl.innerHTML = `
+                    <div class="tt-name">${item.name || `Item #${item.id}`}</div>
+                    <div class="tt-cat">${catLabel[item.category] || item.category || 'Desconhecido'}</div>
+                    <div class="tt-desc">${item.desc || item.description || ''}</div>
+                    <div class="tt-qty">Quantidade: ${inv.quantity}</div>
+                `;
+                document.body.appendChild(tooltipEl);
+                const rect = slot.getBoundingClientRect();
+                let left = rect.right + 8;
+                let top = rect.top;
+                if (left + 220 > window.innerWidth) left = rect.left - 228;
+                if (top + 140 > window.innerHeight) top = window.innerHeight - 148;
+                tooltipEl.style.left = left + 'px';
+                tooltipEl.style.top = top + 'px';
+            });
+            slot.addEventListener('mouseleave', () => {
+                if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
+            });
+
+            grid.appendChild(slot);
+        }
     }
 
     navigatePC(dir) {
