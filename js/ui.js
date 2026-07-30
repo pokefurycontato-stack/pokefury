@@ -33,13 +33,29 @@ export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activ
     const enemyPokemon = enemyTeam[activeEnemyIdx];
 
     const playerInfo = $('#player-info');
-    const enemyInfo = $('#enemy-info');
 
-    if (playerPokemon) playerInfo.querySelector('.trainer-name').textContent = `Você - Lv.${playerPokemon.level}`;
-    if (enemyPokemon) enemyInfo.querySelector('.trainer-name').textContent = `Inimigo - Lv.${enemyPokemon.level}`;
+    if (playerPokemon) {
+        updateTeamIndicators('#player-info .pokemon-team', playerTeam);
+    }
 
-    updateTeamIndicators('#player-info .pokemon-team', playerTeam);
-    updateTeamIndicators('#enemy-info .pokemon-team', enemyTeam);
+    if (enemyPokemon) {
+        const hpName = document.getElementById('enemy-hp-name');
+        const hpLevel = document.getElementById('enemy-hp-level');
+        const hpBarFill = document.getElementById('enemy-hp-bar-fill');
+        const hpText = document.getElementById('enemy-hp-text');
+
+        if (hpName) hpName.textContent = enemyPokemon.name;
+        if (hpLevel) hpLevel.textContent = `Lv. ${enemyPokemon.level}`;
+
+        const hpPct = enemyPokemon.stats.hp > 0 ? (enemyPokemon.currentHp / enemyPokemon.stats.hp) * 100 : 0;
+        if (hpBarFill) {
+            hpBarFill.style.width = hpPct + '%';
+            if (hpPct > 50) hpBarFill.style.background = '#4caf50';
+            else if (hpPct > 20) hpBarFill.style.background = '#ff9800';
+            else hpBarFill.style.background = '#f44336';
+        }
+        if (hpText) hpText.textContent = `${enemyPokemon.currentHp} / ${enemyPokemon.stats.hp}`;
+    }
 }
 
 function updateTeamIndicators(selector, team) {
@@ -339,10 +355,10 @@ function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {
     ctx.shadowBlur = 4;
     let nameText = pokemon.name;
     if (pokemon.isMega) nameText = '★ ' + nameText;
-    ctx.fillText(nameText, x, y + spriteH / 2 + Math.round(16 * sizeScale));
+    ctx.fillText(nameText, x, y + spriteH / 2 + Math.round(36 * sizeScale));
     ctx.font = `400 ${Math.round(11 * sizeScale)}px Inter, sans-serif`;
     ctx.fillStyle = isShiny ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.6)';
-    ctx.fillText(`Lv.${pokemon.level}`, x, y + spriteH / 2 + Math.round(32 * sizeScale));
+    ctx.fillText(`Lv.${pokemon.level}`, x, y + spriteH / 2 + Math.round(52 * sizeScale));
     ctx.shadowBlur = 0;
 }
 
