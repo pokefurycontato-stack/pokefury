@@ -75,69 +75,6 @@ export class BattleAnimations {
         enemySpriteEl.style.filter = '';
     }
 
-    async playTrainerEntrance(side, pokemonSpriteEl) {
-        if (!pokemonSpriteEl) return;
-
-        const containerRect = this._getBoundingClientRect();
-        const spriteRect = pokemonSpriteEl.getBoundingClientRect();
-
-        const startX = spriteRect.left - containerRect.left - 80;
-        const startY = spriteRect.top - containerRect.top + spriteRect.height * 0.5;
-        const endX = spriteRect.left - containerRect.left + spriteRect.width * 0.5;
-        const endY = spriteRect.top - containerRect.top + spriteRect.height * 0.5;
-
-        this._ensureOverlay();
-        this._clear();
-
-        const ball = this._createBall();
-        ball.style.left = startX + 'px';
-        ball.style.top = startY + 'px';
-
-        const dx = endX - startX;
-        const dy = endY - startY;
-        const midX = (startX + endX) / 2;
-        const midY = Math.min(startY, endY) - 80;
-
-        ball.animate([
-            { opacity: 0, transform: 'translate(0,0) scale(0.5) rotate(0deg)' },
-            { opacity: 1, offset: 0.1 },
-            { transform: `translate(${midX - startX}px, ${midY - startY}px) scale(1.1) rotate(180deg)`, offset: 0.5 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.9) rotate(360deg)`, opacity: 1, offset: 0.85 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(400deg)`, opacity: 1 }
-        ], {
-            duration: 500, easing: 'ease-out', fill: 'forwards'
-        });
-
-        await this._sleep(480);
-
-        const beam = this._createLightBeam(endX, endY, 70);
-        beam.style.animation = 'ballOpenGlow 0.4s ease-out forwards';
-
-        ball.animate([
-            { opacity: 1 },
-            { opacity: 0, offset: 0.4 }
-        ], { duration: 350, fill: 'forwards' });
-
-        await this._sleep(150);
-
-        pokemonSpriteEl.style.opacity = '0';
-        pokemonSpriteEl.style.transform = 'scale(0.3)';
-        pokemonSpriteEl.style.filter = 'brightness(3) blur(6px)';
-        pokemonSpriteEl.style.transition = 'none';
-
-        await this._sleep(50);
-
-        pokemonSpriteEl.style.transition = 'all 0.4s ease-out';
-        pokemonSpriteEl.style.opacity = '1';
-        pokemonSpriteEl.style.transform = 'scale(1)';
-        pokemonSpriteEl.style.filter = 'brightness(1) blur(0px)';
-
-        await this._sleep(500);
-        pokemonSpriteEl.style.transition = '';
-        pokemonSpriteEl.style.filter = '';
-        this._clear();
-    }
-
     async playPlayerEntrance(playerSpriteEl) {
         if (!playerSpriteEl) return;
 
@@ -145,17 +82,15 @@ export class BattleAnimations {
         this._clear();
 
         playerSpriteEl.style.display = 'none';
-        playerSpriteEl.style.opacity = '0';
-        playerSpriteEl.style.transform = 'scale(0.1)';
-        playerSpriteEl.style.filter = 'brightness(3) blur(6px)';
 
         const containerRect = this._getBoundingClientRect();
-        const spriteRect = playerSpriteEl.getBoundingClientRect();
+        const cw = containerRect.width;
+        const ch = containerRect.height;
 
-        const endX = spriteRect.left - containerRect.left + spriteRect.width * 0.5;
-        const endY = spriteRect.top - containerRect.top + spriteRect.height * 0.5;
+        const endX = cw * 0.25;
+        const endY = ch * 0.55;
         const startX = -30;
-        const startY = endY + 40;
+        const startY = endY + 30;
 
         const ball = this._createBall();
         ball.style.left = startX + 'px';
@@ -164,14 +99,13 @@ export class BattleAnimations {
         const dx = endX - startX;
         const dy = endY - startY;
         const midX = (startX + endX) / 2;
-        const midY = Math.min(startY, endY) - 60;
+        const midY = Math.min(startY, endY) - 70;
 
         ball.animate([
-            { opacity: 0, transform: 'translate(0,0) scale(0.6) rotate(0deg)' },
-            { opacity: 1, offset: 0.1 },
+            { transform: 'translate(0,0) scale(0.6) rotate(0deg)' },
             { transform: `translate(${midX - startX}px, ${midY - startY}px) scale(1.1) rotate(200deg)`, offset: 0.5 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.9) rotate(400deg)`, opacity: 1, offset: 0.85 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(440deg)`, opacity: 1 }
+            { transform: `translate(${dx}px, ${dy}px) scale(0.9) rotate(400deg)`, offset: 0.85 },
+            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(440deg)` }
         ], {
             duration: 500, easing: 'ease-out', fill: 'forwards'
         });
@@ -181,14 +115,18 @@ export class BattleAnimations {
         const beam = this._createLightBeam(endX, endY, 70);
         beam.style.animation = 'ballOpenGlow 0.4s ease-out forwards';
 
-        ball.animate([
-            { opacity: 1 },
-            { opacity: 0, offset: 0.4 }
-        ], { duration: 350, fill: 'forwards' });
+        ball.style.transition = 'opacity 0.3s';
+        ball.style.opacity = '0';
 
-        await this._sleep(150);
+        await this._sleep(200);
 
         playerSpriteEl.style.display = 'block';
+        playerSpriteEl.style.opacity = '0';
+        playerSpriteEl.style.transform = 'scale(0.3)';
+        playerSpriteEl.style.filter = 'brightness(3) blur(6px)';
+
+        await this._sleep(50);
+
         playerSpriteEl.style.transition = 'all 0.4s ease-out';
         playerSpriteEl.style.opacity = '1';
         playerSpriteEl.style.transform = 'scale(1)';
@@ -225,11 +163,10 @@ export class BattleAnimations {
         ball.style.top = startY + 'px';
 
         ball.animate([
-            { opacity: 0, transform: 'translate(0,0) scale(0.5) rotate(0deg)' },
-            { opacity: 1, offset: 0.08 },
+            { transform: 'translate(0,0) scale(0.5) rotate(0deg)' },
             { transform: `translate(${midX - startX}px, ${midY - startY}px) scale(1) rotate(270deg)`, offset: 0.45 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.85) rotate(540deg)`, opacity: 1, offset: 0.8 },
-            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(630deg)`, opacity: 1 }
+            { transform: `translate(${dx}px, ${dy}px) scale(0.85) rotate(540deg)`, offset: 0.8 },
+            { transform: `translate(${dx}px, ${dy}px) scale(0.8) rotate(630deg)` }
         ], {
             duration: 700, easing: 'ease-out', fill: 'forwards'
         });
@@ -310,10 +247,24 @@ export class BattleAnimations {
         await this._sleep(150);
 
         if (pokemonSpriteEl) {
-            pokemonSpriteEl.style.animation = 'pokemonReappear 0.5s ease-out forwards';
+            pokemonSpriteEl.style.display = 'block';
+            pokemonSpriteEl.style.opacity = '0';
+            pokemonSpriteEl.style.transform = 'scale(0.3)';
+            pokemonSpriteEl.style.filter = 'brightness(3) blur(6px)';
+
+            await this._sleep(50);
+
+            pokemonSpriteEl.style.transition = 'all 0.4s ease-out';
+            pokemonSpriteEl.style.opacity = '1';
+            pokemonSpriteEl.style.transform = 'scale(1)';
+            pokemonSpriteEl.style.filter = 'brightness(1) blur(0px)';
         }
 
         await this._sleep(600);
+        if (pokemonSpriteEl) {
+            pokemonSpriteEl.style.transition = '';
+            pokemonSpriteEl.style.filter = '';
+        }
         this._clear();
     }
 }

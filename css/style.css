@@ -1413,7 +1413,7 @@ body {
     background: radial-gradient(circle at 40% 35%, #fff 4px, transparent 4px),
                 linear-gradient(to bottom, #e53935 0%, #e53935 45%, #333 45%, #333 55%, #fff 55%, #fff 100%);
     border: 2px solid #333; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    z-index: 20; opacity: 0;
+    z-index: 20;
 }
 .battle-pokeball::after {
     content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);

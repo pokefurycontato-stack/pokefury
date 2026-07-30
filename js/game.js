@@ -1099,17 +1099,17 @@ class PokeFuryGame {
 
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
-            const containerRect = this.canvas.getBoundingClientRect();
+            const overlayRect = this.battleAnimations._getBoundingClientRect();
 
-            const startX = containerRect.width * 0.15;
-            const startY = containerRect.height * 0.65;
+            const startX = overlayRect.width * 0.15;
+            const startY = overlayRect.height * 0.65;
 
-            let targetX = containerRect.width * 0.5;
-            let targetY = containerRect.height * 0.4;
+            let targetX = overlayRect.width * 0.5;
+            let targetY = overlayRect.height * 0.35;
             if (sprites.enemy) {
                 const eRect = sprites.enemy.getBoundingClientRect();
-                targetX = eRect.left - containerRect.left + eRect.width * 0.5;
-                targetY = eRect.top - containerRect.top + eRect.height * 0.5;
+                targetX = eRect.left - overlayRect.left + eRect.width * 0.5;
+                targetY = eRect.top - overlayRect.top + eRect.height * 0.5;
             }
 
             if (sprites.player) sprites.player.style.display = 'none';
