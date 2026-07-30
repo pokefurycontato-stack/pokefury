@@ -177,6 +177,7 @@ const GameData = {
                 is_mega: pokemon.isMega || false,
                 held_item_id: pokemon.heldItemId || null
             });
+        if (error) console.error('[AddToTeam] Error:', error);
         return !error ? 'team' : false;
     },
 
