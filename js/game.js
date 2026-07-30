@@ -522,6 +522,7 @@ class PokeFuryGame {
             this._lastBattlePlayer = activePlayer;
             this._lastBattleEnemy = activeEnemy;
             drawBattleScene(this.ctx, this.canvas, activePlayer, activeEnemy, this.currentBattleBg, this.getBattleClipRect());
+            if (!this._playerSpriteReady) removePlayerSprite();
         }
     }
 
@@ -532,6 +533,7 @@ class PokeFuryGame {
             return;
         }
         this.isWildBattle = true;
+        this._playerSpriteReady = false;
 
         this.currentBattleBg = this.getNormalizedBattleBg();
         if (this.currentBattleBg) {
@@ -655,6 +657,7 @@ class PokeFuryGame {
             await this.battleAnimations.playWildEntrance(sprites.enemy);
             await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc);
         }
+        this._playerSpriteReady = true;
 
         await showBattleMessage(introMsg);
     }
@@ -666,6 +669,7 @@ class PokeFuryGame {
             return;
         }
         this.isWildBattle = true;
+        this._playerSpriteReady = false;
 
         try {
             const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
@@ -748,6 +752,7 @@ class PokeFuryGame {
                 await this.battleAnimations.playWildEntrance(sprites.enemy);
                 await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc);
             }
+            this._playerSpriteReady = true;
 
             await showBattleMessage(introMsg);
         } catch (e) {

@@ -115,7 +115,7 @@ export class BattleAnimations {
             if (container) {
                 const img = document.createElement('img');
                 img.src = spriteUrl;
-                img.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;display:block;opacity:0;transform:scale(0.3);filter:brightness(3) blur(6px);';
+                img.style.cssText = `position:absolute;pointer-events:none;image-rendering:auto;display:block;opacity:0;transform:scale(0.3);filter:brightness(3) blur(6px);left:${endX - 35}px;top:${endY - 35}px;width:70px;height:70px;`;
                 container.appendChild(img);
                 window.__playerSpriteEl = img;
 
