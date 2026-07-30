@@ -287,7 +287,19 @@ const GameData = {
             .select('item_id, quantity, items(*)')
             .eq('character_id', this.currentCharacterId);
         if (error) return [];
-        return data || [];
+        if (!data) return [];
+        const POKEBALL_LOCAL = {
+            10: { id: 10, name: 'Poké Ball', category: 'pokeball', effect: 'catch_1x', effect_value: 1, sprite: 'assets/sprites/items/poke-ball.png' },
+            11: { id: 11, name: 'Great Ball', category: 'pokeball', effect: 'catch_1.5x', effect_value: 1.5, sprite: 'assets/sprites/items/great-ball.png' },
+            12: { id: 12, name: 'Ultra Ball', category: 'pokeball', effect: 'catch_2x', effect_value: 2, sprite: 'assets/sprites/items/ultra-ball.png' },
+            13: { id: 13, name: 'Master Ball', category: 'pokeball', effect: 'catch_100x', effect_value: 100, sprite: 'assets/sprites/items/master-ball.png' }
+        };
+        return data.map(row => {
+            if (!row.items && POKEBALL_LOCAL[row.item_id]) {
+                row.items = POKEBALL_LOCAL[row.item_id];
+            }
+            return row;
+        });
     },
 
     async addItem(itemId, quantity = 1) {

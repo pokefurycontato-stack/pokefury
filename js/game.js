@@ -923,7 +923,8 @@ class PokeFuryGame {
             if (!enemyPokemon) { resolve(false); return; }
 
             const inventory = await window.GameData.getInventory();
-            const balls = inventory.filter(inv => inv.items && inv.items.category === 'pokeball' && inv.quantity > 0);
+            const POKEBALL_IDS = [10, 11, 12, 13];
+            const balls = inventory.filter(inv => inv.quantity > 0 && ((inv.items && inv.items.category === 'pokeball') || POKEBALL_IDS.includes(inv.item_id)));
 
             if (balls.length === 0) {
                 await showBattleMessage('Você não tem nenhuma Pokébola!');
