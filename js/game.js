@@ -626,7 +626,6 @@ class PokeFuryGame {
             }
             this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
             spritesBeforeHide.player.style.display = 'none';
-            spritesBeforeHide.player.removeAttribute('src');
         }
 
         hideBattlePokemonSprites();
@@ -645,6 +644,7 @@ class PokeFuryGame {
 
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
+            if (sprites.player) sprites.player.style.display = 'none';
             await this.battleAnimations.playWildEntrance(sprites.enemy);
             await this.battleAnimations.playPlayerEntrance(sprites.player, playerEndX, playerEndY, this._savedPlayerSpriteSrc);
         }
@@ -714,7 +714,6 @@ class PokeFuryGame {
                 }
                 this._savedPlayerSpriteSrc = getPlayerSpriteSrc();
                 spritesBeforeHide2.player.style.display = 'none';
-                spritesBeforeHide2.player.removeAttribute('src');
             }
 
             hideBattlePokemonSprites();

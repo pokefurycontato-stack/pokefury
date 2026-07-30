@@ -728,7 +728,8 @@ export function getBattlePokemonSprites() {
 }
 
 export function getPlayerSpriteSrc() {
-    return battlePokemonState.player;
+    const el = battlePokemonSprites.player;
+    return el ? el.src : null;
 }
 
 export function setPlayerSpriteSrc(url) {
