@@ -878,7 +878,7 @@ class PokeFuryGame {
                     await showBattleMessage('Você venceu a batalha!');
                     if (this.isWildBattle && this.enemyTeam.length === 1) {
                         const captured = await this.showCapturePrompt();
-                        if (!captured) this.endBattle('win');
+                        this.endBattle('win');
                         return;
                     }
                     this.endBattle('win');
