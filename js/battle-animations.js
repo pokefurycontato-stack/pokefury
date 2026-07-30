@@ -141,7 +141,10 @@ export class BattleAnimations {
     async playPlayerEntrance(playerSpriteEl) {
         if (!playerSpriteEl) return;
 
-        playerSpriteEl.style.display = 'block';
+        this._ensureOverlay();
+        this._clear();
+
+        playerSpriteEl.style.display = 'none';
         playerSpriteEl.style.opacity = '0';
         playerSpriteEl.style.transform = 'scale(0.1)';
         playerSpriteEl.style.filter = 'brightness(3) blur(6px)';
@@ -153,9 +156,6 @@ export class BattleAnimations {
         const endY = spriteRect.top - containerRect.top + spriteRect.height * 0.5;
         const startX = -30;
         const startY = endY + 40;
-
-        this._ensureOverlay();
-        this._clear();
 
         const ball = this._createBall();
         ball.style.left = startX + 'px';
@@ -188,6 +188,7 @@ export class BattleAnimations {
 
         await this._sleep(150);
 
+        playerSpriteEl.style.display = 'block';
         playerSpriteEl.style.transition = 'all 0.4s ease-out';
         playerSpriteEl.style.opacity = '1';
         playerSpriteEl.style.transform = 'scale(1)';
@@ -203,9 +204,7 @@ export class BattleAnimations {
         this._ensureOverlay();
         this._clear();
 
-        const cw = this.container.offsetWidth;
-        const ch = this.container.offsetHeight;
-        const groundY = ch * 0.82;
+        const groundY = targetY + 40;
 
         const ball = this._createBall();
         if (ballSpriteUrl) {
@@ -260,15 +259,15 @@ export class BattleAnimations {
         for (let i = 0; i < count; i++) {
             ball.animate([
                 { transform: `translate(${endX}px, ${groundY}px) rotate(0deg)` },
-                { transform: `translate(${endX - 12}px, ${groundY}px) rotate(-25deg)`, offset: 0.2 },
-                { transform: `translate(${endX + 12}px, ${groundY}px) rotate(25deg)`, offset: 0.45 },
-                { transform: `translate(${endX - 8}px, ${groundY}px) rotate(-12deg)`, offset: 0.65 },
-                { transform: `translate(${endX + 8}px, ${groundY}px) rotate(12deg)`, offset: 0.85 },
+                { transform: `translate(${endX - 14}px, ${groundY}px) rotate(-30deg)`, offset: 0.15 },
+                { transform: `translate(${endX + 14}px, ${groundY}px) rotate(30deg)`, offset: 0.35 },
+                { transform: `translate(${endX - 10}px, ${groundY}px) rotate(-18deg)`, offset: 0.55 },
+                { transform: `translate(${endX + 10}px, ${groundY}px) rotate(18deg)`, offset: 0.75 },
                 { transform: `translate(${endX}px, ${groundY}px) rotate(0deg)` }
             ], {
-                duration: 500, easing: 'ease-in-out', fill: 'forwards'
+                duration: 700, easing: 'ease-in-out', fill: 'forwards'
             });
-            await this._sleep(550);
+            await this._sleep(800);
         }
     }
 

@@ -1099,13 +1099,20 @@ class PokeFuryGame {
 
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
-            const cw = this.canvas.offsetWidth;
-            const ch = this.canvas.offsetHeight;
-            const startX = cw * 0.25;
-            const startY = ch * 0.55;
-            const targetX = cw * 0.72;
-            const targetY = ch * 0.35;
+            const containerRect = this.canvas.getBoundingClientRect();
 
+            const startX = containerRect.width * 0.15;
+            const startY = containerRect.height * 0.65;
+
+            let targetX = containerRect.width * 0.5;
+            let targetY = containerRect.height * 0.4;
+            if (sprites.enemy) {
+                const eRect = sprites.enemy.getBoundingClientRect();
+                targetX = eRect.left - containerRect.left + eRect.width * 0.5;
+                targetY = eRect.top - containerRect.top + eRect.height * 0.5;
+            }
+
+            if (sprites.player) sprites.player.style.display = 'none';
             if (sprites.enemy) sprites.enemy.style.display = 'none';
 
             const ballSpriteUrl = itemData.sprite_url || '';
@@ -1116,6 +1123,7 @@ class PokeFuryGame {
                 await this.battleAnimations.playCaptureSuccess(result.ball, result.endX, result.groundY, enemyPokemon.name);
             } else {
                 await this.battleAnimations.playShake(result.ball, result.endX, result.groundY, 1);
+                await this._sleep(600);
                 await this.battleAnimations.playCaptureFail(result.ball, result.endX, result.groundY, targetX, targetY, sprites.enemy);
                 if (sprites.enemy) sprites.enemy.style.display = 'block';
             }
