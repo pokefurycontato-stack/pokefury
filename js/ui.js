@@ -268,16 +268,16 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     }
 
-    const playerX = w * 0.22 + 180;
-    const playerY = h * 0.58 + 100;
-    const enemyX = w * 0.73 - 150;
-    const enemyY = h * 0.32 + 80;
+    const playerX = w * 0.22 + 580;
+    const playerY = h * 0.58 - 60;
+    const enemyX = w * 0.73 - 350;
+    const enemyY = h * 0.32 + 180;
 
-    updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.8);
-    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.7);
+    updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5);
+    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45);
 
-    drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 0.8);
-    drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 0.7);
+    drawBattlePokemonName(ctx, playerX, playerY, playerPokemon, 0.5);
+    drawBattlePokemonName(ctx, enemyX, enemyY, enemyPokemon, 0.45);
 
     if (clipRect) ctx.restore();
 }

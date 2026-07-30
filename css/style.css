@@ -459,11 +459,11 @@ body {
 
 #battle-actions {
     position: absolute;
-    bottom: -70px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 100%;
+    left: 0;
+    right: 0;
     display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-    padding: 12px; max-width: 500px; width: 100%;
+    padding: 12px 0; max-width: 500px; margin: 0 auto; width: 100%;
 }
 .action-btn {
     padding: 14px 16px; border: none; border-radius: 12px;
