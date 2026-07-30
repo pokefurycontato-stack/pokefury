@@ -57,6 +57,7 @@ export class BattleAnimations {
 
     async playWildEntrance(enemySpriteEl) {
         if (!enemySpriteEl) return;
+        enemySpriteEl.style.display = 'block';
         enemySpriteEl.style.opacity = '0';
         enemySpriteEl.style.transform = 'scale(0.3)';
         enemySpriteEl.style.filter = 'brightness(3) blur(8px)';

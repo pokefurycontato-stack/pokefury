@@ -613,6 +613,8 @@ class PokeFuryGame {
 
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
 
+        hideBattlePokemonSprites();
+
         initBattleUI(
             () => this.onFight(),
             () => this.onBag(),
@@ -627,7 +629,6 @@ class PokeFuryGame {
 
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
-            if (sprites.player) sprites.player.style.display = 'none';
             await this.battleAnimations.playWildEntrance(sprites.enemy);
             await this.battleAnimations.playPlayerEntrance(sprites.player);
         }
@@ -685,6 +686,8 @@ class PokeFuryGame {
 
             drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, this.getBattleClipRect());
 
+            hideBattlePokemonSprites();
+
             initBattleUI(
                 () => this.onFight(),
                 () => this.onBag(),
@@ -697,7 +700,6 @@ class PokeFuryGame {
 
             if (this.battleAnimations) {
                 const sprites = getBattlePokemonSprites();
-                if (sprites.player) sprites.player.style.display = 'none';
                 await this.battleAnimations.playWildEntrance(sprites.enemy);
                 await this.battleAnimations.playPlayerEntrance(sprites.player);
             }
