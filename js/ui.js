@@ -32,12 +32,6 @@ export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activ
     const playerPokemon = playerTeam[activePlayerIdx];
     const enemyPokemon = enemyTeam[activeEnemyIdx];
 
-    const playerInfo = $('#player-info');
-
-    if (playerPokemon) {
-        updateTeamIndicators('#player-info .pokemon-team', playerTeam);
-    }
-
     if (enemyPokemon) {
         const hpName = document.getElementById('enemy-hp-name');
         const hpLevel = document.getElementById('enemy-hp-level');

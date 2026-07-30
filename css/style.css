@@ -405,19 +405,54 @@ body {
     background: transparent;
     z-index: 20;
     overflow: visible;
+    border: 3px solid var(--battle-neon, #ff2255);
+    box-shadow:
+        inset 0 0 20px var(--battle-neon, #ff2255),
+        inset 0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
+        0 0 20px var(--battle-neon, #ff2255),
+        0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
+        0 0 60px var(--battle-neon-dim, rgba(255,34,85,0.2));
+    animation: battleNeonPulse 1.2s ease-in-out infinite;
+}
+@keyframes battleNeonPulse {
+    0%, 100% {
+        box-shadow:
+            inset 0 0 20px var(--battle-neon, #ff2255),
+            inset 0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
+            0 0 20px var(--battle-neon, #ff2255),
+            0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
+            0 0 60px var(--battle-neon-dim, rgba(255,34,85,0.2));
+        border-color: var(--battle-neon, #ff2255);
+    }
+    25% {
+        box-shadow:
+            inset 0 0 35px var(--battle-neon, #ff2255),
+            inset 0 0 60px var(--battle-neon-bright, rgba(255,100,140,0.5)),
+            0 0 35px var(--battle-neon, #ff2255),
+            0 0 60px var(--battle-neon-bright, rgba(255,100,140,0.5)),
+            0 0 90px var(--battle-neon-dim, rgba(255,34,85,0.3));
+        border-color: var(--battle-neon-bright, #ff6699);
+    }
+    50% {
+        box-shadow:
+            inset 0 0 30px var(--battle-neon, #ff2255),
+            inset 0 0 55px var(--battle-neon-dim, rgba(255,34,85,0.45)),
+            0 0 30px var(--battle-neon, #ff2255),
+            0 0 55px var(--battle-neon-dim, rgba(255,34,85,0.45)),
+            0 0 80px var(--battle-neon-dim, rgba(255,34,85,0.25));
+        border-color: var(--battle-neon, #ff2255);
+    }
+    75% {
+        box-shadow:
+            inset 0 0 40px var(--battle-neon, #ff2255),
+            inset 0 0 70px var(--battle-neon-bright, rgba(255,100,140,0.55)),
+            0 0 40px var(--battle-neon, #ff2255),
+            0 0 70px var(--battle-neon-bright, rgba(255,100,140,0.55)),
+            0 0 100px var(--battle-neon-dim, rgba(255,34,85,0.35));
+        border-color: var(--battle-neon-bright, #ff6699);
+    }
 }
 #battle-ui { display: flex; flex-direction: column; height: 100%; padding: 12px; }
-.trainer-info {
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
-    border: 1px solid rgba(233,69,96,0.3); border-radius: 12px;
-    padding: 10px 14px; max-width: 320px;
-}
-#enemy-info { margin-left: auto; }
-.trainer-sprite { width: 40px; height: 40px; }
-.trainer-details { flex: 1; }
-.trainer-name { color: #fff; font-size: 13px; font-weight: 700; }
-.pokemon-team { display: flex; gap: 4px; margin-top: 4px; }
 
 .enemy-hp-box {
     margin-left: auto;

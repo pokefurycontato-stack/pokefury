@@ -499,6 +499,7 @@ class PokeFuryGame {
         this.currentBattleBg = this.getNormalizedBattleBg();
         if (this.currentBattleBg) {
             await preloadBattleBgImage(this.currentBattleBg);
+            this.applyBattleNeonFromBg(this.currentBattleBg);
         }
 
         let pokemon = null;
@@ -602,6 +603,7 @@ class PokeFuryGame {
             this.currentBattleBg = this.getNormalizedBattleBg();
             if (this.currentBattleBg) {
                 await preloadBattleBgImage(this.currentBattleBg);
+                this.applyBattleNeonFromBg(this.currentBattleBg);
             }
             this.state = 'battle';
             this._lastBattlePlayer = activePlayer;
@@ -1056,6 +1058,49 @@ class PokeFuryGame {
             w: this.overworld2d.worldCols * this.overworld2d.tileW,
             h: this.overworld2d.worldRows * this.overworld2d.tileH
         };
+    }
+
+    applyBattleNeonFromBg(bgUrl) {
+        const battleEl = document.getElementById('battle-screen');
+        if (!battleEl || !bgUrl) return;
+        const isVideo = /\.(mp4|webm|ogg)$/i.test(bgUrl);
+        if (isVideo) return;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const c = document.createElement('canvas');
+            const sw = Math.min(img.naturalWidth, 200);
+            const sh = Math.min(img.naturalHeight, 150);
+            c.width = sw; c.height = sh;
+            const cx = c.getContext('2d');
+            cx.drawImage(img, 0, 0, sw, sh);
+            const data = cx.getImageData(0, 0, sw, sh).data;
+            let rSum = 0, gSum = 0, bSum = 0, count = 0;
+            const samples = [
+                [0, 0], [sw-1, 0], [0, sh-1], [sw-1, sh-1],
+                [Math.floor(sw/2), 0], [0, Math.floor(sh/2)],
+                [sw-1, Math.floor(sh/2)], [Math.floor(sw/2), sh-1]
+            ];
+            for (const [sx, sy] of samples) {
+                const idx = (sy * sw + sx) * 4;
+                const r = data[idx], g = data[idx+1], b = data[idx+2];
+                const avg = (r + g + b) / 3;
+                if (avg > 30 && avg < 240) {
+                    rSum += r; gSum += g; bSum += b; count++;
+                }
+            }
+            if (count === 0) return;
+            const r = Math.round(rSum / count);
+            const g = Math.round(gSum / count);
+            const b = Math.round(bSum / count);
+            const main = `rgb(${r},${g},${b})`;
+            const dim = `rgba(${r},${g},${b},0.35)`;
+            const bright = `rgb(${Math.min(255,r+60)},${Math.min(255,g+60)},${Math.min(255,b+60)})`;
+            battleEl.style.setProperty('--battle-neon', main);
+            battleEl.style.setProperty('--battle-neon-dim', dim);
+            battleEl.style.setProperty('--battle-neon-bright', bright);
+        };
+        img.src = bgUrl;
     }
 
     getNormalizedBattleBg() {
