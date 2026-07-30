@@ -405,50 +405,26 @@ body {
     background: transparent;
     z-index: 20;
     overflow: visible;
-    border: 3px solid var(--battle-neon, #ff2255);
+    border: 2px solid var(--battle-neon, #ff2255);
     box-shadow:
-        inset 0 0 20px var(--battle-neon, #ff2255),
-        inset 0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
-        0 0 20px var(--battle-neon, #ff2255),
-        0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
-        0 0 60px var(--battle-neon-dim, rgba(255,34,85,0.2));
-    animation: battleNeonPulse 1.2s ease-in-out infinite;
+        inset 0 0 10px var(--battle-neon-dim, rgba(255,34,85,0.25)),
+        0 0 10px var(--battle-neon-dim, rgba(255,34,85,0.25)),
+        0 0 20px var(--battle-neon-dim, rgba(255,34,85,0.15));
+    animation: battleNeonPulse 2s ease-in-out infinite;
 }
 @keyframes battleNeonPulse {
     0%, 100% {
         box-shadow:
-            inset 0 0 20px var(--battle-neon, #ff2255),
-            inset 0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
-            0 0 20px var(--battle-neon, #ff2255),
-            0 0 40px var(--battle-neon-dim, rgba(255,34,85,0.4)),
-            0 0 60px var(--battle-neon-dim, rgba(255,34,85,0.2));
+            inset 0 0 10px var(--battle-neon-dim, rgba(255,34,85,0.25)),
+            0 0 10px var(--battle-neon-dim, rgba(255,34,85,0.25)),
+            0 0 20px var(--battle-neon-dim, rgba(255,34,85,0.15));
         border-color: var(--battle-neon, #ff2255);
-    }
-    25% {
-        box-shadow:
-            inset 0 0 35px var(--battle-neon, #ff2255),
-            inset 0 0 60px var(--battle-neon-bright, rgba(255,100,140,0.5)),
-            0 0 35px var(--battle-neon, #ff2255),
-            0 0 60px var(--battle-neon-bright, rgba(255,100,140,0.5)),
-            0 0 90px var(--battle-neon-dim, rgba(255,34,85,0.3));
-        border-color: var(--battle-neon-bright, #ff6699);
     }
     50% {
         box-shadow:
-            inset 0 0 30px var(--battle-neon, #ff2255),
-            inset 0 0 55px var(--battle-neon-dim, rgba(255,34,85,0.45)),
-            0 0 30px var(--battle-neon, #ff2255),
-            0 0 55px var(--battle-neon-dim, rgba(255,34,85,0.45)),
-            0 0 80px var(--battle-neon-dim, rgba(255,34,85,0.25));
-        border-color: var(--battle-neon, #ff2255);
-    }
-    75% {
-        box-shadow:
-            inset 0 0 40px var(--battle-neon, #ff2255),
-            inset 0 0 70px var(--battle-neon-bright, rgba(255,100,140,0.55)),
-            0 0 40px var(--battle-neon, #ff2255),
-            0 0 70px var(--battle-neon-bright, rgba(255,100,140,0.55)),
-            0 0 100px var(--battle-neon-dim, rgba(255,34,85,0.35));
+            inset 0 0 18px var(--battle-neon-dim, rgba(255,34,85,0.35)),
+            0 0 18px var(--battle-neon-dim, rgba(255,34,85,0.35)),
+            0 0 35px var(--battle-neon-dim, rgba(255,34,85,0.2));
         border-color: var(--battle-neon-bright, #ff6699);
     }
 }
