@@ -627,7 +627,9 @@ class PokeFuryGame {
 
         if (this.battleAnimations) {
             const sprites = getBattlePokemonSprites();
+            if (sprites.player) sprites.player.style.display = 'none';
             await this.battleAnimations.playWildEntrance(sprites.enemy);
+            await this.battleAnimations.playPlayerEntrance(sprites.player);
         }
 
         await showBattleMessage(introMsg);
@@ -695,7 +697,9 @@ class PokeFuryGame {
 
             if (this.battleAnimations) {
                 const sprites = getBattlePokemonSprites();
+                if (sprites.player) sprites.player.style.display = 'none';
                 await this.battleAnimations.playWildEntrance(sprites.enemy);
+                await this.battleAnimations.playPlayerEntrance(sprites.player);
             }
 
             await showBattleMessage(introMsg);
