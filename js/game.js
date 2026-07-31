@@ -43,6 +43,7 @@ class PokeFuryGame {
         this.currentRegion = null;
         this.currentMap = null;
         this.currentRegionMaps = [];
+        this._winStreak = 0;
 
         this.init();
     }
@@ -333,6 +334,11 @@ class PokeFuryGame {
 
         document.getElementById('character-screen').classList.add('hidden');
         document.getElementById('game-wrapper').classList.remove('hidden');
+
+        window.GameData.getCurrencies().then(cur => {
+            const el = document.getElementById('c-silver');
+            if (el) el.textContent = (cur.silver || 0).toLocaleString();
+        });
 
         if (!this.battleAnimations) {
             this.battleAnimations = new BattleAnimations(document.getElementById('game-wrapper'));
@@ -904,6 +910,29 @@ class PokeFuryGame {
         return Math.min(Math.max(rate, 0.02), 1.0);
     }
 
+    calculateSilverDrop(enemyPokemon) {
+        const level = enemyPokemon.level || 1;
+        const baseStats = enemyPokemon.baseStats || {};
+        const bst = (baseStats.hp || 0) + (baseStats.attack || 0) + (baseStats.defense || 0) +
+                     (baseStats.spAtk || 0) + (baseStats.spDef || 0) + (baseStats.speed || 0);
+
+        const base = (level * 2) + Math.floor(Math.random() * (level + 1));
+
+        let rarityMult = 1.0;
+        if (bst >= 600) rarityMult = 2.5;
+        else if (bst >= 500) rarityMult = 1.5;
+        else if (bst >= 400) rarityMult = 1.2;
+
+        const starters = [1, 4, 7, 25, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498, 501, 650, 653, 656, 722, 725, 728, 810, 813, 816, 906, 909, 912];
+        if (starters.includes(enemyPokemon.id)) rarityMult = 0.5;
+
+        let streakMult = 1.0;
+        if (this._winStreak >= 5) streakMult = 1.2;
+
+        const total = Math.floor(base * rarityMult * streakMult);
+        return Math.max(1, total);
+    }
+
     async onMega() {
         const playerPokemon = getFirstAlive(this.playerTeam);
         if (!playerPokemon) return;
@@ -1299,14 +1328,27 @@ class PokeFuryGame {
             if (this.enemyTeam.length > 0) {
                 await this.awardTrainerExp(1);
             }
+
+            this._winStreak++;
+            const enemy = this.enemyTeam[0];
+            const silverDrop = this.calculateSilverDrop(enemy);
+            const cur = await window.GameData.getCurrencies();
+            const newSilver = (cur.silver || 0) + silverDrop;
+            await window.GameData.updateCurrencies({ ...cur, silver: newSilver });
+            const silverEl = document.getElementById('c-silver');
+            if (silverEl) silverEl.textContent = newSilver.toLocaleString();
+            await showBattleMessage(`+${silverDrop} Prata!`);
         }
 
         if (result === 'lose' && this.playerTeam) {
+            this._winStreak = 0;
             this.playerTeam.forEach(p => {
                 if (p.fainted) {
                     p.currentHp = 0;
                 }
             });
+        } else if (!result) {
+            this._winStreak = 0;
         }
 
         await this.saveTeam();
