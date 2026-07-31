@@ -70,7 +70,7 @@ export class Overworld2D {
         this.wallpaperImg = new Image();
         this.wallpaperImg.src = 'assets/wallpapergrid.jpeg';
 
-        this.bgVideo = document.createElement('video');
+        this.bgVideo = document.getElementById('game-bg-video');
         this.bgVideo.src = 'assets/campobatalha.mp4';
         this.bgVideo.loop = true;
         this.bgVideo.muted = true;
@@ -130,13 +130,20 @@ export class Overworld2D {
 
     resize() {
         const mainArea = document.getElementById('main-area');
-        if (mainArea) {
-            this.canvas.width = mainArea.clientWidth;
-            this.canvas.height = mainArea.clientHeight;
-        } else {
-            this.canvas.width = window.innerWidth - 240;
-            this.canvas.height = window.innerHeight - 48;
-        }
+        const containerW = mainArea ? mainArea.clientWidth : window.innerWidth - 240;
+        const containerH = mainArea ? mainArea.clientHeight : window.innerHeight - 48;
+
+        this.tileW = 32;
+        this.tileH = 32;
+        const mapW = this.worldCols * this.tileW;
+        const mapH = this.worldRows * this.tileH;
+
+        this.canvas.width = mapW;
+        this.canvas.height = mapH;
+
+        const canvasEl = this.canvas;
+        canvasEl.style.left = Math.max(0, Math.floor((containerW - mapW) / 2)) + 'px';
+        canvasEl.style.top = Math.max(0, Math.floor((containerH - mapH) / 2)) + 'px';
 
         if (!this.neonEl) {
             this.neonEl = document.createElement('div');
@@ -144,15 +151,11 @@ export class Overworld2D {
             this.canvas.parentElement.appendChild(this.neonEl);
         }
 
-        this.tileW = 32;
-        this.tileH = 32;
-        const mapW = this.worldCols * this.tileW;
-        const mapH = this.worldRows * this.tileH;
-        this.mapOffsetX = Math.max(0, Math.floor((this.canvas.width - mapW) / 2));
-        this.mapOffsetY = Math.max(0, Math.floor((this.canvas.height - mapH) / 2));
+        this.mapOffsetX = 0;
+        this.mapOffsetY = 0;
 
-        this.neonEl.style.left = this.mapOffsetX + 'px';
-        this.neonEl.style.top = this.mapOffsetY + 'px';
+        this.neonEl.style.left = canvasEl.style.left;
+        this.neonEl.style.top = canvasEl.style.top;
         this.neonEl.style.width = mapW + 'px';
         this.neonEl.style.height = mapH + 'px';
     }
@@ -725,15 +728,7 @@ export class Overworld2D {
         const w = this.canvas.width;
         const h = this.canvas.height;
 
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, w, h);
-
-        if (this.bgVideo.readyState >= 2) {
-            ctx.drawImage(this.bgVideo, 0, 0, w, h);
-            this._lastBgDrawn = 'video';
-        } else if (this._lastBgDrawn !== 'video' && this.wallpaperImg.complete && this.wallpaperImg.naturalWidth > 0) {
-            ctx.drawImage(this.wallpaperImg, 0, 0, w, h);
-        }
+        ctx.clearRect(0, 0, w, h);
 
         if (this.game.state !== 'overworld') return;
 
