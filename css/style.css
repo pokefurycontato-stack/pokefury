@@ -1021,8 +1021,11 @@ body {
     pointer-events: auto;
     backdrop-filter: blur(4px);
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 4px;
+    white-space: nowrap;
     --neon-color: #2244aa;
     --neon-dim: rgba(34,68,170,0.3);
     box-shadow:
@@ -1031,15 +1034,8 @@ body {
     animation: panelNeonPulse 2s ease-in-out infinite;
 }
 #map-nav-panel.hidden { display: none; }
-.map-nav-title {
-    display: none;
-}
-#map-nav-list {
-    display: flex;
-    flex-direction: row;
-    gap: 4px;
-    padding: 0;
-}
+.map-nav-title { display: none; }
+#map-nav-list { display: contents; }
 .map-nav-card {
     display: flex;
     flex-direction: column;
