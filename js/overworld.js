@@ -130,13 +130,21 @@ export class Overworld2D {
 
     resize() {
         const mainArea = document.getElementById('main-area');
-        if (mainArea) {
-            this.canvas.width = mainArea.clientWidth;
-            this.canvas.height = mainArea.clientHeight;
-        } else {
-            this.canvas.width = window.innerWidth - 240;
-            this.canvas.height = window.innerHeight - 48;
-        }
+        const containerW = mainArea ? mainArea.clientWidth : window.innerWidth - 240;
+        const containerH = mainArea ? mainArea.clientHeight : window.innerHeight - 48;
+
+        const INTERNAL_W = 1280;
+        const INTERNAL_H = 720;
+
+        this.canvas.width = INTERNAL_W;
+        this.canvas.height = INTERNAL_H;
+
+        const scaleX = containerW / INTERNAL_W;
+        const scaleY = containerH / INTERNAL_H;
+        const scale = Math.min(scaleX, scaleY);
+
+        this.canvas.style.width = Math.floor(INTERNAL_W * scale) + 'px';
+        this.canvas.style.height = Math.floor(INTERNAL_H * scale) + 'px';
 
         if (!this.neonEl) {
             this.neonEl = document.createElement('div');
@@ -144,17 +152,25 @@ export class Overworld2D {
             this.canvas.parentElement.appendChild(this.neonEl);
         }
 
+        const neonW = INTERNAL_W * scale;
+        const neonH = INTERNAL_H * scale;
+        const neonX = (containerW - neonW) / 2;
+        const neonY = (containerH - neonH) / 2;
+        this.neonEl.style.left = neonX + 'px';
+        this.neonEl.style.top = neonY + 'px';
+        this.neonEl.style.width = neonW + 'px';
+        this.neonEl.style.height = neonH + 'px';
+
+        this.canvasScale = scale;
+        this.canvasOffsetX = neonX;
+        this.canvasOffsetY = neonY;
+
         this.tileW = 32;
         this.tileH = 32;
         const mapW = this.worldCols * this.tileW;
         const mapH = this.worldRows * this.tileH;
-        this.mapOffsetX = Math.max(0, Math.floor((this.canvas.width - mapW) / 2));
-        this.mapOffsetY = Math.max(0, Math.floor((this.canvas.height - mapH) / 2));
-
-        this.neonEl.style.left = this.mapOffsetX + 'px';
-        this.neonEl.style.top = this.mapOffsetY + 'px';
-        this.neonEl.style.width = mapW + 'px';
-        this.neonEl.style.height = mapH + 'px';
+        this.mapOffsetX = Math.floor((INTERNAL_W - mapW) / 2);
+        this.mapOffsetY = Math.floor((INTERNAL_H - mapH) / 2);
     }
 
     setNeonColor(mapName) {

@@ -20,8 +20,8 @@ class PokeFuryGame {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = 960;
-        this.canvas.height = 640;
+        this.canvas.width = 1280;
+        this.canvas.height = 720;
 
         this.state = 'idle';
         this.playerName = 'Treinador';
@@ -466,20 +466,23 @@ class PokeFuryGame {
     }
 
     showTransitionBanner(text, duration = 3000) {
-        const existing = document.querySelector('.transition-banner');
+        const layer = document.getElementById('ui-layer');
+        if (!layer) return;
+
+        const existing = layer.querySelector('.transition-banner');
         if (existing) existing.remove();
 
         const banner = document.createElement('div');
         banner.className = 'transition-banner';
         banner.style.cssText = `
-            position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.80); color: #fff; padding: 8px 24px;
             border-radius: 8px; border: 1px solid rgba(233,69,96,0.5); z-index: 9999;
             font-size: 13px; font-weight: 700; text-align: center;
             pointer-events: none; white-space: nowrap;
         `;
         banner.textContent = text;
-        document.body.appendChild(banner);
+        layer.appendChild(banner);
         banner.style.opacity = '0';
         banner.style.transition = 'opacity 0.2s';
         requestAnimationFrame(() => { banner.style.opacity = '1'; });
