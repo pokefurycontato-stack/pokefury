@@ -1,5 +1,5 @@
 import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs } from './utils.js';
-import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO } from './battle-mechanics.js';
+import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, processEntryHazards, processEntryAbilities, getWeatherSpeed } from './battle-mechanics.js';
 
 const NATURE_NAMES = [
     'hardy','lonely','brave','adamant','naughty',
@@ -157,7 +157,7 @@ export function getFirstAlive(team) {
     return team.find(p => !p.fainted);
 }
 
-export async function executeTurn(attacker, defender, move) {
+export async function executeTurn(attacker, defender, move, battleState) {
     if (!attacker || !defender || !move) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
@@ -167,17 +167,16 @@ export async function executeTurn(attacker, defender, move) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, protected: true };
     }
 
+    // Status moves
+    if (move.category === 'status') {
+        const secondaryMessages = applySecondaryEffect(attacker, defender, move, 1, battleState);
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true, statusMessages: secondaryMessages };
+    }
+
     const result = await calculateDamage(attacker, defender, move);
 
     if (result.missed) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
-    }
-
-    // Status moves
-    if (move.category === 'status') {
-        const statusMessages = applyStatusEffect(attacker, defender, move);
-        const secondaryMessages = applySecondaryEffect(attacker, defender, move, 1);
-        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true, statusMessages: [...statusMessages, ...secondaryMessages] };
     }
 
     // Calculate damage with stat stages
@@ -193,14 +192,18 @@ export async function executeTurn(attacker, defender, move) {
         for (let i = 0; i < hits; i++) {
             const hitResult = await calculateDamage(attacker, defender, move);
             if (!hitResult.missed) {
-                const hitDmg = applyStatStages(attacker, defender, move, hitResult.damage);
+                let hitDmg = applyStatStages(attacker, defender, move, hitResult.damage);
+                hitDmg = applyWeatherDamageModifier(attacker, move, hitDmg, battleState);
+                hitDmg = applyTerrainDamageModifier(attacker, defender, move, hitDmg, battleState);
+                hitDmg = applyScreenReduction(defender, move, hitDmg);
                 totalDamage += hitDmg;
             }
         }
         damage = totalDamage;
     } else {
-        damage = result.damage;
-        damage = applyStatStages(attacker, defender, move, damage);
+        damage = applyWeatherDamageModifier(attacker, move, damage, battleState);
+        damage = applyTerrainDamageModifier(attacker, defender, move, damage, battleState);
+        damage = applyScreenReduction(defender, move, damage);
     }
 
     // Apply damage
@@ -210,22 +213,23 @@ export async function executeTurn(attacker, defender, move) {
     }
 
     // Handle recoil
+    const messages = [];
     if (effect && effect.effect === 'recoil' && damage > 0) {
         const recoilDmg = Math.max(1, Math.floor(damage * effect.recoil));
         attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
         if (attacker.currentHp <= 0) attacker.fainted = true;
+        messages.push(`${attacker.name} perdeu ${recoilDmg} HP com recuo!`);
     }
 
     // Handle drain
-    const messages = [];
     if (effect && effect.effect === 'drain' && damage > 0) {
         const healAmt = Math.floor(damage * effect.drain);
         attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + healAmt);
         messages.push(`${attacker.name} drenou ${healAmt} HP!`);
     }
 
-    // Apply secondary effects (status, stat drops, flinch)
-    const secondaryMsgs = applySecondaryEffect(attacker, defender, move, result.effectiveness);
+    // Apply secondary effects (status, stat drops, flinch, weather, terrain, hazards, screens)
+    const secondaryMsgs = applySecondaryEffect(attacker, defender, move, result.effectiveness, battleState);
     messages.push(...secondaryMsgs);
 
     // Process contact abilities (flame body, static, etc.)
@@ -233,6 +237,9 @@ export async function executeTurn(attacker, defender, move) {
         const contactMsgs = processContactAbilities(defender, attacker);
         messages.push(...contactMsgs);
     }
+
+    // Track last move for Disable/Encore
+    attacker._lastMove = move;
 
     return {
         attacker,

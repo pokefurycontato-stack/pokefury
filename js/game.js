@@ -1,7 +1,7 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
 import { randomInt, loadTypeEffectiveness, calculateAllStats } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
-import { getMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO } from './battle-mechanics.js';
+import { getMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd } from './battle-mechanics.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
@@ -615,6 +615,18 @@ class PokeFuryGame {
         }
         this.enemyTeam = [pokemon];
 
+        this._battleState = {
+            weather: null,
+            weatherTurns: 0,
+            terrain: null,
+            terrainTurns: 0,
+            _neutralizingGas: false,
+        };
+        initFieldEffects({ _teamEffects: this._playerFieldEffects = {} });
+        initFieldEffects({ _teamEffects: this._enemyFieldEffects = {} });
+        this._playerFieldEffects._isPlayer = true;
+        this._enemyFieldEffects._isPlayer = false;
+
         const activePlayer = getFirstAlive(this.playerTeam);
 
         this.state = 'battle';
@@ -711,6 +723,18 @@ class PokeFuryGame {
             }
 
             this.enemyTeam = [pokemon];
+
+            this._battleState = {
+                weather: null,
+                weatherTurns: 0,
+                terrain: null,
+                terrainTurns: 0,
+                _neutralizingGas: false,
+            };
+            initFieldEffects({ _teamEffects: this._playerFieldEffects = {} });
+            initFieldEffects({ _teamEffects: this._enemyFieldEffects = {} });
+            this._playerFieldEffects._isPlayer = true;
+            this._enemyFieldEffects._isPlayer = false;
 
             const activePlayer = getFirstAlive(this.playerTeam);
 
@@ -1018,7 +1042,7 @@ class PokeFuryGame {
                     continue;
                 }
 
-                const result = await executeTurn(attacker, defender, move);
+                const result = await executeTurn(attacker, defender, move, this._battleState);
 
                 attacker.moves.forEach(m => {
                     if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
@@ -1079,7 +1103,8 @@ class PokeFuryGame {
 
             for (const pokemon of [playerPokemon, enemyPokemon]) {
                 if (pokemon.fainted) continue;
-                const eotMsgs = processEndOfTurn(pokemon);
+                pokemon._teamEffects = pokemon === playerPokemon ? this._playerFieldEffects : this._enemyFieldEffects;
+                const eotMsgs = processEndOfTurn(pokemon, this._battleState);
                 for (const msg of eotMsgs) {
                     await showBattleMessage(msg);
                 }
@@ -1094,6 +1119,26 @@ class PokeFuryGame {
                         await showBattleMessage('Todos seus Pokémon desmaiaram...');
                         this.endBattle('lose');
                         return;
+                    }
+                }
+            }
+
+            processFieldTurnEnd(this._playerFieldEffects);
+            processFieldTurnEnd(this._enemyFieldEffects);
+
+            if (this._battleState) {
+                if (this._battleState.weatherTurns > 0) {
+                    this._battleState.weatherTurns--;
+                    if (this._battleState.weatherTurns <= 0) {
+                        this._battleState.weather = null;
+                        await showBattleMessage('O clima voltou ao normal.');
+                    }
+                }
+                if (this._battleState.terrainTurns > 0) {
+                    this._battleState.terrainTurns--;
+                    if (this._battleState.terrainTurns <= 0) {
+                        this._battleState.terrain = null;
+                        await showBattleMessage('O terreno voltou ao normal.');
                     }
                 }
             }
@@ -1124,7 +1169,7 @@ class PokeFuryGame {
         const move = getAIMove(enemyPokemon);
 
         if (move) {
-            const result = await executeTurn(enemyPokemon, playerPokemon, move);
+            const result = await executeTurn(enemyPokemon, playerPokemon, move, this._battleState);
 
             enemyPokemon.moves.forEach(m => {
                 if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
