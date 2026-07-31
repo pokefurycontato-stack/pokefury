@@ -497,6 +497,7 @@ export function preloadBattleBgImage(url) {
 }
 
 export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgroundUrl = null, clipRect = null) {
+    syncBattleContainerToCanvas();
     const w = canvas.width;
     const h = canvas.height;
 
@@ -640,14 +641,28 @@ export function stopBattleVideo() {
     }
 }
 
+function syncBattleContainerToCanvas() {
+    const gameCanvas = document.getElementById('game-canvas');
+    if (!gameCanvas || !battlePokemonContainer) return;
+    const newLeft = gameCanvas.offsetLeft + 'px';
+    const newTop = gameCanvas.offsetTop + 'px';
+    const newW = gameCanvas.width + 'px';
+    const newH = gameCanvas.height + 'px';
+    if (battlePokemonContainer.style.left !== newLeft) battlePokemonContainer.style.left = newLeft;
+    if (battlePokemonContainer.style.top !== newTop) battlePokemonContainer.style.top = newTop;
+    if (battlePokemonContainer.style.width !== newW) battlePokemonContainer.style.width = newW;
+    if (battlePokemonContainer.style.height !== newH) battlePokemonContainer.style.height = newH;
+}
+
 function ensureBattlePokemonContainer() {
     if (battlePokemonContainer) return battlePokemonContainer;
     const mainArea = document.getElementById('main-area');
     if (!mainArea) return null;
     battlePokemonContainer = document.createElement('div');
     battlePokemonContainer.id = 'battle-pokemon-sprites';
-    battlePokemonContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:25;';
+    battlePokemonContainer.style.cssText = 'position:absolute;pointer-events:none;z-index:25;';
     mainArea.appendChild(battlePokemonContainer);
+    syncBattleContainerToCanvas();
     return battlePokemonContainer;
 }
 

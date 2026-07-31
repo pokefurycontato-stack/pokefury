@@ -639,8 +639,10 @@ class PokeFuryGame {
         if (mainArea && wrapper) {
             const mainRect = mainArea.getBoundingClientRect();
             const wrapRect = wrapper.getBoundingClientRect();
-            playerEndX += mainRect.left - wrapRect.left;
-            playerEndY += mainRect.top - wrapRect.top;
+            const canvasLeft = this.canvas ? this.canvas.offsetLeft : 0;
+            const canvasTop = this.canvas ? this.canvas.offsetTop : 0;
+            playerEndX += canvasLeft + (mainRect.left - wrapRect.left);
+            playerEndY += canvasTop + (mainRect.top - wrapRect.top);
         }
 
         const isShinyPlayer = activePlayer.isShiny;
@@ -750,8 +752,10 @@ class PokeFuryGame {
             if (mainArea2 && wrapper2) {
                 const mainRect2 = mainArea2.getBoundingClientRect();
                 const wrapRect2 = wrapper2.getBoundingClientRect();
-                playerEndX += mainRect2.left - wrapRect2.left;
-                playerEndY += mainRect2.top - wrapRect2.top;
+                const canvasLeft2 = this.canvas ? this.canvas.offsetLeft : 0;
+                const canvasTop2 = this.canvas ? this.canvas.offsetTop : 0;
+                playerEndX += canvasLeft2 + (mainRect2.left - wrapRect2.left);
+                playerEndY += canvasTop2 + (mainRect2.top - wrapRect2.top);
             }
 
             const isShinyP2 = activePlayer.isShiny;
@@ -1391,9 +1395,9 @@ class PokeFuryGame {
 
     positionBattleScreen() {
         const battleEl = document.getElementById('battle-screen');
-        if (battleEl && this.overworld2d) {
-            battleEl.style.left = this.overworld2d.mapOffsetX + 'px';
-            battleEl.style.top = this.overworld2d.mapOffsetY + 'px';
+        if (battleEl && this.overworld2d && this.canvas) {
+            battleEl.style.left = this.canvas.offsetLeft + 'px';
+            battleEl.style.top = this.canvas.offsetTop + 'px';
             battleEl.style.width = (this.overworld2d.worldCols * this.overworld2d.tileW) + 'px';
             battleEl.style.height = (this.overworld2d.worldRows * this.overworld2d.tileH) + 'px';
         }

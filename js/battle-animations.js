@@ -132,8 +132,8 @@ export class BattleAnimations {
             if (spriteContainer) {
                 const overlayRect = this.overlay.getBoundingClientRect();
                 const containerRect = spriteContainer.getBoundingClientRect();
-                img.style.left = (endX - 35 + containerRect.left - overlayRect.left) + 'px';
-                img.style.top = (endY - 35 + containerRect.top - overlayRect.top) + 'px';
+                img.style.left = (endX - 35 + overlayRect.left - containerRect.left) + 'px';
+                img.style.top = (endY - 35 + overlayRect.top - containerRect.top) + 'px';
                 spriteContainer.appendChild(img);
             }
         }
