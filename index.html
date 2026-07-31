@@ -247,15 +247,10 @@
             </aside>
 
             <!-- MAIN AREA -->
-            <div id="main-wrapper">
-                <div id="map-nav-panel" class="hidden">
-                    <div class="map-nav-title">🗺️ Mapas</div>
-                    <div id="map-nav-list"></div>
-                </div>
-                <main id="main-area">
-                    <canvas id="game-canvas"></canvas>
+            <main id="main-area">
+                <canvas id="game-canvas"></canvas>
 
-                    <div id="ui-layer">
+                <div id="ui-layer">
                     <div id="party-panel" style="position:absolute;top:50%;left:212px;transform:translateY(-50%);width:220px;background:rgba(10,10,30,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;z-index:15;pointer-events:auto;max-height:80vh;overflow-y:auto">
                         <div style="font-family:Inter,sans-serif;font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08)">Time</div>
                         <div id="party-list" style="display:flex;flex-direction:column;gap:4px"></div>
@@ -390,8 +385,13 @@
                     </div>
                 </div>
             </main>
-            </div>
         </div>
+    </div>
+
+    <!-- Map Navigator -->
+    <div id="map-nav-panel" class="hidden">
+        <div class="map-nav-title">🗺️ Mapas</div>
+        <div id="map-nav-list"></div>
     </div>
 
     <!-- ==================== MAP EDITOR OVERLAY ==================== -->

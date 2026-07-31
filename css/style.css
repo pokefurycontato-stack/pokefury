@@ -1,9 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html, body {
-    height: 100%;
-}
-
 body {
     background: #0a0a0a;
     display: flex;
@@ -162,7 +158,7 @@ body {
 
 /* GAME BODY */
 #game-body {
-    flex: 1; display: flex; overflow: hidden; height: 100%;
+    flex: 1; display: flex; overflow: hidden;
 }
 
 /* SIDEBAR */
@@ -264,7 +260,7 @@ body {
 
 /* MAIN AREA */
 #main-area {
-    flex: 1; position: relative; overflow: hidden; background: #0d1117; min-height: 0;
+    flex: 1; position: relative; overflow: hidden; background: #0d1117;
 }
 #game-canvas {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -1012,14 +1008,15 @@ body {
 }
 
 /* Map Navigator Panel */
-#main-wrapper {
-    flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100%;
-}
 #map-nav-panel {
+    position: fixed;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
     background: rgba(10,10,30,0.94);
     border: 1px solid rgba(34,68,170,0.3);
     border-radius: 10px;
-    z-index: 16;
+    z-index: 100;
     pointer-events: auto;
     backdrop-filter: blur(8px);
     box-shadow:
@@ -1030,8 +1027,6 @@ body {
     overflow: hidden;
     display: inline-flex;
     align-items: stretch;
-    margin: 8px auto 0;
-    flex-shrink: 0;
 }
 #map-nav-panel.hidden { display: none; }
 @keyframes mapNavNeonPulse {
