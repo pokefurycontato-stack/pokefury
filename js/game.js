@@ -20,8 +20,8 @@ class PokeFuryGame {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = 1280;
-        this.canvas.height = 720;
+        this.canvas.width = 960;
+        this.canvas.height = 640;
 
         this.state = 'idle';
         this.playerName = 'Treinador';
