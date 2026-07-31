@@ -781,7 +781,7 @@ export class Overworld2D {
 
         if (!this.pokemonSpriteContainer) {
             this.pokemonSpriteContainer = document.createElement('div');
-            this.pokemonSpriteContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+            this.pokemonSpriteContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:6;';
             wrap.appendChild(this.pokemonSpriteContainer);
         }
 
@@ -1013,7 +1013,7 @@ export class Overworld2D {
         const canvasTop = Math.max(0, Math.floor(((mainArea ? mainArea.clientHeight : 640) - gameCanvas.height) / 2));
 
         navEl.style.left = (canvasLeft + (gameCanvas.width - totalW) / 2) + 'px';
-        navEl.style.top = (canvasTop - 80) + 'px';
+        navEl.style.top = (canvasTop - 160) + 'px';
 
         this.mapNavigatorRects = [];
 
