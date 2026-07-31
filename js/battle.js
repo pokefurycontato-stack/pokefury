@@ -1,4 +1,4 @@
-import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs } from './utils.js';
+import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs, processHeldItemOnHit, processLifeOrbRecoil, setChoiceLock, getChoiceLockedMove } from './utils.js';
 import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, processEntryHazards, processEntryAbilities, getWeatherSpeed } from './battle-mechanics.js';
 
 const NATURE_NAMES = [
@@ -207,13 +207,18 @@ export async function executeTurn(attacker, defender, move, battleState) {
     }
 
     // Apply damage
+    const onHitResult = processHeldItemOnHit(defender, attacker, damage);
+    damage = onHitResult.damage;
     defender.currentHp = Math.max(0, defender.currentHp - damage);
     if (defender.currentHp <= 0) {
         defender.fainted = true;
     }
 
+    // Track damage dealt for Shell Bell
+    attacker._lastDamageDealt = (attacker._lastDamageDealt || 0) + damage;
+
     // Handle recoil
-    const messages = [];
+    const messages = [...onHitResult.messages];
     if (effect && effect.effect === 'recoil' && damage > 0) {
         const recoilDmg = Math.max(1, Math.floor(damage * effect.recoil));
         attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
@@ -240,6 +245,13 @@ export async function executeTurn(attacker, defender, move, battleState) {
 
     // Track last move for Disable/Encore
     attacker._lastMove = move;
+
+    // Life Orb recoil
+    const lifeOrbMsg = processLifeOrbRecoil(attacker);
+    if (lifeOrbMsg) messages.push(lifeOrbMsg);
+
+    // Choice lock
+    setChoiceLock(attacker, move);
 
     return {
         attacker,

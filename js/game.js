@@ -1,5 +1,5 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
-import { randomInt, loadTypeEffectiveness, calculateAllStats } from './utils.js';
+import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTurnEnd, processHeldItemOnHit, checkQuickClaw, processLifeOrbRecoil, getChoiceLockedMove, setChoiceLock, clearChoiceLock, getPokemonItemEffect } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import { getMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd } from './battle-mechanics.js';
 import {
@@ -1003,11 +1003,29 @@ class PokeFuryGame {
             const enemyMove = getAIMove(enemyPokemon);
             const enemyPriority = enemyMove ? getMovePriority(enemyMove) : 0;
 
+            const playerQuickClaw = checkQuickClaw(playerPokemon);
+            const enemyQuickClaw = checkQuickClaw(enemyPokemon);
+
+            const playerItemEffect = getPokemonItemEffect(playerPokemon);
+            const enemyItemEffect = getPokemonItemEffect(enemyPokemon);
+            const playerLagging = playerItemEffect === 'lagging_tail' || playerItemEffect === 'full_incense';
+            const enemyLagging = enemyItemEffect === 'lagging_tail' || enemyItemEffect === 'full_incense';
+
             let order;
-            if (playerPriority > enemyPriority) {
+            if (playerPriority > enemyPriority && !playerLagging) {
                 order = [playerPokemon, enemyPokemon];
-            } else if (enemyPriority > playerPriority) {
+            } else if (enemyPriority > playerPriority && !enemyLagging) {
                 order = [enemyPokemon, playerPokemon];
+            } else if (playerLagging && !enemyLagging) {
+                order = [enemyPokemon, playerPokemon];
+            } else if (enemyLagging && !playerLagging) {
+                order = [playerPokemon, enemyPokemon];
+            } else if (playerQuickClaw && !enemyQuickClaw) {
+                order = [playerPokemon, enemyPokemon];
+                await showBattleMessage(`${playerPokemon.name} agiu primeiro com Quick Claw!`);
+            } else if (enemyQuickClaw && !playerQuickClaw) {
+                order = [enemyPokemon, playerPokemon];
+                await showBattleMessage(`${enemyPokemon.name} agiu primeiro com Quick Claw!`);
             } else {
                 order = determineTurnOrder(playerPokemon, enemyPokemon);
             }
@@ -1125,6 +1143,27 @@ class PokeFuryGame {
 
             processFieldTurnEnd(this._playerFieldEffects);
             processFieldTurnEnd(this._enemyFieldEffects);
+
+            for (const pokemon of [playerPokemon, enemyPokemon]) {
+                if (pokemon.fainted) continue;
+                const itemMsgs = processHeldItemTurnEnd(pokemon);
+                for (const msg of itemMsgs) {
+                    await showBattleMessage(msg);
+                }
+                if (pokemon.fainted) {
+                    await showBattleMessage(`${pokemon.name} desmaiou!`);
+                    if (isTeamFainted(this.enemyTeam)) {
+                        await showBattleMessage('Você venceu a batalha!');
+                        this.endBattle('win');
+                        return;
+                    }
+                    if (isTeamFainted(this.playerTeam)) {
+                        await showBattleMessage('Todos seus Pokémon desmaiaram...');
+                        this.endBattle('lose');
+                        return;
+                    }
+                }
+            }
 
             if (this._battleState) {
                 if (this._battleState.weatherTurns > 0) {

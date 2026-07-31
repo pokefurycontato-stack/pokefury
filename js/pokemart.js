@@ -4,7 +4,7 @@ const PM_CATEGORIES = {
   stone: { label: 'Pedras', filter: item => item.category === 'evolution_stone' },
   tm: { label: 'TMs', filter: item => item.category === 'tm_hm' },
   tr: { label: 'TRs', filter: item => item.category === 'tr' },
-  special: { label: 'Itens Especiais', filter: item => item.category === 'held_item' || item.category === 'mega_stone' || item.category === 'battle_item' }
+  special: { label: 'Itens Especiais', filter: item => item.category === 'held' || item.category === 'held_item' || item.category === 'mega_stone' || item.category === 'battle_item' }
 };
 
 function pmRenderCards(category, query) {
