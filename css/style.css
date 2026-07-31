@@ -1702,3 +1702,150 @@ body {
     0%, 100% { box-shadow: 0 0 8px rgba(0,255,68,0.4); }
     50% { box-shadow: 0 0 24px rgba(0,255,68,0.8), 0 0 48px rgba(0,255,68,0.3); }
 }
+
+/* ============================================================
+   WEATHER ANIMATION OVERLAY
+   ============================================================ */
+#weather-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 25;
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+}
+#weather-canvas.active {
+    opacity: 1;
+}
+#weather-canvas-wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 23;
+}
+
+/* Weather label */
+#weather-label {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 26;
+    pointer-events: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 3px 12px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.6s ease-in-out;
+    white-space: nowrap;
+}
+#weather-label.active {
+    opacity: 1;
+}
+#weather-label.weather-rain {
+    color: #7ec8e3;
+    background: rgba(30,80,120,0.7);
+    text-shadow: 0 0 6px rgba(100,180,255,0.8);
+    border: 1px solid rgba(100,180,255,0.4);
+}
+#weather-label.weather-sun {
+    color: #ffe066;
+    background: rgba(120,60,0,0.7);
+    text-shadow: 0 0 6px rgba(255,200,50,0.8);
+    border: 1px solid rgba(255,200,50,0.4);
+}
+#weather-label.weather-sandstorm {
+    color: #d4a56a;
+    background: rgba(100,60,20,0.7);
+    text-shadow: 0 0 6px rgba(200,150,80,0.8);
+    border: 1px solid rgba(200,150,80,0.4);
+}
+#weather-label.weather-hail {
+    color: #c8e6ff;
+    background: rgba(40,60,100,0.7);
+    text-shadow: 0 0 6px rgba(150,200,255,0.8);
+    border: 1px solid rgba(150,200,255,0.4);
+}
+
+/* Sun overlay glow */
+#weather-sun-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 24;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    background: radial-gradient(ellipse at 80% 20%, rgba(255,200,50,0.25) 0%, rgba(255,150,30,0.1) 40%, transparent 70%);
+}
+#weather-sun-overlay.active {
+    opacity: 1;
+    animation: sunPulse 3s ease-in-out infinite;
+}
+@keyframes sunPulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* Rain darkened overlay */
+#weather-rain-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 23;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    background: linear-gradient(180deg, rgba(20,30,60,0.3) 0%, rgba(10,20,40,0.15) 100%);
+}
+#weather-rain-overlay.active {
+    opacity: 1;
+}
+
+/* Sandstorm overlay */
+#weather-sand-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 23;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    background: linear-gradient(180deg, rgba(140,100,40,0.2) 0%, rgba(100,70,20,0.1) 100%);
+}
+#weather-sand-overlay.active {
+    opacity: 1;
+}
+
+/* Hail overlay */
+#weather-hail-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 23;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    background: linear-gradient(180deg, rgba(100,140,200,0.15) 0%, rgba(60,100,160,0.08) 100%);
+}
+#weather-hail-overlay.active {
+    opacity: 1;
+}

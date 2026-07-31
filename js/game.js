@@ -8,6 +8,7 @@ import {
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender
 } from './ui.js';
+import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js';
 import { MapEditor } from './map-editor.js';
 import { RegionManager } from './region-manager.js';
@@ -41,6 +42,7 @@ class PokeFuryGame {
 
         this.regionManager = new RegionManager();
         this.battleAnimations = null;
+        this.weatherAnim = null;
         this.currentRegion = null;
         this.currentMap = null;
         this.currentRegionMaps = [];
@@ -637,6 +639,9 @@ class PokeFuryGame {
         showScreen('battle-screen');
         this.positionBattleScreen();
 
+        if (!this.weatherAnim) this.weatherAnim = new WeatherAnimations();
+        this.weatherAnim.setWeather(null);
+
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
         const clipRect = this.getBattleClipRect();
@@ -762,6 +767,10 @@ class PokeFuryGame {
             this.battleStartTime = Date.now();
             showScreen('battle-screen');
             this.positionBattleScreen();
+
+            if (!this.weatherAnim) this.weatherAnim = new WeatherAnimations();
+            this.weatherAnim.setWeather(null);
+
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
             const clipRect2 = this.getBattleClipRect();
@@ -1098,6 +1107,10 @@ class PokeFuryGame {
                 updateBattleUI(this.playerTeam, this.enemyTeam);
                 this.updatePartyPanel();
 
+                if (this.weatherAnim && this._battleState) {
+                    this.weatherAnim.setWeather(this._battleState.weather);
+                }
+
                 if (defender.fainted) {
                     await showBattleMessage(`${defender.name} desmaiou!`);
 
@@ -1179,6 +1192,9 @@ class PokeFuryGame {
                         this._battleState.terrain = null;
                         await showBattleMessage('O terreno voltou ao normal.');
                     }
+                }
+                if (this.weatherAnim) {
+                    this.weatherAnim.setWeather(this._battleState.weather);
                 }
             }
 
@@ -1424,6 +1440,7 @@ class PokeFuryGame {
 
     async endBattle(result) {
         if (this.state !== 'battle') return;
+        if (this.weatherAnim) this.weatherAnim.setWeather(null);
 
         if (result) {
             const duration = Math.floor((Date.now() - this.battleStartTime) / 1000);
