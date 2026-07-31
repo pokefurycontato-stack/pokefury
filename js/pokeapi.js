@@ -94,8 +94,8 @@ const PokeAPI = {
             name: row.name,
             species: row.name.toLowerCase(),
             types: row.types,
-            height: row.height && row.height !== 10 ? row.height : null,
-            weight: row.weight && row.weight !== 100 ? row.weight : null,
+            height: row.height || 10,
+            weight: row.weight || 100,
             baseStats: {
                 hp: row.hp,
                 attack: row.attack,
