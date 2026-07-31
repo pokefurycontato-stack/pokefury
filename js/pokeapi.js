@@ -75,14 +75,39 @@ const PokeAPI = {
         return pokemonData;
     },
 
+    _heightCache: {},
+
+    async ensureHeight(pokemonId) {
+        if (this._heightCache[pokemonId]) return this._heightCache[pokemonId];
+        try {
+            const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
+            if (res.ok) {
+                const api = await res.json();
+                const h = api.height || 10;
+                const w = api.weight || 100;
+                this._heightCache[pokemonId] = { height: h, weight: w };
+                if (window.db) {
+                    window.db.from('pokemon').update({ height: h, weight: w }).eq('id', pokemonId);
+                }
+                const cached = this.pokemonCache[pokemonId];
+                if (cached) {
+                    cached.height = h;
+                    cached.weight = w;
+                }
+                return { height: h, weight: w };
+            }
+        } catch (e) {}
+        return { height: 10, weight: 100 };
+    },
+
     transformPokemon(row) {
         return {
             id: row.id,
             name: row.name,
             species: row.name.toLowerCase(),
             types: row.types,
-            height: row.height || 10,
-            weight: row.weight || 100,
+            height: row.height && row.height !== 10 ? row.height : null,
+            weight: row.weight && row.weight !== 100 ? row.weight : null,
             baseStats: {
                 hp: row.hp,
                 attack: row.attack,

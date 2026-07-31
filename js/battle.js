@@ -102,6 +102,12 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
 
     const stats = calculateAllStats(apiData.baseStats, level, ivs, evs, nature);
 
+    if (!apiData.height && window.PokeAPI) {
+        const dim = await window.PokeAPI.ensureHeight(apiData.id);
+        apiData.height = dim.height;
+        apiData.weight = dim.weight;
+    }
+
     return {
         species: apiData.species,
         name: apiData.name,
