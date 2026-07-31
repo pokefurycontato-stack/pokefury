@@ -401,3 +401,12 @@ export function clearChoiceLock(pokemon) {
     if (!pokemon) return;
     pokemon._choiceLockedMove = null;
 }
+
+export function getPokemonScale(pokemon) {
+    if (!pokemon) return 1;
+    const h = pokemon.height || 10;
+    const ref = 10;
+    const min = 0.55;
+    const max = 1.6;
+    return Math.max(min, Math.min(max, h / ref));
+}

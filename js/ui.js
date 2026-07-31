@@ -1,4 +1,5 @@
 import { TYPE_COLORS } from './data.js';
+import { getPokemonScale } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -622,8 +623,10 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         enemyY = dy + 0.4 * dh;
     }
 
-    updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5);
-    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45);
+    const playerScale = getPokemonScale(playerPokemon);
+    const enemyScale = getPokemonScale(enemyPokemon);
+    updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5 * playerScale);
+    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45 * enemyScale);
 
     const now = performance.now();
     const dt = 16;

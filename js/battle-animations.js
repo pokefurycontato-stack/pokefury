@@ -1,3 +1,5 @@
+import { getPokemonScale } from './utils.js';
+
 export class BattleAnimations {
     constructor(gameContainer) {
         this.container = gameContainer;
@@ -75,7 +77,7 @@ export class BattleAnimations {
         enemySpriteEl.style.filter = '';
     }
 
-    async playPlayerEntrance(endX, endY, spriteUrl) {
+    async playPlayerEntrance(endX, endY, spriteUrl, pokemon) {
         this._ensureOverlay();
         this._clear();
 
@@ -113,7 +115,9 @@ export class BattleAnimations {
         if (spriteUrl) {
             const img = document.createElement('img');
             img.src = spriteUrl;
-            img.style.cssText = `position:absolute;pointer-events:none;image-rendering:auto;display:block;opacity:0;transform:scale(0.3);filter:brightness(3) blur(6px);left:${endX - 35}px;top:${endY - 35}px;width:70px;height:70px;z-index:18;`;
+            const sc = getPokemonScale(pokemon);
+            const sz = Math.round(70 * sc);
+            img.style.cssText = `position:absolute;pointer-events:none;image-rendering:auto;display:block;opacity:0;transform:scale(0.3);filter:brightness(3) blur(6px);left:${endX - sz / 2}px;top:${endY - sz / 2}px;width:${sz}px;height:${sz}px;z-index:18;`;
             this.overlay.appendChild(img);
             this._playerEntranceSprite = img;
 

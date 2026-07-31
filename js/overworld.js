@@ -17,6 +17,8 @@ if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D
     };
 }
 
+import { getPokemonScale } from './utils.js';
+
 export class Overworld2D {
     constructor(game) {
         this.game = game;
@@ -796,11 +798,12 @@ export class Overworld2D {
             if (!p.active) continue;
             activeIds.add(p.entityId);
 
-            // Coordenadas FIXAS (sem movimento)
             const drawX = p.x * this.tileW - this.camera.x + this.mapOffsetX;
             const drawY = p.y * this.tileH - this.camera.y + this.mapOffsetY;
 
-            const spriteSize = this.tileW * 1.2;
+            const pScale = (window.PokeAPI && p.encounter?.pokemon_id)
+                ? getPokemonScale(window.PokeAPI.pokemonCache[p.encounter.pokemon_id]) : 1;
+            const spriteSize = this.tileW * 1.2 * pScale;
 
             const finalY = drawY - this.tileH * 0.3;
 
@@ -884,7 +887,9 @@ export class Overworld2D {
         if (this.pokemonFollowing && this.pokemonFollowSprite && this.pokemonFollowSprite.complete) {
             const px = this.pokemonFollowPos.x * this.tileW - this.camera.x + this.mapOffsetX;
             const py = this.pokemonFollowPos.y * this.tileH - this.camera.y + this.mapOffsetY;
-            ctx.drawImage(this.pokemonFollowSprite, px, py, this.tileW, this.tileH);
+            const fScale = getPokemonScale(this.pokemonFollowing);
+            const fSize = this.tileW * fScale;
+            ctx.drawImage(this.pokemonFollowSprite, px + (this.tileW - fSize) / 2, py + (this.tileH - fSize) / 2, fSize, fSize);
         }
     }
 

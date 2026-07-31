@@ -55,6 +55,19 @@ const PokeAPI = {
         }
 
         const pokemonData = this.transformPokemon(data);
+
+        if (!pokemonData.height || pokemonData.height === 10) {
+            try {
+                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonData.id}`);
+                if (res.ok) {
+                    const api = await res.json();
+                    pokemonData.height = api.height || 10;
+                    pokemonData.weight = api.weight || 100;
+                    window.db.from('pokemon').update({ height: pokemonData.height, weight: pokemonData.weight }).eq('id', pokemonData.id);
+                }
+            } catch (e) {}
+        }
+
         this.pokemonCache[pokemonData.id] = pokemonData;
         this.pokemonCache[pokemonData.name.toLowerCase()] = pokemonData;
         this.pokemonCache[pokemonData.species] = pokemonData;
@@ -68,6 +81,8 @@ const PokeAPI = {
             name: row.name,
             species: row.name.toLowerCase(),
             types: row.types,
+            height: row.height || 10,
+            weight: row.weight || 100,
             baseStats: {
                 hp: row.hp,
                 attack: row.attack,
