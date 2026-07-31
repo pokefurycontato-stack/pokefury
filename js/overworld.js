@@ -994,8 +994,7 @@ export class Overworld2D {
     updateMapNavigator() {
         const maps = this.game.currentRegionMaps || [];
         const panel = document.getElementById('map-nav-panel');
-        const list = document.getElementById('map-nav-list');
-        if (!panel || !list) return;
+        if (!panel) return;
 
         if (maps.length <= 1 || this.game.state !== 'overworld') {
             panel.classList.add('hidden');
@@ -1003,7 +1002,7 @@ export class Overworld2D {
         }
         panel.classList.remove('hidden');
 
-        list.innerHTML = '';
+        panel.innerHTML = '';
         let runnerSrc = '';
         if (this.playerSpriteFrames?.down?.[0]) {
             runnerSrc = this.playerSpriteFrames.down[0].src;
@@ -1026,13 +1025,15 @@ export class Overworld2D {
             thumb.src = m.image_url || '';
             thumb.alt = m.name;
 
-            const runner = document.createElement('img');
-            runner.className = 'map-nav-runner';
-            runner.src = runnerSrc;
-            runner.alt = '';
+            if (runnerSrc) {
+                const runner = document.createElement('img');
+                runner.className = 'map-nav-runner';
+                runner.src = runnerSrc;
+                runner.alt = '';
+                thumbWrap.appendChild(runner);
+            }
 
             thumbWrap.appendChild(thumb);
-            thumbWrap.appendChild(runner);
 
             const name = document.createElement('span');
             name.className = 'map-nav-name';
@@ -1045,7 +1046,7 @@ export class Overworld2D {
                 card.addEventListener('click', () => this.teleportToMap(m));
             }
 
-            list.appendChild(card);
+            panel.appendChild(card);
         }
     }
 

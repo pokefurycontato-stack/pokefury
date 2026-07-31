@@ -1009,62 +1009,36 @@ body {
 
 /* Map Navigator Panel */
 #map-nav-panel {
-    position: fixed;
+    position: absolute;
     top: 8px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(10,10,30,0.94);
-    border: 1px solid rgba(34,68,170,0.3);
-    border-radius: 10px;
-    z-index: 100;
+    background: rgba(10,10,30,0.92);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 8px;
+    z-index: 15;
     pointer-events: auto;
-    backdrop-filter: blur(8px);
-    box-shadow:
-        0 0 8px rgba(34,68,170,0.4),
-        0 0 16px rgba(34,68,170,0.2),
-        inset 0 0 12px rgba(34,68,170,0.1);
-    animation: mapNavNeonPulse 2s ease-in-out infinite;
-    overflow: hidden;
-    display: inline-flex;
-    align-items: stretch;
-}
-#map-nav-panel.hidden { display: none; }
-@keyframes mapNavNeonPulse {
-    0%, 100% {
-        box-shadow:
-            0 0 8px rgba(34,68,170,0.4),
-            0 0 16px rgba(34,68,170,0.2),
-            inset 0 0 12px rgba(34,68,170,0.1);
-        border-color: rgba(34,68,170,0.3);
-    }
-    50% {
-        box-shadow:
-            0 0 14px rgba(51,102,204,0.5),
-            0 0 28px rgba(51,102,204,0.3),
-            inset 0 0 18px rgba(51,102,204,0.15);
-        border-color: rgba(51,102,204,0.5);
-    }
-}
-.map-nav-title {
-    font-family: Inter, sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.7);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    padding: 10px 6px;
-    border-right: 1px solid rgba(34,68,170,0.2);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
+    --neon-color: #2244aa;
+    --neon-dim: rgba(34,68,170,0.3);
+    box-shadow:
+        0 0 8px #2244aa,
+        0 0 16px rgba(34,68,170,0.3);
+    animation: panelNeonPulse 2s ease-in-out infinite;
+}
+#map-nav-panel.hidden { display: none; }
+.map-nav-title {
+    display: none;
 }
 #map-nav-list {
     display: flex;
     flex-direction: row;
     gap: 4px;
-    padding: 6px 8px;
+    padding: 0;
 }
 .map-nav-card {
     display: flex;
