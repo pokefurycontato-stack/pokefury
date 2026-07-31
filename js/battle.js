@@ -107,6 +107,8 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         name: apiData.name,
         id: apiData.id,
         types: apiData.types,
+        height: apiData.height || 10,
+        weight: apiData.weight || 100,
         level,
         currentHp: stats.hp,
         stats,
