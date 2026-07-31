@@ -1009,11 +1009,12 @@ export class Overworld2D {
         const gameCanvas = this.canvas;
         const mainArea = document.getElementById('main-area');
         const containerW = mainArea ? mainArea.clientWidth : 960;
+        const containerH = mainArea ? mainArea.clientHeight : 640;
         const canvasLeft = Math.max(0, Math.floor((containerW - gameCanvas.width) / 2));
-        const canvasTop = Math.max(0, Math.floor(((mainArea ? mainArea.clientHeight : 640) - gameCanvas.height) / 2));
+        const canvasTop = Math.max(0, Math.floor((containerH - gameCanvas.height) / 2));
 
-        navEl.style.left = (canvasLeft + (gameCanvas.width - totalW) / 2) + 'px';
-        navEl.style.top = (canvasTop - 160) + 'px';
+        navEl.style.left = (canvasLeft + (gameCanvas.width - totalW) / 2 - 4) + 'px';
+        navEl.style.top = (canvasTop - 160 - 4) + 'px';
 
         this.mapNavigatorRects = [];
 
