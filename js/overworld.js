@@ -1004,32 +1004,42 @@ export class Overworld2D {
         panel.classList.remove('hidden');
 
         list.innerHTML = '';
-        const runnerSrc = this.game.playerGender === 'female'
-            ? 'assets/perso_feminino.webp'
-            : 'assets/perso_masculino.webp';
+        let runnerSrc = '';
+        if (this.playerSpriteFrames?.down?.[0]) {
+            runnerSrc = this.playerSpriteFrames.down[0].src;
+        } else {
+            runnerSrc = this.game.playerGender === 'female'
+                ? 'assets/perso_feminino.webp'
+                : 'assets/perso_masculino.webp';
+        }
 
         for (const m of maps) {
             const isCurrent = m.id === this.currentMapData?.id;
             const card = document.createElement('div');
             card.className = 'map-nav-card' + (isCurrent ? ' active' : '');
 
+            const thumbWrap = document.createElement('div');
+            thumbWrap.className = 'map-nav-thumb-wrap';
+
             const thumb = document.createElement('img');
             thumb.className = 'map-nav-thumb';
             thumb.src = m.image_url || '';
             thumb.alt = m.name;
-
-            const name = document.createElement('span');
-            name.className = 'map-nav-name';
-            name.textContent = m.name;
 
             const runner = document.createElement('img');
             runner.className = 'map-nav-runner';
             runner.src = runnerSrc;
             runner.alt = '';
 
-            card.appendChild(thumb);
+            thumbWrap.appendChild(thumb);
+            thumbWrap.appendChild(runner);
+
+            const name = document.createElement('span');
+            name.className = 'map-nav-name';
+            name.textContent = m.name;
+
+            card.appendChild(thumbWrap);
             card.appendChild(name);
-            card.appendChild(runner);
 
             if (!isCurrent) {
                 card.addEventListener('click', () => this.teleportToMap(m));
