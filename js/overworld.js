@@ -1055,7 +1055,7 @@ export class Overworld2D {
                 ctx.stroke();
             }
 
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = '#ffffff';
             ctx.font = '9px Inter, sans-serif';
             ctx.textAlign = 'center';
             const label = m.name.length > 10 ? m.name.slice(0, 9) + '..' : m.name;
