@@ -250,6 +250,12 @@
             <main id="main-area">
                 <video id="game-bg-video" autoplay loop muted playsinline></video>
                 <canvas id="game-canvas"></canvas>
+                <div id="worldmap-minimap" class="hidden" onclick="if(window.openWorldMap)window.openWorldMap()">
+                    <img id="worldmap-minimap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" alt="Mapa Mundial">
+                    <div id="worldmap-minimap-dot"></div>
+                    <span id="worldmap-minimap-label">🌍 Mapa Mundial</span>
+                </div>
+                <div id="map-nav-canvas" class="hidden"></div>
 
                 <div id="ui-layer">
                     <div id="party-panel" style="position:absolute;top:50%;left:212px;transform:translateY(-50%);width:220px;background:rgba(10,10,30,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;z-index:15;pointer-events:auto;max-height:80vh;overflow-y:auto">

@@ -754,7 +754,7 @@ export class Overworld2D {
         }
 
         this.drawPlayer(ctx);
-        this.drawMinimap(ctx, w, h);
+        this.updateWorldMapMinimap();
         this.drawHUD(ctx, w, h);
     }
 
@@ -888,58 +888,31 @@ export class Overworld2D {
         }
     }
 
-    drawMinimap(ctx, screenW, screenH) {
-        if (!this.worldMapImage || !this.worldMapImage.complete) return;
+    updateWorldMapMinimap() {
+        const el = document.getElementById('worldmap-minimap');
+        const dot = document.getElementById('worldmap-minimap-dot');
+        if (!el) return;
 
-        const mmW = 180;
-        const mmH = 120;
-        const mmX = screenW - mmW - 12;
-        const mmY = screenH - mmH - 12;
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.strokeStyle = 'rgba(46, 160, 67, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(mmX - 4, mmY - 4, mmW + 8, mmH + 8, 8);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(mmX, mmY, mmW, mmH, 6);
-        ctx.clip();
-        ctx.drawImage(this.worldMapImage, mmX, mmY, mmW, mmH);
-        ctx.restore();
+        if (this.game.state !== 'overworld') {
+            el.classList.add('hidden');
+            return;
+        }
+        el.classList.remove('hidden');
 
         const currentRegionName = this.game.currentRegion?.name || '';
         if (currentRegionName && this.worldMapRegions) {
             const region = this.worldMapRegions.find(r => r.name === currentRegionName);
-            if (region) {
-                const rx = mmX + region.cx * mmW;
-                const ry = mmY + region.cy * mmH;
-                ctx.fillStyle = '#00ff44';
-                ctx.shadowColor = '#00ff44';
-                ctx.shadowBlur = 10;
-                ctx.beginPath();
-                ctx.arc(rx, ry, 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
+            if (region && dot) {
+                dot.style.display = 'block';
+                dot.style.left = (region.cx * 100) + '%';
+                dot.style.top = (region.cy * 100) + '%';
+                dot.style.transform = 'translate(-50%, -50%)';
             }
         }
-
-        this.worldMapRect = { x: mmX, y: mmY, w: mmW, h: mmH };
-
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.font = '10px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🌍 Mapa Mundial', mmX + mmW / 2, mmY - 8);
     }
 
     drawHUD(ctx, w, h) {
-        this.drawMapNavigator(ctx, w);
+        this.drawMapNavigator();
 
         const mapName = this.currentMapData?.name || '';
         const regionName = this.game.currentRegion?.name || '';
@@ -987,56 +960,97 @@ export class Overworld2D {
         }
     }
 
-    drawMapNavigator(ctx, screenW) {
+    drawMapNavigator() {
         const maps = this.game.currentRegionMaps || [];
-        if (maps.length <= 1) { this.mapNavigatorRects = []; return; }
+        const navEl = document.getElementById('map-nav-canvas');
+        if (!navEl) return;
+
+        if (maps.length <= 1 || this.game.state !== 'overworld') {
+            navEl.classList.add('hidden');
+            this.mapNavigatorRects = [];
+            return;
+        }
+        navEl.classList.remove('hidden');
 
         const thumbW = 68;
         const thumbH = 50;
         const gap = 6;
-        const totalW = maps.length * thumbW + (maps.length - 1) * gap;
-        let startX = Math.floor((screenW - totalW) / 2);
-        const thumbY = 12;
+        const padX = 12;
+        const padTop = 8;
+        const padBottom = 20;
+        const totalW = maps.length * thumbW + (maps.length - 1) * gap + padX * 2;
+        const totalH = thumbH + padTop + padBottom;
+
+        if (!this._navCanvas) {
+            this._navCanvas = document.createElement('canvas');
+            this._navCanvas.style.cursor = 'pointer';
+            this._navCanvas.addEventListener('click', (e) => {
+                const rect = this._navCanvas.getBoundingClientRect();
+                const sx = this._navCanvas.width / rect.width;
+                const sy = this._navCanvas.height / rect.height;
+                const cx = (e.clientX - rect.left) * sx;
+                const cy = (e.clientY - rect.top) * sy;
+                for (const r of this.mapNavigatorRects) {
+                    if (cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h) {
+                        if (r.map.id !== this.currentMapData?.id) {
+                            this.teleportToMap(r.map);
+                        }
+                        return;
+                    }
+                }
+            });
+            navEl.appendChild(this._navCanvas);
+        }
+
+        this._navCanvas.width = totalW;
+        this._navCanvas.height = totalH;
+        const ctx = this._navCanvas.getContext('2d');
+
+        const gameCanvas = this.canvas;
+        const mainArea = document.getElementById('main-area');
+        const containerW = mainArea ? mainArea.clientWidth : 960;
+        const canvasLeft = Math.max(0, Math.floor((containerW - gameCanvas.width) / 2));
+        const canvasTop = Math.max(0, Math.floor(((mainArea ? mainArea.clientHeight : 640) - gameCanvas.height) / 2));
+
+        navEl.style.left = (canvasLeft + (gameCanvas.width - totalW) / 2) + 'px';
+        navEl.style.top = (canvasTop - 80) + 'px';
 
         this.mapNavigatorRects = [];
 
         for (let i = 0; i < maps.length; i++) {
             const m = maps[i];
-            const x = startX + i * (thumbW + gap);
+            const x = padX + i * (thumbW + gap);
+            const y = padTop;
             const isCurrent = m.id === this.currentMapData?.id;
 
             ctx.fillStyle = 'rgba(0,0,0,0.65)';
             ctx.beginPath();
-            ctx.roundRect(x, thumbY, thumbW, thumbH, 6);
+            ctx.roundRect(x, y, thumbW, thumbH, 6);
             ctx.fill();
 
             const thumb = this.mapThumbnails[m.id];
             if (thumb && thumb.complete) {
                 ctx.save();
                 ctx.beginPath();
-                ctx.roundRect(x, thumbY, thumbW, thumbH, 6);
+                ctx.roundRect(x, y, thumbW, thumbH, 6);
                 ctx.clip();
-                ctx.drawImage(thumb, x, thumbY, thumbW, thumbH);
+                ctx.drawImage(thumb, x, y, thumbW, thumbH);
                 ctx.restore();
             } else {
                 ctx.fillStyle = 'rgba(255,255,255,0.15)';
-                ctx.fillRect(x + 4, thumbY + 4, thumbW - 8, thumbH - 8);
+                ctx.fillRect(x + 4, y + 4, thumbW - 8, thumbH - 8);
             }
 
             const runner = this.playerSprites?.down;
             if (runner && runner.complete) {
-                const runnerH = 20;
-                const runnerW = 16;
-                const runnerX = x + 4;
-                const runnerY = thumbY + thumbH - runnerH - 3;
-                ctx.drawImage(runner, runnerX, runnerY, runnerW, runnerH);
+                ctx.drawImage(runner, x + 4, y + thumbH - 23, 16, 20);
             }
 
             if (isCurrent) {
                 ctx.strokeStyle = '#e94560';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.roundRect(x, thumbY, thumbW, thumbH, 6);
+                ctx.roundRect(x, y, thumbW, thumbH, 6);
                 ctx.stroke();
             }
 
@@ -1044,39 +1058,14 @@ export class Overworld2D {
             ctx.font = '9px Inter, sans-serif';
             ctx.textAlign = 'center';
             const label = m.name.length > 10 ? m.name.slice(0, 9) + '..' : m.name;
-            ctx.fillText(label, x + thumbW / 2, thumbY + thumbH + 11);
+            ctx.fillText(label, x + thumbW / 2, y + thumbH + 11);
 
-            this.mapNavigatorRects.push({ x, y: thumbY, w: thumbW, h: thumbH, map: m });
+            this.mapNavigatorRects.push({ x, y, w: thumbW, h: thumbH, map: m });
         }
     }
 
     handleCanvasClick(e) {
         if (this.game.state !== 'overworld') return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const cx = (e.clientX - rect.left) * scaleX;
-        const cy = (e.clientY - rect.top) * scaleY;
-
-        if (this.worldMapRect) {
-            const wm = this.worldMapRect;
-            if (cx >= wm.x && cx <= wm.x + wm.w && cy >= wm.y && cy <= wm.y + wm.h) {
-                if (window.openWorldMap) window.openWorldMap();
-                return;
-            }
-        }
-
-        if (!this.mapNavigatorRects.length) return;
-
-        for (const r of this.mapNavigatorRects) {
-            if (cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h) {
-                if (r.map.id !== this.currentMapData?.id) {
-                    this.teleportToMap(r.map);
-                }
-                return;
-            }
-        }
     }
 
     async teleportToMap(mapData) {
