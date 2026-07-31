@@ -1,6 +1,7 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
 import { randomInt, loadTypeEffectiveness, calculateAllStats } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
+import { getMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO } from './battle-mechanics.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
@@ -969,69 +970,140 @@ class PokeFuryGame {
     async executeBattleTurn(playerPokemon, enemyPokemon, playerMove) {
         if (!playerPokemon || !enemyPokemon) return;
         try {
-        const order = determineTurnOrder(playerPokemon, enemyPokemon);
+            clearProtect(playerPokemon);
+            clearProtect(enemyPokemon);
+            resetTurnState(playerPokemon);
+            resetTurnState(enemyPokemon);
 
-        for (const pokemon of order) {
-            if (pokemon.fainted) continue;
+            const playerPriority = getMovePriority(playerMove);
+            const enemyMove = getAIMove(enemyPokemon);
+            const enemyPriority = enemyMove ? getMovePriority(enemyMove) : 0;
 
-            const isPlayer = pokemon === playerPokemon;
-            const attacker = isPlayer ? playerPokemon : enemyPokemon;
-            const defender = isPlayer ? enemyPokemon : playerPokemon;
-            const move = isPlayer ? playerMove : getAIMove(attacker);
-
-            if (!move) {
-                await showBattleMessage(`${attacker.name} não tem PP!`);
-                continue;
-            }
-
-            const result = await executeTurn(attacker, defender, move);
-
-            attacker.moves.forEach(m => {
-                if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
-            });
-
-            if (result.missed) {
-                await showBattleMessage(`${attacker.name} errou ${move.name}!`);
-            } else if (result.statusMove) {
-                await showBattleMessage(`${attacker.name} usou ${move.name}!`);
-                for (const msg of (result.statusMessages || [])) {
-                    await showBattleMessage(msg);
-                }
+            let order;
+            if (playerPriority > enemyPriority) {
+                order = [playerPokemon, enemyPokemon];
+            } else if (enemyPriority > playerPriority) {
+                order = [enemyPokemon, playerPokemon];
             } else {
-                await showBattleMessage(`${attacker.name} usou ${move.name}!`);
-
-                const effText = getEffectivenessText(result.effectiveness);
-                if (effText) await showBattleMessage(effText);
-
-                if (result.critical) await showBattleMessage('Golpe crítico!');
-
-                await showBattleMessage(updateHpBar(defender));
+                order = determineTurnOrder(playerPokemon, enemyPokemon);
             }
 
-            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
-            updateBattleUI(this.playerTeam, this.enemyTeam);
-            this.updatePartyPanel();
+            for (const pokemon of order) {
+                if (pokemon.fainted) continue;
 
-            if (defender.fainted) {
-                await showBattleMessage(`${defender.name} desmaiou!`);
+                const isPlayer = pokemon === playerPokemon;
+                const attacker = isPlayer ? playerPokemon : enemyPokemon;
+                const defender = isPlayer ? enemyPokemon : playerPokemon;
+                const move = isPlayer ? playerMove : getAIMove(attacker);
 
-                if (isTeamFainted(this.enemyTeam)) {
-                    await showBattleMessage('Você venceu a batalha!');
-                    if (this.isWildBattle && this.enemyTeam.length === 1) {
-                        const captured = await this.showCapturePrompt();
+                if (!move) {
+                    await showBattleMessage(`${attacker.name} não tem PP!`);
+                    continue;
+                }
+
+                const canActResult = canPokemonAct(attacker);
+                if (!canActResult.canAct) {
+                    await showBattleMessage(canActResult.message);
+                    drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                    updateBattleUI(this.playerTeam, this.enemyTeam);
+                    continue;
+                }
+                if (canActResult.message) {
+                    await showBattleMessage(canActResult.message);
+                }
+
+                if (attacker._flinched) {
+                    await showBattleMessage(`${attacker.name} hesitou!`);
+                    attacker._flinched = false;
+                    continue;
+                }
+
+                const result = await executeTurn(attacker, defender, move);
+
+                attacker.moves.forEach(m => {
+                    if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
+                });
+
+                if (result.protected) {
+                    await showBattleMessage(`${defender.name} se protegeu!`);
+                } else if (result.missed) {
+                    await showBattleMessage(`${attacker.name} errou ${move.name}!`);
+                } else if (result.statusMove) {
+                    await showBattleMessage(`${attacker.name} usou ${move.name}!`);
+                    for (const msg of (result.statusMessages || [])) {
+                        await showBattleMessage(msg);
+                    }
+                } else {
+                    await showBattleMessage(`${attacker.name} usou ${move.name}!`);
+
+                    const effText = getEffectivenessText(result.effectiveness);
+                    if (effText) await showBattleMessage(effText);
+
+                    if (result.critical) await showBattleMessage('Golpe crítico!');
+
+                    if (result.hits && result.hits > 1) {
+                        await showBattleMessage(`Acertou ${result.hits} vezes!`);
+                    }
+
+                    await showBattleMessage(updateHpBar(defender));
+
+                    for (const msg of (result.messages || [])) {
+                        await showBattleMessage(msg);
+                    }
+                }
+
+                drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                updateBattleUI(this.playerTeam, this.enemyTeam);
+                this.updatePartyPanel();
+
+                if (defender.fainted) {
+                    await showBattleMessage(`${defender.name} desmaiou!`);
+
+                    if (isTeamFainted(this.enemyTeam)) {
+                        await showBattleMessage('Você venceu a batalha!');
+                        if (this.isWildBattle && this.enemyTeam.length === 1) {
+                            const captured = await this.showCapturePrompt();
+                            this.endBattle('win');
+                            return;
+                        }
                         this.endBattle('win');
                         return;
                     }
-                    this.endBattle('win');
-                    return;
-                }
-                if (isTeamFainted(this.playerTeam)) {
-                    await showBattleMessage('Todos seus Pokémon desmaiaram...');
-                    this.endBattle('lose');
-                    return;
+                    if (isTeamFainted(this.playerTeam)) {
+                        await showBattleMessage('Todos seus Pokémon desmaiaram...');
+                        this.endBattle('lose');
+                        return;
+                    }
                 }
             }
-        }
+
+            for (const pokemon of [playerPokemon, enemyPokemon]) {
+                if (pokemon.fainted) continue;
+                const eotMsgs = processEndOfTurn(pokemon);
+                for (const msg of eotMsgs) {
+                    await showBattleMessage(msg);
+                }
+                if (pokemon.fainted) {
+                    await showBattleMessage(`${pokemon.name} desmaiou!`);
+                    if (isTeamFainted(this.enemyTeam)) {
+                        await showBattleMessage('Você venceu a batalha!');
+                        this.endBattle('win');
+                        return;
+                    }
+                    if (isTeamFainted(this.playerTeam)) {
+                        await showBattleMessage('Todos seus Pokémon desmaiaram...');
+                        this.endBattle('lose');
+                        return;
+                    }
+                }
+            }
+
+            clearProtect(playerPokemon);
+            clearProtect(enemyPokemon);
+
+            drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+            updateBattleUI(this.playerTeam, this.enemyTeam);
+
         } catch (e) {
             console.error('[Battle] executeBattleTurn error:', e);
             drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());

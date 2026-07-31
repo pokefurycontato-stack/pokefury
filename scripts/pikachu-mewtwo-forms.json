@@ -1,0 +1,356 @@
+{
+  "source": "PokeAPI (https://pokeapi.co/)",
+  "fetched_at": "2026-07-29",
+  "base_forms": {
+    "pikachu": {
+      "id": 25,
+      "name": "Pikachu",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      }
+    },
+    "mewtwo": {
+      "id": 150,
+      "name": "Mewtwo",
+      "types": ["Psychic"],
+      "stats": {
+        "hp": 106,
+        "attack": 110,
+        "defense": 90,
+        "special_attack": 154,
+        "special_defense": 90,
+        "speed": 130
+      }
+    }
+  },
+  "pikachu_forms": [
+    {
+      "id": 25,
+      "name": "Pikachu",
+      "form_name": "Default",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10080,
+      "name": "Pikachu Rock Star",
+      "form_name": "Rock Star",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10081,
+      "name": "Pikachu Belle",
+      "form_name": "Belle",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10082,
+      "name": "Pikachu Pop Star",
+      "form_name": "Pop Star",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10083,
+      "name": "Pikachu PhD",
+      "form_name": "PhD",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10084,
+      "name": "Pikachu Libre",
+      "form_name": "Libre",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10085,
+      "name": "Pikachu Cosplay",
+      "form_name": "Cosplay",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10094,
+      "name": "Pikachu Original Cap",
+      "form_name": "Original Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10095,
+      "name": "Pikachu Hoenn Cap",
+      "form_name": "Hoenn Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10096,
+      "name": "Pikachu Sinnoh Cap",
+      "form_name": "Sinnoh Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10097,
+      "name": "Pikachu Unova Cap",
+      "form_name": "Unova Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10098,
+      "name": "Pikachu Kalos Cap",
+      "form_name": "Kalos Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10099,
+      "name": "Pikachu Alola Cap",
+      "form_name": "Alola Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10148,
+      "name": "Pikachu Partner Cap",
+      "form_name": "Partner Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10158,
+      "name": "Pikachu Starter",
+      "form_name": "Starter",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10160,
+      "name": "Pikachu World Cap",
+      "form_name": "World Cap",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10199,
+      "name": "Pikachu G-Max",
+      "form_name": "Gigantamax",
+      "types": ["Electric"],
+      "stats": {
+        "hp": 35,
+        "attack": 55,
+        "defense": 40,
+        "special_attack": 50,
+        "special_defense": 50,
+        "speed": 90
+      },
+      "stats_differ_from_base": false
+    }
+  ],
+  "mewtwo_forms": [
+    {
+      "id": 150,
+      "name": "Mewtwo",
+      "form_name": "Default",
+      "types": ["Psychic"],
+      "stats": {
+        "hp": 106,
+        "attack": 110,
+        "defense": 90,
+        "special_attack": 154,
+        "special_defense": 90,
+        "speed": 130
+      },
+      "stats_differ_from_base": false
+    },
+    {
+      "id": 10043,
+      "name": "Mewtwo Mega X",
+      "form_name": "Mega X",
+      "types": ["Psychic", "Fighting"],
+      "stats": {
+        "hp": 106,
+        "attack": 190,
+        "defense": 100,
+        "special_attack": 154,
+        "special_defense": 100,
+        "speed": 130
+      },
+      "stats_differ_from_base": true,
+      "stat_changes": {
+        "attack": "+80",
+        "defense": "+10",
+        "special_defense": "+10"
+      },
+      "type_changes": "Added Fighting type"
+    },
+    {
+      "id": 10044,
+      "name": "Mewtwo Mega Y",
+      "form_name": "Mega Y",
+      "types": ["Psychic"],
+      "stats": {
+        "hp": 106,
+        "attack": 150,
+        "defense": 70,
+        "special_attack": 194,
+        "special_defense": 120,
+        "speed": 140
+      },
+      "stats_differ_from_base": true,
+      "stat_changes": {
+        "attack": "+40",
+        "defense": "-20",
+        "special_attack": "+40",
+        "special_defense": "+30",
+        "speed": "+10"
+      }
+    }
+  ],
+  "summary": {
+    "total_pikachu_forms": 17,
+    "total_mewtwo_forms": 3,
+    "pikachu_forms_with_different_stats": 0,
+    "mewtwo_forms_with_different_stats": 2,
+    "note": "All Pikachu forms share identical stats with the base form (cosmetic variations only). Both Mega Mewtwo forms have significantly different stats and typing."
+  }
+}

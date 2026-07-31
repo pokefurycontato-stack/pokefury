@@ -1,4 +1,5 @@
 import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs } from './utils.js';
+import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO } from './battle-mechanics.js';
 
 const NATURE_NAMES = [
     'hardy','lonely','brave','adamant','naughty',
@@ -160,31 +161,90 @@ export async function executeTurn(attacker, defender, move) {
     if (!attacker || !defender || !move) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
+
+    // Check if defender is protected
+    if (isProtected(defender)) {
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, protected: true };
+    }
+
     const result = await calculateDamage(attacker, defender, move);
 
     if (result.missed) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
 
+    // Status moves
     if (move.category === 'status') {
         const statusMessages = applyStatusEffect(attacker, defender, move);
-        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true, statusMessages };
+        const secondaryMessages = applySecondaryEffect(attacker, defender, move, 1);
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true, statusMessages: [...statusMessages, ...secondaryMessages] };
     }
 
-    defender.currentHp = Math.max(0, defender.currentHp - result.damage);
+    // Calculate damage with stat stages
+    let damage = result.damage;
+    damage = applyStatStages(attacker, defender, move, damage);
+
+    // Handle multi-hit moves
+    const effect = getMoveEffect(move);
+    let totalDamage = 0;
+    let hits = 1;
+    if (effect && effect.effect === 'multi_hit') {
+        hits = randomInt(effect.minHits, effect.maxHits);
+        for (let i = 0; i < hits; i++) {
+            const hitResult = await calculateDamage(attacker, defender, move);
+            if (!hitResult.missed) {
+                const hitDmg = applyStatStages(attacker, defender, move, hitResult.damage);
+                totalDamage += hitDmg;
+            }
+        }
+        damage = totalDamage;
+    } else {
+        damage = result.damage;
+        damage = applyStatStages(attacker, defender, move, damage);
+    }
+
+    // Apply damage
+    defender.currentHp = Math.max(0, defender.currentHp - damage);
     if (defender.currentHp <= 0) {
         defender.fainted = true;
+    }
+
+    // Handle recoil
+    if (effect && effect.effect === 'recoil' && damage > 0) {
+        const recoilDmg = Math.max(1, Math.floor(damage * effect.recoil));
+        attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
+        if (attacker.currentHp <= 0) attacker.fainted = true;
+    }
+
+    // Handle drain
+    const messages = [];
+    if (effect && effect.effect === 'drain' && damage > 0) {
+        const healAmt = Math.floor(damage * effect.drain);
+        attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + healAmt);
+        messages.push(`${attacker.name} drenou ${healAmt} HP!`);
+    }
+
+    // Apply secondary effects (status, stat drops, flinch)
+    const secondaryMsgs = applySecondaryEffect(attacker, defender, move, result.effectiveness);
+    messages.push(...secondaryMsgs);
+
+    // Process contact abilities (flame body, static, etc.)
+    if (move.category === 'physical' || move.makesContact) {
+        const contactMsgs = processContactAbilities(defender, attacker);
+        messages.push(...contactMsgs);
     }
 
     return {
         attacker,
         defender,
         move,
-        damage: result.damage,
+        damage,
         effectiveness: result.effectiveness,
         critical: result.critical,
         missed: false,
-        fainted: defender.fainted
+        fainted: defender.fainted,
+        hits,
+        messages
     };
 }
 

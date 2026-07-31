@@ -32,3 +32,19 @@ CREATE POLICY "pmv2_delete" ON pokemon_moves_v2 FOR DELETE USING (true);
 
 -- Reload PostgREST schema cache
 NOTIFY pgrst, 'reload schema';
+
+-- Fix RLS policies for player_progress table
+DO $$ BEGIN
+    DROP POLICY IF EXISTS "pp_select" ON player_progress;
+    DROP POLICY IF EXISTS "pp_insert" ON player_progress;
+    DROP POLICY IF EXISTS "pp_update" ON player_progress;
+    DROP POLICY IF EXISTS "pp_delete" ON player_progress;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+CREATE POLICY "pp_select" ON player_progress FOR SELECT USING (true);
+CREATE POLICY "pp_insert" ON player_progress FOR INSERT WITH CHECK (true);
+CREATE POLICY "pp_update" ON player_progress FOR UPDATE USING (true);
+CREATE POLICY "pp_delete" ON player_progress FOR DELETE USING (true);
+
+NOTIFY pgrst, 'reload schema';

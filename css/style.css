@@ -319,6 +319,17 @@ body {
     position: absolute;
     z-index: 5;
     pointer-events: auto;
+    background: rgba(10,10,30,0.92);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 4px;
+    backdrop-filter: blur(4px);
+    --neon-color: #2244aa;
+    --neon-dim: rgba(34,68,170,0.3);
+    box-shadow:
+        0 0 8px #2244aa,
+        0 0 16px rgba(34,68,170,0.3);
+    animation: panelNeonPulse 2s ease-in-out infinite;
 }
 #map-nav-canvas.hidden { display: none; }
 #ui-layer {
