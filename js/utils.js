@@ -408,7 +408,5 @@ export function getPokemonScale(pokemon) {
     const ref = 7;
     const min = 0.5;
     const max = 2.2;
-    const scale = Math.max(min, Math.min(max, h / ref));
-    if (pokemon.name) console.log(`[Scale] ${pokemon.name} h=${h} scale=${scale.toFixed(2)}`);
-    return scale;
+    return Math.max(min, Math.min(max, h / ref));
 }

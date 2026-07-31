@@ -56,26 +56,6 @@ const PokeAPI = {
 
         const pokemonData = this.transformPokemon(data);
 
-        if (!pokemonData.height || pokemonData.height === 10) {
-            try {
-                console.log(`[PokeAPI] Fetching height for ${pokemonData.name} (id:${pokemonData.id})`);
-                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonData.id}`);
-                if (res.ok) {
-                    const api = await res.json();
-                    pokemonData.height = api.height || 10;
-                    pokemonData.weight = api.weight || 100;
-                    console.log(`[PokeAPI] ${pokemonData.name} height=${pokemonData.height} weight=${pokemonData.weight}`);
-                    window.db.from('pokemon').update({ height: pokemonData.height, weight: pokemonData.weight }).eq('id', pokemonData.id);
-                } else {
-                    console.warn(`[PokeAPI] Failed to fetch height for ${pokemonData.name}: ${res.status}`);
-                }
-            } catch (e) {
-                console.warn(`[PokeAPI] Error fetching height for ${pokemonData.name}:`, e);
-            }
-        } else {
-            console.log(`[PokeAPI] ${pokemonData.name} already has height=${pokemonData.height}`);
-        }
-
         this.pokemonCache[pokemonData.id] = pokemonData;
         this.pokemonCache[pokemonData.name.toLowerCase()] = pokemonData;
         this.pokemonCache[pokemonData.species] = pokemonData;
@@ -88,14 +68,12 @@ const PokeAPI = {
     async ensureHeight(pokemonId) {
         if (this._heightCache[pokemonId]) return this._heightCache[pokemonId];
         try {
-            console.log(`[PokeAPI] ensureHeight fetching for id:${pokemonId}`);
             const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
             if (res.ok) {
                 const api = await res.json();
                 const h = api.height || 10;
                 const w = api.weight || 100;
                 this._heightCache[pokemonId] = { height: h, weight: w };
-                console.log(`[PokeAPI] ensureHeight ${pokemonId} => height=${h} weight=${w}`);
                 if (window.db) {
                     window.db.from('pokemon').update({ height: h, weight: w }).eq('id', pokemonId);
                 }
@@ -105,12 +83,8 @@ const PokeAPI = {
                     cached.weight = w;
                 }
                 return { height: h, weight: w };
-            } else {
-                console.warn(`[PokeAPI] ensureHeight failed for ${pokemonId}: ${res.status}`);
             }
-        } catch (e) {
-            console.warn(`[PokeAPI] ensureHeight error for ${pokemonId}:`, e);
-        }
+        } catch (e) {}
         return { height: 10, weight: 100 };
     },
 
