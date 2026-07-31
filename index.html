@@ -367,6 +367,16 @@
                         </div>
                     </div>
 
+                    <!-- World Map Overlay -->
+                    <div id="worldmap-overlay" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:27;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.90);backdrop-filter:blur(6px);">
+                        <div id="worldmap-box" style="position:relative;display:inline-block;">
+                            <img id="worldmap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" style="max-width:90vw;max-height:85vh;border-radius:12px;display:block;" alt="Mapa Mundial">
+                            <div id="worldmap-hotspots"></div>
+                            <button onclick="if(window.closeWorldMap)window.closeWorldMap()" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;transition:background 0.2s;">✕</button>
+                            <div id="worldmap-region-label" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#00ff44;font-family:Inter,sans-serif;font-size:14px;font-weight:700;padding:8px 20px;border-radius:8px;border:1px solid rgba(0,255,68,0.3);pointer-events:none;text-align:center;white-space:nowrap;"></div>
+                        </div>
+                    </div>
+
                     <!-- HUD (party bar only) -->
                     <div id="hud" class="hidden">
                         <div id="hud-bottom">
@@ -648,6 +658,7 @@
     <script src="js/supabase-config.js"></script>
     <script src="js/items-data.js"></script>
     <script src="js/pokemart.js"></script>
+    <script src="js/worldmap.js"></script>
     <script src="js/game-data.js"></script>
     <script src="js/pokeapi.js"></script>
     <script src="js/auth.js"></script>

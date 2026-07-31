@@ -86,6 +86,24 @@ export class Overworld2D {
         this.mapNavigatorRects = [];
 
         this.neonEl = null;
+        this.worldMapRect = null;
+
+        this.worldMapImage = new Image();
+        this.worldMapImage.crossOrigin = 'anonymous';
+        this.worldMapImage.src = 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png';
+
+        this.worldMapRegions = [
+            { name: 'Kanto',  cx: 0.13, cy: 0.14, hitR: 0.08 },
+            { name: 'Johto',  cx: 0.33, cy: 0.14, hitR: 0.08 },
+            { name: 'Hoenn',  cx: 0.53, cy: 0.14, hitR: 0.08 },
+            { name: 'Sinnoh', cx: 0.77, cy: 0.14, hitR: 0.08 },
+            { name: 'Unova',  cx: 0.20, cy: 0.46, hitR: 0.08 },
+            { name: 'Kalos',  cx: 0.47, cy: 0.46, hitR: 0.08 },
+            { name: 'Alola',  cx: 0.73, cy: 0.46, hitR: 0.08 },
+            { name: 'Galar',  cx: 0.15, cy: 0.78, hitR: 0.08 },
+            { name: 'Hisui',  cx: 0.38, cy: 0.78, hitR: 0.08 },
+            { name: 'Paldea', cx: 0.63, cy: 0.78, hitR: 0.08 }
+        ];
         this.biomeColors = {
             'floresta':   { main: '#00cc44', dim: 'rgba(0,204,68,0.3)',  bright: '#66ff99' },
             'montanha':   { main: '#cc8800', dim: 'rgba(204,136,0,0.3)', bright: '#ffbb44' },
@@ -876,38 +894,53 @@ export class Overworld2D {
     }
 
     drawMinimap(ctx, screenW, screenH) {
-        if (!this.currentMapImage || !this.currentMapImage.complete) return;
+        if (!this.worldMapImage || !this.worldMapImage.complete) return;
 
-        const mmW = 140;
-        const mmH = 100;
+        const mmW = 180;
+        const mmH = 120;
         const mmX = screenW - mmW - 12;
         const mmY = screenH - mmH - 12;
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.strokeStyle = 'rgba(233, 69, 96, 0.5)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(46, 160, 67, 0.6)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.roundRect(mmX - 4, mmY - 4, mmW + 8, mmH + 8, 6);
+        ctx.roundRect(mmX - 4, mmY - 4, mmW + 8, mmH + 8, 8);
         ctx.fill();
         ctx.stroke();
 
-        ctx.drawImage(this.currentMapImage, mmX, mmY, mmW, mmH);
-
-        const px = mmX + (this.player.x / this.worldCols) * mmW;
-        const py = mmY + (this.player.y / this.worldRows) * mmH;
-        ctx.fillStyle = '#e94560';
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(px, py, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        ctx.roundRect(mmX, mmY, mmW, mmH, 6);
+        ctx.clip();
+        ctx.drawImage(this.worldMapImage, mmX, mmY, mmW, mmH);
+        ctx.restore();
 
-        const mapName = this.currentMapData?.name || 'Mapa';
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.font = '9px Inter, sans-serif';
+        const currentRegionName = this.game.currentRegion?.name || '';
+        if (currentRegionName && this.worldMapRegions) {
+            const region = this.worldMapRegions.find(r => r.name === currentRegionName);
+            if (region) {
+                const rx = mmX + region.cx * mmW;
+                const ry = mmY + region.cy * mmH;
+                ctx.fillStyle = '#00ff44';
+                ctx.shadowColor = '#00ff44';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+        }
+
+        this.worldMapRect = { x: mmX, y: mmY, w: mmW, h: mmH };
+
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = '10px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(mapName, mmX + mmW / 2, mmY - 8);
+        ctx.fillText('🌍 Mapa Mundial', mmX + mmW / 2, mmY - 8);
     }
 
     drawHUD(ctx, w, h) {
@@ -1015,13 +1048,22 @@ export class Overworld2D {
 
     handleCanvasClick(e) {
         if (this.game.state !== 'overworld') return;
-        if (!this.mapNavigatorRects.length) return;
 
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
         const scaleY = this.canvas.height / rect.height;
         const cx = (e.clientX - rect.left) * scaleX;
         const cy = (e.clientY - rect.top) * scaleY;
+
+        if (this.worldMapRect) {
+            const wm = this.worldMapRect;
+            if (cx >= wm.x && cx <= wm.x + wm.w && cy >= wm.y && cy <= wm.y + wm.h) {
+                if (window.openWorldMap) window.openWorldMap();
+                return;
+            }
+        }
+
+        if (!this.mapNavigatorRects.length) return;
 
         for (const r of this.mapNavigatorRects) {
             if (cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h) {
