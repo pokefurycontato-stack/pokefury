@@ -996,12 +996,12 @@ export class Overworld2D {
         const maps = this.game.currentRegionMaps || [];
         if (maps.length <= 1) { this.mapNavigatorRects = []; return; }
 
-        const thumbW = 44;
-        const thumbH = 32;
-        const gap = 4;
+        const thumbW = 68;
+        const thumbH = 50;
+        const gap = 6;
         const totalW = maps.length * thumbW + (maps.length - 1) * gap;
         let startX = Math.floor((screenW - totalW) / 2);
-        const thumbY = 12;
+        const thumbY = 8;
 
         this.mapNavigatorRects = [];
 
@@ -1010,16 +1010,16 @@ export class Overworld2D {
             const x = startX + i * (thumbW + gap);
             const isCurrent = m.id === this.currentMapData?.id;
 
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
             ctx.beginPath();
-            ctx.roundRect(x, thumbY, thumbW, thumbH, 4);
+            ctx.roundRect(x, thumbY, thumbW, thumbH, 6);
             ctx.fill();
 
             const thumb = this.mapThumbnails[m.id];
             if (thumb && thumb.complete) {
                 ctx.save();
                 ctx.beginPath();
-                ctx.roundRect(x, thumbY, thumbW, thumbH, 4);
+                ctx.roundRect(x, thumbY, thumbW, thumbH, 6);
                 ctx.clip();
                 ctx.drawImage(thumb, x, thumbY, thumbW, thumbH);
                 ctx.restore();
@@ -1028,19 +1028,28 @@ export class Overworld2D {
                 ctx.fillRect(x + 4, thumbY + 4, thumbW - 8, thumbH - 8);
             }
 
+            const runner = this.playerSprites?.down;
+            if (runner && runner.complete) {
+                const runnerH = 20;
+                const runnerW = 16;
+                const runnerX = x + 4;
+                const runnerY = thumbY + thumbH - runnerH - 3;
+                ctx.drawImage(runner, runnerX, runnerY, runnerW, runnerH);
+            }
+
             if (isCurrent) {
                 ctx.strokeStyle = '#e94560';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.roundRect(x, thumbY, thumbW, thumbH, 4);
+                ctx.roundRect(x, thumbY, thumbW, thumbH, 6);
                 ctx.stroke();
             }
 
             ctx.fillStyle = '#000000';
-            ctx.font = '8px Inter, sans-serif';
+            ctx.font = '9px Inter, sans-serif';
             ctx.textAlign = 'center';
-            const label = m.name.length > 8 ? m.name.slice(0, 7) + '..' : m.name;
-            ctx.fillText(label, x + thumbW / 2, thumbY + thumbH + 10);
+            const label = m.name.length > 10 ? m.name.slice(0, 9) + '..' : m.name;
+            ctx.fillText(label, x + thumbW / 2, thumbY + thumbH + 11);
 
             this.mapNavigatorRects.push({ x, y: thumbY, w: thumbW, h: thumbH, map: m });
         }
