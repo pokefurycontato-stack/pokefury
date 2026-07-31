@@ -1,5 +1,5 @@
 import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs, processHeldItemOnHit, processLifeOrbRecoil, setChoiceLock, getChoiceLockedMove } from './utils.js';
-import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, processEntryHazards, processEntryAbilities, getWeatherSpeed } from './battle-mechanics.js';
+import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, processEntryHazards, processEntryAbilities, getWeatherSpeed, cacheAbilityName } from './battle-mechanics.js';
 
 const NATURE_NAMES = [
     'hardy','lonely','brave','adamant','naughty',
@@ -409,8 +409,16 @@ export async function checkAbilityChange(pokemon) {
 
         if (data && data.length > 0) {
             const normalAbilities = data.filter(a => !a.is_hidden);
-            if (normalAbilities.length > 0 && !pokemon.currentAbility) {
-                pokemon.currentAbility = normalAbilities[0].ability_id;
+            if (normalAbilities.length > 0) {
+                if (!pokemon.currentAbility) {
+                    pokemon.currentAbility = normalAbilities[0].ability_id;
+                }
+                if (!pokemon.currentAbilityName) {
+                    pokemon.currentAbilityName = normalAbilities[0].abilities?.name || '';
+                }
+                if (pokemon.currentAbility && pokemon.currentAbilityName) {
+                    cacheAbilityName(pokemon.currentAbility, pokemon.currentAbilityName);
+                }
                 return normalAbilities[0].abilities?.name;
             }
         }

@@ -767,9 +767,17 @@ export function getMoveEffect(move) {
     return MOVE_EFFECTS_BY_NAME[name] || null;
 }
 
+const _abilityIdToName = new Map();
+
+export function cacheAbilityName(id, name) {
+    if (id && name) _abilityIdToName.set(Number(id), name.toLowerCase().trim());
+}
+
 function getAbilityName(abilityId) {
     if (!abilityId) return '';
     if (typeof abilityId === 'string') return abilityId.toLowerCase();
+    const cached = _abilityIdToName.get(Number(abilityId));
+    if (cached) return cached;
     for (const [name, effect] of Object.entries(ABILITY_EFFECTS)) {
         if (effect._id === abilityId) return name;
     }
@@ -1332,7 +1340,7 @@ export function applyScreenReduction(defender, move, baseDamage) {
 export function processEntryAbilities(pokemon, opponent, battleState) {
     if (!pokemon) return [];
     const messages = [];
-    const abilityName = getAbilityName(pokemon.currentAbility);
+    const abilityName = (pokemon.currentAbilityName || '').toLowerCase().trim() || getAbilityName(pokemon.currentAbility);
     const effect = ABILITY_EFFECTS[abilityName];
     if (!effect) return messages;
 

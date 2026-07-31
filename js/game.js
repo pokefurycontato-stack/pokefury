@@ -706,6 +706,17 @@ class PokeFuryGame {
         this._playerSpriteReady = true;
 
         await showBattleMessage(introMsg, 2000);
+
+        await checkAbilityChange(activePlayer);
+        await checkAbilityChange(pokemon);
+        const playerEntry1 = processEntryAbilities(activePlayer, pokemon, this._battleState);
+        const enemyEntry1 = processEntryAbilities(pokemon, activePlayer, this._battleState);
+        for (const msg of [...playerEntry1, ...enemyEntry1]) {
+            await showBattleMessage(msg);
+        }
+        if (this.weatherAnim && this._battleState) {
+            this.weatherAnim.setWeather(this._battleState.weather);
+        }
     }
 
     async startBattleWithPokemon(pokemonName, level, spriteUrl) {
@@ -833,6 +844,17 @@ class PokeFuryGame {
             this._playerSpriteReady = true;
 
             await showBattleMessage(introMsg, 2000);
+
+            await checkAbilityChange(activePlayer);
+            await checkAbilityChange(pokemon);
+            const playerEntry2 = processEntryAbilities(activePlayer, pokemon, this._battleState);
+            const enemyEntry2 = processEntryAbilities(pokemon, activePlayer, this._battleState);
+            for (const msg of [...playerEntry2, ...enemyEntry2]) {
+                await showBattleMessage(msg);
+            }
+            if (this.weatherAnim && this._battleState) {
+                this.weatherAnim.setWeather(this._battleState.weather);
+            }
         } catch (e) {
             console.error('[PokeFury] Error starting battle:', e);
             hideBattlePokemonSprites();
