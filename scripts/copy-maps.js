@@ -1,7 +1,9 @@
 // ============================================================
 // COPY KANTO MAP CONFIGS TO ALL REGIONS
 // Run in browser console on the PokeFury page (logged in as admin)
-// Copies: image_url, collision_zones, spawn_zones, battle_bg_url
+// Copies: image_url, collision_zones, spawn_zones, battle_bg_url,
+//         battle_player_x/y, battle_enemy_x/y, battle_player_fx, battle_enemy_fx
+// Does NOT copy encounters (map_encounters table)
 // ============================================================
 
 (async () => {
@@ -24,7 +26,7 @@
         .eq('region_id', kanto.id)
         .order('sort_order');
 
-    console.log('[CopyMaps] Kanto maps:', kantoMaps.map(m => `${m.name} (img: ${m.image_url ? 'yes' : 'no'}, coll: ${(m.collision_zones||[]).length}, spawn: ${(m.spawn_zones||[]).length})`));
+    console.log('[CopyMaps] Kanto maps:', kantoMaps.map(m => `${m.name} (img: ${m.image_url ? 'yes' : 'no'}, coll: ${(m.collision_zones||[]).length}, spawn: ${(m.spawn_zones||[]).length}, bg: ${m.battle_bg_url ? 'yes' : 'no'}, pos: ${m.battle_player_x != null ? 'yes' : 'no'}, fx: ${m.battle_player_fx || 'none'})`));
 
     // 4) For each other region, update matching biome maps
     const otherRegions = regions.filter(r => r.id !== kanto.id);
@@ -47,7 +49,13 @@
                 image_url: kMap.image_url,
                 collision_zones: kMap.collision_zones || [],
                 spawn_zones: kMap.spawn_zones || [],
-                battle_bg_url: kMap.battle_bg_url || null
+                battle_bg_url: kMap.battle_bg_url || null,
+                battle_player_x: kMap.battle_player_x,
+                battle_player_y: kMap.battle_player_y,
+                battle_enemy_x: kMap.battle_enemy_x,
+                battle_enemy_y: kMap.battle_enemy_y,
+                battle_player_fx: kMap.battle_player_fx || null,
+                battle_enemy_fx: kMap.battle_enemy_fx || null
             };
 
             const { error } = await db.from('region_maps')
@@ -58,7 +66,7 @@
                 console.error(`[CopyMaps] Error updating ${region.name}/${rMap.name}:`, error);
             } else {
                 totalUpdated++;
-                console.log(`[CopyMaps] ${region.name}/${rMap.name} <- copied from Kanto`);
+                console.log(`[CopyMaps] ${region.name}/${rMap.name} <- Kanto (bg:${update.battle_bg_url?'✓':'✗'} pos:${update.battle_player_x!=null?'✓':'✗'} fx:${update.battle_player_fx||'none'})`);
             }
         }
     }
