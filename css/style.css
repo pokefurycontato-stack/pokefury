@@ -1526,4 +1526,71 @@ body {
     0% { opacity: 0; filter: brightness(4) blur(6px); transform: scale(0.3); }
     50% { opacity: 0.8; filter: brightness(1.5) blur(2px); transform: scale(0.9); }
     100% { opacity: 1; filter: brightness(1) blur(0); transform: scale(1); }
+
+/* PokéMart */
+.pm-banner-wrap {
+    position: relative; width: 100%; height: 110px; overflow: hidden; flex-shrink: 0;
 }
+.pm-banner {
+    width: 100%; height: 100%; object-fit: cover; object-position: center 20%;
+    display: block;
+}
+.pm-banner-fade {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
+    background: linear-gradient(transparent, rgba(15,20,35,0.97));
+    pointer-events: none;
+}
+.pm-close-btn {
+    position: absolute; top: 8px; right: 10px;
+    background: rgba(0,0,0,0.45); border: none; color: #fff;
+    font-size: 16px; width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s; z-index: 2;
+}
+.pm-close-btn:hover { background: rgba(233,69,96,0.7); }
+
+.pm-tab {
+    padding: 6px 12px; border: none; border-radius: 8px 8px 0 0; cursor: pointer;
+    background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45);
+    font-size: 11px; font-family: Inter, sans-serif; font-weight: 600;
+    transition: all 0.2s; white-space: nowrap;
+}
+.pm-tab:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+.pm-tab.active { background: rgba(46,160,67,0.15); color: #2ea043; border-bottom: 2px solid #2ea043; }
+
+.pm-card {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 10px 12px; transition: all 0.2s;
+}
+.pm-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(46,160,67,0.3); }
+
+.pm-card-img {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: rgba(255,255,255,0.06); object-fit: contain;
+    flex-shrink: 0;
+}
+
+.pm-card-info { flex: 1; min-width: 0; }
+.pm-card-name { color: #fff; font-size: 12px; font-weight: 700; font-family: Inter, sans-serif; }
+.pm-card-desc { color: rgba(255,255,255,0.35); font-size: 10px; font-family: Inter, sans-serif; margin-top: 2px; line-height: 1.3; }
+.pm-card-price { color: #2ea043; font-size: 11px; font-weight: 600; font-family: Inter, sans-serif; margin-top: 3px; }
+
+.pm-card-buy {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+.pm-card-buy input {
+    width: 42px; padding: 4px 6px; text-align: center;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px; color: #fff; font-size: 12px; font-family: Inter, sans-serif;
+    outline: none;
+}
+.pm-card-buy input:focus { border-color: rgba(46,160,67,0.5); }
+.pm-card-buy button {
+    padding: 5px 12px; border: none; border-radius: 6px; cursor: pointer;
+    background: #2ea043; color: #fff; font-size: 11px; font-weight: 700;
+    font-family: Inter, sans-serif; transition: all 0.2s; white-space: nowrap;
+}
+.pm-card-buy button:hover { background: #3cc454; }
+.pm-card-buy button:active { transform: scale(0.95); }
+.pm-card-buy button:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; }
