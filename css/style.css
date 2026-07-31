@@ -1006,6 +1006,108 @@ body {
     overflow-y: auto;
     max-height: 80vh;
 }
+
+/* Map Navigator Panel */
+#map-nav-panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 130px;
+    background: rgba(10,10,30,0.94);
+    border: 1px solid rgba(34,68,170,0.3);
+    border-radius: 10px;
+    z-index: 16;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+    box-shadow:
+        0 0 8px rgba(34,68,170,0.4),
+        0 0 16px rgba(34,68,170,0.2),
+        inset 0 0 12px rgba(34,68,170,0.1);
+    animation: mapNavNeonPulse 2s ease-in-out infinite;
+    overflow: hidden;
+}
+#map-nav-panel.hidden { display: none; }
+@keyframes mapNavNeonPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 8px rgba(34,68,170,0.4),
+            0 0 16px rgba(34,68,170,0.2),
+            inset 0 0 12px rgba(34,68,170,0.1);
+        border-color: rgba(34,68,170,0.3);
+    }
+    50% {
+        box-shadow:
+            0 0 14px rgba(51,102,204,0.5),
+            0 0 28px rgba(51,102,204,0.3),
+            inset 0 0 18px rgba(51,102,204,0.15);
+        border-color: rgba(51,102,204,0.5);
+    }
+}
+.map-nav-title {
+    font-family: Inter, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 8px 8px 6px;
+    border-bottom: 1px solid rgba(34,68,170,0.2);
+}
+#map-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+#map-nav-list::-webkit-scrollbar { width: 3px; }
+#map-nav-list::-webkit-scrollbar-thumb { background: rgba(34,68,170,0.4); border-radius: 2px; }
+.map-nav-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+}
+.map-nav-card:hover {
+    background: rgba(34,68,170,0.15);
+    border-color: rgba(34,68,170,0.3);
+}
+.map-nav-card.active {
+    background: rgba(34,68,170,0.25);
+    border-color: rgba(51,102,204,0.5);
+}
+.map-nav-thumb {
+    width: 40px;
+    height: 30px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.map-nav-name {
+    color: #fff;
+    font-family: Inter, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.map-nav-runner {
+    width: 18px;
+    height: 18px;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+}
+
 #party-list {
     display: flex;
     flex-direction: column;
