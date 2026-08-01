@@ -17,6 +17,7 @@ import { Chat } from './chat.js';
 import { BattleAnimations } from './battle-animations.js';
 import { EventManager } from './events.js';
 import { AFKManager } from './afk.js';
+import { TypeEffects } from './type-effects.js';
 
 const SHINY_CHANCE = 128;
 
@@ -44,6 +45,7 @@ class PokeFuryGame {
 
         this.regionManager = new RegionManager();
         this.battleAnimations = null;
+        this.typeEffects = null;
         this.weatherAnim = null;
         this.eventManager = null;
         this.afkManager = null;
@@ -350,6 +352,7 @@ class PokeFuryGame {
 
         if (!this.battleAnimations) {
             this.battleAnimations = new BattleAnimations(document.getElementById('game-wrapper'));
+            this.typeEffects = new TypeEffects();
         }
 
         try {
@@ -1129,6 +1132,19 @@ class PokeFuryGame {
                     }
                 } else {
                     await showBattleMessage(`${attacker.name} usou ${move.name}!`);
+
+                    if (this.typeEffects && move.type && !result.missed) {
+                        const isPlayer = attacker === playerPokemon;
+                        const targetSprites = getBattlePokemonSprites();
+                        const targetEl = isPlayer ? targetSprites.enemy : targetSprites.player;
+                        if (targetEl) {
+                            const rect = targetEl.getBoundingClientRect();
+                            const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
+                            const tx = rect.left - battleRect.left + rect.width / 2;
+                            const ty = rect.top - battleRect.top + rect.height / 2;
+                            this.typeEffects.playEffect(move.type, tx, ty, move.power || 50);
+                        }
+                    }
 
                     const effText = getEffectivenessText(result.effectiveness);
                     if (effText) await showBattleMessage(effText);
