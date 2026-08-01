@@ -1862,7 +1862,7 @@ class PokeFuryGame {
         if (!this._isRaidBattle) return;
         this._isRaidBattle = false;
 
-        if (result === 'win' && this.enemyTeam[0]) {
+        if (this.enemyTeam[0]) {
             const boss = this.enemyTeam[0];
             const damageDealt = boss.maxHp - boss.currentHp;
             if (damageDealt > 0 && this.eventManager) {
