@@ -512,7 +512,7 @@ export class Overworld2D {
             let pos = this.findSpawnPosition();
             if (!pos) continue;
 
-            const spriteUrl = enc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null);
+            const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null) || enc.sprite_url;
 
             this.mapPokemonEntities.push({
                 entityId: `pokemon_${Date.now()}_${i}`,
@@ -547,7 +547,7 @@ export class Overworld2D {
                 entityId: `pokemon_${row.id}`,
                 x: row.pos_x,
                 y: row.pos_y,
-                spriteUrl: row.map_encounters?.sprite_url || null,
+                spriteUrl: (window.PokeAPI && row.map_encounters?.pokemon_id ? window.PokeAPI.getAnimatedFrontUrl(row.map_encounters.pokemon_id) : null) || row.map_encounters?.sprite_url || null,
                 encounter: row.map_encounters,
                 active: row.active,
                 respawnTimer: row.respawn_timer || 0
@@ -578,7 +578,7 @@ export class Overworld2D {
             let pos = this.findSpawnPosition();
             if (!pos) continue;
 
-            const spriteUrl = enc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null);
+            const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null) || enc.sprite_url;
 
             // Save to DB
             let dbId = null;
@@ -676,7 +676,9 @@ export class Overworld2D {
         const maxWild = Math.min(highestLevel + 2, 100);
         const minWild = Math.max(maxWild - 2, 1);
         const level = minWild + Math.floor(Math.random() * (maxWild - minWild + 1));
-        await this.game.startBattleWithPokemon(enc.pokemon_name, level, entity.spriteUrl);
+        const battleId = enc.pokemon_id || enc.pokemon_name;
+        const battleSprite = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null) || entity.spriteUrl;
+        await this.game.startBattleWithPokemon(battleId, level, battleSprite);
 
         if (this.game.state === 'battle') {
             entity.active = false;
@@ -707,7 +709,7 @@ export class Overworld2D {
         const pos = this.findSpawnPosition();
         if (!pos) return;
 
-        const spriteUrl = newEnc.sprite_url || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(newEnc.pokemon_id) : null);
+        const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(newEnc.pokemon_id) : null) || newEnc.sprite_url;
 
         entity.encounter = newEnc;
         entity.spriteUrl = spriteUrl;
