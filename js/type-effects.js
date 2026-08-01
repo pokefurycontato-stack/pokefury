@@ -26,10 +26,18 @@ export class TypeEffects {
     }
 
     _resize() {
+        const gameCanvas = document.getElementById('game-canvas');
         const mainArea = document.getElementById('main-area');
-        if (!mainArea || !this.canvas) return;
-        this.canvas.width = mainArea.offsetWidth;
-        this.canvas.height = mainArea.offsetHeight;
+        if (!this.canvas) return;
+        if (gameCanvas) {
+            this.canvas.style.left = gameCanvas.offsetLeft + 'px';
+            this.canvas.style.top = gameCanvas.offsetTop + 'px';
+            this.canvas.width = gameCanvas.width;
+            this.canvas.height = gameCanvas.height;
+        } else if (mainArea) {
+            this.canvas.width = mainArea.offsetWidth;
+            this.canvas.height = mainArea.offsetHeight;
+        }
     }
 
     _sleep(ms) {
@@ -130,10 +138,10 @@ export class TypeEffects {
         const particles = [];
         if (v === 0) {
             for (let i = 0; i < count; i++) {
-                particles.push({ x: x + (Math.random() - 0.5) * 70, y: y - 35, vx: (Math.random() - 0.5) * 1.5, vy: 3.5 + Math.random() * 4, life: 50 + Math.random() * 35, maxLife: 85, size: 5 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0.12, glow: true });
+                particles.push({ x: x + (Math.random() - 0.5) * 40, y: y - 15, vx: (Math.random() - 0.5) * 1.5, vy: 3 + Math.random() * 4, life: 50 + Math.random() * 35, maxLife: 85, size: 5 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0.12, glow: true });
             }
             for (let i = 0; i < 6; i++) {
-                particles.push({ x: x + (Math.random() - 0.5) * 40, y: y + 10, vx: (Math.random() - 0.5) * 3, vy: -2 - Math.random() * 3, life: 35 + Math.random() * 25, maxLife: 60, size: 3 + Math.random() * 4, color: '#e3f2fd', type: 'circle', gravity: 0.08 });
+                particles.push({ x: x + (Math.random() - 0.5) * 30, y: y + 5, vx: (Math.random() - 0.5) * 3, vy: -2 - Math.random() * 3, life: 35 + Math.random() * 25, maxLife: 60, size: 3 + Math.random() * 4, color: '#e3f2fd', type: 'circle', gravity: 0.08 });
             }
         } else if (v === 1) {
             for (let i = 0; i < count; i++) {
@@ -179,11 +187,11 @@ export class TypeEffects {
                 particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 50 + Math.random() * 35, maxLife: 85, size: 5 + Math.random() * 8, color: colors[Math.floor(Math.random() * colors.length)], type: 'diamond', gravity: 0, rotation: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.15, glow: true });
             } else if (v === 1) {
                 for (let j = 0; j < 3; j++) {
-                    particles.push({ x: x + (Math.random() - 0.5) * 90, y: y - 50 + Math.random() * 20, vx: (Math.random() - 0.5) * 2, vy: 2.5 + Math.random() * 4, life: 50 + Math.random() * 40, maxLife: 90, size: 4 + Math.random() * 6, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0.06, glow: true });
+                    particles.push({ x: x + (Math.random() - 0.5) * 40, y: y - 15 + Math.random() * 10, vx: (Math.random() - 0.5) * 1.5, vy: 2 + Math.random() * 3, life: 50 + Math.random() * 40, maxLife: 90, size: 5 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0.06, glow: true });
                 }
             } else if (v === 2) {
                 for (let i = 0; i < count; i++) {
-                    particles.push({ x: x - 45, y: y, vx: 6 + Math.random() * 3, vy: (Math.random() - 0.5) * 3, life: 35 + Math.random() * 25, maxLife: 60, size: 8 + Math.random() * 12, color: colors[Math.floor(Math.random() * colors.length)], type: 'diamond', gravity: 0, rotation: Math.PI / 4, rotSpeed: 0, glow: true });
+                    particles.push({ x: x + (Math.random() - 0.5) * 20, y: y + (Math.random() - 0.5) * 20, vx: 5 + Math.random() * 3, vy: (Math.random() - 0.5) * 2, life: 35 + Math.random() * 25, maxLife: 60, size: 8 + Math.random() * 12, color: colors[Math.floor(Math.random() * colors.length)], type: 'diamond', gravity: 0, rotation: Math.PI / 4, rotSpeed: 0, glow: true });
                 }
             } else {
                 for (let j = 0; j < 5; j++) {
@@ -206,7 +214,7 @@ export class TypeEffects {
             }
         } else if (v === 1) {
             for (let i = 0; i < count; i++) {
-                particles.push({ x: x + (Math.random() - 0.5) * 50, y: y - 25 + Math.random() * 50, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, life: 22 + Math.random() * 18, maxLife: 40, size: 3 + Math.random() * 4, color: colors[Math.floor(Math.random() * colors.length)], type: 'spark', gravity: 0, glow: true });
+                particles.push({ x: x + (Math.random() - 0.5) * 35, y: y - 15 + Math.random() * 30, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, life: 22 + Math.random() * 18, maxLife: 40, size: 3 + Math.random() * 4, color: colors[Math.floor(Math.random() * colors.length)], type: 'spark', gravity: 0, glow: true });
             }
         } else if (v === 2) {
             for (let i = 0; i < count; i++) {
@@ -225,7 +233,7 @@ export class TypeEffects {
         if (v === 0) {
             for (let i = 0; i < count; i++) {
                 const angle = (Math.random() - 0.5) * 1.0;
-                particles.push({ x: x - 70, y: y + (Math.random() - 0.5) * 20, vx: 7 + Math.random() * 4, vy: angle * 4, life: 30 + Math.random() * 20, maxLife: 50, size: 6 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0, glow: true });
+                particles.push({ x: x - 30, y: y + (Math.random() - 0.5) * 15, vx: 7 + Math.random() * 4, vy: angle * 4, life: 30 + Math.random() * 20, maxLife: 50, size: 6 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0, glow: true });
             }
             this.particles.push({ x, y, vx: 0, vy: 0, life: 8, maxLife: 8, size: 40, color: '#ffffff', type: 'circle', gravity: 0, alpha: 0.7 });
         } else if (v === 1) {
@@ -262,10 +270,10 @@ export class TypeEffects {
         const particles = [];
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
-            particles.push({ x: x + Math.cos(angle) * 12, y: y + 12, vx: Math.cos(angle) * (3 + Math.random() * 4), vy: -2 - Math.random() * 5, life: 40 + Math.random() * 30, maxLife: 70, size: 5 + Math.random() * 8, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0.18, glow: true });
+            particles.push({ x: x + Math.cos(angle) * 8, y: y + 5, vx: Math.cos(angle) * (3 + Math.random() * 4), vy: -2 - Math.random() * 5, life: 40 + Math.random() * 30, maxLife: 70, size: 5 + Math.random() * 8, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0.18, glow: true });
         }
         for (let i = 0; i < 5; i++) {
-            particles.push({ x: x + (Math.random() - 0.5) * 40, y: y + 15, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2, life: 35 + Math.random() * 25, maxLife: 60, size: 4 + Math.random() * 5, color: '#d7ccc8', type: 'circle', gravity: 0.1 });
+            particles.push({ x: x + (Math.random() - 0.5) * 25, y: y + 8, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2, life: 35 + Math.random() * 25, maxLife: 60, size: 4 + Math.random() * 5, color: '#d7ccc8', type: 'circle', gravity: 0.1 });
         }
         return particles;
     }
@@ -273,10 +281,10 @@ export class TypeEffects {
     _flyingParticles(x, y, count, colors, v) {
         const particles = [];
         for (let i = 0; i < count; i++) {
-            particles.push({ x: x + (Math.random() - 0.5) * 70, y: y + (Math.random() - 0.5) * 50, vx: (Math.random() - 0.5) * 3, vy: -1.5 - Math.random() * 3, life: 50 + Math.random() * 40, maxLife: 90, size: 5 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: -0.03, glow: true });
+            particles.push({ x: x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 30, vx: (Math.random() - 0.5) * 3, vy: -1.5 - Math.random() * 3, life: 50 + Math.random() * 40, maxLife: 90, size: 5 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: -0.03, glow: true });
         }
         for (let i = 0; i < 3; i++) {
-            particles.push({ x: x + (Math.random() - 0.5) * 30, y: y, vx: (Math.random() - 0.5) * 6, vy: -3 - Math.random() * 2, life: 40 + Math.random() * 30, maxLife: 70, size: 3 + Math.random() * 4, color: '#ffffff', type: 'leaf', gravity: -0.02, rotation: Math.random() * Math.PI, rotSpeed: (Math.random() - 0.5) * 0.3 });
+            particles.push({ x: x + (Math.random() - 0.5) * 20, y: y, vx: (Math.random() - 0.5) * 4, vy: -3 - Math.random() * 2, life: 40 + Math.random() * 30, maxLife: 70, size: 3 + Math.random() * 4, color: '#ffffff', type: 'leaf', gravity: -0.02, rotation: Math.random() * Math.PI, rotSpeed: (Math.random() - 0.5) * 0.3 });
         }
         return particles;
     }
@@ -285,11 +293,11 @@ export class TypeEffects {
         const particles = [];
         for (let i = 0; i < count; i++) {
             const angle = (i / count) * Math.PI * 2;
-            const radius = 25 + Math.random() * 35;
+            const radius = 15 + Math.random() * 25;
             particles.push({ x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius, vx: Math.cos(angle + Math.PI / 2) * 0.8, vy: Math.sin(angle + Math.PI / 2) * 0.8, life: 55 + Math.random() * 40, maxLife: 95, size: 5 + Math.random() * 6, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0, pulse: true, glow: true });
         }
         for (let i = 0; i < 3; i++) {
-            particles.push({ x, y, vx: 0, vy: 0, life: 30 + Math.random() * 20, maxLife: 50, size: 20 + Math.random() * 15, color: colors[0], type: 'circle', gravity: 0, alpha: 0.2, pulse: true });
+            particles.push({ x, y, vx: 0, vy: 0, life: 30 + Math.random() * 20, maxLife: 50, size: 15 + Math.random() * 10, color: colors[0], type: 'circle', gravity: 0, alpha: 0.2, pulse: true });
         }
         return particles;
     }
@@ -297,10 +305,10 @@ export class TypeEffects {
     _bugParticles(x, y, count, colors, v) {
         const particles = [];
         for (let i = 0; i < count; i++) {
-            particles.push({ x: x + (Math.random() - 0.5) * 55, y: y + (Math.random() - 0.5) * 55, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, life: 40 + Math.random() * 30, maxLife: 70, size: 4 + Math.random() * 5, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0, glow: true });
+            particles.push({ x: x + (Math.random() - 0.5) * 35, y: y + (Math.random() - 0.5) * 35, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, life: 40 + Math.random() * 30, maxLife: 70, size: 4 + Math.random() * 5, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0, glow: true });
         }
         for (let i = 0; i < 4; i++) {
-            particles.push({ x: x + (Math.random() - 0.5) * 25, y: y + (Math.random() - 0.5) * 25, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2, life: 35 + Math.random() * 25, maxLife: 60, size: 2 + Math.random() * 3, color: '#c5e1a5', type: 'leaf', gravity: 0, rotation: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.4 });
+            particles.push({ x: x + (Math.random() - 0.5) * 18, y: y + (Math.random() - 0.5) * 18, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2, life: 35 + Math.random() * 25, maxLife: 60, size: 2 + Math.random() * 3, color: '#c5e1a5', type: 'leaf', gravity: 0, rotation: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.4 });
         }
         return particles;
     }
@@ -312,7 +320,7 @@ export class TypeEffects {
             particles.push({ x, y, vx: Math.cos(angle) * (3 + Math.random() * 5), vy: Math.sin(angle) * (3 + Math.random() * 5) - 3, life: 35 + Math.random() * 30, maxLife: 65, size: 6 + Math.random() * 11, color: colors[Math.floor(Math.random() * colors.length)], type: 'rock', gravity: 0.18, rotation: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.25, glow: true });
         }
         for (let i = 0; i < 4; i++) {
-            particles.push({ x: x + (Math.random() - 0.5) * 30, y: y + 10, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2, life: 30 + Math.random() * 20, maxLife: 50, size: 5 + Math.random() * 6, color: '#bcaaa4', type: 'circle', gravity: 0.12, alpha: 0.5 });
+            particles.push({ x: x + (Math.random() - 0.5) * 20, y: y + 5, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2, life: 30 + Math.random() * 20, maxLife: 50, size: 5 + Math.random() * 6, color: '#bcaaa4', type: 'circle', gravity: 0.12, alpha: 0.5 });
         }
         return particles;
     }
@@ -346,11 +354,11 @@ export class TypeEffects {
         const particles = [];
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
-            particles.push({ x: x + Math.cos(angle) * 25, y: y + Math.sin(angle) * 25, vx: Math.cos(angle) * -0.7, vy: Math.sin(angle) * -0.7, life: 55 + Math.random() * 40, maxLife: 95, size: 6 + Math.random() * 9, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0, alpha: 0.6, glow: true });
+            particles.push({ x: x + Math.cos(angle) * 15, y: y + Math.sin(angle) * 15, vx: Math.cos(angle) * -0.7, vy: Math.sin(angle) * -0.7, life: 55 + Math.random() * 40, maxLife: 95, size: 6 + Math.random() * 9, color: colors[Math.floor(Math.random() * colors.length)], type: 'circle', gravity: 0, alpha: 0.6, glow: true });
         }
         for (let i = 0; i < 4; i++) {
             const angle = Math.random() * Math.PI * 2;
-            particles.push({ x: x + Math.cos(angle) * 10, y: y + Math.sin(angle) * 10, vx: Math.cos(angle) * 1.5, vy: Math.sin(angle) * 1.5, life: 45 + Math.random() * 30, maxLife: 75, size: 4 + Math.random() * 6, color: '#37474f', type: 'circle', gravity: 0, alpha: 0.8 });
+            particles.push({ x: x + Math.cos(angle) * 8, y: y + Math.sin(angle) * 8, vx: Math.cos(angle) * 1.5, vy: Math.sin(angle) * 1.5, life: 45 + Math.random() * 30, maxLife: 75, size: 4 + Math.random() * 6, color: '#37474f', type: 'circle', gravity: 0, alpha: 0.8 });
         }
         return particles;
     }
