@@ -1137,7 +1137,7 @@ class PokeFuryGame {
                             const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
                             const tx = rect.left - battleRect.left + rect.width / 2;
                             const ty = rect.top - battleRect.top + rect.height / 2;
-                            this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
+                            await this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
                         }
                     }
 
@@ -1156,7 +1156,7 @@ class PokeFuryGame {
                             const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
                             const tx = rect.left - battleRect.left + rect.width / 2;
                             const ty = rect.top - battleRect.top + rect.height / 2;
-                            this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
+                            await this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
                         }
                     }
 
@@ -1315,7 +1315,7 @@ class PokeFuryGame {
                         const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
                         const tx = rect.left - battleRect.left + rect.width / 2;
                         const ty = rect.top - battleRect.top + rect.height / 2;
-                        this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
+                        await this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
                     }
                 }
 
@@ -1333,7 +1333,7 @@ class PokeFuryGame {
                         const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
                         const tx = rect.left - battleRect.left + rect.width / 2;
                         const ty = rect.top - battleRect.top + rect.height / 2;
-                        this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
+                        await this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
                     }
                 }
 
