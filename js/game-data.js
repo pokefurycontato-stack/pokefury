@@ -1,6 +1,7 @@
 const GameData = {
     userId: localStorage.getItem('pokefury_userId') || null,
     currentCharacterId: localStorage.getItem('pokefury_characterId') || null,
+    _saveQueue: Promise.resolve(),
 
     setUserId(id) {
         this.userId = id;
@@ -93,7 +94,11 @@ const GameData = {
 
     async saveTeam(pokemonList) {
         if (!this.currentCharacterId || !this.userId) return;
+        this._saveQueue = this._saveQueue.then(() => this._doSaveTeam(pokemonList));
+        return this._saveQueue;
+    },
 
+    async _doSaveTeam(pokemonList) {
         await window.db
             .from('pokemon_team')
             .delete()

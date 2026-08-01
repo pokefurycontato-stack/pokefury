@@ -506,9 +506,8 @@ class PokeFuryGame {
             const team = await window.GameData.getTeam();
             const isNew = team.length === 0;
 
-            await this.saveTeam();
-
             if (isNew) {
+                await this.saveTeam();
                 await Promise.all([
                     window.GameData.addItem(1, 5),
                     window.GameData.addItem(10, 10)
@@ -929,6 +928,7 @@ class PokeFuryGame {
                 await showBattleMessage(`Capturou ${enemyPokemon.name}!`);
                 const added = await window.GameData.addPokemonToTeam(enemyPokemon);
                 if (added === 'team') {
+                    this.playerTeam.push(enemyPokemon);
                     await showBattleMessage(`${enemyPokemon.name} foi adicionado a equipe!`);
                 } else if (added === 'pc') {
                     await showBattleMessage(`Equipe cheia! ${enemyPokemon.name} foi enviado ao PC Pokemon.`);
@@ -1836,7 +1836,7 @@ class PokeFuryGame {
         }
     }
 
-    reorderTeam(fromIndex, toIndex, insertBefore) {
+    async reorderTeam(fromIndex, toIndex, insertBefore) {
         const pokemon = this.playerTeam[fromIndex];
         if (!pokemon) return;
         this.playerTeam.splice(fromIndex, 1);
@@ -1849,7 +1849,7 @@ class PokeFuryGame {
             newIndex = insertBefore ? toIndex : toIndex + 1;
         }
         this.playerTeam.splice(newIndex, 0, pokemon);
-        this.saveTeam();
+        await this.saveTeam();
         this.updatePartyPanel();
     }
 
