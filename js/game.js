@@ -18,8 +18,74 @@ import { BattleAnimations } from './battle-animations.js';
 import { EventManager } from './events.js';
 import { AFKManager } from './afk.js';
 import { TypeEffects } from './type-effects.js';
+import { getMoveEffect } from './battle-mechanics.js';
 
 const SHINY_CHANCE = 128;
+
+function classifyMoveEffect(move) {
+    if (!move) return { category: 'damage', effectType: 'none' };
+    const effect = getMoveEffect(move);
+    if (move.category === 'status') {
+        if (effect) {
+            if (effect.effect === 'stat_boost') {
+                const primaryStat = effect.stat || 'attack';
+                return { category: 'self_buff', effectType: 'buff', stat: primaryStat };
+            }
+            if (effect.effect === 'stat_drop') {
+                if (effect.selfOnly) {
+                    return { category: 'self_debuff', effectType: 'self_debuff' };
+                }
+                if (effect.selfStatDrop && !effect.stat) {
+                    return { category: 'self_debuff', effectType: 'self_debuff' };
+                }
+                return { category: 'enemy_debuff', effectType: 'debuff' };
+            }
+            if (effect.effect === 'status') {
+                return { category: 'enemy_status', effectType: 'status' };
+            }
+            if (effect.effect === 'heal' || effect.effect === 'rest') {
+                return { category: 'self_heal', effectType: 'heal' };
+            }
+            if (effect.effect === 'weather') {
+                return { category: 'weather', effectType: 'buff', stat: 'default' };
+            }
+            if (effect.effect === 'terrain') {
+                return { category: 'terrain', effectType: 'buff', stat: 'default' };
+            }
+            if (effect.effect === 'screen' || effect.effect === 'field_status') {
+                return { category: 'screen', effectType: 'buff', stat: 'defense' };
+            }
+            if (effect.effect === 'hazard' || effect.effect === 'hazard_remove') {
+                return { category: 'hazard', effectType: 'buff', stat: 'default' };
+            }
+            if (effect.effect === 'taunt' || effect.effect === 'torment' || effect.effect === 'encore' || effect.effect === 'disable') {
+                return { category: 'enemy_debuff', effectType: 'debuff' };
+            }
+            if (effect.effect === 'pivot') {
+                return { category: 'damage', effectType: 'none' };
+            }
+        }
+        return { category: 'enemy_status', effectType: 'status' };
+    }
+    if (effect) {
+        if (effect.effect === 'drain') {
+            return { category: 'drain', effectType: 'drain', drain: effect.drain };
+        }
+        if (effect.effect === 'recoil') {
+            return { category: 'damage', effectType: 'recoil' };
+        }
+        if (effect.effect === 'status') {
+            return { category: 'damage', effectType: 'status' };
+        }
+        if (effect.effect === 'flinch') {
+            return { category: 'damage', effectType: 'flinch' };
+        }
+        if (effect.effect === 'multi_hit') {
+            return { category: 'damage', effectType: 'multi_hit' };
+        }
+    }
+    return { category: 'damage', effectType: 'none' };
+}
 
 class PokeFuryGame {
     constructor() {
@@ -1131,13 +1197,55 @@ class PokeFuryGame {
                     if (this.typeEffects) {
                         const isPlayer = attacker === playerPokemon;
                         const targetSprites = getBattlePokemonSprites();
-                        const targetEl = isPlayer ? targetSprites.player : targetSprites.enemy;
-                        if (targetEl) {
-                            const rect = targetEl.getBoundingClientRect();
-                            const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
-                            const tx = rect.left - battleRect.left + rect.width / 2;
-                            const ty = rect.top - battleRect.top + rect.height / 2;
-                            await this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
+                        const attackerEl = isPlayer ? targetSprites.player : targetSprites.enemy;
+                        const defenderEl = isPlayer ? targetSprites.enemy : targetSprites.player;
+                        const battleRect = document.getElementById('main-area').getBoundingClientRect();
+
+                        const moveInfo = classifyMoveEffect(move);
+                        const moveType = move.type || 'normal';
+
+                        if (moveInfo.category === 'self_buff') {
+                            if (attackerEl) {
+                                const r = attackerEl.getBoundingClientRect();
+                                const tx = r.left - battleRect.left + r.width / 2;
+                                const ty = r.top - battleRect.top + r.height / 2;
+                                await this.typeEffects.playSelfBuffEffect(tx, ty, moveInfo.stat);
+                            }
+                        } else if (moveInfo.category === 'self_debuff') {
+                            if (attackerEl) {
+                                const r = attackerEl.getBoundingClientRect();
+                                const tx = r.left - battleRect.left + r.width / 2;
+                                const ty = r.top - battleRect.top + r.height / 2;
+                                await this.typeEffects.playSelfDebuffEffect(tx, ty);
+                            }
+                        } else if (moveInfo.category === 'enemy_debuff') {
+                            if (defenderEl) {
+                                const r = defenderEl.getBoundingClientRect();
+                                const tx = r.left - battleRect.left + r.width / 2;
+                                const ty = r.top - battleRect.top + r.height / 2;
+                                await this.typeEffects.playDebuffEffect(tx, ty);
+                            }
+                        } else if (moveInfo.category === 'enemy_status') {
+                            if (defenderEl) {
+                                const r = defenderEl.getBoundingClientRect();
+                                const tx = r.left - battleRect.left + r.width / 2;
+                                const ty = r.top - battleRect.top + r.height / 2;
+                                await this.typeEffects.playEffect(moveType, tx, ty, 30);
+                            }
+                        } else if (moveInfo.category === 'self_heal') {
+                            if (attackerEl) {
+                                const r = attackerEl.getBoundingClientRect();
+                                const tx = r.left - battleRect.left + r.width / 2;
+                                const ty = r.top - battleRect.top + r.height / 2;
+                                await this.typeEffects.playHealEffect(tx, ty);
+                            }
+                        } else {
+                            if (attackerEl) {
+                                const r = attackerEl.getBoundingClientRect();
+                                const tx = r.left - battleRect.left + r.width / 2;
+                                const ty = r.top - battleRect.top + r.height / 2;
+                                await this.typeEffects.playSelfBuffEffect(tx, ty, 'default');
+                            }
                         }
                     }
 
@@ -1150,13 +1258,25 @@ class PokeFuryGame {
                     if (this.typeEffects && (move.type || move.category !== 'status')) {
                         const isPlayer = attacker === playerPokemon;
                         const targetSprites = getBattlePokemonSprites();
-                        const targetEl = isPlayer ? targetSprites.enemy : targetSprites.player;
-                        if (targetEl) {
-                            const rect = targetEl.getBoundingClientRect();
-                            const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
-                            const tx = rect.left - battleRect.left + rect.width / 2;
-                            const ty = rect.top - battleRect.top + rect.height / 2;
-                            await this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
+                        const attackerEl = isPlayer ? targetSprites.player : targetSprites.enemy;
+                        const defenderEl = isPlayer ? targetSprites.enemy : targetSprites.player;
+                        const battleRect = document.getElementById('main-area').getBoundingClientRect();
+                        const moveType = move.type || 'normal';
+                        const moveInfo = classifyMoveEffect(move);
+
+                        if (moveInfo.category === 'drain' && defenderEl && attackerEl) {
+                            const dr = defenderEl.getBoundingClientRect();
+                            const dtx = dr.left - battleRect.left + dr.width / 2;
+                            const dty = dr.top - battleRect.top + dr.height / 2;
+                            const ar = attackerEl.getBoundingClientRect();
+                            const atx = ar.left - battleRect.left + ar.width / 2;
+                            const aty = ar.top - battleRect.top + ar.height / 2;
+                            await this.typeEffects.playDualEffect(moveType, dtx, dty, atx, aty, move.power || 50);
+                        } else if (defenderEl) {
+                            const r = defenderEl.getBoundingClientRect();
+                            const tx = r.left - battleRect.left + r.width / 2;
+                            const ty = r.top - battleRect.top + r.height / 2;
+                            await this.typeEffects.playEffect(moveType, tx, ty, move.power || 50);
                         }
                     }
 
@@ -1309,13 +1429,54 @@ class PokeFuryGame {
 
                 if (this.typeEffects) {
                     const targetSprites = getBattlePokemonSprites();
-                    const targetEl = targetSprites.enemy;
-                    if (targetEl) {
-                        const rect = targetEl.getBoundingClientRect();
-                        const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
-                        const tx = rect.left - battleRect.left + rect.width / 2;
-                        const ty = rect.top - battleRect.top + rect.height / 2;
-                        await this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
+                    const attackerEl = targetSprites.enemy;
+                    const defenderEl = targetSprites.player;
+                    const battleRect = document.getElementById('main-area').getBoundingClientRect();
+                    const moveType = move.type || 'normal';
+                    const moveInfo = classifyMoveEffect(move);
+
+                    if (moveInfo.category === 'self_buff') {
+                        if (attackerEl) {
+                            const r = attackerEl.getBoundingClientRect();
+                            const tx = r.left - battleRect.left + r.width / 2;
+                            const ty = r.top - battleRect.top + r.height / 2;
+                            await this.typeEffects.playSelfBuffEffect(tx, ty, moveInfo.stat);
+                        }
+                    } else if (moveInfo.category === 'self_debuff') {
+                        if (attackerEl) {
+                            const r = attackerEl.getBoundingClientRect();
+                            const tx = r.left - battleRect.left + r.width / 2;
+                            const ty = r.top - battleRect.top + r.height / 2;
+                            await this.typeEffects.playSelfDebuffEffect(tx, ty);
+                        }
+                    } else if (moveInfo.category === 'enemy_debuff') {
+                        if (defenderEl) {
+                            const r = defenderEl.getBoundingClientRect();
+                            const tx = r.left - battleRect.left + r.width / 2;
+                            const ty = r.top - battleRect.top + r.height / 2;
+                            await this.typeEffects.playDebuffEffect(tx, ty);
+                        }
+                    } else if (moveInfo.category === 'enemy_status') {
+                        if (defenderEl) {
+                            const r = defenderEl.getBoundingClientRect();
+                            const tx = r.left - battleRect.left + r.width / 2;
+                            const ty = r.top - battleRect.top + r.height / 2;
+                            await this.typeEffects.playEffect(moveType, tx, ty, 30);
+                        }
+                    } else if (moveInfo.category === 'self_heal') {
+                        if (attackerEl) {
+                            const r = attackerEl.getBoundingClientRect();
+                            const tx = r.left - battleRect.left + r.width / 2;
+                            const ty = r.top - battleRect.top + r.height / 2;
+                            await this.typeEffects.playHealEffect(tx, ty);
+                        }
+                    } else {
+                        if (attackerEl) {
+                            const r = attackerEl.getBoundingClientRect();
+                            const tx = r.left - battleRect.left + r.width / 2;
+                            const ty = r.top - battleRect.top + r.height / 2;
+                            await this.typeEffects.playSelfBuffEffect(tx, ty, 'default');
+                        }
                     }
                 }
 
@@ -1327,13 +1488,25 @@ class PokeFuryGame {
 
                 if (this.typeEffects) {
                     const targetSprites = getBattlePokemonSprites();
-                    const targetEl = targetSprites.player;
-                    if (targetEl) {
-                        const rect = targetEl.getBoundingClientRect();
-                        const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
-                        const tx = rect.left - battleRect.left + rect.width / 2;
-                        const ty = rect.top - battleRect.top + rect.height / 2;
-                        await this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
+                    const attackerEl = targetSprites.enemy;
+                    const defenderEl = targetSprites.player;
+                    const battleRect = document.getElementById('main-area').getBoundingClientRect();
+                    const moveType = move.type || 'normal';
+                    const moveInfo = classifyMoveEffect(move);
+
+                    if (moveInfo.category === 'drain' && defenderEl && attackerEl) {
+                        const dr = defenderEl.getBoundingClientRect();
+                        const dtx = dr.left - battleRect.left + dr.width / 2;
+                        const dty = dr.top - battleRect.top + dr.height / 2;
+                        const ar = attackerEl.getBoundingClientRect();
+                        const atx = ar.left - battleRect.left + ar.width / 2;
+                        const aty = ar.top - battleRect.top + ar.height / 2;
+                        await this.typeEffects.playDualEffect(moveType, dtx, dty, atx, aty, move.power || 50);
+                    } else if (defenderEl) {
+                        const r = defenderEl.getBoundingClientRect();
+                        const tx = r.left - battleRect.left + r.width / 2;
+                        const ty = r.top - battleRect.top + r.height / 2;
+                        await this.typeEffects.playEffect(moveType, tx, ty, move.power || 50);
                     }
                 }
 

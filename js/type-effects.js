@@ -13,11 +13,11 @@ export class TypeEffects {
         if (!this.canvas) {
             this.canvas = document.createElement('canvas');
             this.canvas.id = 'type-effects-canvas';
-            this.canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;';
-            const battleScreen = document.getElementById('battle-screen');
-            if (battleScreen) {
-                battleScreen.style.position = 'relative';
-                battleScreen.appendChild(this.canvas);
+            this.canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:30;';
+            const mainArea = document.getElementById('main-area');
+            if (mainArea) {
+                mainArea.style.position = mainArea.style.position || 'relative';
+                mainArea.appendChild(this.canvas);
             }
         }
         this.ctx = this.canvas.getContext('2d');
@@ -26,10 +26,10 @@ export class TypeEffects {
     }
 
     _resize() {
-        const battleScreen = document.getElementById('battle-screen');
-        if (!battleScreen || !this.canvas) return;
-        this.canvas.width = battleScreen.offsetWidth;
-        this.canvas.height = battleScreen.offsetHeight;
+        const mainArea = document.getElementById('main-area');
+        if (!mainArea || !this.canvas) return;
+        this.canvas.width = mainArea.offsetWidth;
+        this.canvas.height = mainArea.offsetHeight;
     }
 
     _sleep(ms) {
@@ -349,6 +349,195 @@ export class TypeEffects {
     }
 
     // ============================================================
+    // SPECIAL EFFECTS: HEAL / BUFF / DEBUFF
+    // ============================================================
+
+    _healParticles(x, y, count) {
+        const particles = [];
+        const colors = ['#4caf50', '#81c784', '#a5d6a7', '#c8e6c9', '#ffffff', '#69f0ae'];
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const radius = 10 + Math.random() * 25;
+            particles.push({
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius * 0.6,
+                vx: Math.cos(angle) * 0.3,
+                vy: -1.5 - Math.random() * 2,
+                life: 55 + Math.random() * 40,
+                maxLife: 95,
+                size: 2 + Math.random() * 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                type: 'star',
+                gravity: -0.04,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.1
+            });
+        }
+        for (let i = 0; i < Math.floor(count * 0.4); i++) {
+            const angle = Math.random() * Math.PI * 2;
+            particles.push({
+                x: x + Math.cos(angle) * 5,
+                y: y + 10,
+                vx: Math.cos(angle) * 0.5,
+                vy: -2 - Math.random() * 3,
+                life: 40 + Math.random() * 30,
+                maxLife: 70,
+                size: 3 + Math.random() * 5,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                type: 'circle',
+                gravity: -0.06
+            });
+        }
+        for (let i = 0; i < 3; i++) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 20,
+                vx: 0,
+                vy: -0.5,
+                life: 50 + Math.random() * 30,
+                maxLife: 80,
+                size: 10 + Math.random() * 15,
+                color: '#69f0ae',
+                type: 'circle',
+                gravity: -0.02,
+                alpha: 0.2,
+                pulse: true
+            });
+        }
+        return particles;
+    }
+
+    _buffParticles(x, y, count, statType) {
+        const particles = [];
+        const statColors = {
+            attack:  ['#f44336', '#ef5350', '#ff8a80', '#ff5252', '#ffffff'],
+            defense: ['#2196f3', '#42a5f5', '#90caf9', '#64b5f6', '#ffffff'],
+            spAtk:   ['#9c27b0', '#ab47bc', '#ce93d8', '#ba68c8', '#ffffff'],
+            spDef:   ['#00bcd4', '#26c6da', '#80deea', '#4dd0e1', '#ffffff'],
+            speed:   ['#ff9800', '#ffa726', '#ffcc80', '#ffb74d', '#ffffff'],
+            accuracy:['#ffeb3b', '#ffee58', '#fff9c4', '#fff176', '#ffffff'],
+            default: ['#e040fb', '#ea80fc', '#f8bbd0', '#ce93d8', '#ffffff']
+        };
+        const colors = statColors[statType] || statColors.default;
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const radius = 15 + Math.random() * 20;
+            particles.push({
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius * 0.5,
+                vx: Math.cos(angle + Math.PI / 2) * 1.2,
+                vy: -0.8 - Math.random() * 1.5,
+                life: 45 + Math.random() * 35,
+                maxLife: 80,
+                size: 2 + Math.random() * 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                type: 'star',
+                gravity: -0.03,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.15
+            });
+        }
+        for (let i = 0; i < 4; i++) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * 30,
+                y: y + (Math.random() - 0.5) * 30,
+                vx: 0,
+                vy: -0.3,
+                life: 50 + Math.random() * 30,
+                maxLife: 80,
+                size: 15 + Math.random() * 10,
+                color: colors[0],
+                type: 'circle',
+                gravity: -0.01,
+                alpha: 0.15,
+                pulse: true
+            });
+        }
+        return particles;
+    }
+
+    _debuffParticles(x, y, count) {
+        const particles = [];
+        const colors = ['#424242', '#616161', '#757575', '#9e9e9e', '#b71c1c'];
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 10 + Math.random() * 20;
+            particles.push({
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius * 0.5,
+                vx: Math.cos(angle) * -0.4,
+                vy: 0.8 + Math.random() * 1.5,
+                life: 40 + Math.random() * 30,
+                maxLife: 70,
+                size: 3 + Math.random() * 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                type: 'circle',
+                gravity: 0.04,
+                alpha: 0.7
+            });
+        }
+        for (let i = 0; i < 3; i++) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * 25,
+                y: y - 10,
+                vx: (Math.random() - 0.5) * 2,
+                vy: 2 + Math.random() * 2,
+                life: 35 + Math.random() * 25,
+                maxLife: 60,
+                size: 6 + Math.random() * 8,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                type: 'circle',
+                gravity: 0.08,
+                alpha: 0.4
+            });
+        }
+        return particles;
+    }
+
+    _selfBuffParticles(x, y, count, statType) {
+        return this._buffParticles(x, y, count, statType);
+    }
+
+    _selfDebuffParticles(x, y, count) {
+        const particles = [];
+        const colors = ['#ff1744', '#d50000', '#b71c1c', '#ff5252', '#ff8a80'];
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const radius = 12 + Math.random() * 18;
+            particles.push({
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius * 0.5,
+                vx: Math.cos(angle) * 0.8,
+                vy: 0.5 + Math.random() * 1,
+                life: 40 + Math.random() * 30,
+                maxLife: 70,
+                size: 3 + Math.random() * 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                type: 'circle',
+                gravity: 0.03,
+                alpha: 0.7
+            });
+        }
+        for (let i = 0; i < 2; i++) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y,
+                vx: 0,
+                vy: 0,
+                life: 30 + Math.random() * 20,
+                maxLife: 50,
+                size: 12 + Math.random() * 8,
+                color: '#ff1744',
+                type: 'circle',
+                gravity: 0,
+                alpha: 0.2,
+                pulse: true
+            });
+        }
+        return particles;
+    }
+
+    // ============================================================
     // RENDER & ANIMATION
     // ============================================================
 
@@ -479,6 +668,85 @@ export class TypeEffects {
             this._update();
         }
         await this._sleep(900);
+    }
+
+    async playHealEffect(targetX, targetY) {
+        if (!this.ctx) return;
+        this._resize();
+        const newParticles = this._healParticles(targetX, targetY, 35);
+        this.particles.push(...newParticles);
+        if (!this.running) {
+            this.running = true;
+            this._update();
+        }
+        await this._sleep(1000);
+    }
+
+    async playBuffEffect(targetX, targetY, statType) {
+        if (!this.ctx) return;
+        this._resize();
+        const newParticles = this._buffParticles(targetX, targetY, 30, statType);
+        this.particles.push(...newParticles);
+        if (!this.running) {
+            this.running = true;
+            this._update();
+        }
+        await this._sleep(900);
+    }
+
+    async playDebuffEffect(targetX, targetY) {
+        if (!this.ctx) return;
+        this._resize();
+        const newParticles = this._debuffParticles(targetX, targetY, 30);
+        this.particles.push(...newParticles);
+        if (!this.running) {
+            this.running = true;
+            this._update();
+        }
+        await this._sleep(800);
+    }
+
+    async playSelfBuffEffect(targetX, targetY, statType) {
+        if (!this.ctx) return;
+        this._resize();
+        const newParticles = this._selfBuffParticles(targetX, targetY, 30, statType);
+        this.particles.push(...newParticles);
+        if (!this.running) {
+            this.running = true;
+            this._update();
+        }
+        await this._sleep(900);
+    }
+
+    async playSelfDebuffEffect(targetX, targetY) {
+        if (!this.ctx) return;
+        this._resize();
+        const newParticles = this._selfDebuffParticles(targetX, targetY, 25);
+        this.particles.push(...newParticles);
+        if (!this.running) {
+            this.running = true;
+            this._update();
+        }
+        await this._sleep(800);
+    }
+
+    async playDualEffect(type, targetX, targetY, selfX, selfY, power = 50) {
+        if (!this.ctx) return;
+        this._resize();
+        const attackParticles = this._createParticles(type, targetX, targetY, power);
+        this.particles.push(...attackParticles);
+        if (!this.running) {
+            this.running = true;
+            this._update();
+        }
+        await this._sleep(600);
+        const healParticles = this._healParticles(selfX, selfY, 25);
+        this.particles.push(...healParticles);
+        if (!this.running) {
+            this.running = true;
+            this._update();
+        }
+        await this._sleep(700);
     }
 
     stop() {
