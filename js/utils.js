@@ -138,6 +138,9 @@ export async function calculateDamage(attacker, defender, move) {
     const attackerItem = getHeldItemEffect(attacker.heldItemId);
     const defenderItem = getHeldItemEffect(defender.heldItemId);
 
+    const attackerAbilityName = (typeof attacker.currentAbilityName === 'string' && attacker.currentAbilityName) || '';
+    const defAbilityName = (typeof defender.currentAbilityName === 'string' && defender.currentAbilityName) || '';
+
     if (attackerItem) {
         if (attackerItem.effect === 'choice_band' && move.category === 'physical') attack *= 1.5;
         if (attackerItem.effect === 'choice_specs' && move.category === 'special') attack *= 1.5;
@@ -149,13 +152,35 @@ export async function calculateDamage(attacker, defender, move) {
         }
     }
 
+    if (attackerAbilityName === 'huge power' || attackerAbilityName === 'pure power') {
+        if (move.category === 'physical') attack *= 2;
+    }
+    if (attackerAbilityName === 'guts' && attacker.statusEffect && move.category === 'physical') {
+        attack *= 1.5;
+    }
+    if (attackerAbilityName === 'hustle' && move.category === 'physical') {
+        attack *= 1.5;
+    }
+    if (defAbilityName === 'marvel scale' && defender.statusEffect && move.category === 'physical') {
+        defense *= 1.5;
+    }
+    if (defAbilityName === 'fur coat' && move.category === 'special') {
+        defense *= 2;
+    }
+
     let damage = ((2 * level / 5 + 2) * move.power * attack / defense) / 50 + 2;
 
     const effectiveness = getEffectiveness(chart, move.type, defender.types);
     damage *= effectiveness;
 
-    const stab = attacker.types.includes(move.type) ? 1.5 : 1;
-    damage *= stab;
+    const isSTAB = attacker.types && attacker.types.includes(move.type);
+    let stabMult = isSTAB ? 1.5 : 1;
+    if (attackerAbilityName === 'adaptability' && isSTAB) stabMult = 2;
+    damage *= stabMult;
+
+    if (attackerAbilityName === 'technician' && move.power && move.power <= 60) {
+        damage *= 1.5;
+    }
 
     const critical = Math.random() < 1 / 16 ? 1.5 : 1;
     damage *= critical;
@@ -405,8 +430,8 @@ export function clearChoiceLock(pokemon) {
 export function getPokemonScale(pokemon) {
     if (!pokemon) return 1;
     const h = pokemon.height || 10;
-    const ref = 5;
-    const min = 0.35;
-    const max = 3.0;
-    return Math.max(min, Math.min(max, h / ref));
+    const min = 0.4;
+    const max = 2.5;
+    const t = Math.log(1 + h / 5) / Math.log(1 + 50 / 5);
+    return Math.max(min, Math.min(max, min + t * (max - min)));
 }

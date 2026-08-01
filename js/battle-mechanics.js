@@ -419,6 +419,13 @@ const MOVE_EFFECTS_BY_NAME = {
     'poison jab': { effect: 'status', status: STATUS.POISON, chance: 30 },
     'gunk shot': { effect: 'status', status: STATUS.POISON, chance: 30 },
     'drain punch': { effect: 'drain', drain: 0.5 },
+    'absorb': { effect: 'drain', drain: 0.5 },
+    'mega drain': { effect: 'drain', drain: 0.5 },
+    'giga drain': { effect: 'drain', drain: 0.5 },
+    'leech life': { effect: 'drain', drain: 0.5 },
+    'horn leech': { effect: 'drain', drain: 0.5 },
+    'parasitic bite': { effect: 'drain', drain: 0.5 },
+    'bitter blade': { effect: 'drain', drain: 0.5 },
     'hex': { effect: 'none', powerBoostIfStatused: 2 },
     'shadow ball': { effect: 'stat_drop', stat: 'spDef', stages: 1, chance: 20 },
     'flash cannon': { effect: 'stat_drop', stat: 'spDef', stages: 1, chance: 10 },
@@ -488,6 +495,26 @@ const MOVE_EFFECTS_BY_NAME = {
     'sunny day': { effect: 'weather', weather: 'sun' },
     'sandstorm': { effect: 'weather', weather: 'sandstorm' },
     'hail': { effect: 'weather', weather: 'hail' },
+
+    // Self stat drop moves
+    'close combat': { effect: 'stat_drop', stat: 'defense', stages: 1, selfStatDrop: { stat: 'spDef', stages: 1 } },
+    'focus blast': { effect: 'stat_drop', stat: 'spDef', stages: 1, chance: 10 },
+    'overheat': { effect: 'stat_drop', stat: 'spAtk', stages: 2, selfOnly: true },
+    'draco meteor': { effect: 'stat_drop', stat: 'spAtk', stages: 2, selfOnly: true },
+    'leaf storm': { effect: 'stat_drop', stat: 'spAtk', stages: 2, selfOnly: true },
+    'petal dance': { effect: 'multi_turn' },
+    'superpower': { effect: 'stat_drop', stat: 'attack', stages: 1, selfStatDrop: { stat: 'defense', stages: 1 } },
+    'hammer arm': { effect: 'stat_drop', stat: 'speed', stages: 1, selfOnly: true },
+    'headlong rush': { effect: 'stat_drop', stat: 'defense', stages: 1, selfStatDrop: { stat: 'spDef', stages: 1 } },
+    'shell smash': { effect: 'stat_boost', stat: 'attack', stages: 2, stat2: 'spAtk', stages2: 2, stat3: 'speed', stages3: 2, selfDefDrop: { stat: 'defense', stages: 1, stat2: 'spDef', stages2: 1 } },
+
+    // Other special moves
+    'energy ball': { effect: 'stat_drop', stat: 'spDef', stages: 1, chance: 10 },
+    'earth power': { effect: 'stat_drop', stat: 'spDef', stages: 1, chance: 10 },
+    'ancient power': { effect: 'stat_boost', stat: 'attack', stages: 1, stat2: 'defense', stages2: 1, stat3: 'spAtk', stages3: 1, stat4: 'spDef', stages4: 1, stat5: 'speed', stages5: 1, chance: 10 },
+    'power gem': { effect: 'none' },
+    'dazzling gleam': { effect: 'none' },
+    'play rough': { effect: 'stat_drop', stat: 'attack', stages: 1, chance: 10 },
 
     // Terrain setting moves
     'psychic terrain': { effect: 'terrain', terrain: 'psychic' },
@@ -702,6 +729,7 @@ export const ABILITY_EFFECTS = {
     'battle armor': { trigger: 'crit_immune' },
     'sturdy': { trigger: 'ohko_immune', also: 'survive_ohko_at_full' },
     'inner focus': { trigger: 'flinch_immune' },
+    'stamina': { trigger: 'contacted', effect: 'self_stat_boost', stat: 'defense', stages: 1 },
 
     // === MULTI-STRIKE ===
     'skill link': { trigger: 'multi_strike', always_max: true },
@@ -1287,9 +1315,14 @@ export function applyStatStages(attacker, defender, move, baseDamage) {
         defMult = getStatMult(dStages.spDef || 0);
     }
 
-    // Hustle: +50% attack, -20% accuracy (applied in calc accuracy)
     const abilityName = getAbilityName(attacker.currentAbility);
     if (abilityName === 'hustle' && move.category === 'physical') atkMult *= 1.5;
+    if ((abilityName === 'huge power' || abilityName === 'pure power') && move.category === 'physical') atkMult *= 2;
+    if (abilityName === 'guts' && attacker.statusEffect && move.category === 'physical') atkMult *= 1.5;
+
+    const defAbility = getAbilityName(defender.currentAbility);
+    if (defAbility === 'marvel scale' && defender.statusEffect && move.category === 'physical') defMult *= 1.5;
+    if (defAbility === 'fur coat' && move.category === 'special') defMult *= 2;
 
     return Math.max(1, Math.floor(baseDamage * atkMult / defMult));
 }
@@ -1418,6 +1451,11 @@ export function processContactAbilities(defender, attacker) {
             defender._statStages.defense = Math.max(-6, (defender._statStages.defense || 0) - (abilityEffect.defDrop || 1));
             defender._statStages.speed = Math.min(6, (defender._statStages.speed || 0) + (abilityEffect.speedBoost || 2));
             messages.push(`${abilityName} de ${defender.name}: Defesa caiu, Velocidade subiu!`);
+        } else if (abilityEffect.effect === 'self_stat_boost') {
+            defender._statStages = defender._statStages || {};
+            defender._statStages[abilityEffect.stat] = Math.min(6, (defender._statStages[abilityEffect.stat] || 0) + abilityEffect.stages);
+            const statNames = { attack: 'Ataque', defense: 'Defesa', spAtk: 'Sp.Atk', spDef: 'Sp.Def', speed: 'Velocidade' };
+            messages.push(`${abilityName} de ${defender.name}: ${statNames[abilityEffect.stat] || abilityEffect.stat} subiu!`);
         } else if (abilityEffect.effect === 'disable') {
             if (Math.random() * 100 < (abilityEffect.chance || 0)) {
                 if (attacker._lastMove) {
