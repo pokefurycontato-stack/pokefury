@@ -1563,6 +1563,11 @@ class PokeFuryGame {
         hideBattlePokemonSprites();
         if (this.battleAnimations) this.battleAnimations.cleanupEntrance();
         stopBattleVideo();
+
+        const raidBossHp = this._isRaidBattle && this.enemyTeam[0]
+            ? { maxHp: this.enemyTeam[0].maxHp, currentHp: this.enemyTeam[0].currentHp }
+            : null;
+
         this.enemyTeam = [];
         this.updatePartyPanel();
         if (this.overworld2d) this.overworld2d.show();
@@ -1573,12 +1578,19 @@ class PokeFuryGame {
             document.getElementById('location-name').textContent = 'Área Selvagem';
         }
 
-        if (this.enemyTeam[0]?.isAlpha && result === 'win') {
-            await this.endAlphaBattle('win');
+        if (this._isRaidBattle) {
+            this._isRaidBattle = false;
+            if (raidBossHp && this.eventManager) {
+                const damageDealt = raidBossHp.maxHp - raidBossHp.currentHp;
+                if (damageDealt > 0) {
+                    await this.eventManager.onRaidBattleWin(damageDealt);
+                    await showBattleMessage(`Dano ao Raid Boss: ${damageDealt.toLocaleString()}!`);
+                }
+            }
         }
 
-        if (this._isRaidBattle) {
-            await this.endRaidBattle(result);
+        if (this.enemyTeam[0]?.isAlpha && result === 'win') {
+            await this.endAlphaBattle('win');
         }
     }
 
@@ -1856,20 +1868,6 @@ class PokeFuryGame {
         }
 
         document.getElementById('location-name').textContent = `RAID BOSS ${raid.boss_name.toUpperCase()}!`;
-    }
-
-    async endRaidBattle(result) {
-        if (!this._isRaidBattle) return;
-        this._isRaidBattle = false;
-
-        if (this.enemyTeam[0]) {
-            const boss = this.enemyTeam[0];
-            const damageDealt = boss.maxHp - boss.currentHp;
-            if (damageDealt > 0 && this.eventManager) {
-                await this.eventManager.onRaidBattleWin(damageDealt);
-                await showBattleMessage(`Dano ao Raid Boss: ${damageDealt.toLocaleString()}!`);
-            }
-        }
     }
 
     async teleportToPokemonCenter() {
