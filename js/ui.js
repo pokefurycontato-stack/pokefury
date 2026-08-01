@@ -625,8 +625,6 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
 
     const playerScale = getPokemonScale(playerPokemon);
     const enemyScale = getPokemonScale(enemyPokemon);
-    console.log(`[Battle] Player: ${playerPokemon?.name} h=${playerPokemon?.height} scale=${playerScale}`);
-    console.log(`[Battle] Enemy: ${enemyPokemon?.name} h=${enemyPokemon?.height} scale=${enemyScale}`);
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5 * playerScale);
     updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45 * enemyScale);
 
@@ -717,7 +715,6 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     el.style.display = 'block';
 
     const maxDim = Math.round(140 * sizeScale);
-    console.log(`[Battle] ${side} maxDim=${maxDim}px (140 * ${sizeScale.toFixed(2)})`);
     el.style.width = maxDim + 'px';
     el.style.height = maxDim + 'px';
     el.style.left = (x - maxDim / 2) + 'px';
