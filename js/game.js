@@ -930,6 +930,10 @@ class PokeFuryGame {
             await showBattleMessage(`Usou ${itemData.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
             this.updatePartyPanel();
         } else if (itemData.category === 'pokeball') {
+            if (enemyPokemon.isAlpha || enemyPokemon.isRaidBoss) {
+                await showBattleMessage('Não é possível capturar este Pokémon!');
+                return;
+            }
             const catchRate = this.calculateCatchRate(enemyPokemon, itemData);
             const caught = Math.random() < catchRate;
             if (caught) {
@@ -1146,7 +1150,8 @@ class PokeFuryGame {
 
                     if (isTeamFainted(this.enemyTeam)) {
                         await showBattleMessage('Você venceu a batalha!');
-                        if (this.isWildBattle && this.enemyTeam.length === 1) {
+                        const isBoss = defender.isAlpha || defender.isRaidBoss;
+                        if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss) {
                             const captured = await this.showCapturePrompt();
                             this.endBattle('win');
                             return;
@@ -1568,6 +1573,8 @@ class PokeFuryGame {
             ? { maxHp: this.enemyTeam[0].maxHp, currentHp: this.enemyTeam[0].currentHp }
             : null;
 
+        const wasAlpha = !!(this.enemyTeam[0]?.isAlpha);
+
         this.enemyTeam = [];
         this.updatePartyPanel();
         if (this.overworld2d) this.overworld2d.show();
@@ -1589,7 +1596,7 @@ class PokeFuryGame {
             }
         }
 
-        if (this.enemyTeam[0]?.isAlpha && result === 'win') {
+        if (wasAlpha && result === 'win') {
             await this.endAlphaBattle('win');
         }
     }
