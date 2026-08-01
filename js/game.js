@@ -1618,6 +1618,10 @@ class PokeFuryGame {
 
         if (result === 'lose') {
             await this.teleportToPokemonCenter();
+            if (this.afkManager && this.afkManager.running) {
+                this.afkManager._visitingCenter = true;
+                this.afkManager._centerStep = 0;
+            }
         } else {
             document.getElementById('location-name').textContent = 'Área Selvagem';
         }
