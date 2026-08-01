@@ -9,6 +9,7 @@ export class EventManager {
         this.raidPollInterval = null;
         this.alphaOverlay = null;
         this._pollInterval = null;
+        this._raidCooldownUntil = 0;
     }
 
     async init() {
@@ -142,7 +143,7 @@ export class EventManager {
 
         const { data: existing } = await window.db.from('alpha_events')
             .select('*').eq('user_id', user.id).eq('character_id', charId)
-            .eq('defeated', false).limit(1);
+            .eq('defeated', false).eq('event_id', this.activeEvent.id).limit(1);
         if (existing && existing.length > 0) return;
 
         const { data: alphaEvent } = await window.db.from('alpha_events').insert({
@@ -297,6 +298,24 @@ export class EventManager {
 
         container.querySelector('#raid-attack-btn').onclick = () => this.attackRaidBoss();
         container.querySelector('#raid-ranking-btn').onclick = () => this.showRaidRankingPopup();
+
+        this._raidAttackBtn = container.querySelector('#raid-attack-btn');
+        this.updateRaidCooldownDisplay();
+    }
+
+    updateRaidCooldownDisplay() {
+        if (!this._raidAttackBtn) return;
+        const now = Date.now();
+        if (now < this._raidCooldownUntil) {
+            const secs = Math.ceil((this._raidCooldownUntil - now) / 1000);
+            this._raidAttackBtn.textContent = `AGUARDE ${secs}s`;
+            this._raidAttackBtn.style.background = 'rgba(255,255,255,0.1)';
+            this._raidAttackBtn.style.cursor = 'not-allowed';
+        } else {
+            this._raidAttackBtn.textContent = 'ATACAR';
+            this._raidAttackBtn.style.background = 'linear-gradient(135deg,#e94560,#c23152)';
+            this._raidAttackBtn.style.cursor = 'pointer';
+        }
     }
 
     removeRaidBoss() {
@@ -336,22 +355,46 @@ export class EventManager {
 
     async attackRaidBoss() {
         if (!this.raidState || this.raidState.boss_current_hp <= 0) return;
-        const attacker = this.game.playerTeam.find(p => !p.fainted) || this.game.playerTeam[0];
-        if (!attacker) return;
 
-        const damage = Math.floor(attacker.stats.attack * (1 + Math.random() * 0.5) * 10);
+        const now = Date.now();
+        if (now < this._raidCooldownUntil) {
+            const secs = Math.ceil((this._raidCooldownUntil - now) / 1000);
+            alert(`Cooldown: aguarde ${secs}s para atacar novamente!`);
+            return;
+        }
+
+        this.game.startRaidBattle();
+    }
+
+    startRaidCooldownTimer() {
+        if (this._raidCooldownInterval) clearInterval(this._raidCooldownInterval);
+        this._raidCooldownInterval = setInterval(() => {
+            this.updateRaidCooldownDisplay();
+            if (Date.now() >= this._raidCooldownUntil && this._raidCooldownInterval) {
+                clearInterval(this._raidCooldownInterval);
+                this._raidCooldownInterval = null;
+            }
+        }, 1000);
+    }
+
+    async onRaidBattleWin(totalDamageDealt) {
+        if (!this.raidState) return;
+
+        this._raidCooldownUntil = Date.now() + 120000;
+        this.startRaidCooldownTimer();
+
+        const newHp = Math.max(0, this.raidState.boss_current_hp - totalDamageDealt);
+        await window.db.from('raid_events').update({ boss_current_hp: newHp }).eq('id', this.raidState.id);
+
         const user = (await window.db.auth.getUser()).data.user;
         const charId = this.game.currentCharacterId;
-
-        const newHp = Math.max(0, this.raidState.boss_current_hp - damage);
-        await window.db.from('raid_events').update({ boss_current_hp: newHp }).eq('id', this.raidState.id);
 
         const { data: existing } = await window.db.from('raid_participants')
             .select('*').eq('raid_id', this.raidState.id).eq('character_id', charId).limit(1);
 
         if (existing && existing.length > 0) {
             await window.db.from('raid_participants').update({
-                total_damage: existing[0].total_damage + damage,
+                total_damage: existing[0].total_damage + totalDamageDealt,
                 attacks_count: existing[0].attacks_count + 1,
                 last_attack_at: new Date().toISOString()
             }).eq('id', existing[0].id);
@@ -361,7 +404,7 @@ export class EventManager {
                 user_id: user.id,
                 character_id: charId,
                 character_name: this.game.playerName || 'Jogador',
-                total_damage: damage,
+                total_damage: totalDamageDealt,
                 attacks_count: 1,
                 last_attack_at: new Date().toISOString()
             });

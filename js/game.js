@@ -49,6 +49,7 @@ class PokeFuryGame {
         this.currentMap = null;
         this.currentRegionMaps = [];
         this._winStreak = 0;
+        this._isRaidBattle = false;
 
         this.init();
     }
@@ -1575,6 +1576,10 @@ class PokeFuryGame {
         if (this.enemyTeam[0]?.isAlpha && result === 'win') {
             await this.endAlphaBattle('win');
         }
+
+        if (this._isRaidBattle) {
+            await this.endRaidBattle(result);
+        }
     }
 
     async startAlphaBattle() {
@@ -1646,6 +1651,69 @@ class PokeFuryGame {
         this.weatherAnim.setWeather(null);
 
         updateBattleUI(this.playerTeam, this.enemyTeam);
+
+        const clipRect = this.getBattleClipRect();
+        const dw = clipRect ? clipRect.w : this.canvas.offsetWidth;
+        const dh = clipRect ? clipRect.h : this.canvas.offsetHeight;
+        const dx = clipRect ? clipRect.x : 0;
+        const dy = clipRect ? clipRect.y : 0;
+        let playerEndX, playerEndY;
+        if (this.currentMap && this.currentMap.battle_player_x != null) {
+            playerEndX = dx + this.currentMap.battle_player_x * dw;
+            playerEndY = dy + this.currentMap.battle_player_y * dh;
+        } else {
+            playerEndX = dx + 0.25 * dw;
+            playerEndY = dy + 0.75 * dh;
+        }
+
+        const wrapper = document.getElementById('game-wrapper');
+        const mainArea = document.getElementById('main-area');
+        if (mainArea && wrapper) {
+            const mainRect = mainArea.getBoundingClientRect();
+            const wrapRect = wrapper.getBoundingClientRect();
+            const canvasLeft = this.canvas ? this.canvas.offsetLeft : 0;
+            const canvasTop = this.canvas ? this.canvas.offsetTop : 0;
+            playerEndX += canvasLeft + (mainRect.left - wrapRect.left);
+            playerEndY += canvasTop + (mainRect.top - wrapRect.top);
+        }
+
+        setSkipPlayerRender(true);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
+
+        removePlayerSprite();
+        hideBattlePokemonSprites();
+
+        initBattleUI(
+            () => this.onFight(),
+            () => this.onBag(),
+            () => this.onMega(),
+            () => this.onRun()
+        );
+
+        if (this.battleAnimations) {
+            const sprites = getBattlePokemonSprites();
+            await this.battleAnimations.playWildEntrance(sprites.enemy);
+            await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc, activePlayer);
+            if (this.battleAnimations._playerEntranceSprite) {
+                setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
+            }
+        }
+        setSkipPlayerRender(false);
+        this._playerSpriteReady = true;
+
+        await showBattleMessage(`O ALPHA ${a.pokemonName.toUpperCase()} selvagem apareceu!`, 2000);
+
+        await checkAbilityChange(activePlayer);
+        await checkAbilityChange(pokemon);
+        const playerEntry = processEntryAbilities(activePlayer, pokemon, this._battleState);
+        const enemyEntry = processEntryAbilities(pokemon, activePlayer, this._battleState);
+        for (const msg of [...playerEntry, ...enemyEntry]) {
+            await showBattleMessage(msg);
+        }
+        if (this.weatherAnim && this._battleState) {
+            this.weatherAnim.setWeather(this._battleState.weather);
+        }
+
         document.getElementById('location-name').textContent = `ALPHA ${a.pokemonName.toUpperCase()} APROXIMOU-SE!`;
     }
 
@@ -1657,6 +1725,149 @@ class PokeFuryGame {
                 await showBattleMessage(`+${rewards.rareCandy} Rare Candy!`);
                 await showBattleMessage(`+1 TM!`);
                 if (rewards.megaStone) await showBattleMessage(`+1 Mega Stone!`);
+            }
+        }
+    }
+
+    async startRaidBattle() {
+        if (!this.eventManager || !this.eventManager.raidState) return;
+        const raid = this.eventManager.raidState;
+        if (raid.boss_current_hp <= 0) return;
+
+        hideBattlePokemonSprites();
+        if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) return;
+
+        this.isWildBattle = true;
+        this._playerSpriteReady = false;
+        this._isRaidBattle = true;
+
+        const apiData = await PokeAPI.ensurePokemon(raid.boss_pokemon_id);
+        const pokemon = await createPokemon(apiData, raid.boss_level, null, null, null, false);
+        pokemon.isRaidBoss = true;
+        pokemon.currentHp = raid.boss_current_hp;
+        pokemon.maxHp = raid.boss_max_hp;
+        pokemon.stats.hp = raid.boss_max_hp;
+
+        this.enemyTeam = [pokemon];
+
+        this._battleState = { weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0, _neutralizingGas: false };
+        initFieldEffects({ _teamEffects: this._playerFieldEffects = {} });
+        initFieldEffects({ _teamEffects: this._enemyFieldEffects = {} });
+        this._playerFieldEffects._isPlayer = true;
+        this._enemyFieldEffects._isPlayer = false;
+
+        const activePlayer = getFirstAlive(this.playerTeam);
+
+        this.currentBattleBg = this.getNormalizedBattleBg();
+        if (this.currentBattleBg) {
+            await preloadBattleBgImage(this.currentBattleBg);
+            this.applyBattleNeonFromBg(this.currentBattleBg);
+        }
+        if (this.currentMap && this.currentMap.battle_player_x != null) {
+            setBattlePositions({
+                playerX: this.currentMap.battle_player_x,
+                playerY: this.currentMap.battle_player_y,
+                enemyX: this.currentMap.battle_enemy_x,
+                enemyY: this.currentMap.battle_enemy_y
+            });
+            setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
+        } else {
+            setBattlePositions(null);
+            setBattleEffects('none', 'none');
+        }
+
+        this.state = 'battle';
+        this._lastBattlePlayer = activePlayer;
+        this._lastBattleEnemy = pokemon;
+        if (this.overworld2d) this.overworld2d.hide();
+        this.battleStartTime = Date.now();
+        this.currentTurn = 1;
+        this._turnQueue = [];
+        this._playerUsedMoveThisTurn = false;
+
+        showScreen('battle-screen');
+        this.positionBattleScreen();
+
+        if (!this.weatherAnim) this.weatherAnim = new WeatherAnimations();
+        this.weatherAnim.setWeather(null);
+
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+
+        const clipRect = this.getBattleClipRect();
+        const dw = clipRect ? clipRect.w : this.canvas.offsetWidth;
+        const dh = clipRect ? clipRect.h : this.canvas.offsetHeight;
+        const dx = clipRect ? clipRect.x : 0;
+        const dy = clipRect ? clipRect.y : 0;
+        let playerEndX, playerEndY;
+        if (this.currentMap && this.currentMap.battle_player_x != null) {
+            playerEndX = dx + this.currentMap.battle_player_x * dw;
+            playerEndY = dy + this.currentMap.battle_player_y * dh;
+        } else {
+            playerEndX = dx + 0.25 * dw;
+            playerEndY = dy + 0.75 * dh;
+        }
+
+        const wrapper = document.getElementById('game-wrapper');
+        const mainArea = document.getElementById('main-area');
+        if (mainArea && wrapper) {
+            const mainRect = mainArea.getBoundingClientRect();
+            const wrapRect = wrapper.getBoundingClientRect();
+            const canvasLeft = this.canvas ? this.canvas.offsetLeft : 0;
+            const canvasTop = this.canvas ? this.canvas.offsetTop : 0;
+            playerEndX += canvasLeft + (mainRect.left - wrapRect.left);
+            playerEndY += canvasTop + (mainRect.top - wrapRect.top);
+        }
+
+        setSkipPlayerRender(true);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
+
+        removePlayerSprite();
+        hideBattlePokemonSprites();
+
+        initBattleUI(
+            () => this.onFight(),
+            () => this.onBag(),
+            () => this.onMega(),
+            () => this.onRun()
+        );
+
+        if (this.battleAnimations) {
+            const sprites = getBattlePokemonSprites();
+            await this.battleAnimations.playWildEntrance(sprites.enemy);
+            await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc, activePlayer);
+            if (this.battleAnimations._playerEntranceSprite) {
+                setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
+            }
+        }
+        setSkipPlayerRender(false);
+        this._playerSpriteReady = true;
+
+        await showBattleMessage(`O RAID BOSS ${raid.boss_name} selvagem apareceu!`, 2000);
+
+        await checkAbilityChange(activePlayer);
+        await checkAbilityChange(pokemon);
+        const playerEntry = processEntryAbilities(activePlayer, pokemon, this._battleState);
+        const enemyEntry = processEntryAbilities(pokemon, activePlayer, this._battleState);
+        for (const msg of [...playerEntry, ...enemyEntry]) {
+            await showBattleMessage(msg);
+        }
+        if (this.weatherAnim && this._battleState) {
+            this.weatherAnim.setWeather(this._battleState.weather);
+        }
+
+        document.getElementById('location-name').textContent = `RAID BOSS ${raid.boss_name.toUpperCase()}!`;
+    }
+
+    async endRaidBattle(result) {
+        if (!this._isRaidBattle) return;
+        this._isRaidBattle = false;
+
+        if (result === 'win' && this.enemyTeam[0]) {
+            const boss = this.enemyTeam[0];
+            const damageDealt = boss.maxHp - boss.currentHp;
+            if (damageDealt > 0 && this.eventManager) {
+                await this.eventManager.onRaidBattleWin(damageDealt);
+                await showBattleMessage(`Dano ao Raid Boss: ${damageDealt.toLocaleString()}!`);
             }
         }
     }
