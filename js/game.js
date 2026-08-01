@@ -1127,13 +1127,27 @@ class PokeFuryGame {
                     await showBattleMessage(`${attacker.name} errou ${move.name}!`);
                 } else if (result.statusMove) {
                     await showBattleMessage(`${attacker.name} usou ${move.name}!`);
+
+                    if (this.typeEffects) {
+                        const isPlayer = attacker === playerPokemon;
+                        const targetSprites = getBattlePokemonSprites();
+                        const targetEl = isPlayer ? targetSprites.player : targetSprites.enemy;
+                        if (targetEl) {
+                            const rect = targetEl.getBoundingClientRect();
+                            const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
+                            const tx = rect.left - battleRect.left + rect.width / 2;
+                            const ty = rect.top - battleRect.top + rect.height / 2;
+                            this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
+                        }
+                    }
+
                     for (const msg of (result.statusMessages || [])) {
                         await showBattleMessage(msg);
                     }
                 } else {
                     await showBattleMessage(`${attacker.name} usou ${move.name}!`);
 
-                    if (this.typeEffects && move.type && !result.missed) {
+                    if (this.typeEffects && (move.type || move.category !== 'status')) {
                         const isPlayer = attacker === playerPokemon;
                         const targetSprites = getBattlePokemonSprites();
                         const targetEl = isPlayer ? targetSprites.enemy : targetSprites.player;
@@ -1142,7 +1156,7 @@ class PokeFuryGame {
                             const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
                             const tx = rect.left - battleRect.left + rect.width / 2;
                             const ty = rect.top - battleRect.top + rect.height / 2;
-                            this.typeEffects.playEffect(move.type, tx, ty, move.power || 50);
+                            this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
                         }
                     }
 
@@ -1292,11 +1306,36 @@ class PokeFuryGame {
 
             if (result.statusMove) {
                 await showBattleMessage(`${enemyPokemon.name} usou ${move.name}!`);
+
+                if (this.typeEffects) {
+                    const targetSprites = getBattlePokemonSprites();
+                    const targetEl = targetSprites.enemy;
+                    if (targetEl) {
+                        const rect = targetEl.getBoundingClientRect();
+                        const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
+                        const tx = rect.left - battleRect.left + rect.width / 2;
+                        const ty = rect.top - battleRect.top + rect.height / 2;
+                        this.typeEffects.playEffect(move.type || 'normal', tx, ty, 30);
+                    }
+                }
+
                 for (const msg of (result.statusMessages || [])) {
                     await showBattleMessage(msg);
                 }
             } else {
                 await showBattleMessage(`${enemyPokemon.name} usou ${move.name}`);
+
+                if (this.typeEffects) {
+                    const targetSprites = getBattlePokemonSprites();
+                    const targetEl = targetSprites.player;
+                    if (targetEl) {
+                        const rect = targetEl.getBoundingClientRect();
+                        const battleRect = document.getElementById('battle-screen').getBoundingClientRect();
+                        const tx = rect.left - battleRect.left + rect.width / 2;
+                        const ty = rect.top - battleRect.top + rect.height / 2;
+                        this.typeEffects.playEffect(move.type || 'normal', tx, ty, move.power || 50);
+                    }
+                }
 
                 const effText = getEffectivenessText(result.effectiveness);
                 if (effText) await showBattleMessage(effText);
