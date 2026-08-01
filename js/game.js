@@ -1935,6 +1935,16 @@ class PokeFuryGame {
         this.showTransitionBanner('Você foi enviado ao Centro Pokemon...');
     }
 
+    async teleportToMap(mapData) {
+        if (!mapData) return;
+        this.currentMap = mapData;
+        if (this.overworld2d) {
+            await this.overworld2d.setCurrentMap(mapData);
+            this.overworld2d.show();
+        }
+        document.getElementById('location-name').textContent = mapData.name || 'Área Selvagem';
+    }
+
     async checkEvolutions() {
         if (!this.playerTeam) return;
 
@@ -2627,6 +2637,8 @@ class PokeFuryGame {
         const healSliderWrap = document.getElementById('afk-heal-slider-wrap');
         const healSlider = document.getElementById('afk-heal-slider');
         const healVal = document.getElementById('afk-heal-val');
+        const healPotionWrap = document.getElementById('afk-heal-potion-wrap');
+        const healPotionSelect = document.getElementById('afk-heal-potion');
         const captureCheck = document.getElementById('afk-auto-capture');
         const captureOptions = document.getElementById('afk-capture-options');
         const startBtn = document.getElementById('afk-start-btn');
@@ -2681,10 +2693,15 @@ class PokeFuryGame {
         healCheck.addEventListener('change', () => {
             afk.autoHeal = healCheck.checked;
             healSliderWrap.style.display = healCheck.checked ? 'block' : 'none';
+            healPotionWrap.style.display = healCheck.checked ? 'block' : 'none';
+            if (healCheck.checked) this._populateHealPotionSelect(healPotionSelect);
         });
         healSlider.addEventListener('input', () => {
             afk.healThreshold = parseInt(healSlider.value);
             healVal.textContent = healSlider.value + '%';
+        });
+        healPotionSelect.addEventListener('change', () => {
+            afk.healPotionId = healPotionSelect.value ? parseInt(healPotionSelect.value) : null;
         });
         captureCheck.addEventListener('change', () => {
             afk.autoCapture = captureCheck.checked;
@@ -2731,6 +2748,36 @@ class PokeFuryGame {
         } catch (e) {
             console.error('[AFK] Error loading pokeballs:', e);
             select.innerHTML = '<option value="">Erro ao carregar</option>';
+        }
+    }
+
+    async _populateHealPotionSelect(select) {
+        try {
+            if (!window.GameData.currentCharacterId) {
+                select.innerHTML = '<option value="">Nenhum personagem</option>';
+                return;
+            }
+            const items = await window.GameData.getInventory();
+            const potions = items.filter(inv => inv.items &&
+                inv.items.category === 'medicine' &&
+                (inv.items.subcategory === 'heal' || inv.items.effect === 'heal_full' || inv.items.effect === 'heal_full_status') &&
+                inv.quantity > 0);
+            select.innerHTML = '<option value="" style="background:#1a1a2e;color:#fff;">Selecione poção</option>';
+            if (potions.length === 0) {
+                select.innerHTML = '<option value="" style="background:#1a1a2e;color:#fff;">Nenhuma poção</option>';
+                return;
+            }
+            potions.sort((a, b) => (b.items.effect_value || 0) - (a.items.effect_value || 0));
+            potions.forEach(inv => {
+                const opt = document.createElement('option');
+                opt.value = inv.items.id;
+                const val = inv.items.effect === 'heal_full' || inv.items.effect === 'heal_full_status' ? 'Full' : `+${inv.items.effect_value}`;
+                opt.textContent = `${inv.items.name} ${val} (x${inv.quantity})`;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('[AFK] Error loading potions:', e);
+            select.innerHTML = '<option value="" style="background:#1a1a2e;color:#fff;">Erro ao carregar</option>';
         }
     }
 

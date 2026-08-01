@@ -9,19 +9,28 @@ export class AFKManager {
         this.autoHeal = false;
         this.autoCapture = false;
         this.healThreshold = 40;
+        this.healPotionId = null;
         this.captureRarities = {};
         this._walkPath = [];
         this._walkIndex = 0;
-        this._walkDir = null;
         this._state = 'idle';
         this._loopTimer = null;
-        this._battleResult = null;
+        this._homeMap = null;
+        this._homePlayerX = 0;
+        this._homePlayerY = 0;
+        this._visitingCenter = false;
+        this._centerStep = 0;
     }
 
     start() {
         if (this.running) return;
         this.running = true;
         this._state = 'idle';
+        this._homeMap = this.game.currentMap;
+        if (this.game.overworld2d) {
+            this._homePlayerX = this.game.overworld2d.player.x;
+            this._homePlayerY = this.game.overworld2d.player.y;
+        }
         this._loopTick();
     }
 
@@ -29,6 +38,8 @@ export class AFKManager {
         this.running = false;
         this._state = 'idle';
         this._walkPath = [];
+        this._visitingCenter = false;
+        this._centerStep = 0;
         if (this._loopTimer) { clearTimeout(this._loopTimer); this._loopTimer = null; }
     }
 
@@ -39,7 +50,9 @@ export class AFKManager {
             if (game.state === 'battle' && this.autoBattle) {
                 await this._handleBattle();
             } else if (game.state === 'overworld') {
-                if (this.autoSearch) {
+                if (this._visitingCenter) {
+                    await this._handleCenterVisit();
+                } else if (this.autoSearch) {
                     await this._handleOverworld();
                 }
             }
@@ -51,6 +64,11 @@ export class AFKManager {
         }
     }
 
+    _allMovesExhausted(pokemon) {
+        if (!pokemon || !pokemon.moves) return false;
+        return pokemon.moves.every(m => !m || m.currentPp <= 0);
+    }
+
     // ============================================================
     // OVERWORLD: Walk to nearest Pokemon
     // ============================================================
@@ -59,6 +77,12 @@ export class AFKManager {
         const ow = this.game.overworld2d;
         if (!ow || this.game.state !== 'overworld') return;
         if (ow.player.moving || ow.moveCooldown > 0) return;
+
+        const playerPokemon = getFirstAlive(this.game.playerTeam);
+        if (playerPokemon && this._allMovesExhausted(playerPokemon)) {
+            await this._goToPokemonCenter();
+            return;
+        }
 
         if (this._walkPath.length > 0 && this._walkIndex < this._walkPath.length) {
             const next = this._walkPath[this._walkIndex];
@@ -71,12 +95,8 @@ export class AFKManager {
             let dir = null;
             if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'right' : 'left';
             else dir = dy > 0 ? 'down' : 'up';
-            const ndx = dir === 'right' ? 1 : dir === 'left' ? -1 : 0;
-            const ndy = dir === 'down' ? 1 : dir === 'up' ? -1 : 0;
             ow.keys[dir === 'up' ? 'ArrowUp' : dir === 'down' ? 'ArrowDown' : dir === 'left' ? 'ArrowLeft' : 'ArrowRight'] = true;
-            setTimeout(() => {
-                ow.keys = {};
-            }, 50);
+            setTimeout(() => { ow.keys = {}; }, 50);
             this._walkIndex++;
             return;
         }
@@ -157,6 +177,42 @@ export class AFKManager {
     }
 
     // ============================================================
+    // POKEMON CENTER: Go heal when PP exhausted
+    // ============================================================
+
+    async _goToPokemonCenter() {
+        this._visitingCenter = true;
+        this._centerStep = 0;
+        this._walkPath = [];
+        console.log('[AFK] PP esgotados, indo ao Centro Pokemon...');
+        await this.game.teleportToPokemonCenter();
+    }
+
+    async _handleCenterVisit() {
+        const game = this.game;
+        const ow = game.overworld2d;
+        if (!ow || game.state !== 'overworld') return;
+
+        if (this._centerStep === 0) {
+            await game.healAllPokemon();
+            console.log('[AFK] Time curado no Centro Pokemon');
+            this._centerStep = 1;
+            await game.teleportToMap(this._homeMap);
+            if (ow.player) {
+                ow.player.x = this._homePlayerX;
+                ow.player.y = this._homePlayerY;
+                ow.player.fromX = this._homePlayerX;
+                ow.player.fromY = this._homePlayerY;
+                ow.camera.x = ow.player.x * ow.tileW - ow.canvas.width / 2 + ow.tileW / 2;
+                ow.camera.y = ow.player.y * ow.tileH - ow.canvas.height / 2 + ow.tileH / 2;
+            }
+            game.showTransitionBanner('Time curado! Voltando à área selvagem...');
+            this._visitingCenter = false;
+            this._centerStep = 0;
+        }
+    }
+
+    // ============================================================
     // BATTLE: Smart AI
     // ============================================================
 
@@ -172,8 +228,12 @@ export class AFKManager {
         const hpPct = (playerPokemon.currentHp / playerPokemon.stats.hp) * 100;
 
         if (this.autoHeal && hpPct <= this.healThreshold) {
-            const healed = await this._tryHeal(playerPokemon);
+            const healed = await this._tryHealSmart(playerPokemon);
             if (healed) return;
+        }
+
+        if (this._allMovesExhausted(playerPokemon)) {
+            return;
         }
 
         const bestMove = this._chooseBestMove(playerPokemon, enemyPokemon);
@@ -247,73 +307,87 @@ export class AFKManager {
         return null;
     }
 
-    async _tryHeal(pokemon) {
+    _calculateHealMoveAmount(pokemon, move) {
+        const effect = this._getMoveEffectFast(move);
+        if (!effect) return 0;
+        if (effect.effect === 'heal') {
+            return Math.floor(pokemon.stats.hp * (effect.healPercent || 0.5));
+        }
+        if (effect.effect === 'drain') {
+            return Math.floor(pokemon.stats.hp * (effect.drain || 0.5));
+        }
+        return 0;
+    }
+
+    async _tryHealSmart(pokemon) {
         const hpPct = (pokemon.currentHp / pokemon.stats.hp) * 100;
         if (hpPct > this.healThreshold) return false;
 
-        for (const move of (pokemon.moves || [])) {
-            if (!move || move.currentPp <= 0) continue;
-            const effect = this._getMoveEffectFast(move);
-            if (effect && effect.effect === 'heal') {
-                try {
-                    const game = this.game;
-                    const enemyPokemon = getFirstAlive(game.enemyTeam);
-                    if (enemyPokemon) {
-                        await game.executeBattleTurn(pokemon, enemyPokemon, move);
-                        return true;
-                    }
-                } catch (e) { return false; }
-            }
-        }
+        const hpDeficit = pokemon.stats.hp - pokemon.currentHp;
+        let bestHealMove = null;
+        let bestMoveHeal = 0;
 
         for (const move of (pokemon.moves || [])) {
             if (!move || move.currentPp <= 0) continue;
             const effect = this._getMoveEffectFast(move);
-            if (effect && effect.effect === 'drain') {
-                try {
-                    const game = this.game;
-                    const enemyPokemon = getFirstAlive(game.enemyTeam);
-                    if (enemyPokemon) {
-                        await game.executeBattleTurn(pokemon, enemyPokemon, move);
-                        return true;
-                    }
-                } catch (e) { return false; }
-            }
-        }
-
-        const healed = await this._usePotion(pokemon);
-        return healed;
-    }
-
-    async _usePotion(pokemon) {
-        try {
-            const items = await window.GameData.getInventory();
-            const healItems = items.filter(inv => inv.items &&
-                inv.items.category === 'medicine' &&
-                inv.items.subcategory === 'heal' &&
-                inv.quantity > 0);
-            if (healItems.length === 0) return false;
-            healItems.sort((a, b) => (b.items.effect_value || 0) - (a.items.effect_value || 0));
-            const hpDeficit = pokemon.stats.hp - pokemon.currentHp;
-            for (const inv of healItems) {
-                if (inv.items.effect_value >= hpDeficit * 0.5 || inv.items.effect === 'heal_full') {
-                    const heal = inv.items.effect === 'heal_full' || inv.items.effect === 'heal_full_status'
-                        ? pokemon.stats.hp
-                        : Math.min(inv.items.effect_value, hpDeficit);
-                    pokemon.currentHp = Math.min(pokemon.stats.hp, pokemon.currentHp + heal);
-                    await window.GameData.addItem(inv.items.id, -1);
-                    return true;
+            if (effect && (effect.effect === 'heal' || effect.effect === 'drain')) {
+                const amount = this._calculateHealMoveAmount(pokemon, move);
+                if (amount > bestMoveHeal) {
+                    bestMoveHeal = amount;
+                    bestHealMove = move;
                 }
             }
-            if (healItems.length > 0) {
-                const best = healItems[0];
-                const heal = best.items.effect === 'heal_full' || best.items.effect === 'heal_full_status'
-                    ? pokemon.stats.hp
-                    : Math.min(best.items.effect_value, hpDeficit);
-                pokemon.currentHp = Math.min(pokemon.stats.hp, pokemon.currentHp + heal);
-                await window.GameData.addItem(best.items.id, -1);
-                return true;
-            }
+        }
+
+        let potionHeal = 0;
+        let potionItem = null;
+        if (this.healPotionId) {
+            try {
+                const items = await window.GameData.getInventory();
+                const potionInv = items.find(inv => inv.items && inv.items.id === this.healPotionId && inv.quantity > 0);
+                if (potionInv) {
+                    const eff = potionInv.items.effect;
+                    if (eff === 'heal_full' || eff === 'heal_full_status') {
+                        potionHeal = hpDeficit;
+                    } else {
+                        potionHeal = Math.min(potionInv.items.effect_value || 0, hpDeficit);
+                    }
+                    potionItem = potionInv;
+                }
+            } catch (e) { console.error('[AFK] Potion check error:', e); }
+        }
+
+        if (potionHeal > 0 && potionHeal >= bestMoveHeal) {
+            return await this._useSpecificPotion(pokemon, potionItem, hpDeficit);
+        }
+
+        if (bestHealMove && bestMoveHeal > 0) {
+            try {
+                const enemyPokemon = getFirstAlive(this.game.enemyTeam);
+                if (enemyPokemon) {
+                    await this.game.executeBattleTurn(pokemon, enemyPokemon, bestHealMove);
+                    return true;
+                }
+            } catch (e) { return false; }
+        }
+
+        if (potionHeal > 0) {
+            return await this._useSpecificPotion(pokemon, potionItem, hpDeficit);
+        }
+
+        return false;
+    }
+
+    async _useSpecificPotion(pokemon, potionInv, hpDeficit) {
+        if (!potionInv) return false;
+        try {
+            const item = potionInv.items;
+            const heal = (item.effect === 'heal_full' || item.effect === 'heal_full_status')
+                ? hpDeficit
+                : Math.min(item.effect_value || 0, hpDeficit);
+            pokemon.currentHp = Math.min(pokemon.stats.hp, pokemon.currentHp + heal);
+            await window.GameData.addItem(item.id, -1);
+            return true;
         } catch (e) {
             console.error('[AFK] Potion use error:', e);
         }
