@@ -2688,9 +2688,19 @@ class PokeFuryGame {
 
     async _populateBallSelect(select) {
         try {
+            if (!window.GameData.currentCharacterId) {
+                select.innerHTML = '<option value="">Nenhum personagem</option>';
+                return;
+            }
             const items = await window.GameData.getInventory();
+            console.log('[AFK] Inventory items:', items.length, items);
             const balls = items.filter(inv => inv.items && inv.items.category === 'pokeball' && inv.quantity > 0);
+            console.log('[AFK] Pokeballs found:', balls.length, balls);
             select.innerHTML = '<option value="">Selecione</option>';
+            if (balls.length === 0) {
+                select.innerHTML = '<option value="">Nenhuma pokébola</option>';
+                return;
+            }
             balls.forEach(inv => {
                 const opt = document.createElement('option');
                 opt.value = inv.items.id;
@@ -2699,6 +2709,7 @@ class PokeFuryGame {
             });
         } catch (e) {
             console.error('[AFK] Error loading pokeballs:', e);
+            select.innerHTML = '<option value="">Erro ao carregar</option>';
         }
     }
 
