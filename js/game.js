@@ -1307,6 +1307,27 @@ class PokeFuryGame {
             const enemyPokemon = this.enemyTeam[0];
             if (!enemyPokemon) { resolve(false); return; }
 
+            if (this.afkManager && this.afkManager.running && this.afkManager.autoCapture) {
+                const rarity = enemyPokemon.rarity || 'common';
+                const captureConfig = this.afkManager.captureRarities[rarity];
+                if (!captureConfig || !captureConfig.ballId) {
+                    await showBattleMessage(`${enemyPokemon.name} não está nas raridades configuradas. Pulando captura...`);
+                    resolve(false);
+                    return;
+                }
+                const items = await window.GameData.getInventory();
+                const ballInv = items.find(inv => inv.items && inv.items.id === captureConfig.ballId && inv.quantity > 0);
+                if (!ballInv) {
+                    await showBattleMessage(`Pokébola configurada não disponível. Pulando captura...`);
+                    resolve(false);
+                    return;
+                }
+                await showBattleMessage(`Auto-capturando ${enemyPokemon.name} (${rarity}) com ${ballInv.items.name}!`);
+                const caught = await this.tryCaptureWithBall(enemyPokemon, ballInv.items);
+                resolve(caught);
+                return;
+            }
+
             const inventory = await window.GameData.getInventory();
             const balls = inventory.filter(inv => inv.quantity > 0 && inv.items && inv.items.category === 'pokeball');
 
@@ -1482,6 +1503,13 @@ class PokeFuryGame {
         }
     }
 
+    async tryCaptureWithBall(enemyPokemon, ballItemData) {
+        const inventory = await window.GameData.getInventory();
+        const ballInv = inventory.find(inv => inv.items && inv.items.id === ballItemData.id && inv.quantity > 0);
+        if (!ballInv) return false;
+        return await this.attemptCapture(ballInv);
+    }
+
     async endBattle(result) {
         if (this.state !== 'battle') return;
         if (this.weatherAnim) this.weatherAnim.setWeather(null);
@@ -1569,13 +1597,6 @@ class PokeFuryGame {
         }
 
         await this.saveTeam();
-
-        if (this.afkManager && this.afkManager.running && result === 'win' && this.isWildBattle && this.enemyTeam.length > 0) {
-            const capturedEnemy = this.enemyTeam[0];
-            if (!capturedEnemy.isAlpha && !capturedEnemy.isRaidBoss) {
-                await this.afkManager.tryAutoCapture(capturedEnemy);
-            }
-        }
 
         this.state = 'overworld';
         this._lastBattlePlayer = null;
