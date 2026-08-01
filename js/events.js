@@ -13,7 +13,7 @@ export class EventManager {
 
     async init() {
         await this.checkActiveEvents();
-        this._pollInterval = setInterval(() => this.checkActiveEvents(), 15000);
+        this._pollInterval = setInterval(() => this.checkActiveEvents(), 10000);
     }
 
     destroy() {
@@ -37,6 +37,7 @@ export class EventManager {
         }).select().single();
         if (error) { console.error('[Events] Failed to start alpha:', error); return null; }
         this.activeEvent = data;
+        this.spawnAlphaOnMap();
         return data;
     }
 
@@ -67,6 +68,7 @@ export class EventManager {
         if (bossErr) { console.error('[Events] Failed to insert raid boss:', bossErr); }
 
         this.activeEvent = eventData;
+        this.joinRaid();
         return eventData;
     }
 
@@ -77,8 +79,11 @@ export class EventManager {
             ended_at: new Date().toISOString()
         }).eq('id', this.activeEvent.id);
         this.activeEvent = null;
+        this.alphaState = null;
+        this.raidState = null;
         this.removeAlphaOverlay();
         this.removeRaidBoss();
+        this.removeAlphaFromMap();
         if (this.raidPollInterval) { clearInterval(this.raidPollInterval); this.raidPollInterval = null; }
     }
 
@@ -88,6 +93,7 @@ export class EventManager {
 
     async checkActiveEvents() {
         if (!window.db) return;
+        if (!this.game || this.game.state === 'battle') return;
         try {
             const { data } = await window.db.from('game_events')
                 .select('*').eq('status', 'active').order('started_at', { ascending: false }).limit(1);
@@ -96,16 +102,20 @@ export class EventManager {
                 const event = data[0];
                 if (!this.activeEvent || this.activeEvent.id !== event.id) {
                     this.activeEvent = event;
-                    if (event.event_type === 'raid') {
+                    if (event.event_type === 'alpha') {
+                        this.spawnAlphaOnMap();
+                    } else if (event.event_type === 'raid') {
                         this.joinRaid();
                     }
                 }
-            } else {
-                if (this.activeEvent) {
-                    this.activeEvent = null;
-                    this.removeAlphaOverlay();
-                    this.removeRaidBoss();
-                }
+            } else if (this.activeEvent) {
+                this.activeEvent = null;
+                this.alphaState = null;
+                this.raidState = null;
+                this.removeAlphaOverlay();
+                this.removeRaidBoss();
+                this.removeAlphaFromMap();
+                if (this.raidPollInterval) { clearInterval(this.raidPollInterval); this.raidPollInterval = null; }
             }
         } catch (e) {}
     }
@@ -114,23 +124,12 @@ export class EventManager {
     // ALPHA EVENT
     // ============================================================
 
-    async tryStartAlpha() {
-        if (this.activeEvent && this.activeEvent.event_type === 'alpha') return false;
-        if (Math.random() > 0.005) return false;
-        return this.startAlphaForPlayer();
-    }
-
-    async startAlphaForPlayer() {
-        const user = (await window.db.auth.getUser()).data.user;
-        const charId = this.game.currentCharacterId;
-
-        const { data: existing } = await window.db.from('alpha_events')
-            .select('*').eq('user_id', user.id).eq('character_id', charId)
-            .eq('defeated', false).limit(1);
-        if (existing && existing.length > 0) return false;
+    async spawnAlphaOnMap() {
+        if (!this.activeEvent || this.activeEvent.event_type !== 'alpha') return;
+        if (!this.game.overworld2d) return;
 
         const encounters = await this.game.regionManager.loadMapEncounters(this.game.currentMap?.id);
-        if (!encounters || encounters.length === 0) return false;
+        if (!encounters || encounters.length === 0) return;
 
         const enc = encounters[Math.floor(Math.random() * encounters.length)];
         const highestLevel = this.game.playerTeam.reduce((max, p) => Math.max(max, p.level || 1), 1);
@@ -138,10 +137,18 @@ export class EventManager {
 
         const alphaData = await window.PokeAPI.ensurePokemon(enc.pokemon_id || enc.pokemon_name);
 
+        const user = (await window.db.auth.getUser()).data.user;
+        const charId = this.game.currentCharacterId;
+
+        const { data: existing } = await window.db.from('alpha_events')
+            .select('*').eq('user_id', user.id).eq('character_id', charId)
+            .eq('defeated', false).limit(1);
+        if (existing && existing.length > 0) return;
+
         const { data: alphaEvent } = await window.db.from('alpha_events').insert({
             user_id: user.id,
             character_id: charId,
-            event_id: null,
+            event_id: this.activeEvent.id,
             pokemon_id: alphaData.id,
             pokemon_name: alphaData.name,
             pokemon_level: alphaLevel,
@@ -153,11 +160,34 @@ export class EventManager {
             pokemonId: alphaData.id,
             pokemonName: alphaData.name,
             level: alphaLevel,
-            isLegendary: alphaData.types?.includes('dragon') || [144,145,146,150,151,243,244,245,249,250,251,377,378,379,380,381,382,383,384,385,386,480,481,482,483,484,485,486,487,488,489,490,491,492,493,494,638,639,640,641,642,643,644,645,646,647,648,649,716,717,718,719,720,721,785,786,787,788,789,790,791,792,800,888,889,890,891,892,893,894,895,896,897,898,905,1007,1008,1010].includes(alphaData.id)
+            isLegendary: [6,150,151,248,249,250,382,383,384,483,484,487,644,645,646,718,800,888,889,890,1007,1008,1010].includes(alphaData.id)
         };
 
+        this.removeAlphaFromMap();
+
+        const spriteUrl = window.PokeAPI.getAnimatedFrontUrl(alphaData.id);
+
+        const pos = this.game.overworld2d.findSpawnPosition();
+        if (!pos) return;
+
+        this.game.overworld2d.mapPokemonEntities.push({
+            entityId: `alpha_${Date.now()}`,
+            x: pos.x,
+            y: pos.y,
+            spriteUrl: spriteUrl,
+            encounter: { pokemon_id: alphaData.id, pokemon_name: alphaData.name, rarity: 'legendary', weight: 100 },
+            active: true,
+            respawnTimer: 0,
+            isAlpha: true
+        });
+
         this.showAlphaOverlay();
-        return true;
+    }
+
+    removeAlphaFromMap() {
+        if (!this.game.overworld2d) return;
+        this.game.overworld2d.mapPokemonEntities =
+            this.game.overworld2d.mapPokemonEntities.filter(e => !e.isAlpha);
     }
 
     showAlphaOverlay() {
@@ -167,36 +197,18 @@ export class EventManager {
         overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:999;pointer-events:none;animation:alphaDarken 3s ease-in forwards;display:flex;align-items:center;justify-content:center;flex-direction:column;';
         overlay.innerHTML = `
             <div style="font-size:28px;font-weight:900;color:#e94560;text-shadow:0 0 30px rgba(233,69,96,0.8);animation:alphaPulse 2s ease-in-out infinite;letter-spacing:4px;">O ALPHA CHEGOU</div>
-            <div style="font-size:14px;color:rgba(255,255,255,0.6);margin-top:12px;font-weight:600;">Um pokemon poderoso apareceu no mapa!</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.6);margin-top:12px;font-weight:600;">Um pokemon poderoso apareceu no mapa! Encontre-o!</div>
         `;
         document.body.appendChild(overlay);
         this.alphaOverlay = overlay;
-        setTimeout(() => { if (overlay.parentElement) overlay.style.opacity = '0.3'; }, 4000);
+        setTimeout(() => { if (overlay.parentElement) overlay.style.opacity = '0'; }, 4000);
+        setTimeout(() => { this.removeAlphaOverlay(); }, 4500);
     }
 
     removeAlphaOverlay() {
         if (this.alphaOverlay) { this.alphaOverlay.remove(); this.alphaOverlay = null; }
         const old = document.getElementById('alpha-overlay');
         if (old) old.remove();
-    }
-
-    getAlphaPokemon() {
-        if (!this.alphaState) return null;
-        const a = this.alphaState;
-        return {
-            id: a.pokemonId, name: a.pokemonName, level: a.level,
-            isAlpha: true, isShiny: false, isMega: false, variant: 'normal',
-            height: 30, weight: 999,
-            types: [], currentAbility: null, currentAbilityName: null,
-            statusEffect: null, heldItemId: null, experience: 0, happiness: 70,
-            fainted: false, _statStages: { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 },
-            ivs: { hp: 31, attack: 31, defense: 31, spAtk: 31, spDef: 31, speed: 31 },
-            evs: { hp: 252, attack: 252, defense: 252, spAtk: 252, spDef: 252, speed: 252 },
-            nature: 'hardy', moves: [], spriteUrls: {}, shinySpriteUrls: {},
-            stats: { hp: 999, attack: 999, defense: 999, spAtk: 999, spDef: 999, speed: 999 },
-            baseStats: { hp: 999, attack: 999, defense: 999, spAtk: 999, spDef: 999, speed: 999 },
-            species: a.pokemonName?.toLowerCase()
-        };
     }
 
     async onAlphaDefeated() {
@@ -208,23 +220,26 @@ export class EventManager {
         await window.db.from('alpha_events').update({ defeated: true }).eq('id', a.eventId);
 
         const silverAmount = 5000 + (a.level * 100);
-        await window.GameData.updateCurrencies({ 'c-silver': (await window.GameData.getCurrencies())['c-silver'] + silverAmount });
+        const cur = await window.GameData.getCurrencies();
+        await window.GameData.updateCurrencies({ 'c-silver': (cur['c-silver'] || 0) + silverAmount });
 
         await window.GameData.addItem(6, 5);
 
-        const tmPool = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,3001,3002,3003,3004,3005];
+        const tmPool = [3001,3002,3003,3004,3005,3006,3007,3008,3009,3010];
         const tmId = tmPool[Math.floor(Math.random() * tmPool.length)];
         await window.GameData.addItem(tmId, 1);
 
         if (a.isLegendary) {
-            const megaStones = [1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020];
+            const megaStones = [1001,1002,1003,1004,1005,1006,1007,1008,1009,1010];
             const stoneId = megaStones[Math.floor(Math.random() * megaStones.length)];
             await window.GameData.addItem(stoneId, 1);
         }
 
+        const result = { silver: silverAmount, tm: tmId, rareCandy: 5, megaStone: a.isLegendary };
         this.alphaState = null;
         this.removeAlphaOverlay();
-        return { silver: silverAmount, tm: tmId, rareCandy: 5, megaStone: a.isLegendary };
+        this.removeAlphaFromMap();
+        return result;
     }
 
     canCaptureAlpha() { return false; }
@@ -235,29 +250,53 @@ export class EventManager {
 
     async joinRaid() {
         if (!this.activeEvent || this.activeEvent.event_type !== 'raid') return;
+        await this.loadRaidState();
         this.startRaidBossDisplay();
         this.startRaidPolling();
     }
 
+    async loadRaidState() {
+        if (!this.activeEvent) return;
+        try {
+            const { data } = await window.db.from('raid_events')
+                .select('*').eq('event_id', this.activeEvent.id).limit(1);
+            if (data && data.length > 0) {
+                this.raidState = data[0];
+            }
+        } catch (e) {}
+    }
+
     startRaidBossDisplay() {
         this.removeRaidBoss();
+        if (!this.raidState) return;
+
         const container = document.createElement('div');
         container.id = 'raid-boss-display';
         container.style.cssText = 'position:fixed;top:16px;right:16px;z-index:998;background:rgba(10,10,20,0.95);border:2px solid #e94560;border-radius:12px;padding:12px 16px;min-width:220px;box-shadow:0 0 20px rgba(233,69,96,0.4);';
+
+        const spriteUrl = window.PokeAPI.getAnimatedFrontUrl(this.raidState.boss_pokemon_id);
+
         container.innerHTML = `
             <div style="color:#e94560;font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">RAID GLOBAL</div>
-            <div id="raid-boss-name" style="color:#fff;font-size:14px;font-weight:700;margin-bottom:4px;">Carregando...</div>
-            <div style="width:100%;height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden;margin-bottom:4px;">
-                <div id="raid-boss-hp-bar" style="height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b);border-radius:5px;transition:width 0.5s;width:100%;"></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <img src="${spriteUrl}" style="width:48px;height:48px;image-rendering:pixelated;" onerror="this.style.display='none'">
+                <div>
+                    <div id="raid-boss-name" style="color:#fff;font-size:14px;font-weight:700;">${this.raidState.boss_name} (Lv.${this.raidState.boss_level})</div>
+                    <div id="raid-boss-hp-text" style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;">${this.raidState.boss_current_hp.toLocaleString()} / ${this.raidState.boss_max_hp.toLocaleString()} HP</div>
+                </div>
             </div>
-            <div id="raid-boss-hp-text" style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;">???</div>
-            <button id="raid-attack-btn" style="width:100%;margin-top:8px;padding:8px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:transform 0.15s;">ATACAR</button>
+            <div style="width:100%;height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden;margin-bottom:8px;">
+                <div id="raid-boss-hp-bar" style="height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b);border-radius:5px;transition:width 0.5s;width:${(this.raidState.boss_current_hp / this.raidState.boss_max_hp * 100)}%;"></div>
+            </div>
+            <button id="raid-attack-btn" style="width:100%;padding:8px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:transform 0.15s;">ATACAR</button>
+            <button id="raid-ranking-btn" style="width:100%;margin-top:6px;padding:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">VER RANKING</button>
         `;
         document.body.appendChild(container);
         this.raidBossEl = container;
         this.raidBossHpBar = container.querySelector('#raid-boss-hp-bar');
 
         container.querySelector('#raid-attack-btn').onclick = () => this.attackRaidBoss();
+        container.querySelector('#raid-ranking-btn').onclick = () => this.showRaidRankingPopup();
     }
 
     removeRaidBoss() {
@@ -269,11 +308,11 @@ export class EventManager {
     startRaidPolling() {
         if (this.raidPollInterval) clearInterval(this.raidPollInterval);
         this.raidPollInterval = setInterval(() => this.updateRaidDisplay(), 5000);
-        this.updateRaidDisplay();
     }
 
     async updateRaidDisplay() {
         if (!this.activeEvent || this.activeEvent.event_type !== 'raid') return;
+        if (!this.raidBossEl) { if (this.raidPollInterval) { clearInterval(this.raidPollInterval); this.raidPollInterval = null; } return; }
         try {
             const { data } = await window.db.from('raid_events')
                 .select('*').eq('event_id', this.activeEvent.id).limit(1);
@@ -281,8 +320,8 @@ export class EventManager {
             const raid = data[0];
             this.raidState = raid;
 
-            const nameEl = document.querySelector('#raid-boss-name');
-            const hpText = document.querySelector('#raid-boss-hp-text');
+            const nameEl = this.raidBossEl.querySelector('#raid-boss-name');
+            const hpText = this.raidBossEl.querySelector('#raid-boss-hp-text');
             if (nameEl) nameEl.textContent = `${raid.boss_name} (Lv.${raid.boss_level})`;
             if (hpText) hpText.textContent = `${raid.boss_current_hp.toLocaleString()} / ${raid.boss_max_hp.toLocaleString()} HP`;
             if (this.raidBossHpBar) {
@@ -339,6 +378,7 @@ export class EventManager {
     async onRaidDefeated() {
         this.removeRaidBoss();
         if (this.raidPollInterval) { clearInterval(this.raidPollInterval); this.raidPollInterval = null; }
+        this.showRaidRankingPopup();
     }
 
     async getRaidRanking() {
@@ -386,13 +426,10 @@ export class EventManager {
         return { rank: myRank, silver, rareCandy, tmId };
     }
 
-    // ============================================================
-    // Raid ranking popup
-    // ============================================================
-
     async showRaidRankingPopup() {
         const ranking = await this.getRaidRanking();
         const overlay = document.createElement('div');
+        overlay.id = 'raid-ranking-popup';
         overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:center;justify-content:center;';
 
         let rows = ranking.map((r, i) => {
@@ -413,12 +450,22 @@ export class EventManager {
             <div style="background:rgba(15,20,35,0.98);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:70vh;overflow-y:auto;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <div style="color:#e94560;font-size:16px;font-weight:800;">RANKING RAID GLOBAL</div>
-                    <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;">✕</button>
+                    <button onclick="this.closest('#raid-ranking-popup').remove()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;">✕</button>
                 </div>
                 ${rows}
-                <button onclick="window.pokefury.eventManager.claimRaidRewards().then(r => { if(r) alert('Recompensas: '+r.silver+' Prata, '+r.rareCandy+' Rare Candy'); this.closest('div[style*=fixed]').remove(); })" style="width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">RECEBER RECOMPENSAS</button>
+                <button id="claim-raid-rewards-btn" style="width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">RECEBER RECOMPENSAS</button>
             </div>
         `;
         document.body.appendChild(overlay);
+
+        overlay.querySelector('#claim-raid-rewards-btn').onclick = async () => {
+            const rewards = await this.claimRaidRewards();
+            if (rewards) {
+                alert(`Recompensas:\n${rewards.silver} Prata\n${rewards.rareCandy} Rare Candy${rewards.tmId ? '\n1 TM' : ''}`);
+            } else {
+                alert('Recompensas já recebidas!');
+            }
+            overlay.remove();
+        };
     }
 }

@@ -1572,43 +1572,81 @@ class PokeFuryGame {
             document.getElementById('location-name').textContent = 'Área Selvagem';
         }
 
-        if (result === 'win' && this.eventManager && this.eventManager.alphaState) {
-            await this.startAlphaBattle();
-        } else if (result === 'win' && this.eventManager) {
-            await this.eventManager.tryStartAlpha();
-        }
-
-        if (this.eventManager && this.eventManager.alphaState && result === 'win' && this.enemyTeam[0]?.isAlpha) {
+        if (this.enemyTeam[0]?.isAlpha && result === 'win') {
             await this.endAlphaBattle('win');
         }
     }
 
     async startAlphaBattle() {
         if (!this.eventManager || !this.eventManager.alphaState) return;
-        const alphaPoke = this.eventManager.getAlphaPokemon();
-        if (!alphaPoke) return;
+        const a = this.eventManager.alphaState;
 
-        const apiData = await PokeAPI.ensurePokemon(alphaPoke.id);
-        alphaPoke.types = apiData.types;
-        alphaPoke.spriteUrls = apiData.spriteUrls;
-        alphaPoke.shinySpriteUrls = apiData.shinySpriteUrls;
+        hideBattlePokemonSprites();
+        if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) return;
 
-        this.enemyTeam = [alphaPoke];
+        this.isWildBattle = true;
+        this._playerSpriteReady = false;
+
+        const apiData = await PokeAPI.ensurePokemon(a.pokemonId);
+        const pokemon = await createPokemon(apiData, a.level, null, null, null, false);
+        pokemon.isAlpha = true;
+        pokemon.ivs = { hp: 31, attack: 31, defense: 31, spAtk: 31, spDef: 31, speed: 31 };
+        pokemon.evs = { hp: 252, attack: 252, defense: 252, spAtk: 252, spDef: 252, speed: 252 };
+        const stats = pokemon.stats;
+        stats.hp = Math.floor(stats.hp * 2.5);
+        stats.attack = Math.floor(stats.attack * 2);
+        stats.defense = Math.floor(stats.defense * 2);
+        stats.spAtk = Math.floor(stats.spAtk * 2);
+        stats.spDef = Math.floor(stats.spDef * 2);
+        stats.speed = Math.floor(stats.speed * 1.5);
+        pokemon.currentHp = stats.hp;
+        pokemon.maxHp = stats.hp;
+
+        this.enemyTeam = [pokemon];
+
+        this._battleState = { weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0, _neutralizingGas: false };
+        initFieldEffects({ _teamEffects: this._playerFieldEffects = {} });
+        initFieldEffects({ _teamEffects: this._enemyFieldEffects = {} });
+        this._playerFieldEffects._isPlayer = true;
+        this._enemyFieldEffects._isPlayer = false;
+
+        const activePlayer = getFirstAlive(this.playerTeam);
+
+        this.currentBattleBg = this.getNormalizedBattleBg();
+        if (this.currentBattleBg) {
+            await preloadBattleBgImage(this.currentBattleBg);
+            this.applyBattleNeonFromBg(this.currentBattleBg);
+        }
+        if (this.currentMap && this.currentMap.battle_player_x != null) {
+            setBattlePositions({
+                playerX: this.currentMap.battle_player_x,
+                playerY: this.currentMap.battle_player_y,
+                enemyX: this.currentMap.battle_enemy_x,
+                enemyY: this.currentMap.battle_enemy_y
+            });
+            setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
+        } else {
+            setBattlePositions(null);
+            setBattleEffects('none', 'none');
+        }
+
         this.state = 'battle';
-        this._lastBattlePlayer = null;
-        this._lastBattleEnemy = null;
-
-        document.getElementById('location-name').textContent = `ALPHA ${alphaPoke.name.toUpperCase()} APROXIMOU-SE!`;
-
-        showScreen('battle');
-        await this.renderBattleScene();
+        this._lastBattlePlayer = activePlayer;
+        this._lastBattleEnemy = pokemon;
+        if (this.overworld2d) this.overworld2d.hide();
         this.battleStartTime = Date.now();
         this.currentTurn = 1;
         this._turnQueue = [];
         this._playerUsedMoveThisTurn = false;
 
-        const battleLog = document.getElementById('battle-log');
-        if (battleLog) battleLog.innerHTML = '<div class="log-entry">⚔️ O ALPHA apareceu!</div>';
+        showScreen('battle-screen');
+        this.positionBattleScreen();
+
+        if (!this.weatherAnim) this.weatherAnim = new WeatherAnimations();
+        this.weatherAnim.setWeather(null);
+
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        document.getElementById('location-name').textContent = `ALPHA ${a.pokemonName.toUpperCase()} APROXIMOU-SE!`;
     }
 
     async endAlphaBattle(result) {

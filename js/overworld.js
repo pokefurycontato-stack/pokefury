@@ -662,6 +662,14 @@ export class Overworld2D {
     async triggerPokemonBattle(entity) {
         if (!entity.encounter) return;
 
+        if (entity.isAlpha && this.game.eventManager && this.game.eventManager.alphaState) {
+            await this.game.startAlphaBattle();
+            if (this.game.state === 'battle') {
+                entity.active = false;
+            }
+            return;
+        }
+
         const enc = entity.encounter;
 
         const highestLevel = this.game.playerTeam.reduce((max, p) => Math.max(max, p.level || 1), 1);
@@ -675,7 +683,6 @@ export class Overworld2D {
             const RESPAWN = { common: 200, uncommon: 350, rare: 500, legendary: 800, inicial: 800 };
             entity.respawnTimer = RESPAWN[enc.rarity] || 300;
 
-            // Mark inactive in DB
             if (entity.dbId && window.db) {
                 await window.db.from('map_pokemon_entities')
                     .update({ active: false, respawn_timer: entity.respawnTimer })
