@@ -15,6 +15,7 @@ import { RegionManager } from './region-manager.js';
 import { MapZoneEditor } from './zone-editor.js';
 import { Chat } from './chat.js';
 import { BattleAnimations } from './battle-animations.js';
+import { EventManager } from './events.js';
 
 const SHINY_CHANCE = 128;
 
@@ -43,6 +44,7 @@ class PokeFuryGame {
         this.regionManager = new RegionManager();
         this.battleAnimations = null;
         this.weatherAnim = null;
+        this.eventManager = null;
         this.currentRegion = null;
         this.currentMap = null;
         this.currentRegionMaps = [];
@@ -375,6 +377,11 @@ class PokeFuryGame {
             await this.loadPlayerRegion();
         } catch (e) {
             console.error('[PokeFury] Error showing overworld:', e);
+        }
+
+        if (!this.eventManager) {
+            this.eventManager = new EventManager(this);
+            await this.eventManager.init();
         }
 
         console.log('[PokeFury] Game started successfully!');
@@ -1564,6 +1571,56 @@ class PokeFuryGame {
         } else {
             document.getElementById('location-name').textContent = 'Área Selvagem';
         }
+
+        if (result === 'win' && this.eventManager && this.eventManager.alphaState) {
+            await this.startAlphaBattle();
+        } else if (result === 'win' && this.eventManager) {
+            await this.eventManager.tryStartAlpha();
+        }
+
+        if (this.eventManager && this.eventManager.alphaState && result === 'win' && this.enemyTeam[0]?.isAlpha) {
+            await this.endAlphaBattle('win');
+        }
+    }
+
+    async startAlphaBattle() {
+        if (!this.eventManager || !this.eventManager.alphaState) return;
+        const alphaPoke = this.eventManager.getAlphaPokemon();
+        if (!alphaPoke) return;
+
+        const apiData = await PokeAPI.ensurePokemon(alphaPoke.id);
+        alphaPoke.types = apiData.types;
+        alphaPoke.spriteUrls = apiData.spriteUrls;
+        alphaPoke.shinySpriteUrls = apiData.shinySpriteUrls;
+
+        this.enemyTeam = [alphaPoke];
+        this.state = 'battle';
+        this._lastBattlePlayer = null;
+        this._lastBattleEnemy = null;
+
+        document.getElementById('location-name').textContent = `ALPHA ${alphaPoke.name.toUpperCase()} APROXIMOU-SE!`;
+
+        showScreen('battle');
+        await this.renderBattleScene();
+        this.battleStartTime = Date.now();
+        this.currentTurn = 1;
+        this._turnQueue = [];
+        this._playerUsedMoveThisTurn = false;
+
+        const battleLog = document.getElementById('battle-log');
+        if (battleLog) battleLog.innerHTML = '<div class="log-entry">⚔️ O ALPHA apareceu!</div>';
+    }
+
+    async endAlphaBattle(result) {
+        if (this.eventManager && this.eventManager.alphaState && result === 'win') {
+            const rewards = await this.eventManager.onAlphaDefeated();
+            if (rewards) {
+                await showBattleMessage(`+${rewards.silver} Prata!`);
+                await showBattleMessage(`+${rewards.rareCandy} Rare Candy!`);
+                await showBattleMessage(`+1 TM!`);
+                if (rewards.megaStone) await showBattleMessage(`+1 Mega Stone!`);
+            }
+        }
     }
 
     async teleportToPokemonCenter() {
@@ -2173,6 +2230,81 @@ class PokeFuryGame {
         if (donateBtn) {
             donateBtn.onclick = () => this.openDonateScreen();
         }
+
+        const eventsBtn = document.getElementById('admin-btn-events');
+        if (eventsBtn) {
+            eventsBtn.onclick = () => this.openEventsPanel();
+        }
+    }
+
+    openEventsPanel() {
+        if (!window.isAdmin) return;
+        const em = this.eventManager;
+        if (!em) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'events-panel-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+        const render = async () => {
+            const { data: events } = await window.db.from('game_events').select('*').order('created_at', { ascending: false }).limit(10);
+            const active = events?.find(e => e.status === 'active');
+            const raidData = active?.event_type === 'raid' ? (await window.db.from('raid_events').select('*').eq('event_id', active.id).limit(1)).data?.[0] : null;
+
+            let activeSection = '';
+            if (active) {
+                const statusColor = active.event_type === 'alpha' ? '#e94560' : '#4ecdc4';
+                const typeName = active.event_type === 'alpha' ? 'ALPHA EVENT' : 'GLOBAL RAID';
+                activeSection = `
+                    <div style="background:rgba(255,255,255,0.05);border:1px solid ${statusColor}33;border-radius:8px;padding:12px;margin-bottom:12px;">
+                        <div style="color:${statusColor};font-size:13px;font-weight:700;">${typeName} ATIVO</div>
+                        <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:4px;">Iniciado: ${new Date(active.started_at).toLocaleString('pt-BR')}</div>
+                        ${raidData ? `<div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:2px;">HP: ${raidData.boss_current_hp.toLocaleString()} / ${raidData.boss_max_hp.toLocaleString()}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            overlay.innerHTML = `
+                <div style="background:rgba(15,20,35,0.98);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:24px;max-width:420px;width:90%;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <div style="color:#e94560;font-size:16px;font-weight:800;">PAINEL DE EVENTOS</div>
+                        <button id="events-close-btn" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;">✕</button>
+                    </div>
+                    ${activeSection}
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <button id="start-alpha-btn" ${active ? 'disabled' : ''} style="width:100%;padding:12px;background:${active ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#e94560,#c23152)'};border:1px solid rgba(233,69,96,0.3);border-radius:8px;color:${active ? 'rgba(255,255,255,0.3)' : '#fff'};font-size:13px;font-weight:700;cursor:${active ? 'not-allowed' : 'pointer'};">INICIAR ALPHA EVENT</button>
+                        <button id="start-raid-btn" ${active ? 'disabled' : ''} style="width:100%;padding:12px;background:${active ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#4ecdc4,#2ab7ad)'};border:1px solid rgba(78,205,196,0.3);border-radius:8px;color:${active ? 'rgba(255,255,255,0.3)' : '#fff'};font-size:13px;font-weight:700;cursor:${active ? 'not-allowed' : 'pointer'};">INICIAR GLOBAL RAID</button>
+                        ${active ? `<button id="end-event-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#ff6b6b,#c0392b);border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">ENCERRAR EVENTO</button>` : ''}
+                        ${active?.event_type === 'raid' && raidData ? `<button id="show-ranking-btn" style="width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">VER RANKING</button>` : ''}
+                    </div>
+                </div>
+            `;
+
+            overlay.querySelector('#events-close-btn').onclick = () => overlay.remove();
+            overlay.querySelector('#start-alpha-btn').onclick = async () => {
+                await em.startAlphaEvent();
+                overlay.remove();
+            };
+            overlay.querySelector('#start-raid-btn').onclick = async () => {
+                await em.startRaidEvent();
+                overlay.remove();
+            };
+            if (overlay.querySelector('#end-event-btn')) {
+                overlay.querySelector('#end-event-btn').onclick = async () => {
+                    await em.endEvent();
+                    overlay.remove();
+                };
+            }
+            if (overlay.querySelector('#show-ranking-btn')) {
+                overlay.querySelector('#show-ranking-btn').onclick = () => {
+                    overlay.remove();
+                    em.showRaidRankingPopup();
+                };
+            }
+        };
+
+        render();
+        document.body.appendChild(overlay);
     }
 
     openDonateScreen() {

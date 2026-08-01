@@ -1849,3 +1849,14 @@ body {
 #weather-hail-overlay.active {
     opacity: 1;
 }
+
+/* Alpha Event */
+@keyframes alphaDarken {
+    0% { background: rgba(0,0,0,0); }
+    100% { background: rgba(0,0,0,0.85); }
+}
+
+@keyframes alphaPulse {
+    0%, 100% { text-shadow: 0 0 20px rgba(233,69,96,0.6); }
+    50% { text-shadow: 0 0 50px rgba(233,69,96,1), 0 0 100px rgba(233,69,96,0.5); }
+}
