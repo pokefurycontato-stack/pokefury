@@ -16,6 +16,7 @@ import { MapZoneEditor } from './zone-editor.js';
 import { Chat } from './chat.js';
 import { BattleAnimations } from './battle-animations.js';
 import { EventManager } from './events.js';
+import { AFKManager } from './afk.js';
 
 const SHINY_CHANCE = 128;
 
@@ -45,6 +46,7 @@ class PokeFuryGame {
         this.battleAnimations = null;
         this.weatherAnim = null;
         this.eventManager = null;
+        this.afkManager = null;
         this.currentRegion = null;
         this.currentMap = null;
         this.currentRegionMaps = [];
@@ -383,6 +385,13 @@ class PokeFuryGame {
         if (!this.eventManager) {
             this.eventManager = new EventManager(this);
             await this.eventManager.init();
+        }
+
+        if (!this.afkManager) {
+            this.afkManager = new AFKManager(this);
+            this.setupAfkPanel();
+            const typeChart = await loadTypeEffectiveness();
+            this.afkManager.setTypeChart(typeChart);
         }
 
         console.log('[PokeFury] Game started successfully!');
@@ -1561,6 +1570,13 @@ class PokeFuryGame {
 
         await this.saveTeam();
 
+        if (this.afkManager && this.afkManager.running && result === 'win' && this.isWildBattle && this.enemyTeam.length > 0) {
+            const capturedEnemy = this.enemyTeam[0];
+            if (!capturedEnemy.isAlpha && !capturedEnemy.isRaidBoss) {
+                await this.afkManager.tryAutoCapture(capturedEnemy);
+            }
+        }
+
         this.state = 'overworld';
         this._lastBattlePlayer = null;
         this._lastBattleEnemy = null;
@@ -2578,6 +2594,112 @@ class PokeFuryGame {
         this.setupDonateItemSearch();
         this.setupDonatePokemonSearch();
         this.setupDonatePokemonForm();
+    }
+
+    setupAfkPanel() {
+        const afk = this.afkManager;
+        if (!afk) return;
+
+        const searchCheck = document.getElementById('afk-auto-search');
+        const battleCheck = document.getElementById('afk-auto-battle');
+        const healCheck = document.getElementById('afk-auto-heal');
+        const healSliderWrap = document.getElementById('afk-heal-slider-wrap');
+        const healSlider = document.getElementById('afk-heal-slider');
+        const healVal = document.getElementById('afk-heal-val');
+        const captureCheck = document.getElementById('afk-auto-capture');
+        const captureOptions = document.getElementById('afk-capture-options');
+        const startBtn = document.getElementById('afk-start-btn');
+        const stopBtn = document.getElementById('afk-stop-btn');
+        const statusEl = document.getElementById('afk-status');
+
+        const RARITIES = [
+            { key: 'common', label: 'Comum' },
+            { key: 'uncommon', label: 'Incomum' },
+            { key: 'rare', label: 'Raro' },
+            { key: 'inicial', label: 'Inicial' },
+            { key: 'legendary', label: 'Lendário' },
+            { key: 'shiny', label: 'Shiny' }
+        ];
+
+        const rarityList = document.getElementById('afk-rarity-list');
+        RARITIES.forEach(r => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 0;';
+            row.innerHTML = `
+                <input type="checkbox" id="afk-rarity-${r.key}" style="accent-color:#e94560;width:12px;height:12px;">
+                <label for="afk-rarity-${r.key}" style="font-size:10px;font-weight:600;flex:1;cursor:pointer;">${r.label}</label>
+                <select class="afk-rarity-ball" data-rarity="${r.key}" style="display:none;width:90px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#fff;font-size:9px;padding:2px 3px;font-family:Inter;">
+                    <option value="">Selecione</option>
+                </select>
+            `;
+            rarityList.appendChild(row);
+
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            const select = row.querySelector('select');
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    select.style.display = 'block';
+                    this._populateBallSelect(select);
+                } else {
+                    select.style.display = 'none';
+                    select.value = '';
+                    delete afk.captureRarities[r.key];
+                }
+            });
+            select.addEventListener('change', () => {
+                if (select.value) {
+                    afk.captureRarities[r.key] = { ballId: parseInt(select.value) };
+                } else {
+                    delete afk.captureRarities[r.key];
+                }
+            });
+        });
+
+        searchCheck.addEventListener('change', () => { afk.autoSearch = searchCheck.checked; });
+        battleCheck.addEventListener('change', () => { afk.autoBattle = battleCheck.checked; });
+        healCheck.addEventListener('change', () => {
+            afk.autoHeal = healCheck.checked;
+            healSliderWrap.style.display = healCheck.checked ? 'block' : 'none';
+        });
+        healSlider.addEventListener('input', () => {
+            afk.healThreshold = parseInt(healSlider.value);
+            healVal.textContent = healSlider.value + '%';
+        });
+        captureCheck.addEventListener('change', () => {
+            afk.autoCapture = captureCheck.checked;
+            captureOptions.style.display = captureCheck.checked ? 'block' : 'none';
+        });
+
+        startBtn.onclick = () => {
+            afk.start();
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+            statusEl.textContent = 'Executando...';
+            statusEl.style.color = '#4ecdc4';
+        };
+        stopBtn.onclick = () => {
+            afk.stop();
+            startBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+            statusEl.textContent = 'Parado';
+            statusEl.style.color = 'rgba(255,255,255,0.4)';
+        };
+    }
+
+    async _populateBallSelect(select) {
+        try {
+            const items = await window.GameData.getInventory();
+            const balls = items.filter(inv => inv.items && inv.items.category === 'pokeball' && inv.quantity > 0);
+            select.innerHTML = '<option value="">Selecione</option>';
+            balls.forEach(inv => {
+                const opt = document.createElement('option');
+                opt.value = inv.items.id;
+                opt.textContent = `${inv.items.name} (x${inv.quantity})`;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('[AFK] Error loading pokeballs:', e);
+        }
     }
 
     setupDonateSearch() {

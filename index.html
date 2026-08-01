@@ -258,10 +258,48 @@
                 </div>
                 <div id="map-nav-canvas" class="hidden"></div>
 
-                <div id="ui-layer">
+                    <div id="ui-layer">
                     <div id="party-panel" style="position:absolute;top:50%;left:212px;transform:translateY(-50%);width:220px;background:rgba(10,10,30,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;z-index:15;pointer-events:auto;max-height:80vh;overflow-y:auto">
                         <div style="font-family:Inter,sans-serif;font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08)">Time</div>
                         <div id="party-list" style="display:flex;flex-direction:column;gap:4px"></div>
+                    </div>
+
+                    <!-- AFK Panel -->
+                    <div id="afk-panel" style="position:absolute;top:50%;right:16px;transform:translateY(-50%);width:210px;background:rgba(10,10,30,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px;z-index:15;pointer-events:auto;max-height:85vh;overflow-y:auto;font-family:Inter,sans-serif;color:#fff">
+                        <div style="font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08)">Auto Farm</div>
+
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px;font-size:11px;font-weight:600;">
+                            <input type="checkbox" id="afk-auto-search" style="accent-color:#e94560;width:14px;height:14px;"> Procurar batalhas
+                        </label>
+
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px;font-size:11px;font-weight:600;">
+                            <input type="checkbox" id="afk-auto-battle" style="accent-color:#e94560;width:14px;height:14px;"> Batalhar automático
+                        </label>
+
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;font-size:11px;font-weight:600;">
+                            <input type="checkbox" id="afk-auto-heal" style="accent-color:#e94560;width:14px;height:14px;"> Auto cura
+                        </label>
+                        <div id="afk-heal-slider-wrap" style="display:none;margin-bottom:6px;padding-left:4px;">
+                            <input type="range" id="afk-heal-slider" min="10" max="90" value="40" style="width:100%;accent-color:#e94560;">
+                            <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px;">
+                                <span>10%</span>
+                                <span id="afk-heal-val" style="color:#e94560;font-weight:700;">40%</span>
+                                <span>90%</span>
+                            </div>
+                        </div>
+
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;font-size:11px;font-weight:600;">
+                            <input type="checkbox" id="afk-auto-capture" style="accent-color:#e94560;width:14px;height:14px;"> Captura automática
+                        </label>
+                        <div id="afk-capture-options" style="display:none;margin-bottom:6px;">
+                            <div id="afk-rarity-list" style="display:flex;flex-direction:column;gap:3px;"></div>
+                        </div>
+
+                        <div style="display:flex;gap:6px;margin-top:8px;">
+                            <button id="afk-start-btn" style="flex:1;padding:8px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">INICIAR</button>
+                            <button id="afk-stop-btn" style="flex:1;padding:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;display:none;">PARAR</button>
+                        </div>
+                        <div id="afk-status" style="font-size:10px;color:rgba(255,255,255,0.4);text-align:center;margin-top:4px;">Parado</div>
                     </div>
                     <!-- Battle Screen -->
                     <div id="battle-screen" class="hidden">
@@ -683,6 +721,7 @@
     <script type="module" src="js/battle.js"></script>
     <script type="module" src="js/ui.js"></script>
     <script type="module" src="js/game.js"></script>
+    <script type="module" src="js/afk.js"></script>
     <script type="module" src="js/map-editor.js"></script>
     <script type="module" src="js/zone-editor.js"></script>
     <script type="module" src="js/region-manager.js"></script>
