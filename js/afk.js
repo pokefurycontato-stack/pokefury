@@ -307,14 +307,22 @@ export class AFKManager {
         return null;
     }
 
-    _calculateHealMoveAmount(pokemon, move) {
+    _calculateHealMoveAmount(pokemon, move, defender) {
         const effect = this._getMoveEffectFast(move);
         if (!effect) return 0;
         if (effect.effect === 'heal') {
             return Math.floor(pokemon.stats.hp * (effect.healPercent || 0.5));
         }
         if (effect.effect === 'drain') {
-            return Math.floor(pokemon.stats.hp * (effect.drain || 0.5));
+            const power = move.power || 40;
+            let atk = pokemon.stats.spAtk || pokemon.stats.attack || 50;
+            let def = 100;
+            if (defender) {
+                def = (move.category === 'physical' ? defender.stats.defense : defender.stats.spDef) || 100;
+            }
+            const estimatedDamage = Math.max(1, Math.floor((power * atk) / (def * 2)));
+            const cappedDamage = Math.min(estimatedDamage, pokemon.stats.hp * 0.5);
+            return Math.floor(cappedDamage * (effect.drain || 0.5));
         }
         return 0;
     }
@@ -324,6 +332,7 @@ export class AFKManager {
         if (hpPct > this.healThreshold) return false;
 
         const hpDeficit = pokemon.stats.hp - pokemon.currentHp;
+        const defender = getFirstAlive(this.game.enemyTeam);
         let bestHealMove = null;
         let bestMoveHeal = 0;
 
@@ -331,7 +340,7 @@ export class AFKManager {
             if (!move || move.currentPp <= 0) continue;
             const effect = this._getMoveEffectFast(move);
             if (effect && (effect.effect === 'heal' || effect.effect === 'drain')) {
-                const amount = this._calculateHealMoveAmount(pokemon, move);
+                const amount = this._calculateHealMoveAmount(pokemon, move, defender);
                 if (amount > bestMoveHeal) {
                     bestMoveHeal = amount;
                     bestHealMove = move;
