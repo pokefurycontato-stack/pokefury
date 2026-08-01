@@ -1860,3 +1860,15 @@ body {
     0%, 100% { text-shadow: 0 0 20px rgba(233,69,96,0.6); }
     50% { text-shadow: 0 0 50px rgba(233,69,96,1), 0 0 100px rgba(233,69,96,0.5); }
 }
+
+/* AFK Panel */
+#afk-panel select,
+#afk-panel option {
+    background: #1a1a2e;
+    color: #fff;
+}
+#afk-panel select option:hover,
+#afk-panel select option:checked {
+    background: #e94560;
+    color: #fff;
+}
