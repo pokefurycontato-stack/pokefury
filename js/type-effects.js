@@ -13,7 +13,7 @@ export class TypeEffects {
         if (!this.canvas) {
             this.canvas = document.createElement('canvas');
             this.canvas.id = 'type-effects-canvas';
-            this.canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:30;';
+            this.canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:30;';
             const mainArea = document.getElementById('main-area');
             if (mainArea) {
                 mainArea.style.position = mainArea.style.position || 'relative';
@@ -27,17 +27,11 @@ export class TypeEffects {
 
     _resize() {
         const gameCanvas = document.getElementById('game-canvas');
-        const mainArea = document.getElementById('main-area');
-        if (!this.canvas) return;
-        if (gameCanvas) {
-            this.canvas.style.left = gameCanvas.offsetLeft + 'px';
-            this.canvas.style.top = gameCanvas.offsetTop + 'px';
-            this.canvas.width = gameCanvas.width;
-            this.canvas.height = gameCanvas.height;
-        } else if (mainArea) {
-            this.canvas.width = mainArea.offsetWidth;
-            this.canvas.height = mainArea.offsetHeight;
-        }
+        if (!this.canvas || !gameCanvas) return;
+        this.canvas.style.left = gameCanvas.offsetLeft + 'px';
+        this.canvas.style.top = gameCanvas.offsetTop + 'px';
+        this.canvas.width = gameCanvas.offsetWidth || gameCanvas.width;
+        this.canvas.height = gameCanvas.offsetHeight || gameCanvas.height;
     }
 
     _sleep(ms) {
