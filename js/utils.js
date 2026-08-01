@@ -405,8 +405,8 @@ export function clearChoiceLock(pokemon) {
 export function getPokemonScale(pokemon) {
     if (!pokemon) return 1;
     const h = pokemon.height || 10;
-    const ref = 7;
-    const min = 0.5;
-    const max = 2.2;
+    const ref = 5;
+    const min = 0.35;
+    const max = 3.0;
     return Math.max(min, Math.min(max, h / ref));
 }
