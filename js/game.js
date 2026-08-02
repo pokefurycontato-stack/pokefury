@@ -2492,6 +2492,10 @@ class PokeFuryGame {
     }
 
     async healAllPokemon() {
+        if (this.state !== 'overworld') {
+            this.showTransitionBanner('Não pode curar em batalha!');
+            return;
+        }
         if (!this.playerTeam) return;
         let healed = 0;
         for (const p of this.playerTeam) {
