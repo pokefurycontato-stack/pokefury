@@ -145,7 +145,7 @@ export class Overworld2D {
 
         const scaleX = containerW / mapW;
         const scaleY = containerH / mapH;
-        const scale = Math.min(scaleX, scaleY);
+        const scale = Math.max(scaleX, scaleY);
 
         const canvasEl = this.canvas;
         canvasEl.style.width = Math.floor(mapW * scale) + 'px';
@@ -163,15 +163,10 @@ export class Overworld2D {
         this.mapOffsetX = 0;
         this.mapOffsetY = 0;
 
-        const scaledW = Math.floor(mapW * scale);
-        const scaledH = Math.floor(mapH * scale);
-        const neonLeft = Math.floor((containerW - scaledW) / 2);
-        const neonTop = Math.floor((containerH - scaledH) / 2);
-
-        this.neonEl.style.left = neonLeft + 'px';
-        this.neonEl.style.top = neonTop + 'px';
-        this.neonEl.style.width = scaledW + 'px';
-        this.neonEl.style.height = scaledH + 'px';
+        this.neonEl.style.left = '0';
+        this.neonEl.style.top = '0';
+        this.neonEl.style.width = containerW + 'px';
+        this.neonEl.style.height = containerH + 'px';
     }
 
     setNeonColor(mapName) {
