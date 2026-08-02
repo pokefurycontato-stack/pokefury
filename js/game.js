@@ -3056,6 +3056,12 @@ class PokeFuryGame {
         });
 
         startBtn.onclick = () => {
+            if (!window.boostsManager || !window.boostsManager.isActive('vip')) {
+                statusEl.textContent = 'Auto Farm só para VIP!';
+                statusEl.style.color = '#f44336';
+                this.showTransitionBanner('Auto Farm disponível apenas para jogadores com VIP ativo!');
+                return;
+            }
             afk.start();
             startBtn.style.display = 'none';
             stopBtn.style.display = 'block';
