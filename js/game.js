@@ -3064,7 +3064,7 @@ class PokeFuryGame {
             row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 0;';
             row.innerHTML = `
                 <input type="checkbox" id="afk-rarity-${r.key}" style="accent-color:#e94560;width:12px;height:12px;">
-                <label for="afk-rarity-${r.key}" style="font-size:10px;font-weight:600;flex:1;cursor:pointer;">${r.label}</label>
+                <label for="afk-rarity-${r.key}" style="font-size:10px;font-weight:600;flex:1;cursor:pointer;color:#fff;">${r.label}</label>
                 <select class="afk-rarity-ball" data-rarity="${r.key}" style="display:none;width:90px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#fff;font-size:9px;padding:2px 3px;font-family:Inter;">
                     <option value="">Selecione</option>
                 </select>
