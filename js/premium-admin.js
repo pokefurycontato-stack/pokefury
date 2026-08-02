@@ -29,19 +29,27 @@ class PremiumAdmin {
             });
         });
 
-        // Image preview
-        document.getElementById('pf-image')?.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const preview = document.getElementById('pf-image-preview');
-                if (preview) {
-                    preview.src = URL.createObjectURL(file);
-                    preview.style.display = 'block';
+        // Image preview + click to open file dialog
+        const imageLabel = document.getElementById('pf-image-label');
+        const imageInput = document.getElementById('pf-image');
+        if (imageLabel && imageInput) {
+            imageLabel.addEventListener('click', (e) => {
+                e.preventDefault();
+                imageInput.click();
+            });
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const preview = document.getElementById('pf-image-preview');
+                    if (preview) {
+                        preview.src = URL.createObjectURL(file);
+                        preview.style.display = 'block';
+                    }
+                    const label = document.getElementById('pf-image-label');
+                    if (label) label.textContent = file.name;
                 }
-                const label = document.getElementById('pf-image-label');
-                if (label) label.textContent = file.name;
-            }
-        });
+            });
+        }
     }
 
     async open() {
