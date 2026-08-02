@@ -135,25 +135,25 @@ body {
 
 /* TOP BAR */
 #top-bar {
-    height: 48px; min-height: 48px;
+    height: 44px; min-height: 44px;
     background: #161b22; border-bottom: 1px solid #30363d;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px; z-index: 100;
+    padding: 0 12px; z-index: 100;
 }
-.top-bar-nav { display: flex; gap: 4px; }
+.top-bar-nav { display: flex; gap: 2px; flex-wrap: nowrap; overflow-x: auto; }
 .nav-btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px 14px; border: none; border-radius: 8px;
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border: none; border-radius: 6px;
     background: transparent; color: rgba(255,255,255,0.5);
-    font-size: 13px; font-weight: 500; font-family: inherit;
+    font-size: 12px; font-weight: 500; font-family: inherit;
     cursor: pointer; transition: all 0.2s; white-space: nowrap;
 }
 .nav-btn:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); }
 .nav-btn.active { background: rgba(233,69,96,0.15); color: #e94560; }
-.nav-icon { font-size: 15px; }
+.nav-icon { font-size: 13px; }
 .top-bar-right {
-    display: flex; align-items: center; gap: 12px;
-    color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+    color: rgba(255,255,255,0.5); font-size: 12px; font-weight: 500;
 }
 #location-name { color: #e94560; }
 
@@ -164,36 +164,36 @@ body {
 
 /* SIDEBAR */
 #sidebar {
-    width: 205px; min-width: 205px;
+    width: 18vw; min-width: 160px; max-width: 220px;
     background: #0f1520; border-right: 1px solid rgba(255,255,255,0.08);
     display: flex; flex-direction: column; overflow: hidden;
 }
 .sidebar-scroll {
-    flex: 1; overflow-y: auto; padding: 10px;
+    flex: 1; overflow-y: auto; padding: 8px;
     display: flex; flex-direction: column; gap: 2px;
 }
 
 /* Profile */
 .sidebar-profile {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px; background: rgba(255,255,255,0.03);
-    border-radius: 12px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px; background: rgba(255,255,255,0.03);
+    border-radius: 8px; margin-bottom: 6px;
 }
 .profile-avatar {
-    width: 44px; height: 44px; border-radius: 50%;
+    width: 36px; height: 36px; border-radius: 50%;
     background: rgba(233,69,96,0.15); border: 2px solid rgba(233,69,96,0.3);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     overflow: hidden;
 }
 .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.profile-name { font-size: 14px; font-weight: 700; color: #fff; }
-.profile-level { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+.profile-name { font-size: 12px; font-weight: 700; color: #fff; }
+.profile-level { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 1px; }
 .trainer-exp-bar {
     width: 100%;
-    height: 4px;
+    height: 3px;
     background: rgba(255,255,255,0.08);
     border-radius: 2px;
-    margin-top: 4px;
+    margin-top: 3px;
     overflow: hidden;
 }
 .trainer-exp-fill {
@@ -206,36 +206,36 @@ body {
 
 /* Currencies */
 .sidebar-currencies {
-    display: flex; flex-direction: column; gap: 4px;
-    padding: 8px 0; margin-bottom: 4px;
-    border-bottom: 1px solid #30363d;
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 6px 0; margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .currency-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 8px; border-radius: 8px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; border-radius: 6px;
     transition: background 0.2s;
 }
 .currency-row:hover { background: rgba(255,255,255,0.04); }
-.currency-icon { font-size: 16px; width: 20px; text-align: center; }
+.currency-icon { font-size: 14px; width: 18px; text-align: center; }
 .currency-icon.dia { filter: drop-shadow(0 0 4px #a855f7); }
 .currency-icon.gold { filter: drop-shadow(0 0 4px #eab308); }
 .currency-icon.silver { filter: drop-shadow(0 0 4px #94a3b8); }
-.currency-label { flex: 1; font-size: 12px; color: rgba(255,255,255,0.5); font-weight: 500; }
-.currency-val { font-size: 13px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.currency-label { flex: 1; font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 500; }
+.currency-val { font-size: 12px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
 
 /* Sidebar Sections */
-.sidebar-section { margin-bottom: 2px; }
+.sidebar-section { margin-bottom: 1px; }
 .section-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 10px; border-radius: 8px; cursor: pointer;
-    color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 600;
+    padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    color: rgba(255,255,255,0.6); font-size: 12px; font-weight: 600;
     transition: all 0.2s; user-select: none;
 }
 .section-header:hover { background: rgba(255,255,255,0.06); color: #fff; }
 .section-header.premium { color: #eab308; }
 .section-header.premium:hover { background: rgba(234,179,8,0.1); }
 .section-header .arrow {
-    font-size: 10px; transition: transform 0.2s; color: rgba(255,255,255,0.25);
+    font-size: 9px; transition: transform 0.2s; color: rgba(255,255,255,0.25);
 }
 .section-header.open .arrow { transform: rotate(90deg); }
 .section-items {
@@ -244,18 +244,18 @@ body {
 }
 .section-items.open { max-height: 200px; padding: 2px 4px 4px; }
 .item-btn {
-    display: block; width: 100%; padding: 8px 12px; border: none;
-    background: none; color: rgba(255,255,255,0.45); font-size: 12px;
-    font-family: inherit; text-align: left; border-radius: 6px;
+    display: block; width: 100%; padding: 6px 10px; border: none;
+    background: none; color: rgba(255,255,255,0.45); font-size: 11px;
+    font-family: inherit; text-align: left; border-radius: 5px;
     cursor: pointer; transition: all 0.2s;
 }
 .item-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
 
 /* Logout */
 .logout-btn {
-    margin-top: auto; padding: 10px; border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 8px; background: none; color: rgba(255,255,255,0.35);
-    font-size: 12px; font-family: inherit; cursor: pointer; transition: all 0.2s;
+    margin-top: auto; padding: 6px; border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 5px; background: none; color: rgba(255,255,255,0.3);
+    font-size: 10px; font-family: inherit; cursor: pointer; transition: all 0.2s;
 }
 .logout-btn:hover { border-color: #e94560; color: #e94560; background: rgba(233,69,96,0.06); }
 
@@ -326,23 +326,23 @@ body {
 
 /* RIGHT SIDEBAR */
 #right-sidebar {
-    width: 220px; min-width: 220px;
+    width: 18vw; min-width: 160px; max-width: 220px;
     background: #0f1520; border-left: 1px solid rgba(255,255,255,0.08);
     display: flex; flex-direction: column; overflow: hidden;
 }
 #right-sidebar .sidebar-scroll {
-    flex: 1; overflow-y: auto; padding: 10px;
-    display: flex; flex-direction: column; gap: 10px;
+    flex: 1; overflow-y: auto; padding: 8px;
+    display: flex; flex-direction: column; gap: 8px;
 }
 .right-section {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 8px; padding: 8px;
+    border-radius: 6px; padding: 6px;
 }
 .right-section-title {
-    font-size: 10px; font-weight: 700; color: #e94560;
+    font-size: 9px; font-weight: 700; color: #e94560;
     text-transform: uppercase; letter-spacing: 1px;
-    margin-bottom: 8px; padding-bottom: 4px;
+    margin-bottom: 6px; padding-bottom: 4px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     font-family: Inter, sans-serif;
 }
@@ -386,60 +386,60 @@ body {
 
 /* AFK Panel (Right Sidebar) */
 .afk-checkbox {
-    display: flex; align-items: center; gap: 6px;
-    cursor: pointer; margin-bottom: 5px; font-size: 11px;
+    display: flex; align-items: center; gap: 5px;
+    cursor: pointer; margin-bottom: 4px; font-size: 10px;
     font-weight: 600; color: #fff; font-family: Inter, sans-serif;
 }
-.afk-checkbox input[type="checkbox"] { accent-color: #e94560; width: 13px; height: 13px; }
-.afk-sub-option { padding-left: 4px; margin-bottom: 4px; }
+.afk-checkbox input[type="checkbox"] { accent-color: #e94560; width: 12px; height: 12px; }
+.afk-sub-option { padding-left: 3px; margin-bottom: 3px; }
 .afk-sub-option.hidden { display: none; }
 .afk-sub-option input[type="range"] { width: 100%; accent-color: #e94560; }
 .afk-slider-labels {
     display: flex; justify-content: space-between;
-    font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 2px;
+    font-size: 8px; color: rgba(255,255,255,0.4); margin-top: 2px;
 }
 .afk-slider-labels span:nth-child(2) { color: #e94560; font-weight: 700; }
 .afk-sub-option select {
     width: 100%; background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 4px;
-    color: #fff; font-size: 10px; padding: 3px; font-family: Inter;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 3px;
+    color: #fff; font-size: 9px; padding: 2px; font-family: Inter;
 }
 .afk-heal-team {
-    margin-top: 4px; padding: 5px;
+    margin-top: 3px; padding: 4px;
     background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.2);
-    border-radius: 6px;
+    border-radius: 5px;
 }
 .afk-heal-label { color: #4caf50 !important; margin-bottom: 0 !important; }
 .afk-heal-label input { accent-color: #4caf50 !important; }
 .afk-heal-hint {
-    font-size: 9px; color: rgba(255,255,255,0.35);
-    margin-top: 2px; padding-left: 19px;
+    font-size: 8px; color: rgba(255,255,255,0.35);
+    margin-top: 2px; padding-left: 17px;
 }
-.afk-buttons { display: flex; gap: 6px; margin-top: 8px; }
+.afk-buttons { display: flex; gap: 4px; margin-top: 6px; }
 .afk-btn-start {
-    flex: 1; padding: 7px; background: linear-gradient(135deg, #e94560, #c23152);
-    border: none; border-radius: 6px; color: #fff; font-size: 11px;
+    flex: 1; padding: 6px; background: linear-gradient(135deg, #e94560, #c23152);
+    border: none; border-radius: 5px; color: #fff; font-size: 10px;
     font-weight: 700; cursor: pointer; font-family: Inter;
 }
 .afk-btn-stop {
-    flex: 1; padding: 7px; background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
-    color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700;
+    flex: 1; padding: 6px; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 5px;
+    color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 700;
     cursor: pointer; font-family: Inter;
 }
 .afk-btn-stop.hidden { display: none; }
 .afk-status {
-    font-size: 10px; color: rgba(255,255,255,0.35);
-    text-align: center; margin-top: 4px;
+    font-size: 9px; color: rgba(255,255,255,0.35);
+    text-align: center; margin-top: 3px;
     font-family: Inter, sans-serif;
 }
 
 /* Team (Right Sidebar) */
 .team-heal-btn {
-    width: 100%; padding: 7px; margin-top: 6px;
+    width: 100%; padding: 6px; margin-top: 4px;
     background: linear-gradient(135deg, #e94560, #c23152);
-    border: none; border-radius: 6px; color: #fff;
-    font-size: 11px; font-weight: 700; cursor: pointer;
+    border: none; border-radius: 5px; color: #fff;
+    font-size: 10px; font-weight: 700; cursor: pointer;
     font-family: Inter;
 }
 #right-team-list {
@@ -448,61 +448,61 @@ body {
 
 /* Chat (Left Sidebar) */
 .sidebar-chat {
-    margin-top: 8px; padding-top: 8px;
+    margin-top: 6px; padding-top: 6px;
     border-top: 1px solid rgba(255,255,255,0.06);
 }
 #chat-container {
-    display: flex; flex-direction: column; gap: 4px;
+    display: flex; flex-direction: column; gap: 3px;
 }
 #chat-tabs {
     display: flex; gap: 2px;
 }
 .chat-tab {
-    flex: 1; padding: 4px 6px; border: none; border-radius: 4px;
+    flex: 1; padding: 3px 5px; border: none; border-radius: 3px;
     background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.4);
-    font-size: 9px; font-weight: 700; cursor: pointer;
+    font-size: 8px; font-weight: 700; cursor: pointer;
     font-family: Inter; transition: all 0.2s;
-    display: flex; align-items: center; gap: 4px;
+    display: flex; align-items: center; gap: 3px;
 }
 .chat-tab.active { background: rgba(233,69,96,0.15); color: #e94560; }
 .chat-tab-dot {
-    width: 6px; height: 6px; border-radius: 50%;
+    width: 5px; height: 5px; border-radius: 50%;
     background: #4caf50; display: inline-block;
 }
 .chat-tab-dot.trade { background: #2196f3; }
 .chat-badge {
-    font-size: 8px; background: #e94560; color: #fff;
-    padding: 1px 4px; border-radius: 8px; margin-left: auto;
+    font-size: 7px; background: #e94560; color: #fff;
+    padding: 1px 3px; border-radius: 6px; margin-left: auto;
 }
 .chat-badge.hidden { display: none; }
 #chat-messages {
-    flex: 1; overflow-y: auto; max-height: 120px;
-    font-size: 10px; color: rgba(255,255,255,0.5);
+    flex: 1; overflow-y: auto; max-height: 100px;
+    font-size: 9px; color: rgba(255,255,255,0.5);
     font-family: Inter; padding: 2px 0;
 }
-#chat-messages .chat-msg { margin-bottom: 2px; line-height: 1.3; }
+#chat-messages .chat-msg { margin-bottom: 1px; line-height: 1.3; }
 #chat-messages .chat-msg .chat-author { color: #e94560; font-weight: 600; }
 #chat-input-area {
-    display: flex; gap: 4px;
+    display: flex; gap: 3px;
 }
 #chat-input {
-    flex: 1; padding: 5px 8px; background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
-    color: #fff; font-size: 10px; font-family: Inter;
+    flex: 1; padding: 4px 6px; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 3px;
+    color: #fff; font-size: 9px; font-family: Inter;
 }
 #chat-input::placeholder { color: rgba(255,255,255,0.25); }
 #chat-send {
-    padding: 5px 8px; background: #e94560; border: none;
-    border-radius: 4px; color: #fff; font-size: 11px;
+    padding: 4px 6px; background: #e94560; border: none;
+    border-radius: 3px; color: #fff; font-size: 10px;
     cursor: pointer; font-weight: 700;
 }
 
 /* Switch Character */
 .switch-char-btn {
-    margin-top: 4px; padding: 8px;
+    margin-top: 4px; padding: 6px;
     background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 6px; color: rgba(255,255,255,0.5);
-    font-size: 11px; font-family: Inter; cursor: pointer;
+    border-radius: 5px; color: rgba(255,255,255,0.5);
+    font-size: 10px; font-family: Inter; cursor: pointer;
 }
 .switch-char-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
 
