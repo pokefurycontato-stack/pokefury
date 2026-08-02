@@ -289,23 +289,32 @@ class PremiumAdmin {
             return;
         }
 
-        let imageUrl = document.getElementById('pf-image-preview').src || '';
+        let imageUrl = '';
+
+        // Keep existing image if editing and no new file selected
+        if (id && !file) {
+            const existing = this.allProducts.find(p => p.id === id);
+            imageUrl = existing?.image_url || '';
+        }
 
         // Upload image if new file selected
         if (file) {
             try {
                 const ext = file.name.split('.').pop() || 'png';
                 const filename = `store-products/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-                const { error: uploadError } = await window.db.storage
+                console.log('[PremiumAdmin] uploading image:', filename);
+                const { data: uploadData, error: uploadError } = await window.db.storage
                     .from('sprites')
                     .upload(filename, file, { contentType: file.type, upsert: true });
                 if (uploadError) throw uploadError;
+                console.log('[PremiumAdmin] upload success:', uploadData);
 
                 const { data: urlData } = window.db.storage.from('sprites').getPublicUrl(filename);
                 imageUrl = urlData.publicUrl;
+                console.log('[PremiumAdmin] image URL:', imageUrl);
             } catch (e) {
                 console.error('[PremiumAdmin] image upload failed:', e);
-                this._toast('Erro no upload da imagem!', 'error');
+                this._toast('Erro no upload da imagem: ' + e.message, 'error');
                 return;
             }
         }
@@ -320,21 +329,27 @@ class PremiumAdmin {
             active: true
         };
 
+        console.log('[PremiumAdmin] saving product:', productData);
+
         try {
             if (id) {
                 // Update existing
-                const { error } = await window.db
+                const { data, error } = await window.db
                     .from('premium_products')
                     .update(productData)
-                    .eq('id', id);
+                    .eq('id', id)
+                    .select();
                 if (error) throw error;
+                console.log('[PremiumAdmin] updated product:', data);
                 this._toast('Produto atualizado!');
             } else {
                 // Create new
-                const { error } = await window.db
+                const { data, error } = await window.db
                     .from('premium_products')
-                    .insert([productData]);
+                    .insert([productData])
+                    .select();
                 if (error) throw error;
+                console.log('[PremiumAdmin] created product:', data);
                 this._toast('Produto criado!');
             }
 
