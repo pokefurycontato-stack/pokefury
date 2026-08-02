@@ -5140,6 +5140,21 @@ class PokeFuryGame {
         document.getElementById('gym-leader-type').textContent = `Tipo: ${leader.type || 'Desconhecido'}`;
         document.getElementById('gym-leader-badge').textContent = `🏅 ${leader.badge_name || 'Sem badge'}`;
 
+        const typeColors = {
+            'Normal': '#A8A878', 'Fire': '#FF4500', 'Water': '#1E90FF', 'Grass': '#228B22',
+            'Electric': '#FFD700', 'Ice': '#98D8E8', 'Fighting': '#C03028', 'Poison': '#9370DB',
+            'Ground': '#DEB887', 'Flying': '#A890F0', 'Psychic': '#FF69B4', 'Bug': '#A8B820',
+            'Rock': '#8B7355', 'Ghost': '#7B68EE', 'Dragon': '#7038F8', 'Dark': '#705848',
+            'Steel': '#B8B8D0', 'Fairy': '#EE99AC'
+        };
+
+        const spriteCircle = document.getElementById('gym-leader-sprite');
+        if (spriteCircle) {
+            const color = typeColors[leader.type] || '#333';
+            spriteCircle.style.background = color;
+            spriteCircle.style.boxShadow = `0 0 20px ${color}80`;
+        }
+
         const img = document.getElementById('gym-leader-img');
         if (img) {
             img.src = leader.sprite_url || '';
