@@ -1,9 +1,9 @@
 -- ============================================================
--- FIX PROFILES TABLE - versão robusta
--- Resolve erro 500 na tabela profiles
+-- FIX PROFILES RLS - SEM RECURSÃO
+-- Remove o loop infinito da política admin
 -- ============================================================
 
--- 1. Criar tabela profiles se não existir
+-- 1. Garantir que a tabela existe
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username TEXT,
@@ -12,37 +12,21 @@ CREATE TABLE IF NOT EXISTS profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Adicionar colunas uma por uma (seguro)
-DO $$ BEGIN
-    ALTER TABLE profiles ADD COLUMN IF NOT EXISTS username TEXT;
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
+DO $$ BEGIN ALTER TABLE profiles ADD COLUMN IF NOT EXISTS username TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE profiles ADD COLUMN IF NOT EXISTS display_email TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
-DO $$ BEGIN
-    ALTER TABLE profiles ADD COLUMN IF NOT EXISTS display_email TEXT;
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
-
-DO $$ BEGIN
-    ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
-
-DO $$ BEGIN
-    ALTER TABLE profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
-
--- 3. Índice único para username
+-- 2. Índice único para username
 DO $$ BEGIN
     CREATE UNIQUE INDEX IF NOT EXISTS profiles_username_unique ON profiles(username);
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
--- 4. Habilitar RLS
+-- 3. Habilitar RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- 5. Remover TODAS as políticas antigas e recriar
+-- 4. Remover TODAS as políticas
 DO $$ BEGIN
     DROP POLICY IF EXISTS "profiles_select_public" ON profiles;
     DROP POLICY IF EXISTS "profiles_insert_own" ON profiles;
@@ -57,7 +41,7 @@ DO $$ BEGIN
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
--- 6. Criar políticas novas
+-- 5. Criar políticas SEM recursão
 CREATE POLICY "profiles_select_public"
     ON profiles FOR SELECT
     USING (true);
@@ -69,9 +53,3 @@ CREATE POLICY "profiles_insert_own"
 CREATE POLICY "profiles_update_own"
     ON profiles FOR UPDATE
     USING (auth.uid() = id);
-
-CREATE POLICY "profiles_admin_all"
-    ON profiles FOR ALL
-    USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
-    );
