@@ -513,3 +513,5 @@ class GymLeadersAdmin {
         }
     }
 }
+
+window.GymLeadersAdmin = GymLeadersAdmin;
