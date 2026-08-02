@@ -232,17 +232,17 @@
                         </div>
                     </div>
 
-                    <!-- Admin Panel -->
-                    <div id="admin-panel" class="sidebar-section hidden">
-                        <div class="sidebar-section-title">Admin</div>
-                        <div class="sidebar-section-items">
-                            <button class="item-btn admin-btn" id="admin-btn-regions">Regioes</button>
-                            <button class="item-btn admin-btn" id="admin-btn-maps">Mapas</button>
-                            <button class="item-btn admin-btn" id="admin-btn-donate">Doar</button>
-                            <button class="item-btn admin-btn" id="admin-btn-events" style="background:linear-gradient(135deg,#e94560,#c23152);">Eventos</button>
-                            <button class="item-btn admin-btn" id="admin-btn-premium">💎 Loja Premium</button>
-                        </div>
-                    </div>
+<!-- Admin Panel -->
+<div id="admin-panel" class="sidebar-section hidden">
+    <div class="sidebar-section-title">Admin</div>
+    <div class="sidebar-section-items">
+        <button class="item-btn admin-btn" id="admin-btn-regions">Regioes</button>
+        <button class="item-btn admin-btn" id="admin-btn-gym-leaders">Líderes de Ginásio</button>
+        <button class="item-btn admin-btn" id="admin-btn-donate">Doar</button>
+        <button class="item-btn admin-btn" id="admin-btn-events" style="background:linear-gradient(135deg,#e94560,#c23152);">Eventos</button>
+        <button class="item-btn admin-btn" id="admin-btn-premium">💎 Loja Premium</button>
+    </div>
+</div>
 
                     <!-- Logout -->
                     <button id="btn-switch-character" class="switch-char-btn">Trocar Personagem</button>
@@ -545,6 +545,40 @@
                 <div id="region-detail" class="region-detail">
                     <div class="region-empty">
                         <p>Selecione uma regiao ou crie uma nova</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== GYM LEADERS ADMIN OVERLAY ==================== -->
+    <div id="gym-admin-overlay" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:200;background:#0a0a1e;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(20,20,40,0.98);border-bottom:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button id="gym-admin-close" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:16px;">✕</button>
+                <span style="color:#fff;font-size:14px;font-weight:700;">Gerenciar Líderes de Ginásio</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button id="gym-admin-add-region" style="padding:8px 16px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Nova Região</button>
+            </div>
+        </div>
+        <div style="flex:1;display:flex;overflow:hidden;">
+            <div style="width:240px;background:rgba(15,15,35,0.95);border-right:1px solid rgba(255,255,255,0.1);overflow-y:auto;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Regiões</div>
+                <div id="gym-admin-regions-list"></div>
+            </div>
+            <div style="width:280px;background:rgba(20,20,40,0.95);border-right:1px solid rgba(255,255,255,0.1);overflow-y:auto;padding:12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <span style="font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;">Líderes</span>
+                    <button id="gym-admin-add-leader" style="padding:4px 10px;background:rgba(76,175,80,0.2);border:1px solid rgba(76,175,80,0.4);border-radius:4px;color:#4caf50;font-size:10px;font-weight:700;cursor:pointer;">+ Adicionar</button>
+                </div>
+                <div id="gym-admin-leaders-list"></div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:16px;background:rgba(25,25,50,0.95);">
+                <div id="gym-admin-editor">
+                    <div style="text-align:center;color:rgba(255,255,255,0.3);margin-top:40px;">
+                        <div style="font-size:48px;margin-bottom:12px;">🏟️</div>
+                        <p>Selecione um líder ou crie uma nova região</p>
                     </div>
                 </div>
             </div>
@@ -976,6 +1010,7 @@
 
     <script src="js/premium-store.js"></script>
     <script src="js/premium-admin.js"></script>
+    <script src="js/gym-leaders-admin.js"></script>
     <script src="js/boosts.js"></script>
 </body>
 </html>

@@ -2859,20 +2859,13 @@ class PokeFuryGame {
             regionsBtn.onclick = () => this.openRegionManager();
         }
 
-        const mapsBtn = document.getElementById('admin-btn-maps');
-        if (mapsBtn) {
-            mapsBtn.onclick = () => {
-                const overlay = document.getElementById('map-editor-overlay');
-                overlay.classList.remove('hidden');
-                if (!this.mapEditor) {
-                    this.mapEditor = new MapEditor();
-                    this.setupMapEditorEvents();
+        const gymLeadersBtn = document.getElementById('admin-btn-gym-leaders');
+        if (gymLeadersBtn) {
+            gymLeadersBtn.onclick = () => {
+                if (!window.gymLeadersAdmin) {
+                    window.gymLeadersAdmin = new GymLeadersAdmin();
                 }
-                this.mapEditor.resize(
-                    overlay.querySelector('.editor-canvas-wrap').clientWidth,
-                    overlay.querySelector('.editor-canvas-wrap').clientHeight
-                );
-                this.loadSavedMapsList();
+                window.gymLeadersAdmin.open();
             };
         }
 
