@@ -612,6 +612,7 @@ class PokeFuryGame {
                 if (this.currentRegion) {
                     this.currentRegionMaps = await this.regionManager.loadRegionMaps(this.currentRegion.id);
                     this.currentMap = this.currentRegionMaps.find(m => m.id === progress.current_map_id);
+                    this.updateBiomeGrid();
 
                     if (this.currentMap && this.overworld2d) {
                         await this.overworld2d.setCurrentMap(this.currentMap);
@@ -639,6 +640,7 @@ class PokeFuryGame {
             this.currentRegion = result.region;
             this.currentMap = result.map;
             this.currentRegionMaps = await this.regionManager.loadRegionMaps(this.currentRegion.id);
+            this.updateBiomeGrid();
 
             if (this.overworld2d) {
                 await this.overworld2d.setCurrentMap(this.currentMap);
@@ -2405,6 +2407,40 @@ class PokeFuryGame {
 
     async saveTeam() {
         await window.GameData.saveTeam(this.playerTeam);
+    }
+
+    updateBiomeGrid() {
+        const grid = document.getElementById('biome-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const maps = this.currentRegionMaps || [];
+        maps.forEach(map => {
+            const thumb = document.createElement('div');
+            thumb.className = 'biome-thumb';
+
+            if (map.image_url) {
+                const img = document.createElement('img');
+                img.src = map.image_url;
+                img.alt = map.name;
+                img.loading = 'lazy';
+                img.onerror = () => { img.style.display = 'none'; };
+                thumb.appendChild(img);
+            }
+
+            const label = document.createElement('div');
+            label.className = 'biome-thumb-label';
+            label.textContent = map.name;
+            thumb.appendChild(label);
+
+            thumb.addEventListener('click', () => {
+                if (map.id !== this.currentMap?.id && this.overworld2d) {
+                    this.overworld2d.teleportToMap(map);
+                }
+            });
+
+            grid.appendChild(thumb);
+        });
     }
 
     updatePartyPanel() {

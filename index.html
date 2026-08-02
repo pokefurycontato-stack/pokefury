@@ -247,18 +247,8 @@
                     <!-- Logout -->
                     <button id="btn-switch-character" class="switch-char-btn">Trocar Personagem</button>
 
-                    <!-- Chat -->
-                    <div class="sidebar-chat">
-                        <div class="chat-tabs">
-                            <button class="chat-tab active" data-channel="global">💬 GLOBAL</button>
-                            <button class="chat-tab" data-channel="trade">🔄 TRADE</button>
-                        </div>
-                        <div id="chat-messages" class="chat-messages"></div>
-                        <div class="chat-input-row">
-                            <input type="text" id="chat-input" placeholder="Digite sua mensagem..." maxlength="200">
-                            <button id="chat-send-btn" class="chat-send">➤</button>
-                        </div>
-                    </div>
+                    <!-- Chat Container (populated by chat.js) -->
+                    <div class="sidebar-chat"></div>
 
                     <button id="btn-logout" class="logout-btn">Sair da conta</button>
                 </div>
@@ -499,7 +489,6 @@
                     <div id="party-panel" class="right-section">
                         <div class="right-section-title">TIME</div>
                         <div id="party-list" style="display:flex;flex-direction:column;gap:4px"></div>
-                        <button id="right-team-heal-btn" class="team-heal-btn">TIME CURADO!</button>
                     </div>
 
                 </div>

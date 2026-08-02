@@ -20,8 +20,8 @@ export class Chat {
     }
 
     buildUI() {
-        const container = document.getElementById('chat-container');
-        if (container) return;
+        const existing = document.getElementById('chat-container');
+        if (existing) return;
 
         const html = `
         <div id="chat-container">
@@ -42,9 +42,12 @@ export class Chat {
             </div>
         </div>`;
 
-        const layer = document.getElementById('ui-layer');
-        if (layer) {
-            layer.insertAdjacentHTML('beforeend', html);
+        const sidebarChat = document.querySelector('.sidebar-chat');
+        if (sidebarChat) {
+            sidebarChat.innerHTML = html;
+        } else {
+            const layer = document.getElementById('ui-layer');
+            if (layer) layer.insertAdjacentHTML('beforeend', html);
         }
 
         this.setupEvents();
