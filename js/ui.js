@@ -647,13 +647,12 @@ export function stopBattleVideo() {
 function syncBattleContainerToCanvas() {
     const gameCanvas = document.getElementById('game-canvas');
     if (!gameCanvas || !battlePokemonContainer) return;
-    const rect = gameCanvas.getBoundingClientRect();
     const mainArea = document.getElementById('main-area');
-    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0 };
-    battlePokemonContainer.style.left = (rect.left - mainRect.left) + 'px';
-    battlePokemonContainer.style.top = (rect.top - mainRect.top) + 'px';
-    battlePokemonContainer.style.width = rect.width + 'px';
-    battlePokemonContainer.style.height = rect.height + 'px';
+    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    battlePokemonContainer.style.left = '0';
+    battlePokemonContainer.style.top = '0';
+    battlePokemonContainer.style.width = mainRect.width + 'px';
+    battlePokemonContainer.style.height = mainRect.height + 'px';
 }
 
 function ensureBattlePokemonContainer() {
@@ -713,13 +712,12 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     }
     el.style.display = 'block';
 
-    const gameCanvas = document.getElementById('game-canvas');
-    const canvasW = gameCanvas ? gameCanvas.width : 1024;
-    const canvasH = gameCanvas ? gameCanvas.height : 768;
-    const containerW = container.offsetWidth || canvasW;
-    const containerH = container.offsetHeight || canvasH;
-    const sx = containerW / canvasW;
-    const sy = containerH / canvasH;
+    const mainArea = document.getElementById('main-area');
+    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { width: 1024, height: 768 };
+    const canvasW = 1024;
+    const canvasH = 768;
+    const sx = mainRect.width / canvasW;
+    const sy = mainRect.height / canvasH;
 
     const maxDim = Math.round(140 * sizeScale);
     el.style.width = Math.round(maxDim * sx) + 'px';

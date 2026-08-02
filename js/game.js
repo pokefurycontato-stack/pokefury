@@ -2335,14 +2335,11 @@ class PokeFuryGame {
 
     positionBattleScreen() {
         const battleEl = document.getElementById('battle-screen');
-        if (battleEl && this.canvas) {
-            const rect = this.canvas.getBoundingClientRect();
-            const mainArea = document.getElementById('main-area');
-            const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0 };
-            battleEl.style.left = (rect.left - mainRect.left) + 'px';
-            battleEl.style.top = (rect.top - mainRect.top) + 'px';
-            battleEl.style.width = rect.width + 'px';
-            battleEl.style.height = rect.height + 'px';
+        if (battleEl) {
+            battleEl.style.left = '0';
+            battleEl.style.top = '0';
+            battleEl.style.width = '100%';
+            battleEl.style.height = '100%';
         }
     }
 
