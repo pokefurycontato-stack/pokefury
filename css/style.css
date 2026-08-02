@@ -353,12 +353,15 @@ body {
 
 /* Right Minimap */
 #right-minimap {
-    position: relative; cursor: pointer; border-radius: 6px;
+    position: sticky; top: 0; z-index: 10;
+    cursor: pointer; border-radius: 6px;
     overflow: hidden; border: 1px solid rgba(255,255,255,0.08);
-    transition: transform 0.2s;
+    flex-shrink: 0;
+    background: #0f1520;
+    max-height: 150px;
 }
-#right-minimap:hover { transform: scale(1.02); }
-#right-minimap-img { width: 100%; display: block; border-radius: 4px; }
+#right-minimap:hover { opacity: 0.9; }
+#right-minimap-img { width: 100%; display: block; border-radius: 4px; object-fit: cover; }
 #right-minimap-dot {
     position: absolute; width: 6px; height: 6px; border-radius: 50%;
     background: #00ff44; border: 1px solid #fff;
