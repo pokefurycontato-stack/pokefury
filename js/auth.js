@@ -174,7 +174,13 @@ async function handleRegister() {
             return;
         }
         if (data.user) {
-            await window.db.from('profiles').upsert({ id: data.user.id, username, display_email: email }, { onConflict: 'id' }).catch(() => {});
+            const { error: profileError } = await window.db.from('profiles').upsert(
+                { id: data.user.id, username, display_email: email },
+                { onConflict: 'id' }
+            );
+            if (profileError) {
+                console.error('[PokeFury Auth] Profile insert error:', profileError);
+            }
         }
         console.log('[PokeFury Auth] Register OK, user:', data.user.id);
         window.GameData.setUserId(data.user.id);
