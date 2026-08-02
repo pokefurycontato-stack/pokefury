@@ -246,6 +246,20 @@
 
                     <!-- Logout -->
                     <button id="btn-switch-character" class="switch-char-btn">Trocar Personagem</button>
+
+                    <!-- Chat -->
+                    <div class="sidebar-chat">
+                        <div class="chat-tabs">
+                            <button class="chat-tab active" data-channel="global">💬 GLOBAL</button>
+                            <button class="chat-tab" data-channel="trade">🔄 TRADE</button>
+                        </div>
+                        <div id="chat-messages" class="chat-messages"></div>
+                        <div class="chat-input-row">
+                            <input type="text" id="chat-input" placeholder="Digite sua mensagem..." maxlength="200">
+                            <button id="chat-send-btn" class="chat-send">➤</button>
+                        </div>
+                    </div>
+
                     <button id="btn-logout" class="logout-btn">Sair da conta</button>
                 </div>
             </aside>
@@ -254,7 +268,7 @@
             <main id="main-area">
                 <video id="game-bg-video" autoplay loop muted playsinline></video>
                 <canvas id="game-canvas"></canvas>
-                <div id="worldmap-minimap" class="hidden" onclick="if(window.openWorldMap)window.openWorldMap()">
+                <div id="worldmap-minimap" class="hidden" style="display:none!important">>
                     <img id="worldmap-minimap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" alt="Mapa Mundial">
                     <div id="worldmap-minimap-dot"></div>
                     <span id="worldmap-minimap-label">🌍 Mapa Mundial</span>
@@ -262,61 +276,6 @@
                 <div id="map-nav-canvas" class="hidden"></div>
 
                     <div id="ui-layer">
-                    <div id="party-panel" style="position:absolute;top:50%;left:212px;transform:translateY(-50%);width:220px;background:rgba(10,10,30,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;z-index:15;pointer-events:auto;max-height:80vh;overflow-y:auto">
-                        <div style="font-family:Inter,sans-serif;font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08)">Time</div>
-                        <div id="party-list" style="display:flex;flex-direction:column;gap:4px"></div>
-                    </div>
-
-                    <!-- AFK Panel -->
-                    <div id="afk-panel" style="position:absolute;top:50%;right:16px;transform:translateY(-50%);width:210px;background:rgba(10,10,30,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px;z-index:15;pointer-events:auto;max-height:85vh;overflow-y:auto;font-family:Inter,sans-serif;color:#fff">
-                        <div style="font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08)">Auto Farm</div>
-
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px;font-size:11px;font-weight:600;">
-                            <input type="checkbox" id="afk-auto-search" style="accent-color:#e94560;width:14px;height:14px;"> Procurar batalhas
-                        </label>
-
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px;font-size:11px;font-weight:600;">
-                            <input type="checkbox" id="afk-auto-battle" style="accent-color:#e94560;width:14px;height:14px;"> Batalhar automático
-                        </label>
-
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;font-size:11px;font-weight:600;">
-                            <input type="checkbox" id="afk-auto-heal" style="accent-color:#e94560;width:14px;height:14px;"> Auto cura
-                        </label>
-                        <div id="afk-heal-slider-wrap" style="display:none;margin-bottom:6px;padding-left:4px;">
-                            <input type="range" id="afk-heal-slider" min="10" max="90" value="40" style="width:100%;accent-color:#e94560;">
-                            <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px;">
-                                <span>10%</span>
-                                <span id="afk-heal-val" style="color:#e94560;font-weight:700;">40%</span>
-                                <span>90%</span>
-                            </div>
-                        </div>
-                        <div id="afk-heal-potion-wrap" style="display:none;margin-bottom:6px;padding-left:4px;">
-                            <select id="afk-heal-potion" style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#fff;font-size:10px;padding:3px;font-family:Inter;">
-                                <option value="" style="background:#1a1a2e;color:#fff;">Selecione poção</option>
-                            </select>
-                            <div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;">Usa a melhor opção (cura vs poção)</div>
-                        </div>
-
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;font-size:11px;font-weight:600;">
-                            <input type="checkbox" id="afk-auto-capture" style="accent-color:#e94560;width:14px;height:14px;"> Captura automática
-                        </label>
-                        <div id="afk-capture-options" style="display:none;margin-bottom:6px;">
-                            <div id="afk-rarity-list" style="display:flex;flex-direction:column;gap:3px;"></div>
-                        </div>
-
-                        <div id="afk-heal-anywhere-wrap" style="display:none;margin-top:4px;margin-bottom:6px;padding:6px;background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.2);border-radius:6px;">
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:600;color:#4caf50;">
-                                <input type="checkbox" id="afk-auto-heal-team" style="accent-color:#4caf50;width:14px;height:14px;"> Curar time completo após batalha
-                            </label>
-                            <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:3px;padding-left:20px;">Cura todos osPokémon se algum estiver ferido</div>
-                        </div>
-
-                        <div style="display:flex;gap:6px;margin-top:8px;">
-                            <button id="afk-start-btn" style="flex:1;padding:8px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">INICIAR</button>
-                            <button id="afk-stop-btn" style="flex:1;padding:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:rgba(255,255,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;display:none;">PARAR</button>
-                        </div>
-                        <div id="afk-status" style="font-size:10px;color:rgba(255,255,255,0.4);text-align:center;margin-top:4px;">Parado</div>
-                    </div>
                     <!-- Battle Screen -->
                     <div id="battle-screen" class="hidden">
                         <div id="battle-ui">
@@ -490,6 +449,62 @@
                     </div>
                 </div>
             </main>
+
+            <!-- RIGHT SIDEBAR -->
+            <aside id="right-sidebar">
+                <div class="sidebar-scroll">
+
+                    <!-- Minimap -->
+                    <div id="right-minimap" class="right-section" onclick="if(window.openWorldMap)window.openWorldMap()">
+                        <img id="right-minimap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" alt="Mapa Mundial">
+                        <div id="right-minimap-dot"></div>
+                        <span class="minimap-label">🌍 Mapa Mundial</span>
+                    </div>
+
+                    <!-- Biome Grid -->
+                    <div class="right-section">
+                        <div class="right-section-title">Biomas</div>
+                        <div id="biome-grid" class="biome-grid"></div>
+                    </div>
+
+                    <!-- Auto Farm -->
+                    <div id="afk-panel" class="right-section">
+                        <div class="right-section-title">AUTO FARM</div>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-search"> Procurar batalhas</label>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-battle"> Batalhar automático</label>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-heal"> Auto cura</label>
+                        <div id="afk-heal-slider-wrap" class="afk-sub-option hidden">
+                            <input type="range" id="afk-heal-slider" min="10" max="90" value="40">
+                            <div class="afk-slider-labels"><span>10%</span><span id="afk-heal-val">40%</span><span>90%</span></div>
+                        </div>
+                        <div id="afk-heal-potion-wrap" class="afk-sub-option hidden">
+                            <select id="afk-heal-potion"><option value="">Selecione poção</option></select>
+                        </div>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-capture"> Captura automática</label>
+                        <div id="afk-capture-options" class="afk-sub-option hidden">
+                            <div id="afk-rarity-list"></div>
+                        </div>
+                        <div id="afk-heal-anywhere-wrap" class="afk-sub-option hidden afk-heal-team">
+                            <label class="afk-checkbox afk-heal-label"><input type="checkbox" id="afk-auto-heal-team"> Curar time completo após batalha</label>
+                            <div class="afk-heal-hint">Cura todos os Pokémon se algum estiver ferido</div>
+                        </div>
+                        <div class="afk-buttons">
+                            <button id="afk-start-btn" class="afk-btn-start">INICIAR</button>
+                            <button id="afk-stop-btn" class="afk-btn-stop hidden">PARAR</button>
+                        </div>
+                        <div id="afk-status" class="afk-status">Parado</div>
+                    </div>
+
+                    <!-- Team -->
+                    <div id="party-panel" class="right-section">
+                        <div class="right-section-title">TIME</div>
+                        <div id="party-list" style="display:flex;flex-direction:column;gap:4px"></div>
+                        <button id="right-team-heal-btn" class="team-heal-btn">TIME CURADO!</button>
+                    </div>
+
+                </div>
+            </aside>
+
         </div>
     </div>
 
