@@ -828,10 +828,12 @@ class PokeFuryGame {
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
         const clipRect = this.getBattleClipRect();
-        const dw = clipRect ? clipRect.w : this.canvas.offsetWidth;
-        const dh = clipRect ? clipRect.h : this.canvas.offsetHeight;
-        const dx = clipRect ? clipRect.x : 0;
-        const dy = clipRect ? clipRect.y : 0;
+        const mainArea = document.getElementById('main-area');
+        const mainRect = mainArea ? mainArea.getBoundingClientRect() : { width: 1024, height: 768 };
+        const dw = mainRect.width;
+        const dh = mainRect.height;
+        const dx = 0;
+        const dy = 0;
         let playerEndX, playerEndY;
         if (this.currentMap && this.currentMap.battle_player_x != null) {
             playerEndX = dx + this.currentMap.battle_player_x * dw;
@@ -839,17 +841,6 @@ class PokeFuryGame {
         } else {
             playerEndX = dx + 0.25 * dw;
             playerEndY = dy + 0.75 * dh;
-        }
-
-        const mainArea = document.getElementById('main-area');
-        const wrapper = document.getElementById('game-wrapper');
-        if (mainArea && wrapper) {
-            const mainRect = mainArea.getBoundingClientRect();
-            const wrapRect = wrapper.getBoundingClientRect();
-            const canvasLeft = this.canvas ? this.canvas.offsetLeft : 0;
-            const canvasTop = this.canvas ? this.canvas.offsetTop : 0;
-            playerEndX += canvasLeft + (mainRect.left - wrapRect.left);
-            playerEndY += canvasTop + (mainRect.top - wrapRect.top);
         }
 
         const isShinyPlayer = activePlayer.isShiny;
@@ -968,10 +959,12 @@ class PokeFuryGame {
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
             const clipRect2 = this.getBattleClipRect();
-            const dw2 = clipRect2 ? clipRect2.w : this.canvas.offsetWidth;
-            const dh2 = clipRect2 ? clipRect2.h : this.canvas.offsetHeight;
-            const dx2 = clipRect2 ? clipRect2.x : 0;
-            const dy2 = clipRect2 ? clipRect2.y : 0;
+            const mainArea2 = document.getElementById('main-area');
+            const mainRect2 = mainArea2 ? mainArea2.getBoundingClientRect() : { width: 1024, height: 768 };
+            const dw2 = mainRect2.width;
+            const dh2 = mainRect2.height;
+            const dx2 = 0;
+            const dy2 = 0;
             let playerEndX, playerEndY;
             if (this.currentMap && this.currentMap.battle_player_x != null) {
                 playerEndX = dx2 + this.currentMap.battle_player_x * dw2;
@@ -979,17 +972,6 @@ class PokeFuryGame {
             } else {
                 playerEndX = dx2 + 0.25 * dw2;
                 playerEndY = dy2 + 0.75 * dh2;
-            }
-
-            const mainArea2 = document.getElementById('main-area');
-            const wrapper2 = document.getElementById('game-wrapper');
-            if (mainArea2 && wrapper2) {
-                const mainRect2 = mainArea2.getBoundingClientRect();
-                const wrapRect2 = wrapper2.getBoundingClientRect();
-                const canvasLeft2 = this.canvas ? this.canvas.offsetLeft : 0;
-                const canvasTop2 = this.canvas ? this.canvas.offsetTop : 0;
-                playerEndX += canvasLeft2 + (mainRect2.left - wrapRect2.left);
-                playerEndY += canvasTop2 + (mainRect2.top - wrapRect2.top);
             }
 
             const isShinyP2 = activePlayer.isShiny;
@@ -2067,17 +2049,6 @@ class PokeFuryGame {
             playerEndY = dy + 0.75 * dh;
         }
 
-        const wrapper = document.getElementById('game-wrapper');
-        const mainArea = document.getElementById('main-area');
-        if (mainArea && wrapper) {
-            const mainRect = mainArea.getBoundingClientRect();
-            const wrapRect = wrapper.getBoundingClientRect();
-            const canvasLeft = this.canvas ? this.canvas.offsetLeft : 0;
-            const canvasTop = this.canvas ? this.canvas.offsetTop : 0;
-            playerEndX += canvasLeft + (mainRect.left - wrapRect.left);
-            playerEndY += canvasTop + (mainRect.top - wrapRect.top);
-        }
-
         setSkipPlayerRender(true);
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
 
@@ -2195,10 +2166,12 @@ class PokeFuryGame {
         updateBattleUI(this.playerTeam, this.enemyTeam);
 
         const clipRect = this.getBattleClipRect();
-        const dw = clipRect ? clipRect.w : this.canvas.offsetWidth;
-        const dh = clipRect ? clipRect.h : this.canvas.offsetHeight;
-        const dx = clipRect ? clipRect.x : 0;
-        const dy = clipRect ? clipRect.y : 0;
+        const mainAreaRAID = document.getElementById('main-area');
+        const mainRectRAID = mainAreaRAID ? mainAreaRAID.getBoundingClientRect() : { width: 1024, height: 768 };
+        const dw = mainRectRAID.width;
+        const dh = mainRectRAID.height;
+        const dx = 0;
+        const dy = 0;
         let playerEndX, playerEndY;
         if (this.currentMap && this.currentMap.battle_player_x != null) {
             playerEndX = dx + this.currentMap.battle_player_x * dw;
@@ -2206,17 +2179,6 @@ class PokeFuryGame {
         } else {
             playerEndX = dx + 0.25 * dw;
             playerEndY = dy + 0.75 * dh;
-        }
-
-        const wrapper = document.getElementById('game-wrapper');
-        const mainArea = document.getElementById('main-area');
-        if (mainArea && wrapper) {
-            const mainRect = mainArea.getBoundingClientRect();
-            const wrapRect = wrapper.getBoundingClientRect();
-            const canvasLeft = this.canvas ? this.canvas.offsetLeft : 0;
-            const canvasTop = this.canvas ? this.canvas.offsetTop : 0;
-            playerEndX += canvasLeft + (mainRect.left - wrapRect.left);
-            playerEndY += canvasTop + (mainRect.top - wrapRect.top);
         }
 
         setSkipPlayerRender(true);
