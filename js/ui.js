@@ -647,14 +647,13 @@ export function stopBattleVideo() {
 function syncBattleContainerToCanvas() {
     const gameCanvas = document.getElementById('game-canvas');
     if (!gameCanvas || !battlePokemonContainer) return;
-    const newLeft = gameCanvas.offsetLeft + 'px';
-    const newTop = gameCanvas.offsetTop + 'px';
-    const newW = gameCanvas.width + 'px';
-    const newH = gameCanvas.height + 'px';
-    if (battlePokemonContainer.style.left !== newLeft) battlePokemonContainer.style.left = newLeft;
-    if (battlePokemonContainer.style.top !== newTop) battlePokemonContainer.style.top = newTop;
-    if (battlePokemonContainer.style.width !== newW) battlePokemonContainer.style.width = newW;
-    if (battlePokemonContainer.style.height !== newH) battlePokemonContainer.style.height = newH;
+    const rect = gameCanvas.getBoundingClientRect();
+    const mainArea = document.getElementById('main-area');
+    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0 };
+    battlePokemonContainer.style.left = (rect.left - mainRect.left) + 'px';
+    battlePokemonContainer.style.top = (rect.top - mainRect.top) + 'px';
+    battlePokemonContainer.style.width = rect.width + 'px';
+    battlePokemonContainer.style.height = rect.height + 'px';
 }
 
 function ensureBattlePokemonContainer() {
@@ -714,11 +713,19 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     }
     el.style.display = 'block';
 
+    const gameCanvas = document.getElementById('game-canvas');
+    const canvasW = gameCanvas ? gameCanvas.width : 1024;
+    const canvasH = gameCanvas ? gameCanvas.height : 768;
+    const containerW = container.offsetWidth || canvasW;
+    const containerH = container.offsetHeight || canvasH;
+    const sx = containerW / canvasW;
+    const sy = containerH / canvasH;
+
     const maxDim = Math.round(140 * sizeScale);
-    el.style.width = maxDim + 'px';
-    el.style.height = maxDim + 'px';
-    el.style.left = (x - maxDim / 2) + 'px';
-    el.style.top = (y - maxDim / 2) + 'px';
+    el.style.width = Math.round(maxDim * sx) + 'px';
+    el.style.height = Math.round(maxDim * sy) + 'px';
+    el.style.left = Math.round(x * sx - maxDim * sx / 2) + 'px';
+    el.style.top = Math.round(y * sy - maxDim * sy / 2) + 'px';
 }
 
 function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {

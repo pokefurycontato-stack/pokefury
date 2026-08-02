@@ -820,9 +820,10 @@ export class Overworld2D {
         }
 
         const canvasRect = this.canvas.getBoundingClientRect();
-        const wrapRect = wrap.getBoundingClientRect();
-        const offsetX = canvasRect.left - wrapRect.left;
-        const offsetY = canvasRect.top - wrapRect.top;
+        const scaleX = canvasRect.width / this.canvas.width;
+        const scaleY = canvasRect.height / this.canvas.height;
+        const offsetX = canvasRect.left - wrap.getBoundingClientRect().left;
+        const offsetY = canvasRect.top - wrap.getBoundingClientRect().top;
 
         const activeIds = new Set();
 
@@ -851,17 +852,16 @@ export class Overworld2D {
             if (!el) {
                 el = document.createElement('img');
                 el.style.cssText = `position:absolute;pointer-events:none;image-rendering:pixelated;`;
-                // Prioriza a URL do GIF do banco de dados
                 if (p.spriteUrl) el.src = p.spriteUrl;
                 this.pokemonSpriteContainer.appendChild(el);
                 this.pokemonSpriteElements.set(p.entityId, el);
             }
 
             el.style.display = 'block';
-            el.style.left = (offsetX + drawX + (this.tileW - spriteSize) / 2) + 'px';
-            el.style.top = (offsetY + finalY) + 'px';
-            el.style.width = spriteSize + 'px';
-            el.style.height = spriteSize + 'px';
+            el.style.left = (offsetX + (drawX + (this.tileW - spriteSize) / 2) * scaleX) + 'px';
+            el.style.top = (offsetY + finalY * scaleY) + 'px';
+            el.style.width = (spriteSize * scaleX) + 'px';
+            el.style.height = (spriteSize * scaleY) + 'px';
 
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
