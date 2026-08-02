@@ -181,37 +181,64 @@ class PremiumStore {
             return;
         }
 
-        // Diamond shop purchase — deduct diamonds
-        if (product.price_diamonds > 0) {
-            await this._getDiamonds();
-            if (this.diamonds < product.price_diamonds) {
-                this._showToast('Diamantes insuficientes!', 'error');
-                return;
-            }
-            try {
-                const { error } = await window.db
+        if (product.price_diamonds <= 0) {
+            this._showToast('Produto indisponível para compra!', 'error');
+            return;
+        }
+
+        await this._getDiamonds();
+        if (this.diamonds < product.price_diamonds) {
+            this._showToast('Diamantes insuficientes!', 'error');
+            return;
+        }
+
+        // Deduct diamonds
+        try {
+            const { error } = await window.db
+                .from('character_currencies')
+                .update({ diamonds: this.diamonds - product.price_diamonds })
+                .eq('character_id', this.currentCharId);
+            if (error) throw error;
+            this.diamonds -= product.price_diamonds;
+            document.getElementById('buy-diamonds-count').textContent = this.diamonds;
+            document.getElementById('diamond-shop-count').textContent = this.diamonds;
+            const sidebarDiamonds = document.getElementById('c-diamonds');
+            if (sidebarDiamonds) sidebarDiamonds.textContent = this.diamonds;
+        } catch (e) {
+            console.error('[PremiumStore] diamond deduction failed:', e);
+            this._showToast('Erro ao deduzir diamantes!', 'error');
+            return;
+        }
+
+        // Activate boost based on product name
+        const boostMap = {
+            'VIP 30 Dias':                  { type: 'vip',            duration: 30 * 24 * 60 * 60 * 1000 },
+            'Centro Pokémon Portátil':      { type: 'center_anywhere', duration: 7 * 24 * 60 * 60 * 1000 },
+            'Boost Shiny 24h':              { type: 'shiny_boost',     duration: 24 * 60 * 60 * 1000 },
+            'Boost EXP Pokémon 24h':        { type: 'exp_pokemon',     duration: 24 * 60 * 60 * 1000 },
+            'Boost EXP Treinador 24h':      { type: 'exp_trainer',     duration: 24 * 60 * 60 * 1000 }
+        };
+
+        const boost = boostMap[product.name];
+        if (boost) {
+            const ok = await window.boostsManager.purchase(this.currentCharId, boost.type, boost.duration);
+            if (ok) {
+                this._showToast(`${product.name} ativado com sucesso!`, 'success');
+                // Refresh VIP badge if game is loaded
+                if (window.game && window.game.updateVipBadge) {
+                    window.game.updateVipBadge();
+                }
+            } else {
+                // Refund diamonds on failure
+                await window.db
                     .from('character_currencies')
-                    .update({ diamonds: this.diamonds - product.price_diamonds })
+                    .update({ diamonds: this.diamonds + product.price_diamonds })
                     .eq('character_id', this.currentCharId);
-                if (error) throw error;
-
-                this.diamonds -= product.price_diamonds;
-                document.getElementById('buy-diamonds-count').textContent = this.diamonds;
-                document.getElementById('diamond-shop-count').textContent = this.diamonds;
-
-                // Update sidebar diamond display if exists
-                const sidebarDiamonds = document.getElementById('c-diamonds');
-                if (sidebarDiamonds) sidebarDiamonds.textContent = this.diamonds;
-
-                this._showToast(`Compra realizada: ${product.name}!`, 'success');
-            } catch (e) {
-                console.error('[PremiumStore] purchase failed:', e);
-                this._showToast('Erro ao processar compra!', 'error');
+                this.diamonds += product.price_diamonds;
+                this._showToast('Erro ao ativar boost!', 'error');
             }
-        } else if (product.price_brl > 0) {
-            this._showToast('Pagamento em reais será implementado em breve!', 'error');
         } else {
-            this._showToast('Produto gratuito — em desenvolvimento!', 'error');
+            this._showToast(`${product.name} comprado!`, 'success');
         }
     }
 }

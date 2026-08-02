@@ -1929,6 +1929,29 @@ body {
 }
 
 /* Premium Text Banners */
+.vip-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #ffd700, #ffaa00, #ffd700);
+    color: #1a1a2e;
+    text-shadow: 0 0 4px rgba(255,215,0,0.5);
+    box-shadow: 0 0 8px rgba(255,215,0,0.3);
+    animation: vipGlow 2s ease-in-out infinite;
+    margin-top: 2px;
+}
+.vip-badge.hidden {
+    display: none;
+}
+@keyframes vipGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(255,215,0,0.3); }
+    50% { box-shadow: 0 0 16px rgba(255,215,0,0.6); }
+}
+
+/* Premium Text Banners */
 .premium-banner {
     position: relative;
     padding: 20px 24px;

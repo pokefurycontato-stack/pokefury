@@ -433,7 +433,12 @@ export async function checkAbilityChange(pokemon) {
 
 export function awardExp(team, enemyLevel, activePokemon) {
     const messages = [];
-    const baseExp = Math.floor((enemyLevel * 15) / 9);
+    let baseExp = Math.floor((enemyLevel * 15) / 9);
+
+    // Pokémon EXP boost (2x)
+    if (window.boostsManager && window.boostsManager.isActive('exp_pokemon')) {
+        baseExp *= 2;
+    }
 
     for (const p of team) {
         if (p.fainted) continue;

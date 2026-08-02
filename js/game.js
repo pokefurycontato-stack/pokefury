@@ -22,6 +22,14 @@ import { getMoveEffect } from './battle-mechanics.js';
 
 const SHINY_CHANCE = 128;
 
+function getShinyChance() {
+    const base = SHINY_CHANCE;
+    if (window.boostsManager && window.boostsManager.isActive('shiny_boost')) {
+        return Math.floor(base / 2); // 2x chance = half the denominator
+    }
+    return base;
+}
+
 function classifyMoveEffect(move) {
     if (!move) return { category: 'damage', effectType: 'none' };
     const effect = getMoveEffect(move);
@@ -269,6 +277,13 @@ class PokeFuryGame {
         this.avatarUrl = save.avatar_url || null;
         this.trainerLevel = save.trainer_level || 1;
         this.trainerExp = save.trainer_exp || 0;
+
+        // Load boosts (VIP, shiny, exp, etc)
+        if (window.boostsManager) {
+            await window.boostsManager.load(save.id);
+            this.updateVipBadge();
+        }
+
         await this.startGame(save.starter_pokemon);
     }
 
@@ -289,7 +304,12 @@ class PokeFuryGame {
     }
 
     async awardTrainerExp(amount) {
-        this.trainerExp += amount;
+        let exp = amount;
+        // Trainer EXP boost (2x)
+        if (window.boostsManager && window.boostsManager.isActive('exp_trainer')) {
+            exp *= 2;
+        }
+        this.trainerExp += exp;
         let leveled = false;
         while (this.trainerLevel < 100 && this.trainerExp >= this.trainerExpForLevel(this.trainerLevel)) {
             this.trainerExp -= this.trainerExpForLevel(this.trainerLevel);
@@ -331,6 +351,81 @@ class PokeFuryGame {
         await window.db.from('game_saves')
             .update({ trainer_exp: this.trainerExp })
             .eq('id', this.currentCharacterId);
+    }
+
+    updateVipBadge() {
+        const badge = document.getElementById('vip-badge');
+        if (!badge) return;
+        if (window.boostsManager && window.boostsManager.isActive('vip')) {
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    setupHealAnywhere() {
+        const existing = document.getElementById('btn-heal-anywhere');
+        if (existing) existing.remove();
+
+        if (!window.boostsManager || !window.boostsManager.isActive('center_anywhere')) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'btn-heal-anywhere';
+        btn.textContent = '💊 Curar Time';
+        btn.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:100;padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(76,175,80,0.4);transition:transform 0.2s';
+        btn.onmouseenter = () => btn.style.transform = 'scale(1.05)';
+        btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+        btn.onclick = () => this.healTeamAnywhere();
+        document.body.appendChild(btn);
+    }
+
+    async healTeamAnywhere() {
+        if (this.state !== 'overworld') {
+            if (window.boostsManager) window.boostsManager._showToast?.('Não pode curar em batalha!', 'error');
+            return;
+        }
+        if (!window.boostsManager || !window.boostsManager.isActive('center_anywhere')) {
+            const toast = document.createElement('div');
+            toast.className = 'premium-toast error';
+            toast.textContent = 'Centro Pokémon Portátil não ativo!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+            return;
+        }
+
+        try {
+            const { data: team } = await window.db
+                .from('pokemon_team')
+                .select('id, current_hp, hp')
+                .eq('character_id', this.currentCharacterId);
+
+            if (!team || !team.length) return;
+
+            let healed = 0;
+            for (const poke of team) {
+                if (poke.current_hp < poke.hp) {
+                    await window.db.from('pokemon_team').update({ current_hp: poke.hp }).eq('id', poke.id);
+                    healed++;
+                }
+            }
+
+            // Also cure status conditions
+            await window.db.from('pokemon_team')
+                .update({ status: null })
+                .eq('character_id', this.currentCharacterId)
+                .not('status', 'is', null);
+
+            const toast = document.createElement('div');
+            toast.className = 'premium-toast success';
+            toast.textContent = healed > 0 ? `${healed} Pokémon curados!` : 'Time já está com HP cheio!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            // Refresh party panel if open
+            if (this.refreshPartyPanel) this.refreshPartyPanel();
+        } catch (e) {
+            console.error('[HealAnywhere] error:', e);
+        }
     }
 
     async startGame(starterSpecies) {
@@ -438,6 +533,16 @@ class PokeFuryGame {
             profileAvatarEl.innerHTML = `<img src="${this.avatarUrl}" class="profile-avatar-img" alt="${this.playerName}">`;
         }
         this.updateTrainerLevelUI();
+        this.updateVipBadge();
+        this.setupHealAnywhere();
+
+        // Periodic boost expiry check (every 60s)
+        if (!this._boostInterval) {
+            this._boostInterval = setInterval(() => {
+                this.updateVipBadge();
+                this.setupHealAnywhere();
+            }, 60000);
+        }
 
         if (window.GameData.userId && !this.chat._initialized) {
             this.chat.init(window.GameData.userId, this.playerName);
@@ -686,7 +791,7 @@ class PokeFuryGame {
                         const minWild = Math.max(maxWild - 2, 1);
                         const level = minWild + Math.floor(Math.random() * (maxWild - minWild + 1));
                         const pokemonData = await PokeAPI.ensurePokemon(enc.pokemon_name);
-                        const isShiny = Math.random() < (1 / SHINY_CHANCE);
+                        const isShiny = Math.random() < (1 / getShinyChance());
                         pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
                         break;
                     }
@@ -697,7 +802,7 @@ class PokeFuryGame {
         if (!pokemon) {
             const includeVariants = Math.random() < 0.15;
             const result = await PokeAPI.getRandomWildPokemon(minLevel, maxLevel, includeVariants);
-            const isShiny = Math.random() < (1 / SHINY_CHANCE);
+            const isShiny = Math.random() < (1 / getShinyChance());
             pokemon = await createPokemon(result.pokemon, result.level, null, null, null, isShiny);
         }
         this.enemyTeam = [pokemon];
@@ -815,7 +920,7 @@ class PokeFuryGame {
 
         try {
             const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
-            const isShiny = Math.random() < (1 / SHINY_CHANCE);
+            const isShiny = Math.random() < (1 / getShinyChance());
             const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
 
             // Force sprite URL from map entity if provided
