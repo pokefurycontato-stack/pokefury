@@ -220,14 +220,16 @@ class PremiumStore {
         };
 
         const boost = boostMap[product.name];
-        if (boost) {
-            const ok = await window.boostsManager.purchase(this.currentCharId, boost.type, boost.duration);
-            if (ok) {
-                this._showToast(`${product.name} ativado com sucesso!`, 'success');
-                // Refresh VIP badge if game is loaded
-                if (window.game && window.game.updateVipBadge) {
-                    window.game.updateVipBadge();
-                }
+            if (boost) {
+                const ok = await window.boostsManager.purchase(this.currentCharId, boost.type, boost.duration);
+                if (ok) {
+                    this._showToast(`${product.name} ativado com sucesso!`, 'success');
+                    // Refresh game UI
+                    if (window.game) {
+                        if (window.game.updateVipBadge) window.game.updateVipBadge();
+                        if (window.game.updateBoostsDisplay) window.game.updateBoostsDisplay();
+                        if (window.game.setupHealAnywhere) window.game.setupHealAnywhere();
+                    }
             } else {
                 // Refund diamonds on failure
                 await window.db

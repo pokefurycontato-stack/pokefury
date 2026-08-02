@@ -363,6 +363,34 @@ class PokeFuryGame {
         } else {
             badge.classList.add('hidden');
         }
+        this.updateBoostsDisplay();
+    }
+
+    updateBoostsDisplay() {
+        const container = document.getElementById('boosts-display');
+        if (!container || !window.boostsManager) return;
+
+        const bm = window.boostsManager;
+        const tags = [];
+
+        if (bm.isActive('center_anywhere')) {
+            const text = bm.getRemainingText('center_anywhere');
+            tags.push(`<span class="boost-tag cp">CP <span class="boost-timer">${text}</span></span>`);
+        }
+        if (bm.isActive('exp_pokemon')) {
+            const text = bm.getRemainingText('exp_pokemon');
+            tags.push(`<span class="boost-tag exp-poke">EXP Pokémon <span class="boost-timer">${text}</span></span>`);
+        }
+        if (bm.isActive('shiny_boost')) {
+            const text = bm.getRemainingText('shiny_boost');
+            tags.push(`<span class="boost-tag shiny">B. Shiny <span class="boost-timer">${text}</span></span>`);
+        }
+        if (bm.isActive('exp_trainer')) {
+            const text = bm.getRemainingText('exp_trainer');
+            tags.push(`<span class="boost-tag exp-trainer">EXP Trein. <span class="boost-timer">${text}</span></span>`);
+        }
+
+        container.innerHTML = tags.join('');
     }
 
     setupHealAnywhere() {
@@ -542,6 +570,7 @@ class PokeFuryGame {
         if (!this._boostInterval) {
             this._boostInterval = setInterval(() => {
                 this.updateVipBadge();
+                this.updateBoostsDisplay();
                 this.setupHealAnywhere();
             }, 60000);
         }

@@ -1946,6 +1946,54 @@ body {
 .vip-badge.hidden {
     display: none;
 }
+
+/* Boosts Display */
+.boosts-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+.boost-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    white-space: nowrap;
+}
+.boost-tag .boost-timer {
+    font-weight: 600;
+    opacity: 0.85;
+    font-size: 8px;
+}
+.boost-tag.cp {
+    background: rgba(76,175,80,0.2);
+    color: #4caf50;
+    border: 1px solid rgba(76,175,80,0.3);
+}
+.boost-tag.exp-poke {
+    background: rgba(244,67,54,0.2);
+    color: #f44336;
+    border: 1px solid rgba(244,67,54,0.3);
+}
+.boost-tag.shiny {
+    background: rgba(255,215,0,0.2);
+    color: #ffd700;
+    border: 1px solid rgba(255,215,0,0.3);
+}
+.boost-tag.exp-trainer {
+    background: rgba(33,150,243,0.2);
+    color: #2196f3;
+    border: 1px solid rgba(33,150,243,0.3);
+}
+.boost-tag.hidden {
+    display: none;
+}
 @keyframes vipGlow {
     0%, 100% { box-shadow: 0 0 8px rgba(255,215,0,0.3); }
     50% { box-shadow: 0 0 16px rgba(255,215,0,0.6); }
