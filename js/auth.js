@@ -592,6 +592,7 @@ async function createCharacter() {
     window.GameData.setCurrentCharacter(newChar.id);
 
     if (window.pokefury) {
+        window.pokefury.currentCharacterId = newChar.id;
         window.pokefury.playerName = name;
         window.pokefury.playerGender = selectedGender;
         window.pokefury.avatarUrl = selectedAvatarUrl;
