@@ -202,8 +202,7 @@ class PremiumStore {
             this.diamonds -= product.price_diamonds;
             document.getElementById('buy-diamonds-count').textContent = this.diamonds;
             document.getElementById('diamond-shop-count').textContent = this.diamonds;
-            const sidebarDiamonds = document.getElementById('c-diamonds');
-            if (sidebarDiamonds) sidebarDiamonds.textContent = this.diamonds;
+            if (window.game && window.game.refreshCurrencies) await window.game.refreshCurrencies();
         } catch (e) {
             console.error('[PremiumStore] diamond deduction failed:', e);
             this._showToast('Erro ao deduzir diamantes!', 'error');
@@ -237,6 +236,7 @@ class PremiumStore {
                     .update({ diamonds: this.diamonds + product.price_diamonds })
                     .eq('character_id', this.currentCharId);
                 this.diamonds += product.price_diamonds;
+                if (window.game && window.game.refreshCurrencies) await window.game.refreshCurrencies();
                 this._showToast('Erro ao ativar boost!', 'error');
             }
         } else {

@@ -355,6 +355,17 @@ class PokeFuryGame {
             .eq('id', this.currentCharacterId);
     }
 
+    async refreshCurrencies() {
+        if (!this.currentCharacterId || !window.GameData) return;
+        const cur = await window.GameData.getCurrencies();
+        const diamonds = document.getElementById('c-diamonds');
+        const gold = document.getElementById('c-gold');
+        const silver = document.getElementById('c-silver');
+        if (diamonds) diamonds.textContent = (cur.diamonds || 0).toLocaleString();
+        if (gold) gold.textContent = (cur.gold || 0).toLocaleString();
+        if (silver) silver.textContent = (cur.silver || 0).toLocaleString();
+    }
+
     updateVipBadge() {
         const badge = document.getElementById('vip-badge');
         if (!badge) return;
@@ -537,8 +548,7 @@ class PokeFuryGame {
         document.getElementById('game-wrapper').classList.remove('hidden');
 
         window.GameData.getCurrencies().then(cur => {
-            const el = document.getElementById('c-silver');
-            if (el) el.textContent = (cur.silver || 0).toLocaleString();
+            this.refreshCurrencies();
         });
 
         if (!this.battleAnimations) {
@@ -1944,8 +1954,7 @@ class PokeFuryGame {
             const cur = await window.GameData.getCurrencies();
             const newSilver = (cur.silver || 0) + silverDrop;
             await window.GameData.updateCurrencies({ ...cur, silver: newSilver });
-            const silverEl = document.getElementById('c-silver');
-            if (silverEl) silverEl.textContent = newSilver.toLocaleString();
+            await this.refreshCurrencies();
             await showBattleMessage(`+${silverDrop} Prata!`);
         }
 
@@ -3358,6 +3367,7 @@ class PokeFuryGame {
                 document.getElementById('donate-diamonds').value = '0';
                 document.getElementById('donate-gold').value = '0';
                 document.getElementById('donate-silver').value = '0';
+                await this.refreshCurrencies();
             } catch (e) {
                 console.error('[Donate] currency error:', e);
                 const result = document.getElementById('donate-currency-result');
