@@ -5164,19 +5164,19 @@ class PokeFuryGame {
             'Fire': { top: 'calc(14%)', left: 0, size: 120 },
             'Grass': { top: 'calc(11% + 25px)', left: 0, size: 120 },
             'Electric': { top: 'calc(13% + 10px)', left: 0, size: 120 },
-            'Ice': { top: 'calc(10% - 50px)', left: 20, size: 120 },
-            'Fighting': { top: 'calc(15% - 140px)', left: 10, size: 120 },
+            'Ice': { top: 'calc(10% - 55px)', left: 20, size: 120 },
+            'Fighting': { top: 'calc(15% - 130px)', left: 10, size: 120 },
             'Poison': { top: 'calc(12% + 10px)', left: 0, size: 120 },
             'Ground': { top: 'calc(14% + 5px)', left: 0, size: 120 },
             'Flying': { top: 'calc(9% - 40px)', left: 0, size: 120 },
             'Psychic': { top: 'calc(11% + 30px)', left: 0, size: 120 },
-            'Bug': { top: 'calc(13% - 70px)', left: 0, size: 120 },
+            'Bug': { top: 'calc(13% - 90px)', left: 0, size: 120 },
             'Ghost': { top: 'calc(10% + 40px)', left: 0, size: 120 },
             'Dragon': { top: 'calc(12% - 70px)', left: -5, size: 120 },
             'Dark': { top: 'calc(14% + 10px)', left: 0, size: 120 },
-            'Steel': { top: 'calc(11% - 60px)', left: 0, size: 120 },
+            'Steel': { top: 'calc(11% - 65px)', left: 0, size: 120 },
             'Fairy': { top: 'calc(10% + 10px)', left: 0, size: 120 },
-            'Normal': { top: 'calc(12% - 70px)', left: 40, size: 120 }
+            'Normal': { top: 'calc(12% - 85px)', left: 40, size: 120 }
         };
 
         const spriteCircle = document.getElementById('gym-leader-sprite');
