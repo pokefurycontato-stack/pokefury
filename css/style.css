@@ -1944,7 +1944,7 @@ body {
 }
 .premium-card-img {
     width: 100%;
-    aspect-ratio: 16/10;
+    max-height: 180px;
     object-fit: contain;
     background: #0d1117;
     border-bottom: 1px solid #30363d;
