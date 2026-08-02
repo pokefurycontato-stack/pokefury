@@ -1,4 +1,4 @@
-export class GymLeadersAdmin {
+class GymLeadersAdmin {
     constructor() {
         this._currentRegion = null;
         this._currentLeader = null;
