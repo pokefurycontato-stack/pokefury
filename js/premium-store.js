@@ -28,7 +28,7 @@ class PremiumStore {
     async _getDiamonds() {
         if (!this.currentCharId) return 0;
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.db
                 .from('character_currencies')
                 .select('diamonds')
                 .eq('character_id', this.currentCharId)
@@ -47,7 +47,7 @@ class PremiumStore {
 
     async _loadProducts(destination) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.db
                 .from('premium_products')
                 .select('*')
                 .eq('destination', destination)
@@ -189,7 +189,7 @@ class PremiumStore {
                 return;
             }
             try {
-                const { error } = await supabase
+                const { error } = await window.db
                     .from('character_currencies')
                     .update({ diamonds: this.diamonds - product.price_diamonds })
                     .eq('character_id', this.currentCharId);

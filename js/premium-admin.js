@@ -58,7 +58,7 @@ class PremiumAdmin {
 
     async loadAllProducts() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window.db
                 .from('premium_products')
                 .select('*')
                 .order('sort_order', { ascending: true });
@@ -128,16 +128,16 @@ class PremiumAdmin {
     //  CREATE / EDIT FORM
     // ========================
     showCreateForm(destination) {
-        document.getElementById('premium-form-title').textContent = 'Novo Produto';
-        document.getElementById('pf-id').value = '';
-        document.getElementById('pf-name').value = '';
-        document.getElementById('pf-desc').value = '';
-        document.getElementById('pf-price-brl').value = '0';
-        document.getElementById('pf-price-diamonds').value = '0';
-        document.getElementById('pf-image-preview').style.display = 'none';
-        document.getElementById('pf-image-preview').src = '';
-        document.getElementById('pf-image-label').textContent = 'Clique para fazer upload';
-        document.getElementById('pf-image').value = '';
+        const el = (id) => document.getElementById(id);
+        if (el('premium-form-title')) el('premium-form-title').textContent = 'Novo Produto';
+        if (el('pf-id')) el('pf-id').value = '';
+        if (el('pf-name')) el('pf-name').value = '';
+        if (el('pf-desc')) el('pf-desc').value = '';
+        if (el('pf-price-brl')) el('pf-price-brl').value = '0';
+        if (el('pf-price-diamonds')) el('pf-price-diamonds').value = '0';
+        if (el('pf-image-preview')) { el('pf-image-preview').style.display = 'none'; el('pf-image-preview').src = ''; }
+        if (el('pf-image-label')) el('pf-image-label').textContent = 'Clique para fazer upload';
+        if (el('pf-image')) el('pf-image').value = '';
 
         if (destination) {
             const radio = document.querySelector(`input[name="pf-dest"][value="${destination}"]`);
@@ -158,25 +158,25 @@ class PremiumAdmin {
         const product = this.allProducts.find(p => p.id === id);
         if (!product) return;
 
-        document.getElementById('premium-form-title').textContent = 'Editar Produto';
-        document.getElementById('pf-id').value = product.id;
-        document.getElementById('pf-name').value = product.name;
-        document.getElementById('pf-desc').value = product.description || '';
-        document.getElementById('pf-price-brl').value = product.price_brl || 0;
-        document.getElementById('pf-price-diamonds').value = product.price_diamonds || 0;
+        const el = (id) => document.getElementById(id);
+        if (el('premium-form-title')) el('premium-form-title').textContent = 'Editar Produto';
+        if (el('pf-id')) el('pf-id').value = product.id;
+        if (el('pf-name')) el('pf-name').value = product.name;
+        if (el('pf-desc')) el('pf-desc').value = product.description || '';
+        if (el('pf-price-brl')) el('pf-price-brl').value = product.price_brl || 0;
+        if (el('pf-price-diamonds')) el('pf-price-diamonds').value = product.price_diamonds || 0;
 
         const radio = document.querySelector(`input[name="pf-dest"][value="${product.destination}"]`);
         if (radio) radio.checked = true;
 
         if (product.image_url) {
-            document.getElementById('pf-image-preview').src = product.image_url;
-            document.getElementById('pf-image-preview').style.display = 'block';
-            document.getElementById('pf-image-label').textContent = 'Imagem atual';
+            if (el('pf-image-preview')) { el('pf-image-preview').src = product.image_url; el('pf-image-preview').style.display = 'block'; }
+            if (el('pf-image-label')) el('pf-image-label').textContent = 'Imagem atual';
         } else {
-            document.getElementById('pf-image-preview').style.display = 'none';
-            document.getElementById('pf-image-label').textContent = 'Clique para fazer upload';
+            if (el('pf-image-preview')) el('pf-image-preview').style.display = 'none';
+            if (el('pf-image-label')) el('pf-image-label').textContent = 'Clique para fazer upload';
         }
-        document.getElementById('pf-image').value = '';
+        if (el('pf-image')) el('pf-image').value = '';
 
         document.getElementById('premium-form-modal').classList.remove('hidden');
     }
@@ -205,12 +205,12 @@ class PremiumAdmin {
             try {
                 const ext = file.name.split('.').pop() || 'png';
                 const filename = `store-products/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-                const { error: uploadError } = await supabase.storage
+                const { error: uploadError } = await window.db.storage
                     .from('sprites')
                     .upload(filename, file, { contentType: file.type, upsert: true });
                 if (uploadError) throw uploadError;
 
-                const { data: urlData } = supabase.storage.from('sprites').getPublicUrl(filename);
+                const { data: urlData } = window.db.storage.from('sprites').getPublicUrl(filename);
                 imageUrl = urlData.publicUrl;
             } catch (e) {
                 console.error('[PremiumAdmin] image upload failed:', e);
@@ -232,7 +232,7 @@ class PremiumAdmin {
         try {
             if (id) {
                 // Update existing
-                const { error } = await supabase
+                const { error } = await window.db
                     .from('premium_products')
                     .update(productData)
                     .eq('id', id);
@@ -240,7 +240,7 @@ class PremiumAdmin {
                 this._toast('Produto atualizado!');
             } else {
                 // Create new
-                const { error } = await supabase
+                const { error } = await window.db
                     .from('premium_products')
                     .insert([productData]);
                 if (error) throw error;
@@ -262,7 +262,7 @@ class PremiumAdmin {
         if (!confirm(`Excluir "${product.name}"?`)) return;
 
         try {
-            const { error } = await supabase
+            const { error } = await window.db
                 .from('premium_products')
                 .delete()
                 .eq('id', id);
