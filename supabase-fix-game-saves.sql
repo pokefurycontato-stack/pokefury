@@ -7,7 +7,7 @@
 DO $$ DECLARE
     rec RECORD;
 BEGIN
-    FOR rec SELECT conname FROM pg_constraint
+    FOR rec IN SELECT conname FROM pg_constraint
                WHERE conrelid = 'game_saves'::regclass
                AND contype = 'u'
     LOOP
