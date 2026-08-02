@@ -1883,6 +1883,14 @@ body {
     animation: diamondFloat 2s ease-in-out infinite;
     filter: drop-shadow(0 0 12px rgba(79,195,247,0.6));
 }
+
+/* Premium banner images quality */
+#buy-diamonds-screen img,
+#diamond-shop-screen img {
+    image-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
 @keyframes diamondFloat {
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-8px) scale(1.08); }
