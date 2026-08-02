@@ -1872,3 +1872,259 @@ body {
     background: #e94560;
     color: #fff;
 }
+
+/* =============================================
+   PREMIUM STORE STYLES
+   ============================================= */
+
+/* Diamond animated icon */
+.diamond-icon-anim {
+    font-size: 56px;
+    animation: diamondFloat 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(79,195,247,0.6));
+}
+@keyframes diamondFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.08); }
+}
+
+/* Recharge buttons */
+.premium-recharge-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    color: #fff;
+    min-width: 160px;
+    justify-content: center;
+}
+.premium-recharge-btn.pix {
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    border-color: rgba(108,92,231,0.4);
+}
+.premium-recharge-btn.pix:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(108,92,231,0.4);
+    border-color: #a29bfe;
+}
+.premium-recharge-btn.credit {
+    background: linear-gradient(135deg, #0984e3, #74b9ff);
+    border-color: rgba(9,132,227,0.4);
+}
+.premium-recharge-btn.credit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(9,132,227,0.4);
+    border-color: #74b9ff;
+}
+.recharge-icon {
+    font-size: 22px;
+}
+
+/* Product card */
+.premium-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+}
+.premium-card:hover {
+    border-color: #e94560;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(233,69,96,0.2);
+}
+.premium-card-img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+}
+.premium-card-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+.premium-card-name {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+}
+.premium-card-desc {
+    color: rgba(255,255,255,0.45);
+    font-size: 11px;
+    line-height: 1.4;
+    flex: 1;
+}
+.premium-card-price {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #4fc3f7;
+    font-size: 15px;
+    font-weight: 800;
+}
+.premium-card-price.real {
+    color: #4caf50;
+}
+.premium-card-buy {
+    margin-top: 6px;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.premium-card-buy:hover {
+    filter: brightness(1.15);
+    transform: scale(1.02);
+}
+.premium-card-buy:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: none;
+    transform: none;
+}
+
+/* Empty state */
+.premium-empty {
+    text-align: center;
+    color: rgba(255,255,255,0.25);
+    padding: 40px 20px;
+    font-size: 13px;
+}
+
+/* Admin product row */
+.premium-admin-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    transition: border-color 0.2s;
+}
+.premium-admin-row:hover {
+    border-color: #e94560;
+}
+.premium-admin-row-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #0d1117;
+    flex-shrink: 0;
+}
+.premium-admin-row-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.premium-admin-row-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+}
+.premium-admin-row-meta {
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+}
+.premium-admin-row-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.premium-admin-row-badge.buy_diamonds {
+    background: rgba(233,69,96,0.15);
+    color: #e94560;
+}
+.premium-admin-row-badge.diamond_shop {
+    background: rgba(79,195,247,0.15);
+    color: #4fc3f7;
+}
+.premium-admin-row-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.premium-admin-row-actions button {
+    padding: 6px 10px;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    background: #0d1117;
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.premium-admin-row-actions button:hover {
+    border-color: #e94560;
+    color: #e94560;
+}
+.premium-admin-row-actions button.del:hover {
+    border-color: #f44336;
+    color: #f44336;
+}
+
+/* Admin tabs */
+.premium-admin-tab.active {
+    background: rgba(233,69,96,0.15) !important;
+    color: #e94560 !important;
+    border-bottom-color: #e94560 !important;
+}
+
+/* Image upload label hover */
+#pf-image-label:hover {
+    border-color: #e94560 !important;
+    color: rgba(255,255,255,0.6) !important;
+}
+
+/* Confirmation toast */
+.premium-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 999;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+    pointer-events: none;
+}
+.premium-toast.success {
+    background: rgba(46,204,113,0.9);
+    color: #fff;
+}
+.premium-toast.error {
+    background: rgba(244,67,54,0.9);
+    color: #fff;
+}
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes toastOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}

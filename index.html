@@ -179,8 +179,8 @@
                             <span>⭐ Premium</span><span class="arrow">▶</span>
                         </div>
                         <div class="section-items" id="premium-items">
-                            <button class="item-btn">💎 Compre Diamantes</button>
-                            <button class="item-btn">🏪 Loja de Diamantes</button>
+                            <button class="item-btn" id="btn-buy-diamonds">💎 Compre Diamantes</button>
+                            <button class="item-btn" id="btn-diamond-shop">🏪 Loja de Diamantes</button>
                         </div>
                     </div>
 
@@ -238,6 +238,7 @@
                             <button class="item-btn admin-btn" id="admin-btn-maps">Mapas</button>
                             <button class="item-btn admin-btn" id="admin-btn-donate">Doar</button>
                             <button class="item-btn admin-btn" id="admin-btn-events" style="background:linear-gradient(135deg,#e94560,#c23152);">Eventos</button>
+                            <button class="item-btn admin-btn" id="admin-btn-premium">💎 Loja Premium</button>
                         </div>
                     </div>
 
@@ -733,6 +734,8 @@
     <script type="module" src="js/zone-editor.js"></script>
     <script type="module" src="js/region-manager.js"></script>
     <script type="module" src="js/chat.js"></script>
+    <script src="js/premium-store.js"></script>
+    <script src="js/premium-admin.js"></script>
     <script>
     (function(){
         var _origSelectNode = Range.prototype.selectNode;
@@ -772,6 +775,127 @@
             <div id="pokedex-detail" style="flex:1;overflow-y:auto;padding:14px 20px;color:#fff">
                 <div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);font-size:15px">Selecione um Pokémon para ver os detalhes</div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== COMPRE DIAMANTES ===== -->
+    <div id="buy-diamonds-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="position:relative;width:100%">
+            <button id="buy-diamonds-close" style="position:absolute;top:12px;right:16px;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:22px;cursor:pointer;z-index:10;padding:6px 12px;border-radius:8px;backdrop-filter:blur(4px)">✕</button>
+            <img src="assets/ferramentas/compradima.png" style="width:100%;display:block;max-height:220px;object-fit:cover" onerror="this.style.display='none'">
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:24px">
+            <div id="buy-diamonds-display" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+                <div class="diamond-icon-anim">💎</div>
+                <div style="color:rgba(255,255,255,0.5);font-size:13px">Seus Diamantes</div>
+                <div id="buy-diamonds-count" style="color:#4fc3f7;font-size:32px;font-weight:800;text-shadow:0 0 20px rgba(79,195,247,0.5)">0</div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+                <button id="btn-recharge-pix" class="premium-recharge-btn pix">
+                    <span class="recharge-icon">📱</span>
+                    <span>PIX</span>
+                </button>
+                <button id="btn-recharge-credit" class="premium-recharge-btn credit">
+                    <span class="recharge-icon">💳</span>
+                    <span>Crédito</span>
+                </button>
+            </div>
+            <div style="width:100%;max-width:700px">
+                <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:12px;text-align:center">Produtos Disponíveis</div>
+                <div id="buy-diamonds-products" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LOJA DE DIAMANTES ===== -->
+    <div id="diamond-shop-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <button id="diamond-shop-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer">✕</button>
+                <span style="font-size:20px">💎</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Loja de Diamantes</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:16px">💎</span>
+                <span id="diamond-shop-count" style="color:#4fc3f7;font-size:18px;font-weight:700">0</span>
+            </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:20px">
+            <div style="color:rgba(255,255,255,0.4);font-size:13px;text-align:center">Use seus diamantes para comprar itens exclusivos!</div>
+            <div style="width:100%;max-width:700px">
+                <div id="diamond-shop-products" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+                <div id="diamond-shop-empty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);padding:40px;font-size:14px">Nenhum produto disponível ainda</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PREMIUM ADMIN ===== -->
+    <div id="premium-admin-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:910;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <button id="premium-admin-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer">✕</button>
+                <span style="font-size:20px">⚙️</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Gerenciar Loja Premium</span>
+            </div>
+            <button id="premium-admin-new" style="padding:8px 16px;border:none;border-radius:8px;background:linear-gradient(135deg,#e94560,#c23152);color:#fff;font-size:13px;font-weight:700;cursor:pointer">+ Novo Produto</button>
+        </div>
+        <div style="display:flex;gap:0;border-bottom:1px solid #30363d;flex-shrink:0">
+            <button class="premium-admin-tab active" data-tab="buy_diamonds" style="flex:1;padding:10px;border:none;background:rgba(233,69,96,0.15);color:#e94560;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #e94560">Compre Diamantes</button>
+            <button class="premium-admin-tab" data-tab="diamond_shop" style="flex:1;padding:10px;border:none;background:transparent;color:rgba(255,255,255,0.4);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent">Loja de Diamantes</button>
+        </div>
+        <div id="premium-admin-list" style="flex:1;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
+    <!-- ===== PREMIUM ADMIN FORM MODAL ===== -->
+    <div id="premium-form-modal" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:920;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px)">
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:14px;padding:24px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+                <span id="premium-form-title" style="color:#fff;font-size:16px;font-weight:700">Novo Produto</span>
+                <button id="premium-form-close" style="background:none;border:none;color:#f44336;font-size:18px;cursor:pointer">✕</button>
+            </div>
+            <form id="premium-form" style="display:flex;flex-direction:column;gap:14px">
+                <input type="hidden" id="pf-id">
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Nome do Produto</label>
+                    <input id="pf-name" type="text" required style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Descrição</label>
+                    <textarea id="pf-desc" rows="3" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;resize:vertical"></textarea>
+                </div>
+                <div style="display:flex;gap:12px">
+                    <div style="flex:1">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Preço em R$</label>
+                        <input id="pf-price-brl" type="number" min="0" step="0.01" value="0" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                    </div>
+                    <div style="flex:1">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Preço em Diamantes</label>
+                        <input id="pf-price-diamonds" type="number" min="0" value="0" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                    </div>
+                </div>
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:6px">Destino</label>
+                    <div style="display:flex;gap:12px">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:rgba(255,255,255,0.7);font-size:13px">
+                            <input type="radio" name="pf-dest" value="buy_diamonds" checked> Compre Diamantes
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:rgba(255,255,255,0.7);font-size:13px">
+                            <input type="radio" name="pf-dest" value="diamond_shop"> Loja de Diamantes
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Imagem do Card</label>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <label id="pf-image-label" style="flex:1;padding:20px;border:2px dashed #30363d;border-radius:8px;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;transition:border-color 0.2s">
+                            <input id="pf-image" type="file" accept="image/*" style="display:none">
+                            Clique para fazer upload
+                        </label>
+                        <img id="pf-image-preview" style="width:60px;height:60px;border-radius:8px;object-fit:cover;display:none" onerror="this.style.display='none'">
+                    </div>
+                </div>
+                <button type="submit" style="padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#e94560,#c23152);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">Salvar Produto</button>
+            </form>
         </div>
     </div>
 

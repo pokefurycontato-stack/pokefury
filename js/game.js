@@ -2768,6 +2768,32 @@ class PokeFuryGame {
         if (eventsBtn) {
             eventsBtn.onclick = () => this.openEventsPanel();
         }
+
+        const premiumAdminBtn = document.getElementById('admin-btn-premium');
+        if (premiumAdminBtn) {
+            premiumAdminBtn.onclick = () => window.premiumAdmin.open();
+        }
+
+        // Sidebar Premium buttons
+        const buyDiamondsBtn = document.getElementById('btn-buy-diamonds');
+        if (buyDiamondsBtn) {
+            buyDiamondsBtn.onclick = () => {
+                if (window.premiumStore) {
+                    window.premiumStore.setCurrentChar(this.currentCharacterId);
+                    window.premiumStore.openBuyDiamonds();
+                }
+            };
+        }
+
+        const diamondShopBtn = document.getElementById('btn-diamond-shop');
+        if (diamondShopBtn) {
+            diamondShopBtn.onclick = () => {
+                if (window.premiumStore) {
+                    window.premiumStore.setCurrentChar(this.currentCharacterId);
+                    window.premiumStore.openDiamondShop();
+                }
+            };
+        }
     }
 
     openEventsPanel() {
