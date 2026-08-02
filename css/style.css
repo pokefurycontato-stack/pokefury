@@ -273,7 +273,6 @@ body {
     transform: translate(-50%, -50%);
     z-index: 1;
     image-rendering: auto;
-    clip-path: inset(0);
 }
 #worldmap-minimap {
     position: absolute;
