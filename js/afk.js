@@ -8,6 +8,7 @@ export class AFKManager {
         this.autoBattle = false;
         this.autoHeal = false;
         this.autoCapture = false;
+        this.autoHealTeam = false;
         this.healThreshold = 40;
         this.healPotionId = null;
         this.captureRarities = {};
@@ -20,6 +21,7 @@ export class AFKManager {
         this._homePlayerY = 0;
         this._visitingCenter = false;
         this._centerStep = 0;
+        this._wasInBattle = false;
     }
 
     start() {
@@ -49,7 +51,13 @@ export class AFKManager {
             const game = this.game;
             if (game.state === 'battle' && this.autoBattle) {
                 await this._handleBattle();
+                this._wasInBattle = true;
             } else if (game.state === 'overworld') {
+                if (this._wasInBattle && this.autoHealTeam) {
+                    this._wasInBattle = false;
+                    await this._healTeamAfterBattle();
+                }
+                this._wasInBattle = false;
                 if (this._visitingCenter) {
                     await this._handleCenterVisit();
                 } else if (this.autoSearch) {
@@ -67,6 +75,21 @@ export class AFKManager {
     _allMovesExhausted(pokemon) {
         if (!pokemon || !pokemon.moves) return false;
         return pokemon.moves.every(m => !m || m.currentPp <= 0);
+    }
+
+    async _healTeamAfterBattle() {
+        const game = this.game;
+        if (!game.playerTeam) return;
+        const hasInjured = game.playerTeam.some(p => p.currentHp < p.stats.hp || p.fainted || p.statusEffect);
+        if (!hasInjured) return;
+        for (const p of game.playerTeam) {
+            p.currentHp = p.stats.hp;
+            p.fainted = false;
+            p.statusEffect = null;
+            if (p.moves) p.moves.forEach(m => { m.currentPp = m.pp || 35; });
+        }
+        await game.saveTeam();
+        game.showTransitionBanner('Time curado automaticamente!');
     }
 
     // ============================================================

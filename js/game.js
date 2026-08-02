@@ -515,6 +515,10 @@ class PokeFuryGame {
             this._boostInterval = setInterval(() => {
                 this.updateVipBadge();
                 this.updateBoostsDisplay();
+                const healTeamWrap = document.getElementById('afk-heal-anywhere-wrap');
+                if (healTeamWrap) {
+                    healTeamWrap.style.display = (window.boostsManager && window.boostsManager.isActive('center_anywhere')) ? 'block' : 'none';
+                }
             }, 60000);
         }
 
@@ -3065,6 +3069,17 @@ class PokeFuryGame {
             afk.autoCapture = captureCheck.checked;
             captureOptions.style.display = captureCheck.checked ? 'block' : 'none';
         });
+
+        const healTeamWrap = document.getElementById('afk-heal-anywhere-wrap');
+        const healTeamCheck = document.getElementById('afk-auto-heal-team');
+        if (healTeamWrap && healTeamCheck) {
+            if (window.boostsManager && window.boostsManager.isActive('center_anywhere')) {
+                healTeamWrap.style.display = 'block';
+            }
+            healTeamCheck.addEventListener('change', () => {
+                afk.autoHealTeam = healTeamCheck.checked;
+            });
+        }
 
         startBtn.onclick = () => {
             if (!window.boostsManager || !window.boostsManager.isActive('vip')) {
