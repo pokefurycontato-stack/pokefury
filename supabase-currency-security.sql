@@ -21,14 +21,17 @@ CREATE TABLE IF NOT EXISTS currency_audit_log (
 
 ALTER TABLE currency_audit_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can read own audit logs" ON currency_audit_log;
 CREATE POLICY "Users can read own audit logs"
   ON currency_audit_log FOR SELECT
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "System can insert audit logs" ON currency_audit_log;
 CREATE POLICY "System can insert audit logs"
   ON currency_audit_log FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admin can read all audit logs" ON currency_audit_log;
 CREATE POLICY "Admin can read all audit logs"
   ON currency_audit_log FOR SELECT
   USING (
@@ -52,6 +55,11 @@ DECLARE
   v_new INTEGER;
   v_row RECORD;
 BEGIN
+  -- Auth check
+  IF auth.uid() IS NULL THEN
+    RETURN jsonb_build_object('error', 'Not authenticated');
+  END IF;
+
   -- Validate
   IF p_amount < 0 THEN
     RETURN jsonb_build_object('error', 'Amount must be positive');
@@ -116,6 +124,10 @@ DECLARE
   v_new INTEGER;
   v_row RECORD;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN jsonb_build_object('error', 'Not authenticated');
+  END IF;
+
   IF p_amount <= 0 THEN
     RETURN jsonb_build_object('error', 'Amount must be positive');
   END IF;
@@ -169,6 +181,10 @@ CREATE OR REPLACE FUNCTION get_currency_balance(
 DECLARE
   v_row RECORD;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN jsonb_build_object('error', 'Not authenticated');
+  END IF;
+
   SELECT diamonds, gold, silver INTO v_row
   FROM character_currencies
   WHERE character_id = p_character_id;
@@ -191,6 +207,10 @@ DROP POLICY IF EXISTS "currency_select" ON character_currencies;
 DROP POLICY IF EXISTS "currency_insert" ON character_currencies;
 DROP POLICY IF EXISTS "currency_update" ON character_currencies;
 DROP POLICY IF EXISTS "Admin can manage all currencies" ON character_currencies;
+DROP POLICY IF EXISTS "currency_select_safe" ON character_currencies;
+DROP POLICY IF EXISTS "block_direct_insert" ON character_currencies;
+DROP POLICY IF EXISTS "block_direct_update" ON character_currencies;
+DROP POLICY IF EXISTS "block_direct_delete" ON character_currencies;
 
 -- New restrictive policies
 CREATE POLICY "currency_select_safe" ON character_currencies
