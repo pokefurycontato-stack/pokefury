@@ -745,8 +745,22 @@ export function hideBattlePokemonSprites() {
         clearInterval(battleMessageInterval);
         battleMessageInterval = null;
     }
-    if (battlePokemonSprites.player) battlePokemonSprites.player.style.display = 'none';
-    if (battlePokemonSprites.enemy) battlePokemonSprites.enemy.style.display = 'none';
+    if (battlePokemonSprites.player) {
+        battlePokemonSprites.player.style.display = 'none';
+        battlePokemonSprites.player.remove();
+        battlePokemonSprites.player = null;
+    }
+    if (battlePokemonSprites.enemy) {
+        battlePokemonSprites.enemy.style.display = 'none';
+        battlePokemonSprites.enemy.remove();
+        battlePokemonSprites.enemy = null;
+    }
+    battlePokemonState.player = null;
+    battlePokemonState.enemy = null;
+    if (battlePokemonContainer) {
+        battlePokemonContainer.remove();
+        battlePokemonContainer = null;
+    }
     resetBattleFx();
 }
 
