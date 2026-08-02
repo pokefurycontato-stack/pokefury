@@ -2335,11 +2335,14 @@ class PokeFuryGame {
 
     positionBattleScreen() {
         const battleEl = document.getElementById('battle-screen');
-        if (battleEl && this.overworld2d && this.canvas) {
-            battleEl.style.left = this.canvas.offsetLeft + 'px';
-            battleEl.style.top = this.canvas.offsetTop + 'px';
-            battleEl.style.width = (this.overworld2d.worldCols * this.overworld2d.tileW) + 'px';
-            battleEl.style.height = (this.overworld2d.worldRows * this.overworld2d.tileH) + 'px';
+        if (battleEl && this.canvas) {
+            const rect = this.canvas.getBoundingClientRect();
+            const mainArea = document.getElementById('main-area');
+            const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0 };
+            battleEl.style.left = (rect.left - mainRect.left) + 'px';
+            battleEl.style.top = (rect.top - mainRect.top) + 'px';
+            battleEl.style.width = rect.width + 'px';
+            battleEl.style.height = rect.height + 'px';
         }
     }
 
