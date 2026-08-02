@@ -149,15 +149,23 @@ async function handleRegister() {
     if (password !== confirm) { showError('register', 'As senhas não coincidem.'); return; }
 
     try {
-        const { data: existingProfile } = await window.db
-            .from('profiles')
-            .select('id')
-            .eq('username', username)
-            .maybeSingle();
+        try {
+            const { data: existingProfile, error: profileQueryError } = await window.db
+                .from('profiles')
+                .select('id')
+                .eq('username', username)
+                .maybeSingle();
 
-        if (existingProfile) {
-            showError('register', 'Este nome de treinador já existe.');
-            return;
+            if (profileQueryError) {
+                console.warn('[PokeFury Auth] Profiles query skipped:', profileQueryError.message);
+            }
+
+            if (existingProfile) {
+                showError('register', 'Este nome de treinador já existe.');
+                return;
+            }
+        } catch (e) {
+            console.warn('[PokeFury Auth] Username check skipped:', e.message);
         }
 
         const { data, error } = await window.db.auth.signUp({
