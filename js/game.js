@@ -4935,7 +4935,6 @@ class PokeFuryGame {
         screen.classList.remove('hidden');
 
         this._gymDefeatedIds = new Set();
-        this._currentGymRegion = this.currentRegion || { id: 1, name: 'Kanto' };
         this._selectedGymIndex = 0;
 
         const charId = this.currentCharacterId;
@@ -4971,20 +4970,78 @@ class PokeFuryGame {
 
         this._gymRegions = regions;
 
+        let firstUndefeatedRegion = null;
+        let firstUndefeatedLeader = null;
+
+        for (let i = 0; i < regions.length; i++) {
+            const region = regions[i];
+            const { data: leaders } = await window.db
+                .from('gym_leaders')
+                .select('*')
+                .eq('region_id', region.id)
+                .order('gym_number');
+
+            if (!leaders || leaders.length === 0) continue;
+
+            const isRegionComplete = leaders.every(l => this._gymDefeatedIds.has(l.id));
+
+            if (!isRegionComplete && !firstUndefeatedRegion) {
+                firstUndefeatedRegion = region;
+                for (const leader of leaders) {
+                    if (!this._gymDefeatedIds.has(leader.id)) {
+                        firstUndefeatedLeader = leader;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (firstUndefeatedRegion && !this._currentGymRegion) {
+            this._currentGymRegion = firstUndefeatedRegion;
+        }
+
+        if (!this._currentGymRegion && regions.length > 0) {
+            this._currentGymRegion = regions[0];
+        }
+
         const regionList = document.getElementById('gym-region-list');
         if (regionList) {
             regionList.innerHTML = '';
-            regions.forEach((region, i) => {
-                const item = document.createElement('div');
+            for (let i = 0; i < regions.length; i++) {
+                const region = regions[i];
                 const isCurrentRegion = this._currentGymRegion?.id === region.id;
-                item.style.cssText = `padding:6px 10px;border-radius:6px;cursor:pointer;background:${isCurrentRegion ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isCurrentRegion ? 'rgba(233,69,96,0.4)' : 'transparent'};margin-bottom:4px;transition:all 0.2s;`;
-                item.innerHTML = `<div style="font-size:11px;font-weight:700;color:#fff;">${region.name}</div>`;
-                item.addEventListener('click', () => {
-                    this._currentGymRegion = region;
-                    this.loadGymRegions();
-                });
+
+                let isRegionUnlocked = i === 0;
+                if (i > 0) {
+                    const prevRegion = regions[i - 1];
+                    const { data: prevLeaders } = await window.db
+                        .from('gym_leaders')
+                        .select('id')
+                        .eq('region_id', prevRegion.id);
+                    if (prevLeaders) {
+                        isRegionUnlocked = prevLeaders.every(l => this._gymDefeatedIds.has(l.id));
+                    }
+                }
+
+                const item = document.createElement('div');
+                item.style.cssText = `padding:6px 10px;border-radius:6px;cursor:${isRegionUnlocked ? 'pointer' : 'not-allowed'};background:${isCurrentRegion ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isCurrentRegion ? 'rgba(233,69,96,0.4)' : 'transparent'};margin-bottom:4px;transition:all 0.2s;opacity:${isRegionUnlocked ? '1' : '0.4'};`;
+
+                const lockIcon = isRegionUnlocked ? '' : ' 🔒';
+                item.innerHTML = `<div style="font-size:11px;font-weight:700;color:#fff;">${region.name}${lockIcon}</div>`;
+
+                if (isRegionUnlocked) {
+                    item.addEventListener('click', () => {
+                        this._currentGymRegion = region;
+                        this.loadGymRegions();
+                    });
+                }
+
                 regionList.appendChild(item);
-            });
+            }
+        }
+
+        if (firstUndefeatedLeader && firstUndefeatedRegion) {
+            this._currentGymRegion = firstUndefeatedRegion;
         }
 
         await this.loadGymLeaders();
@@ -5007,7 +5064,16 @@ class PokeFuryGame {
         }
 
         this.renderGymList();
-        this.selectGym(0);
+
+        let selectedIndex = 0;
+        for (let i = 0; i < this._gymLeaders.length; i++) {
+            if (!this._gymDefeatedIds.has(this._gymLeaders[i].id)) {
+                selectedIndex = i;
+                break;
+            }
+        }
+
+        this.selectGym(selectedIndex);
     }
 
     _isGymUnlocked(leader, index) {
