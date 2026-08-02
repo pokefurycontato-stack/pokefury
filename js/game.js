@@ -25,7 +25,9 @@ const SHINY_CHANCE = 128;
 function getShinyChance() {
     const base = SHINY_CHANCE;
     if (window.boostsManager && window.boostsManager.isActive('shiny_boost')) {
-        return Math.floor(base / 2); // 2x chance = half the denominator
+        // 2x chance = probability doubled = divide denominator by 2
+        // 1/128 becomes 2/128 = 1/64
+        return Math.max(1, Math.floor(base / 2));
     }
     return base;
 }
