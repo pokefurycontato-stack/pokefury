@@ -5206,7 +5206,121 @@ class PokeFuryGame {
             return;
         }
 
+        this._currentGymLeader = leader;
         this.closeGymLeaders();
+        await this.enterGymMap(leader);
+    }
+
+    async enterGymMap(leader) {
+        const gymMapData = {
+            id: 'gym_' + leader.id,
+            name: 'Ginásio ' + leader.name,
+            image_url: leader.map_image_url || null,
+            collision_zones: [
+                { x: 0, y: 0, w: 32, h: 1 },
+                { x: 0, y: 23, w: 32, h: 1 },
+                { x: 0, y: 0, w: 1, h: 24 },
+                { x: 31, y: 0, w: 1, h: 24 },
+                { x: 4, y: 4, w: 24, h: 1 },
+                { x: 4, y: 18, w: 24, h: 1 },
+                { x: 4, y: 4, w: 1, h: 15 },
+                { x: 27, y: 4, w: 1, h: 15 }
+            ],
+            spawn_zones: [],
+            player_spawn_x: 15,
+            player_spawn_y: 22,
+            battle_bg_url: leader.battle_bg_url || null
+        };
+
+        this._isInGym = true;
+        this._gymExitZones = [{ x: 14, y: 23, w: 4, h: 1 }];
+
+        this.state = 'overworld';
+        showScreen('hud');
+        await this.overworld2d.setCurrentMap(gymMapData);
+        this.overworld2d.show();
+
+        this._gymLeaderEntity = {
+            entityId: 'gym_leader_' + leader.id,
+            x: 15,
+            y: 8,
+            spriteUrl: leader.sprite_url || null,
+            name: leader.name,
+            isLeader: true,
+            active: true,
+            respawnTimer: 0
+        };
+
+        if (leader.sprite_url) {
+            this.overworld2d.gymLeaderImg = new Image();
+            this.overworld2d.gymLeaderImg.src = leader.sprite_url;
+        }
+
+        this.showToast(`Entrou no Ginásio ${leader.name}!`, 'info');
+    }
+
+    checkGymLeaderProximity() {
+        if (!this._isInGym || !this._gymLeaderEntity || !this._gymLeaderEntity.active) return;
+
+        const px = this.overworld2d.player.x;
+        const py = this.overworld2d.player.y;
+        const lx = this._gymLeaderEntity.x;
+        const ly = this._gymLeaderEntity.y;
+
+        const dist = Math.abs(px - lx) + Math.abs(py - ly);
+
+        if (dist <= 1) {
+            this.startGymLeaderBattleDirect();
+        }
+    }
+
+    checkGymExit() {
+        if (!this._isInGym || !this._gymExitZones) return;
+
+        const px = this.overworld2d.player.x;
+        const py = this.overworld2d.player.y;
+
+        for (const zone of this._gymExitZones) {
+            if (px >= zone.x && px < zone.x + zone.w && py >= zone.y && py < zone.y + zone.h) {
+                this.exitGym();
+                return;
+            }
+        }
+    }
+
+    async exitGym() {
+        this._isInGym = false;
+        this._gymLeaderEntity = null;
+        this._gymExitZones = null;
+        this._currentGymLeader = null;
+
+        if (this.overworld2d) {
+            this.overworld2d.gymLeaderImg = null;
+        }
+
+        if (this.currentMap) {
+            this.state = 'overworld';
+            await this.overworld2d.setCurrentMap(this.currentMap);
+            this.overworld2d.show();
+            this.showToast('Saiu do ginásio.', 'info');
+        }
+    }
+
+    async startGymLeaderBattleDirect() {
+        const leader = this._currentGymLeader;
+        if (!leader) return;
+
+        let pokemonList = [];
+        if (leader.pokemon_list) {
+            try {
+                pokemonList = typeof leader.pokemon_list === 'string' ? JSON.parse(leader.pokemon_list) : leader.pokemon_list;
+            } catch(e) { pokemonList = []; }
+        }
+
+        if (pokemonList.length === 0) {
+            this.showToast('Este líder não tem pokémons definidos!', 'error');
+            return;
+        }
 
         const firstPokemon = pokemonList[0];
         const pokemonName = typeof firstPokemon === 'string' ? firstPokemon : (firstPokemon.name || 'Geodude');

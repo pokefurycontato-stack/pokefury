@@ -356,6 +356,12 @@ export class Overworld2D {
         for (const z of this.collisionZones) {
             if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return true;
         }
+
+        if (this.game._gymLeaderEntity && this.game._gymLeaderEntity.active) {
+            const leader = this.game._gymLeaderEntity;
+            if (x === leader.x && y === leader.y) return true;
+        }
+
         return false;
     }
 
@@ -455,6 +461,11 @@ export class Overworld2D {
                 this.moveCooldown = 6;
 
                 this.updatePokemonFollow();
+
+                if (this.game._isInGym) {
+                    this.game.checkGymLeaderProximity();
+                    this.game.checkGymExit();
+                }
             }
         }
 
@@ -759,6 +770,7 @@ export class Overworld2D {
 
             this.drawGrid(ctx, w, h);
             this.drawMapPokemon(ctx);
+            this.drawGymExitZone(ctx);
         } else {
             ctx.fillStyle = '#2d5a27';
             ctx.fillRect(0, 0, w, h);
@@ -903,6 +915,62 @@ export class Overworld2D {
             const fScale = getPokemonScale(this.pokemonFollowing);
             const fSize = this.tileW * fScale;
             ctx.drawImage(this.pokemonFollowSprite, px + (this.tileW - fSize) / 2, py + (this.tileH - fSize) / 2, fSize, fSize);
+        }
+
+        this.drawGymLeader(ctx);
+    }
+
+    drawGymLeader(ctx) {
+        const leader = this.game._gymLeaderEntity;
+        if (!leader || !leader.active || !leader.spriteUrl) return;
+
+        if (!this.gymLeaderImg) {
+            this.gymLeaderImg = new Image();
+            this.gymLeaderImg.src = leader.spriteUrl;
+        }
+
+        if (!this.gymLeaderImg.complete) return;
+
+        const drawX = leader.x * this.tileW - this.camera.x + this.mapOffsetX;
+        const drawY = leader.y * this.tileH - this.camera.y + this.mapOffsetY;
+
+        const spriteW = this.tileW * 2;
+        const spriteH = this.tileH * 2.5;
+
+        ctx.drawImage(this.gymLeaderImg, drawX + (this.tileW - spriteW) / 2, drawY - spriteH + this.tileH, spriteW, spriteH);
+
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 3;
+        ctx.fillText(leader.name, drawX + this.tileW / 2, drawY - 8);
+        ctx.shadowBlur = 0;
+    }
+
+    drawGymExitZone(ctx) {
+        if (!this.game._isInGym || !this.game._gymExitZones) return;
+
+        const time = Date.now() / 1000;
+        const alpha = 0.3 + Math.sin(time * 2) * 0.15;
+
+        for (const zone of this.game._gymExitZones) {
+            const sx = zone.x * this.tileW - this.camera.x + this.mapOffsetX;
+            const sy = zone.y * this.tileH - this.camera.y + this.mapOffsetY;
+            const sw = zone.w * this.tileW;
+            const sh = zone.h * this.tileH;
+
+            ctx.fillStyle = `rgba(233, 69, 96, ${alpha})`;
+            ctx.fillRect(sx, sy, sw, sh);
+
+            ctx.strokeStyle = `rgba(233, 69, 96, ${alpha + 0.2})`;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(sx, sy, sw, sh);
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha + 0.3})`;
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('← Sair', sx + sw / 2, sy + sh / 2 + 4);
         }
     }
 
