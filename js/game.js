@@ -5126,6 +5126,27 @@ class PokeFuryGame {
         canvas.width = canvas.parentElement.clientWidth;
         canvas.height = canvas.parentElement.clientHeight;
 
+        if (leader.map_image_url) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                const w = img.width * scale;
+                const h = img.height * scale;
+                const x = (canvas.width - w) / 2;
+                const y = (canvas.height - h) / 2;
+                ctx.drawImage(img, x, y, w, h);
+            };
+            img.onerror = () => {
+                this.drawGymFallback(ctx, canvas, leader);
+            };
+            img.src = leader.map_image_url;
+        } else {
+            this.drawGymFallback(ctx, canvas, leader);
+        }
+    }
+
+    drawGymFallback(ctx, canvas, leader) {
         const typeColors = {
             'Normal': ['#A8A878', '#C6C6A7'],
             'Fire': ['#FF4500', '#CC3300'],
