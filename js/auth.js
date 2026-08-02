@@ -149,13 +149,13 @@ async function handleRegister() {
     if (password !== confirm) { showError('register', 'As senhas não coincidem.'); return; }
 
     try {
-        const { data: existingUser } = await window.db
+        const { data: existingProfile } = await window.db
             .from('profiles')
             .select('id')
             .eq('username', username)
             .maybeSingle();
 
-        if (existingUser) {
+        if (existingProfile) {
             showError('register', 'Este nome de treinador já existe.');
             return;
         }
@@ -166,13 +166,18 @@ async function handleRegister() {
             options: { data: { username: username, display_email: email } }
         });
         if (error) {
-            if (error.message.includes('already')) {
-                showError('register', 'Este e-mail já está cadastrado.');
+            console.error('[PokeFury Auth] SignUp error:', error.message);
+            const msg = error.message.toLowerCase();
+            if (msg.includes('already') || msg.includes('registrado') || msg.includes('exist')) {
+                showError('register', 'Este e-mail já está cadastrado. Faça login.');
+            } else if (msg.includes('confirm') || msg.includes('verifique')) {
+                showError('register', 'Conta criada! Verifique seu e-mail para confirmar.');
             } else {
                 showError('register', 'Erro: ' + error.message);
             }
             return;
         }
+
         if (data.user) {
             const { error: profileError } = await window.db.from('profiles').upsert(
                 { id: data.user.id, username, display_email: email },
