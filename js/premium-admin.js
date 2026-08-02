@@ -6,6 +6,7 @@ class PremiumAdmin {
     constructor() {
         this.currentTab = 'buy_diamonds';
         this.allProducts = [];
+        this._selectedFile = null;
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this._bindEvents());
         } else {
@@ -40,6 +41,7 @@ class PremiumAdmin {
             imageInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
+                    this._selectedFile = file;
                     const preview = document.getElementById('pf-image-preview');
                     if (preview) {
                         preview.src = URL.createObjectURL(file);
@@ -72,6 +74,16 @@ class PremiumAdmin {
                 .order('sort_order', { ascending: true });
             if (error) throw error;
             this.allProducts = data || [];
+
+            // Clean up any blob URLs that got saved by mistake
+            const blobProducts = this.allProducts.filter(p => p.image_url && p.image_url.startsWith('blob:'));
+            if (blobProducts.length) {
+                console.log('[PremiumAdmin] cleaning up', blobProducts.length, 'blob URLs');
+                for (const p of blobProducts) {
+                    await window.db.from('premium_products').update({ image_url: '' }).eq('id', p.id);
+                    p.image_url = '';
+                }
+            }
         } catch (e) {
             console.error('[PremiumAdmin] load error:', e);
             this.allProducts = [];
@@ -219,6 +231,7 @@ class PremiumAdmin {
     //  CREATE / EDIT FORM
     // ========================
     showCreateForm(destination) {
+        this._selectedFile = null;
         const el = (id) => document.getElementById(id);
         if (el('premium-form-title')) el('premium-form-title').textContent = 'Novo Produto';
         if (el('pf-id')) el('pf-id').value = '';
@@ -246,6 +259,7 @@ class PremiumAdmin {
     }
 
     async editProduct(id) {
+        this._selectedFile = null;
         const product = this.allProducts.find(p => p.id === id);
         if (!product) return;
 
@@ -281,8 +295,7 @@ class PremiumAdmin {
         const priceBrl = parseFloat(document.getElementById('pf-price-brl').value) || 0;
         const priceDiamonds = parseInt(document.getElementById('pf-price-diamonds').value) || 0;
         const destination = document.querySelector('input[name="pf-dest"]:checked')?.value || 'buy_diamonds';
-        const fileInput = document.getElementById('pf-image');
-        const file = fileInput?.files[0];
+        const file = this._selectedFile;
 
         if (!name) {
             this._toast('Nome é obrigatório!', 'error');
@@ -354,6 +367,7 @@ class PremiumAdmin {
             }
 
             this.hideForm();
+            this._selectedFile = null;
             await this.loadAllProducts();
             this.renderProductsList();
         } catch (e) {
