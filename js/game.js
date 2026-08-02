@@ -5024,17 +5024,16 @@ class PokeFuryGame {
                 }
 
                 const item = document.createElement('div');
-                item.style.cssText = `padding:6px 10px;border-radius:6px;cursor:${isRegionUnlocked ? 'pointer' : 'not-allowed'};background:${isCurrentRegion ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isCurrentRegion ? 'rgba(233,69,96,0.4)' : 'transparent'};margin-bottom:4px;transition:all 0.2s;opacity:${isRegionUnlocked ? '1' : '0.4'};`;
+                item.style.cssText = `padding:6px 10px;border-radius:6px;cursor:pointer;background:${isCurrentRegion ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isCurrentRegion ? 'rgba(233,69,96,0.4)' : 'transparent'};margin-bottom:4px;transition:all 0.2s;opacity:1;`;
 
                 const lockIcon = isRegionUnlocked ? '' : ' 🔒';
                 item.innerHTML = `<div style="font-size:11px;font-weight:700;color:#fff;">${region.name}${lockIcon}</div>`;
 
-                if (isRegionUnlocked) {
-                    item.addEventListener('click', () => {
-                        this._currentGymRegion = region;
-                        this.loadGymRegions();
-                    });
-                }
+                item.addEventListener('click', () => {
+                    this._currentGymRegion = region;
+                    this._regionUnlocked = isRegionUnlocked;
+                    this.loadGymRegions();
+                });
 
                 regionList.appendChild(item);
             }
@@ -5216,6 +5215,14 @@ class PokeFuryGame {
         if (btn) {
             if (defeated) {
                 btn.textContent = '✅ Já Derrotado';
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            } else if (!this._isGymUnlocked(leader, this._selectedGymIndex)) {
+                btn.textContent = '🔒 Derrote o anterior';
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            } else if (this._regionUnlocked === false) {
+                btn.textContent = '🔒 Complete a região anterior';
                 btn.style.opacity = '0.5';
                 btn.style.pointerEvents = 'none';
             } else {
