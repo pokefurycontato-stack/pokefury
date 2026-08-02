@@ -1615,10 +1615,20 @@ class PokeFuryGame {
             if (!enemyPokemon) { resolve(false); return; }
 
             if (this.afkManager && this.afkManager.running && this.afkManager.autoCapture) {
+                const isShiny = enemyPokemon.isShiny;
                 const rarity = enemyPokemon.rarity || 'common';
-                const captureConfig = this.afkManager.captureRarities[rarity];
+
+                let captureConfig = null;
+                // Shiny takes priority
+                if (isShiny && this.afkManager.captureRarities['shiny']) {
+                    captureConfig = this.afkManager.captureRarities['shiny'];
+                } else if (!isShiny && this.afkManager.captureRarities[rarity]) {
+                    captureConfig = this.afkManager.captureRarities[rarity];
+                }
+
                 if (!captureConfig || !captureConfig.ballId) {
-                    await showBattleMessage(`${enemyPokemon.name} não está nas raridades configuradas. Pulando captura...`);
+                    const label = isShiny ? 'Shiny' : rarity;
+                    await showBattleMessage(`${enemyPokemon.name} (${label}) não está nas raridades configuradas. Pulando captura...`);
                     resolve(false);
                     return;
                 }
@@ -1629,7 +1639,8 @@ class PokeFuryGame {
                     resolve(false);
                     return;
                 }
-                await showBattleMessage(`Auto-capturando ${enemyPokemon.name} (${rarity}) com ${ballInv.items.name}!`);
+                const label = isShiny ? 'Shiny' : rarity;
+                await showBattleMessage(`Auto-capturando ${enemyPokemon.name} (${label}) com ${ballInv.items.name}!`);
                 const caught = await this.tryCaptureWithBall(enemyPokemon, ballInv.items);
                 resolve(caught);
                 return;

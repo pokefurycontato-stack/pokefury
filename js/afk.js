@@ -409,11 +409,22 @@ export class AFKManager {
 
     async tryAutoCapture(enemyPokemon) {
         if (!this.autoCapture || !enemyPokemon) return false;
-        const rarity = enemyPokemon.rarity || 'common';
-        if (!this.captureRarities[rarity]) return false;
         if (enemyPokemon.isAlpha || enemyPokemon.isRaidBoss) return false;
 
-        const ballConfig = this.captureRarities[rarity];
+        const isShiny = enemyPokemon.isShiny;
+        const rarity = enemyPokemon.rarity || 'common';
+
+        let ballConfig = null;
+
+        // Shiny takes priority - use shiny ball config if enabled
+        if (isShiny && this.captureRarities['shiny']) {
+            ballConfig = this.captureRarities['shiny'];
+        } else if (!isShiny && this.captureRarities[rarity]) {
+            ballConfig = this.captureRarities[rarity];
+        }
+
+        if (!ballConfig) return false;
+
         const ballId = ballConfig.ballId;
         if (!ballId) return false;
 
