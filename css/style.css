@@ -2032,6 +2032,29 @@ body {
 .premium-admin-row:hover {
     border-color: #e94560;
 }
+.premium-admin-row.dragging {
+    opacity: 0.4;
+    border-color: #e94560;
+}
+.premium-admin-row.drag-over {
+    border-color: #4fc3f7;
+    box-shadow: 0 0 10px rgba(79,195,247,0.3);
+}
+.premium-admin-drag-handle {
+    cursor: grab;
+    color: rgba(255,255,255,0.3);
+    font-size: 18px;
+    padding: 0 4px;
+    user-select: none;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+.premium-admin-drag-handle:hover {
+    color: rgba(255,255,255,0.7);
+}
+.premium-admin-drag-handle:active {
+    cursor: grabbing;
+}
 .premium-admin-row-img {
     width: 50px;
     height: 50px;

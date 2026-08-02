@@ -102,7 +102,8 @@ class PremiumAdmin {
                     : 'Grátis';
 
             return `
-                <div class="premium-admin-row" data-id="${p.id}">
+                <div class="premium-admin-row" data-id="${p.id}" draggable="true">
+                    <span class="premium-admin-drag-handle" title="Arrastar para reordenar">⠿</span>
                     ${imgHtml}
                     <div class="premium-admin-row-info">
                         <div class="premium-admin-row-name">${this._esc(p.name)}</div>
@@ -116,6 +117,88 @@ class PremiumAdmin {
                 </div>
             `;
         }).join('');
+
+        this._setupDragAndDrop();
+    }
+
+    _setupDragAndDrop() {
+        const container = document.getElementById('premium-admin-list');
+        if (!container) return;
+
+        let dragRow = null;
+
+        container.querySelectorAll('.premium-admin-row').forEach(row => {
+            row.addEventListener('dragstart', (e) => {
+                dragRow = row;
+                row.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            row.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                container.querySelectorAll('.premium-admin-row').forEach(r => r.classList.remove('drag-over'));
+                dragRow = null;
+            });
+
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragRow && dragRow !== row) {
+                    row.classList.add('drag-over');
+                }
+            });
+
+            row.addEventListener('dragleave', () => {
+                row.classList.remove('drag-over');
+            });
+
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.classList.remove('drag-over');
+                if (!dragRow || dragRow === row) return;
+
+                const allRows = [...container.querySelectorAll('.premium-admin-row')];
+                const fromIdx = allRows.indexOf(dragRow);
+                const toIdx = allRows.indexOf(row);
+
+                if (fromIdx < toIdx) {
+                    row.after(dragRow);
+                } else {
+                    row.before(dragRow);
+                }
+
+                this._saveNewOrder();
+            });
+        });
+    }
+
+    async _saveNewOrder() {
+        const container = document.getElementById('premium-admin-list');
+        if (!container) return;
+
+        const rows = container.querySelectorAll('.premium-admin-row');
+        const updates = [];
+
+        rows.forEach((row, index) => {
+            const id = row.dataset.id;
+            const product = this.allProducts.find(p => p.id === id);
+            if (product) {
+                product.sort_order = index;
+                updates.push({ id, sort_order: index });
+            }
+        });
+
+        try {
+            for (const u of updates) {
+                const { error } = await window.db
+                    .from('premium_products')
+                    .update({ sort_order: u.sort_order })
+                    .eq('id', u.id);
+                if (error) throw error;
+            }
+        } catch (e) {
+            console.error('[PremiumAdmin] reorder failed:', e);
+        }
     }
 
     _esc(str) {
