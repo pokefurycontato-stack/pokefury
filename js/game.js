@@ -3301,6 +3301,71 @@ class PokeFuryGame {
                 delete input.dataset.itemId;
             }
         };
+
+        // Currency donation handler
+        document.getElementById('donate-currency-btn').onclick = async () => {
+            if (!this._donateSelectedChar) return;
+            const diamonds = parseInt(document.getElementById('donate-diamonds').value) || 0;
+            const gold = parseInt(document.getElementById('donate-gold').value) || 0;
+            const silver = parseInt(document.getElementById('donate-silver').value) || 0;
+
+            if (diamonds === 0 && gold === 0 && silver === 0) {
+                const result = document.getElementById('donate-currency-result');
+                result.style.display = 'block';
+                result.style.color = '#f44336';
+                result.textContent = 'Insira pelo menos uma moeda para doar!';
+                return;
+            }
+
+            try {
+                const { data: curr } = await window.db
+                    .from('character_currencies')
+                    .select('*')
+                    .eq('character_id', this._donateSelectedChar.id)
+                    .single();
+
+                if (!curr) {
+                    const { error } = await window.db
+                        .from('character_currencies')
+                        .insert([{
+                            character_id: this._donateSelectedChar.id,
+                            gold: gold,
+                            silver: silver,
+                            diamonds: diamonds
+                        }]);
+                    if (error) throw error;
+                } else {
+                    const { error } = await window.db
+                        .from('character_currencies')
+                        .update({
+                            gold: (curr.gold || 0) + gold,
+                            silver: (curr.silver || 0) + silver,
+                            diamonds: (curr.diamonds || 0) + diamonds
+                        })
+                        .eq('character_id', this._donateSelectedChar.id);
+                    if (error) throw error;
+                }
+
+                const result = document.getElementById('donate-currency-result');
+                result.style.display = 'block';
+                result.style.color = '#4caf50';
+                const parts = [];
+                if (diamonds > 0) parts.push(`${diamonds} 💎`);
+                if (gold > 0) parts.push(`${gold} 🪙 Ouro`);
+                if (silver > 0) parts.push(`${silver} 🪙 Prata`);
+                result.textContent = `${parts.join(', ')} doado para ${this._donateSelectedChar.player_name}!`;
+
+                document.getElementById('donate-diamonds').value = '0';
+                document.getElementById('donate-gold').value = '0';
+                document.getElementById('donate-silver').value = '0';
+            } catch (e) {
+                console.error('[Donate] currency error:', e);
+                const result = document.getElementById('donate-currency-result');
+                result.style.display = 'block';
+                result.style.color = '#f44336';
+                result.textContent = `Erro: ${e.message}`;
+            }
+        };
     }
 
     setupDonatePokemonSearch() {
