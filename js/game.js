@@ -5173,9 +5173,9 @@ class PokeFuryGame {
             'Bug': { top: 'calc(13% - 90px)', left: 0, size: 120 },
             'Ghost': { top: 'calc(10% + 40px)', left: 0, size: 120 },
             'Dragon': { top: 'calc(12% - 70px)', left: -5, size: 120 },
-            'Dark': { top: 'calc(14% - 70px)', left: 0, size: 120 },
+            'Dark': { top: 'calc(14% - 85px)', left: 0, size: 120 },
             'Steel': { top: 'calc(11% - 65px)', left: 0, size: 120 },
-            'Fairy': { top: 'calc(10% - 15px)', left: 0, size: 120 },
+            'Fairy': { top: 'calc(10% - 19px)', left: 0, size: 120 },
             'Normal': { top: 'calc(12% - 85px)', left: 40, size: 120 }
         };
 
