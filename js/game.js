@@ -5148,11 +5148,41 @@ class PokeFuryGame {
             'Steel': '#B8B8D0', 'Fairy': '#EE99AC'
         };
 
+        const typeCircleOffsets = {
+            'Rock': { top: 'calc(12% + 10px)', size: 120 },
+            'Water': { top: 'calc(10% + 10px)', size: 120 },
+            'Fire': { top: 'calc(14% + 10px)', size: 120 },
+            'Grass': { top: 'calc(11% + 10px)', size: 120 },
+            'Electric': { top: 'calc(13% + 10px)', size: 120 },
+            'Ice': { top: 'calc(10% + 10px)', size: 120 },
+            'Fighting': { top: 'calc(15% + 10px)', size: 120 },
+            'Poison': { top: 'calc(12% + 10px)', size: 120 },
+            'Ground': { top: 'calc(14% + 10px)', size: 120 },
+            'Flying': { top: 'calc(9% + 10px)', size: 120 },
+            'Psychic': { top: 'calc(11% + 10px)', size: 120 },
+            'Bug': { top: 'calc(13% + 10px)', size: 120 },
+            'Ghost': { top: 'calc(10% + 10px)', size: 120 },
+            'Dragon': { top: 'calc(12% + 10px)', size: 120 },
+            'Dark': { top: 'calc(14% + 10px)', size: 120 },
+            'Steel': { top: 'calc(11% + 10px)', size: 120 },
+            'Fairy': { top: 'calc(10% + 10px)', size: 120 },
+            'Normal': { top: 'calc(12% + 10px)', size: 120 }
+        };
+
         const spriteCircle = document.getElementById('gym-leader-sprite');
         if (spriteCircle) {
             const color = typeColors[leader.type] || '#333';
             spriteCircle.style.background = color;
             spriteCircle.style.boxShadow = `0 0 20px ${color}80`;
+
+            const offset = typeCircleOffsets[leader.type] || typeCircleOffsets['Rock'];
+            spriteCircle.style.width = offset.size + 'px';
+            spriteCircle.style.height = offset.size + 'px';
+
+            const spot = document.getElementById('gym-leader-spot');
+            if (spot) {
+                spot.style.top = offset.top;
+            }
         }
 
         const img = document.getElementById('gym-leader-img');
