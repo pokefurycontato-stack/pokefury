@@ -6,7 +6,11 @@ class PremiumAdmin {
     constructor() {
         this.currentTab = 'buy_diamonds';
         this.allProducts = [];
-        this._bindEvents();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this._bindEvents());
+        } else {
+            this._bindEvents();
+        }
     }
 
     _bindEvents() {

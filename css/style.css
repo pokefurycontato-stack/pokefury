@@ -2095,10 +2095,26 @@ body {
 }
 
 /* Admin tabs */
+.premium-admin-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.4);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+.premium-admin-tab:hover {
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.05);
+}
 .premium-admin-tab.active {
-    background: rgba(233,69,96,0.15) !important;
-    color: #e94560 !important;
-    border-bottom-color: #e94560 !important;
+    background: rgba(233,69,96,0.15);
+    color: #e94560;
+    border-bottom-color: #e94560;
 }
 
 /* Image upload label hover */

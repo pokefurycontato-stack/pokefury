@@ -7,7 +7,11 @@ class PremiumStore {
         this.products = [];
         this.diamonds = 0;
         this.currentCharId = null;
-        this._bindEvents();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this._bindEvents());
+        } else {
+            this._bindEvents();
+        }
     }
 
     _bindEvents() {
