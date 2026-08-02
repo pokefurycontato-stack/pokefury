@@ -149,13 +149,28 @@ async function handleRegister() {
     if (password !== confirm) { showError('register', 'As senhas não coincidem.'); return; }
 
     try {
+        const { data: existingUser } = await window.db
+            .from('profiles')
+            .select('id')
+            .eq('username', username)
+            .maybeSingle();
+
+        if (existingUser) {
+            showError('register', 'Este nome de treinador já existe.');
+            return;
+        }
+
         const { data, error } = await window.db.auth.signUp({
             email: email,
             password: password,
             options: { data: { username: username, display_email: email } }
         });
         if (error) {
-            showError('register', error.message.includes('already') ? 'Este nome de treinador já existe.' : 'Erro: ' + error.message);
+            if (error.message.includes('already')) {
+                showError('register', 'Este e-mail já está cadastrado.');
+            } else {
+                showError('register', 'Erro: ' + error.message);
+            }
             return;
         }
         if (data.user) {
