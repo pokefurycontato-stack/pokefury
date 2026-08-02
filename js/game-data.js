@@ -40,7 +40,7 @@ const GameData = {
             .select()
             .single();
         if (error) {
-            console.error('[GameData] createCharacter error:', error);
+            console.error('[GameData] createCharacter error:', JSON.stringify(error, null, 2));
             return null;
         }
         return data;
