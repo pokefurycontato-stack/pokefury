@@ -404,71 +404,6 @@ class PokeFuryGame {
         container.innerHTML = tags.join('');
     }
 
-    setupHealAnywhere() {
-        const existing = document.getElementById('btn-heal-anywhere');
-        if (existing) existing.remove();
-
-        if (!window.boostsManager || !window.boostsManager.isActive('center_anywhere')) return;
-
-        const btn = document.createElement('button');
-        btn.id = 'btn-heal-anywhere';
-        btn.textContent = '💊 Curar Time';
-        btn.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:100;padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(76,175,80,0.4);transition:transform 0.2s';
-        btn.onmouseenter = () => btn.style.transform = 'scale(1.05)';
-        btn.onmouseleave = () => btn.style.transform = 'scale(1)';
-        btn.onclick = () => this.healTeamAnywhere();
-        document.body.appendChild(btn);
-    }
-
-    async healTeamAnywhere() {
-        if (this.state !== 'overworld') {
-            if (window.boostsManager) window.boostsManager._showToast?.('Não pode curar em batalha!', 'error');
-            return;
-        }
-        if (!window.boostsManager || !window.boostsManager.isActive('center_anywhere')) {
-            const toast = document.createElement('div');
-            toast.className = 'premium-toast error';
-            toast.textContent = 'Centro Pokémon Portátil não ativo!';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-            return;
-        }
-
-        try {
-            const { data: team } = await window.db
-                .from('pokemon_team')
-                .select('id, current_hp, hp')
-                .eq('character_id', this.currentCharacterId);
-
-            if (!team || !team.length) return;
-
-            let healed = 0;
-            for (const poke of team) {
-                if (poke.current_hp < poke.hp) {
-                    await window.db.from('pokemon_team').update({ current_hp: poke.hp }).eq('id', poke.id);
-                    healed++;
-                }
-            }
-
-            // Also cure status conditions
-            await window.db.from('pokemon_team')
-                .update({ status: null })
-                .eq('character_id', this.currentCharacterId)
-                .not('status', 'is', null);
-
-            const toast = document.createElement('div');
-            toast.className = 'premium-toast success';
-            toast.textContent = healed > 0 ? `${healed} Pokémon curados!` : 'Time já está com HP cheio!';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-
-            // Refresh party panel if open
-            if (this.refreshPartyPanel) this.refreshPartyPanel();
-        } catch (e) {
-            console.error('[HealAnywhere] error:', e);
-        }
-    }
-
     async startGame(starterSpecies) {
         if (this._starting) {
             console.log('[PokeFury] startGame already in progress, skipping');
@@ -574,14 +509,12 @@ class PokeFuryGame {
         }
         this.updateTrainerLevelUI();
         this.updateVipBadge();
-        this.setupHealAnywhere();
 
         // Periodic boost expiry check (every 60s)
         if (!this._boostInterval) {
             this._boostInterval = setInterval(() => {
                 this.updateVipBadge();
                 this.updateBoostsDisplay();
-                this.setupHealAnywhere();
             }, 60000);
         }
 
@@ -2537,7 +2470,9 @@ class PokeFuryGame {
 
         let healBtn = document.getElementById('heal-pokemon-btn');
         const isPokemonCenter = this.currentMap && this.currentMap.name === 'Centro Pokemon';
-        if (isPokemonCenter) {
+        const hasHealAnywhere = window.boostsManager && window.boostsManager.isActive('center_anywhere');
+        const canHeal = isPokemonCenter || hasHealAnywhere;
+        if (canHeal) {
             if (!healBtn) {
                 healBtn = document.createElement('button');
                 healBtn.id = 'heal-pokemon-btn';

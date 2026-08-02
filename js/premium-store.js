@@ -229,7 +229,6 @@ class PremiumStore {
                     if (window.game) {
                         if (window.game.updateVipBadge) window.game.updateVipBadge();
                         if (window.game.updateBoostsDisplay) window.game.updateBoostsDisplay();
-                        if (window.game.setupHealAnywhere) window.game.setupHealAnywhere();
                     }
             } else {
                 // Refund diamonds on failure
