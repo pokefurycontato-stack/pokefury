@@ -780,7 +780,20 @@
     <div id="buy-diamonds-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
         <div style="position:relative;width:100%">
             <button id="buy-diamonds-close" style="position:absolute;top:12px;right:16px;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:22px;cursor:pointer;z-index:10;padding:6px 12px;border-radius:8px;backdrop-filter:blur(4px)">✕</button>
-            <img src="assets/ferramentas/compradima.jpg" style="width:100%;display:block" onerror="this.style.display='none'">
+            <div class="premium-banner buy-diamonds-banner">
+                <div class="premium-banner-glow"></div>
+                <div class="premium-banner-title">
+                    <span class="premium-banner-poke">POKE</span><span class="premium-banner-fury">FURY</span>
+                    <span class="premium-banner-sub">LOJA DE DIAMANTES</span>
+                </div>
+                <div class="premium-banner-price">
+                    CADA DIAMANTE CUSTA APENAS <span class="premium-banner-value">R$ 0,50!</span>
+                </div>
+                <div class="premium-banner-benefits">
+                    <div class="premium-banner-benefit"><span class="benefit-check">✔</span> Comprar Produtos e Benefícios na Loja</div>
+                    <div class="premium-banner-benefit"><span class="benefit-check">✔</span> Comprar Pokémons de Outros Jogadores</div>
+                </div>
+            </div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:24px">
             <div id="buy-diamonds-display" style="display:flex;flex-direction:column;align-items:center;gap:12px">
@@ -818,11 +831,14 @@
                 <span id="diamond-shop-count" style="color:#4fc3f7;font-size:18px;font-weight:700">0</span>
             </div>
         </div>
-        <div style="width:100%">
-            <img src="assets/ferramentas/lojadima.png" style="width:100%;display:block" onerror="this.style.display='none'">
+        <div class="premium-banner diamond-shop-banner">
+            <div class="premium-banner-glow"></div>
+            <div class="premium-banner-title">
+                <span class="premium-banner-diamond-icon">💎</span>
+                <span class="premium-banner-sub">Use seus diamantes para comprar itens exclusivos!</span>
+            </div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:20px">
-            <div style="color:rgba(255,255,255,0.4);font-size:13px;text-align:center">Use seus diamantes para comprar itens exclusivos!</div>
             <div style="width:100%;max-width:700px">
                 <div id="diamond-shop-products" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px"></div>
                 <div id="diamond-shop-empty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);padding:40px;font-size:14px">Nenhum produto disponível ainda</div>

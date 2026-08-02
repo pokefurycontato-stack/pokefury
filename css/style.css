@@ -1884,13 +1884,7 @@ body {
     filter: drop-shadow(0 0 12px rgba(79,195,247,0.6));
 }
 
-/* Premium banner images quality */
-#buy-diamonds-screen img,
-#diamond-shop-screen img {
-    image-rendering: auto;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
+/* Premium banner images quality - removed, using text banners now */
 @keyframes diamondFloat {
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-8px) scale(1.08); }
@@ -1932,6 +1926,118 @@ body {
 }
 .recharge-icon {
     font-size: 22px;
+}
+
+/* Premium Text Banners */
+.premium-banner {
+    position: relative;
+    padding: 20px 24px;
+    text-align: center;
+    overflow: hidden;
+}
+.buy-diamonds-banner {
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1040 30%, #2d1b69 60%, #0a0e27 100%);
+    border-bottom: 2px solid rgba(233,69,96,0.4);
+}
+.diamond-shop-banner {
+    background: linear-gradient(135deg, #0a0e27 0%, #0d2137 30%, #1a3a5c 60%, #0a0e27 100%);
+    border-bottom: 2px solid rgba(79,195,247,0.4);
+}
+.premium-banner-glow {
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 200px;
+    border-radius: 50%;
+    pointer-events: none;
+}
+.buy-diamonds-banner .premium-banner-glow {
+    background: radial-gradient(circle, rgba(233,69,96,0.15) 0%, transparent 70%);
+}
+.diamond-shop-banner .premium-banner-glow {
+    background: radial-gradient(circle, rgba(79,195,247,0.15) 0%, transparent 70%);
+}
+.premium-banner-title {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+.premium-banner-poke {
+    font-size: 28px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+.premium-banner-fury {
+    font-size: 28px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 4px;
+    text-shadow: none;
+    filter: drop-shadow(0 0 10px rgba(233,69,96,0.5));
+}
+.premium-banner-sub {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+.buy-diamonds-banner .premium-banner-sub {
+    color: rgba(255,255,255,0.6);
+}
+.diamond-shop-banner .premium-banner-sub {
+    color: rgba(79,195,247,0.8);
+}
+.premium-banner-diamond-icon {
+    font-size: 24px;
+    margin-right: 8px;
+}
+.premium-banner-price {
+    position: relative;
+    z-index: 1;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+.premium-banner-value {
+    font-size: 22px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #4fc3f7, #81d4fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(79,195,247,0.5));
+}
+.premium-banner-benefits {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+}
+.premium-banner-benefit {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.benefit-check {
+    color: #4caf50;
+    font-weight: 700;
+    font-size: 13px;
 }
 
 /* Product card */
