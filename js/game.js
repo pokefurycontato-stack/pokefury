@@ -4996,7 +4996,7 @@ class PokeFuryGame {
             }
         }
 
-        if (firstUndefeatedRegion && !this._currentGymRegion) {
+        if (!this._currentGymRegion && firstUndefeatedRegion) {
             this._currentGymRegion = firstUndefeatedRegion;
         }
 
@@ -5032,15 +5032,11 @@ class PokeFuryGame {
                 item.addEventListener('click', () => {
                     this._currentGymRegion = region;
                     this._regionUnlocked = isRegionUnlocked;
-                    this.loadGymRegions();
+                    this.loadGymLeaders();
                 });
 
                 regionList.appendChild(item);
             }
-        }
-
-        if (firstUndefeatedLeader && firstUndefeatedRegion) {
-            this._currentGymRegion = firstUndefeatedRegion;
         }
 
         await this.loadGymLeaders();
@@ -5063,6 +5059,7 @@ class PokeFuryGame {
         }
 
         this.renderGymList();
+        this.updateRegionHighlight();
 
         let selectedIndex = 0;
         for (let i = 0; i < this._gymLeaders.length; i++) {
@@ -5073,6 +5070,20 @@ class PokeFuryGame {
         }
 
         this.selectGym(selectedIndex);
+    }
+
+    updateRegionHighlight() {
+        const regionList = document.getElementById('gym-region-list');
+        if (!regionList) return;
+
+        const items = regionList.children;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const regionName = item.textContent.replace(' 🔒', '').trim();
+            const isCurrent = this._currentGymRegion?.name === regionName;
+            item.style.background = isCurrent ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)';
+            item.style.border = isCurrent ? '1px solid rgba(233,69,96,0.4)' : '1px solid transparent';
+        }
     }
 
     _isGymUnlocked(leader, index) {
