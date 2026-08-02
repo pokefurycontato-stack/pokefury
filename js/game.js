@@ -3213,31 +3213,32 @@ class PokeFuryGame {
             if (q.length < 2) { results.style.display = 'none'; return; }
 
             debounce = setTimeout(async () => {
-                const { data: profiles } = await window.db.from('profiles').select('id, username').ilike('username', `%${q}%`).limit(10);
+                let data = null;
+
+                const { data: charsByName } = await window.db.from('characters').select('id, player_name, starter_pokemon, user_id').ilike('player_name', `%${q}%`).limit(10);
+                if (charsByName && charsByName.length > 0) {
+                    data = charsByName;
+                } else {
+                    const { data: profiles } = await window.db.from('profiles').select('id, username').ilike('username', `%${q}%`).limit(10);
+                    if (profiles && profiles.length > 0) {
+                        const userIds = profiles.map(p => p.id);
+                        const { data: charsByUser } = await window.db.from('characters').select('id, player_name, starter_pokemon, user_id').in('user_id', userIds).limit(10);
+                        data = charsByUser || [];
+                    }
+                }
 
                 results.innerHTML = '';
                 results.style.display = 'block';
 
-                if (profiles && profiles.length > 0) {
-                    for (const profile of profiles) {
-                        const { data: chars } = await window.db.from('game_saves').select('id, player_name, starter_pokemon, user_id').eq('user_id', profile.id).limit(5);
-
-                        if (chars && chars.length > 0) {
-                            for (const char of chars) {
-                                const div = document.createElement('div');
-                                div.style.cssText = 'padding:8px 12px;cursor:pointer;color:#fff;font-size:13px;font-family:Inter,sans-serif;border-bottom:1px solid rgba(255,255,255,0.05)';
-                                div.textContent = char.player_name + ' (' + profile.username + ')';
-                                div.onmouseenter = () => div.style.background = 'rgba(255,255,255,0.08)';
-                                div.onmouseleave = () => div.style.background = 'transparent';
-                                div.onclick = () => this.selectDonateChar(char);
-                                results.appendChild(div);
-                            }
-                        } else {
-                            const div = document.createElement('div');
-                            div.style.cssText = 'padding:8px 12px;cursor:pointer;color:rgba(255,255,255,0.4);font-size:13px;font-family:Inter,sans-serif;border-bottom:1px solid rgba(255,255,255,0.05)';
-                            div.textContent = profile.username + ' (sem personagem)';
-                            results.appendChild(div);
-                        }
+                if (data && data.length > 0) {
+                    for (const char of data) {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'padding:8px 12px;cursor:pointer;color:#fff;font-size:13px;font-family:Inter,sans-serif;border-bottom:1px solid rgba(255,255,255,0.05)';
+                        div.textContent = char.player_name;
+                        div.onmouseenter = () => div.style.background = 'rgba(255,255,255,0.08)';
+                        div.onmouseleave = () => div.style.background = 'transparent';
+                        div.onclick = () => this.selectDonateChar(char);
+                        results.appendChild(div);
                     }
                 } else {
                     const div = document.createElement('div');
