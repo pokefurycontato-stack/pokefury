@@ -203,7 +203,7 @@
                             <span>⚔️ Batalhas</span><span class="arrow">▶</span>
                         </div>
                         <div class="section-items" id="battles-items">
-                            <button class="item-btn">Treinadores</button>
+                            <button class="item-btn" id="btn-gym-leaders">Líderes de Ginásio</button>
                             <button class="item-btn">Arena</button>
                             <button class="item-btn">Desafios</button>
                         </div>
@@ -348,6 +348,34 @@
                             <div id="weather-sand-overlay" class="weather-overlay hidden"></div>
                             <div id="weather-hail-overlay" class="weather-overlay hidden"></div>
                             <div id="weather-label" class="hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- Gym Leaders Screen -->
+                    <div id="gym-screen" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;background:#0a0a1e;">
+                        <div style="display:flex;height:100%;">
+                            <div style="flex:1;position:relative;overflow:hidden;">
+                                <canvas id="gym-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;"></canvas>
+                                <div id="gym-leader-spot" style="position:absolute;bottom:20%;left:50%;transform:translateX(-50%);text-align:center;z-index:5;">
+                                    <div id="gym-leader-sprite" style="width:120px;height:120px;margin:0 auto 8px;background:rgba(255,255,255,0.1);border-radius:50%;border:3px solid rgba(233,69,96,0.5);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                        <img id="gym-leader-img" src="" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                                    </div>
+                                    <div id="gym-leader-name" style="color:#e94560;font-size:16px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,0.8);"></div>
+                                    <div id="gym-leader-type" style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px;"></div>
+                                    <div id="gym-leader-badge" style="color:#ffd700;font-size:10px;margin-top:4px;"></div>
+                                </div>
+                                <div id="gym-player-spot" style="position:absolute;bottom:8%;left:50%;transform:translateX(-50%);z-index:5;">
+                                    <div style="width:48px;height:48px;background:rgba(233,69,96,0.3);border-radius:50%;border:2px solid rgba(233,69,96,0.6);display:flex;align-items:center;justify-content:center;">
+                                        <div style="width:32px;height:32px;background:linear-gradient(135deg,#e94560,#c23152);border-radius:50%;"></div>
+                                    </div>
+                                </div>
+                                <button id="gym-battle-btn" style="position:absolute;bottom:4%;left:50%;transform:translateX(-50%);z-index:10;padding:12px 32px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(233,69,96,0.5);text-transform:uppercase;letter-spacing:1px;">Batalhar</button>
+                                <button id="gym-back-btn" style="position:absolute;top:12px;left:12px;z-index:10;padding:8px 16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">← Voltar</button>
+                            </div>
+                            <div id="gym-sidebar" style="width:240px;background:rgba(10,10,30,0.95);border-left:1px solid rgba(255,255,255,0.1);padding:12px;overflow-y:auto;">
+                                <div style="font-size:13px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Ginásios</div>
+                                <div id="gym-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+                            </div>
                         </div>
                     </div>
 

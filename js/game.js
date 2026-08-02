@@ -234,6 +234,19 @@ class PokeFuryGame {
             pcArrowRight.addEventListener('click', () => this.navigatePC(1));
         }
 
+        const gymLeadersBtn = document.getElementById('btn-gym-leaders');
+        if (gymLeadersBtn) {
+            gymLeadersBtn.addEventListener('click', () => this.openGymLeaders());
+        }
+        const gymBackBtn = document.getElementById('gym-back-btn');
+        if (gymBackBtn) {
+            gymBackBtn.addEventListener('click', () => this.closeGymLeaders());
+        }
+        const gymBattleBtn = document.getElementById('gym-battle-btn');
+        if (gymBattleBtn) {
+            gymBattleBtn.addEventListener('click', () => this.startGymLeaderBattle());
+        }
+
         const logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
@@ -4917,6 +4930,182 @@ class PokeFuryGame {
         a.download = `${me.currentMapName || 'mapa'}.json`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    // ============================================================
+    // GYM LEADERS SYSTEM
+    // ============================================================
+
+    openGymLeaders() {
+        const screen = document.getElementById('gym-screen');
+        if (!screen) return;
+        screen.classList.remove('hidden');
+        this._currentGymRegion = this.currentRegion || { id: 1, name: 'Kanto' };
+        this._selectedGymIndex = 0;
+        this.loadGymLeaders();
+    }
+
+    closeGymLeaders() {
+        const screen = document.getElementById('gym-screen');
+        if (screen) screen.classList.add('hidden');
+        this._gymLeaders = [];
+        this._selectedGymIndex = 0;
+    }
+
+    async loadGymLeaders() {
+        const regionId = this._currentGymRegion?.id;
+        if (!regionId) return;
+
+        const { data: leaders, error } = await window.db
+            .from('gym_leaders')
+            .select('*')
+            .eq('region_id', regionId)
+            .order('gym_number');
+
+        if (error || !leaders || leaders.length === 0) {
+            this._gymLeaders = this.getDefaultGymLeaders(regionId);
+        } else {
+            this._gymLeaders = leaders;
+        }
+
+        this.renderGymList();
+        this.selectGym(0);
+    }
+
+    getDefaultGymLeaders(regionId) {
+        const gyms = {
+            1: [
+                { id: 1, name: 'Brock', type: 'Rock', badge: 'Rock Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/rock.png', pokemon: ['Geodude', 'Onix'] },
+                { id: 2, name: 'Misty', type: 'Water', badge: 'Cascade Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/water.png', pokemon: ['Starmie'] },
+                { id: 3, name: 'Lt. Surge', type: 'Electric', badge: 'Thunder Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/electric.png', pokemon: ['Raichu'] },
+                { id: 4, name: 'Erika', type: 'Grass', badge: 'Rainbow Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/grass.png', pokemon: ['Victreebel', 'Tangela'] },
+                { id: 5, name: 'Koga', type: 'Poison', badge: 'Soul Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/poison.png', pokemon: ['Muk', 'Koffing'] },
+                { id: 6, name: 'Sabrina', type: 'Psychic', badge: 'Marsh Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/psychic.png', pokemon: ['Alakazam'] },
+                { id: 7, name: 'Blaine', type: 'Fire', badge: 'Volcano Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/fire.png', pokemon: ['Arcanine'] },
+                { id: 8, name: 'Giovanni', type: 'Ground', badge: 'Earth Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/ground.png', pokemon: ['Nidoqueen', 'Rhyhorn'] }
+            ]
+        };
+        return gyms[regionId] || gyms[1];
+    }
+
+    renderGymList() {
+        const list = document.getElementById('gym-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        this._gymLeaders.forEach((leader, i) => {
+            const item = document.createElement('div');
+            item.style.cssText = `padding:8px;border-radius:6px;cursor:pointer;background:${i === this._selectedGymIndex ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${i === this._selectedGymIndex ? 'rgba(233,69,96,0.4)' : 'transparent'};transition:all 0.2s;`;
+            item.innerHTML = `
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#e94560;">${i + 1}</div>
+                    <div style="flex:1;">
+                        <div style="font-size:11px;font-weight:700;color:#fff;">${leader.name}</div>
+                        <div style="font-size:9px;color:rgba(255,255,255,0.5);">${leader.type}</div>
+                    </div>
+                    <div style="font-size:10px;color:#ffd700;">🏅</div>
+                </div>
+            `;
+            item.addEventListener('click', () => this.selectGym(i));
+            item.addEventListener('mouseenter', () => {
+                if (i !== this._selectedGymIndex) item.style.background = 'rgba(255,255,255,0.05)';
+            });
+            item.addEventListener('mouseleave', () => {
+                if (i !== this._selectedGymIndex) item.style.background = 'rgba(255,255,255,0.03)';
+            });
+            list.appendChild(item);
+        });
+    }
+
+    selectGym(index) {
+        this._selectedGymIndex = index;
+        const leader = this._gymLeaders[index];
+        if (!leader) return;
+
+        document.getElementById('gym-leader-name').textContent = leader.name;
+        document.getElementById('gym-leader-type').textContent = `Tipo: ${leader.type}`;
+        document.getElementById('gym-leader-badge').textContent = `🏅 ${leader.badge}`;
+
+        const img = document.getElementById('gym-leader-img');
+        if (img) {
+            img.src = leader.sprite_url || '';
+            img.style.display = leader.sprite_url ? 'block' : 'none';
+        }
+
+        this.renderGymList();
+        this.drawGymBackground(leader);
+    }
+
+    drawGymBackground(leader) {
+        const canvas = document.getElementById('gym-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+
+        const typeColors = {
+            'Rock': ['#8B7355', '#6B5B3D'],
+            'Water': ['#1E90FF', '#0066CC'],
+            'Electric': ['#FFD700', '#FFA500'],
+            'Grass': ['#228B22', '#006400'],
+            'Poison': ['#9370DB', '#6A0DAD'],
+            'Psychic': ['#FF69B4', '#C71585'],
+            'Fire': ['#FF4500', '#CC3300'],
+            'Ground': ['#DEB887', '#D2691E']
+        };
+
+        const colors = typeColors[leader.type] || ['#333', '#222'];
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[1]);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.3);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < canvas.width; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, canvas.height);
+            ctx.stroke();
+        }
+        for (let j = 0; j < canvas.height; j += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, j);
+            ctx.lineTo(canvas.width, j);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.font = 'bold 120px Inter';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(leader.type, canvas.width / 2, canvas.height / 2);
+    }
+
+    async startGymLeaderBattle() {
+        const leader = this._gymLeaders[this._selectedGymIndex];
+        if (!leader) return;
+
+        const pokemonName = leader.pokemon?.[0] || 'Geodude';
+        const level = 20 + (this._selectedGymIndex * 5);
+
+        this.closeGymLeaders();
+
+        const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
+        if (pokemonData) {
+            await this.startBattleWithPokemon(
+                pokemonData.id,
+                level,
+                null,
+                `${leader.name} - Líder de Ginásio`
+            );
+        }
     }
 }
 
