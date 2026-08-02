@@ -2066,8 +2066,7 @@ body {
 }
 .premium-card-img {
     width: 100%;
-    height: auto;
-    max-height: 160px;
+    height: 160px;
     object-fit: contain;
     background: #0d1117;
     border-bottom: 1px solid #30363d;
