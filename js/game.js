@@ -5100,7 +5100,7 @@ class PokeFuryGame {
             const selected = i === this._selectedGymIndex;
 
             const item = document.createElement('div');
-            item.style.cssText = `padding:8px;border-radius:6px;cursor:${unlocked ? 'pointer' : 'not-allowed'};background:${selected ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${selected ? 'rgba(233,69,96,0.4)' : 'transparent'};opacity:${unlocked ? '1' : '0.4'};transition:all 0.2s;margin-bottom:4px;`;
+            item.style.cssText = `padding:8px;border-radius:6px;cursor:pointer;background:${selected ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${selected ? 'rgba(233,69,96,0.4)' : 'transparent'};opacity:1;transition:all 0.2s;margin-bottom:4px;`;
 
             let statusIcon = '';
             if (defeated) {
@@ -5122,7 +5122,7 @@ class PokeFuryGame {
                 </div>
             `;
             item.addEventListener('click', () => {
-                if (unlocked) this.selectGym(i);
+                this.selectGym(i);
             });
             list.appendChild(item);
         });
