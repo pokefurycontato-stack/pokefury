@@ -718,6 +718,10 @@ export class Overworld2D {
         entity.active = true;
         entity.respawnTimer = 0;
 
+        // Update DOM sprite element
+        const el = this.pokemonSpriteElements?.get(entity.entityId);
+        if (el && spriteUrl) el.src = spriteUrl;
+
         // Update DB: replace encounter, position, reactivate
         if (entity.dbId && window.db) {
             await window.db.from('map_pokemon_entities')
