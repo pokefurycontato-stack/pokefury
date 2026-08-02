@@ -390,45 +390,25 @@ const GameData = {
 
     async getCurrencies() {
         if (!this.currentCharacterId) return { diamonds: 0, gold: 0, silver: 0 };
-        const { data, error } = await window.db
-            .from('character_currencies')
-            .select('*')
-            .eq('character_id', this.currentCharacterId)
-            .maybeSingle();
-        if (error || !data) return { diamonds: 0, gold: 0, silver: 0 };
-        return { diamonds: data.diamonds, gold: data.gold, silver: data.silver };
+        try {
+            const { data, error } = await window.db.rpc('get_currency_balance', {
+                p_character_id: this.currentCharacterId
+            });
+            if (error || !data) return { diamonds: 0, gold: 0, silver: 0 };
+            return {
+                diamonds: data.diamonds || 0,
+                gold: data.gold || 0,
+                silver: data.silver || 0
+            };
+        } catch (e) {
+            return { diamonds: 0, gold: 0, silver: 0 };
+        }
     },
 
     async updateCurrencies(currencies) {
-        if (!this.currentCharacterId) return false;
-        const { data: existing } = await window.db
-            .from('character_currencies')
-            .select('character_id')
-            .eq('character_id', this.currentCharacterId)
-            .maybeSingle();
-
-        const updates = {
-            ...currencies,
-            updated_at: new Date().toISOString()
-        };
-
-        if (existing) {
-            const { error } = await window.db
-                .from('character_currencies')
-                .update(updates)
-                .eq('character_id', this.currentCharacterId);
-            return !error;
-        } else {
-            const { error } = await window.db
-                .from('character_currencies')
-                .insert({
-                    character_id: this.currentCharacterId,
-                    diamonds: currencies.diamonds || 0,
-                    gold: currencies.gold || 0,
-                    silver: currencies.silver || 0
-                });
-            return !error;
-        }
+        // Deprecated - use add_currency or spend_currency RPCs directly
+        console.warn('[GameData] updateCurrencies is deprecated, use RPC functions');
+        return false;
     },
 
     async getBoxPokemon(boxNumber) {

@@ -73,10 +73,25 @@ async function pmBuy(itemId) {
     return;
   }
 
-  const newSilver = cur.silver - totalCost;
-  await window.GameData.updateCurrencies({ ...cur, silver: newSilver });
+  // Spend silver via secure RPC
+  const { data, error } = await window.db.rpc('spend_currency', {
+    p_character_id: window.GameData.currentCharacterId,
+    p_currency_type: 'silver',
+    p_amount: totalCost,
+    p_action: 'shop_purchase',
+    p_description: `PokeMart: ${qty}x ${item.name}`,
+    p_created_by: null
+  });
+  if (error) {
+    alert(`Erro ao processar pagamento: ${error.message}`);
+    return;
+  }
+  if (data && data.error) {
+    alert(`Saldo insuficiente: ${data.error}`);
+    return;
+  }
 
-  document.getElementById('c-silver').textContent = newSilver.toLocaleString();
+  document.getElementById('c-silver').textContent = (data.balance || 0).toLocaleString();
 
   await window.GameData.addItem(item.id, qty);
 

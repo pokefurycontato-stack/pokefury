@@ -221,8 +221,14 @@ export class EventManager {
         await window.db.from('alpha_events').update({ defeated: true }).eq('id', a.eventId);
 
         const silverAmount = 5000 + (a.level * 100);
-        const cur = await window.GameData.getCurrencies();
-        await window.GameData.updateCurrencies({ 'c-silver': (cur['c-silver'] || 0) + silverAmount });
+        await window.db.rpc('add_currency', {
+            p_character_id: charId,
+            p_currency_type: 'silver',
+            p_amount: silverAmount,
+            p_action: 'reward',
+            p_description: `Alpha Event defeated (level ${a.level})`,
+            p_created_by: user.id
+        });
 
         await window.GameData.addItem(6, 5);
 
@@ -453,8 +459,14 @@ export class EventManager {
         else if (myRank === 3) { silver = 10000; rareCandy = 10; tmId = 3003; }
         else if (myRank > 0) { silver = 5000; rareCandy = 5; }
 
-        const currencies = await window.GameData.getCurrencies();
-        await window.GameData.updateCurrencies({ 'c-silver': (currencies['c-silver'] || 0) + silver });
+        await window.db.rpc('add_currency', {
+            p_character_id: charId,
+            p_currency_type: 'silver',
+            p_amount: silver,
+            p_action: 'reward',
+            p_description: `Global Raid ranking #${myRank}`,
+            p_created_by: user.id
+        });
         await window.GameData.addItem(6, rareCandy);
         if (tmId) await window.GameData.addItem(tmId, 1);
 

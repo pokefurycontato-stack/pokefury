@@ -28,17 +28,14 @@ class PremiumStore {
     async _getDiamonds() {
         if (!this.currentCharId) return 0;
         try {
-            const { data, error } = await window.db
-                .from('character_currencies')
-                .select('diamonds')
-                .eq('character_id', this.currentCharId)
-                .single();
+            const { data, error } = await window.db.rpc('get_currency_balance', {
+                p_character_id: this.currentCharId
+            });
             if (error) {
                 console.warn('[PremiumStore] diamonds fetch error:', error.message);
                 return 0;
             }
-            this.diamonds = data?.diamonds || 0;
-            return this.diamonds;
+            return data?.diamonds || 0;
         } catch (e) {
             console.error('[PremiumStore] diamonds fetch failed:', e);
             return 0;
@@ -192,14 +189,19 @@ class PremiumStore {
             return;
         }
 
-        // Deduct diamonds
+        // Deduct diamonds via secure RPC
         try {
-            const { error } = await window.db
-                .from('character_currencies')
-                .update({ diamonds: this.diamonds - product.price_diamonds })
-                .eq('character_id', this.currentCharId);
+            const { data, error } = await window.db.rpc('spend_currency', {
+                p_character_id: this.currentCharId,
+                p_currency_type: 'diamonds',
+                p_amount: product.price_diamonds,
+                p_action: 'purchase',
+                p_description: `Purchase: ${product.name}`,
+                p_created_by: null
+            });
             if (error) throw error;
-            this.diamonds -= product.price_diamonds;
+            if (data && data.error) throw new Error(data.error);
+            this.diamonds = data.balance;
             document.getElementById('buy-diamonds-count').textContent = this.diamonds;
             document.getElementById('diamond-shop-count').textContent = this.diamonds;
             if (window.game && window.game.refreshCurrencies) await window.game.refreshCurrencies();
@@ -231,10 +233,14 @@ class PremiumStore {
                     }
             } else {
                 // Refund diamonds on failure
-                await window.db
-                    .from('character_currencies')
-                    .update({ diamonds: this.diamonds + product.price_diamonds })
-                    .eq('character_id', this.currentCharId);
+                await window.db.rpc('add_currency', {
+                    p_character_id: this.currentCharId,
+                    p_currency_type: 'diamonds',
+                    p_amount: product.price_diamonds,
+                    p_action: 'refund',
+                    p_description: `Refund: ${product.name} - boost activation failed`,
+                    p_created_by: null
+                });
                 this.diamonds += product.price_diamonds;
                 if (window.game && window.game.refreshCurrencies) await window.game.refreshCurrencies();
                 this._showToast('Erro ao ativar boost!', 'error');

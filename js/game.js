@@ -1951,9 +1951,14 @@ class PokeFuryGame {
             this._winStreak++;
             const enemy = this.enemyTeam[0];
             const silverDrop = this.calculateSilverDrop(enemy);
-            const cur = await window.GameData.getCurrencies();
-            const newSilver = (cur.silver || 0) + silverDrop;
-            await window.GameData.updateCurrencies({ ...cur, silver: newSilver });
+            await window.db.rpc('add_currency', {
+                p_character_id: this.currentCharacterId,
+                p_currency_type: 'silver',
+                p_amount: silverDrop,
+                p_action: 'reward',
+                p_description: `Battle reward vs ${enemy.name || 'wild pokemon'}`,
+                p_created_by: this.userId || null
+            });
             await this.refreshCurrencies();
             await showBattleMessage(`+${silverDrop} Prata!`);
         }
@@ -3327,33 +3332,42 @@ class PokeFuryGame {
             }
 
             try {
-                const { data: curr } = await window.db
-                    .from('character_currencies')
-                    .select('*')
-                    .eq('character_id', this._donateSelectedChar.id)
-                    .single();
-
-                if (!curr) {
-                    const { error } = await window.db
-                        .from('character_currencies')
-                        .insert([{
-                            character_id: this._donateSelectedChar.id,
-                            gold: gold,
-                            silver: silver,
-                            diamonds: diamonds
-                        }]);
-                    if (error) throw error;
-                } else {
-                    const { error } = await window.db
-                        .from('character_currencies')
-                        .update({
-                            gold: (curr.gold || 0) + gold,
-                            silver: (curr.silver || 0) + silver,
-                            diamonds: (curr.diamonds || 0) + diamonds
-                        })
-                        .eq('character_id', this._donateSelectedChar.id);
-                    if (error) throw error;
+                const errors = [];
+                if (diamonds > 0) {
+                    const { data, error } = await window.db.rpc('add_currency', {
+                        p_character_id: this._donateSelectedChar.id,
+                        p_currency_type: 'diamonds',
+                        p_amount: diamonds,
+                        p_action: 'admin_grant',
+                        p_description: `Admin donate to ${this._donateSelectedChar.player_name}`,
+                        p_created_by: this.userId
+                    });
+                    if (error) errors.push(error.message);
                 }
+                if (gold > 0) {
+                    const { data, error } = await window.db.rpc('add_currency', {
+                        p_character_id: this._donateSelectedChar.id,
+                        p_currency_type: 'gold',
+                        p_amount: gold,
+                        p_action: 'admin_grant',
+                        p_description: `Admin donate to ${this._donateSelectedChar.player_name}`,
+                        p_created_by: this.userId
+                    });
+                    if (error) errors.push(error.message);
+                }
+                if (silver > 0) {
+                    const { data, error } = await window.db.rpc('add_currency', {
+                        p_character_id: this._donateSelectedChar.id,
+                        p_currency_type: 'silver',
+                        p_amount: silver,
+                        p_action: 'admin_grant',
+                        p_description: `Admin donate to ${this._donateSelectedChar.player_name}`,
+                        p_created_by: this.userId
+                    });
+                    if (error) errors.push(error.message);
+                }
+
+                if (errors.length) throw new Error(errors.join(', '));
 
                 const result = document.getElementById('donate-currency-result');
                 result.style.display = 'block';
