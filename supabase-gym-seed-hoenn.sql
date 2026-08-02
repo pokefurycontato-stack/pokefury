@@ -1,0 +1,37 @@
+-- HOENN
+INSERT INTO gym_regions (id, name, sort_order) VALUES
+('a0000000-0000-0000-0000-000000000003', 'Hoenn', 3);
+
+INSERT INTO gym_leaders (region_id, name, gym_number, type, badge_name, sprite_url, dialogue, pokemon_list) VALUES
+('a0000000-0000-0000-0000-000000000003', 'Roxanne', 1, 'Rock', 'Stone Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/rock.png',
+ 'Eu sou Roxanne! Pedras sao inquebraveis!',
+ '[{"pokemon_id":299,"name":"Nosepass","level":12,"moves":[{"move_id":89,"name":"Rock Throw"},{"move_id":100,"name":"Tackle"}]}]'),
+('a0000000-0000-0000-0000-000000000003', 'Brawly', 2, 'Fighting', 'Knuckle Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/fighting.png',
+ 'Eu sou Brawly! Ondas de combate!',
+ '[{"pokemon_id":66,"name":"Machop","level":16,"moves":[{"move_id":68,"name":"Karate Chop"},{"move_id":99,"name":"Low Kick"}]},{"pokemon_id":8,"name":"Wartortle","level":15,"moves":[{"move_id":33,"name":"Water Gun"},{"move_id":55,"name":"Bubble Beam"}]}]'),
+('a0000000-0000-0000-0000-000000000003', 'Wattson', 3, 'Electric', 'Dynamo Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/electric.png',
+ 'Eu sou Wattson! Wahahahaha!',
+ '[{"pokemon_id":82,"name":"Magneton","level":20,"moves":[{"move_id":85,"name":"Thunderbolt"},{"move_id":84,"name":"Thunder Shock"}]},{"pokemon_id":100,"name":"Electrode","level":20,"moves":[{"move_id":85,"name":"Thunderbolt"},{"move_id":100,"name":"Tackle"}]}]'),
+('a0000000-0000-0000-0000-000000000003', 'Flannery', 4, 'Heat', 'Heat Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/fire.png',
+ 'Eu sou Flannery! Chamas ardentes!',
+ '[{"pokemon_id":219,"name":"Magcargo","level":24,"moves":[{"move_id":44,"name":"Ember"},{"move_id":106,"name":"Rock Slide"}]},{"pokemon_id":323,"name":"Camerupt","level":24,"moves":[{"move_id":44,"name":"Ember"},{"move_id":39,"name":"Take Down"}]}]'),
+('a0000000-0000-0000-0000-000000000003', 'Norman', 5, 'Normal', 'Balance Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/normal.png',
+ 'Eu sou Norman! Normal nao significa fraco!',
+ '[{"pokemon_id":289,"name":"Slaking","level":28,"moves":[{"move_id":100,"name":"Tackle"},{"move_id":39,"name":"Take Down"}]},{"pokemon_id":288,"name":"Vigoroth","level":28,"moves":[{"move_id":100,"name":"Tackle"},{"move_id":68,"name":"Karate Chop"}]}]'),
+('a0000000-0000-0000-0000-000000000003', 'Winona', 6, 'Flying', 'Feather Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/flying.png',
+ 'Eu sou Winona! Voando alto!',
+ '[{"pokemon_id":279,"name":"Pelipper","level":29,"moves":[{"move_id":55,"name":"Bubble Beam"},{"move_id":17,"name":"Wing Attack"}]},{"pokemon_id":373,"name":"Salamence","level":33,"moves":[{"move_id":43,"name":"Dragon Rage"},{"move_id":17,"name":"Wing Attack"}]}]'),
+('a0000000-0000-0000-0000-000000000003', 'Tate and Liza', 7, 'Psychic', 'Mind Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/psychic.png',
+ 'Nos somos Tate e Liza! Nossas mentes se conectam!',
+ '[{"pokemon_id":337,"name":"Lunatone","level":40,"moves":[{"move_id":95,"name":"Psychic"},{"move_id":89,"name":"Rock Throw"}]},{"pokemon_id":338,"name":"Solrock","level":40,"moves":[{"move_id":95,"name":"Psychic"},{"move_id":89,"name":"Rock Throw"}]}]'),
+('a0000000-0000-0000-0000-000000000003', 'Wallace', 8, 'Water', 'Rain Badge',
+ 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/water.png',
+ 'Eu sou Wallace! A elegancia da agua!',
+ '[{"pokemon_id":373,"name":"Salamence","level":42,"moves":[{"move_id":43,"name":"Dragon Rage"},{"move_id":17,"name":"Wing Attack"}]},{"pokemon_id":130,"name":"Gyarados","level":42,"moves":[{"move_id":33,"name":"Water Gun"},{"move_id":44,"name":"Ember"}]}]');

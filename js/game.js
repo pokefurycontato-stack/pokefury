@@ -4929,20 +4929,65 @@ class PokeFuryGame {
     // GYM LEADERS SYSTEM
     // ============================================================
 
-    openGymLeaders() {
+    async openGymLeaders() {
         const screen = document.getElementById('gym-screen');
         if (!screen) return;
         screen.classList.remove('hidden');
+
+        this._gymDefeatedIds = new Set();
         this._currentGymRegion = this.currentRegion || { id: 1, name: 'Kanto' };
         this._selectedGymIndex = 0;
-        this.loadGymLeaders();
+
+        const charId = this.currentCharacterId;
+        if (charId) {
+            const { data: badges } = await window.db
+                .from('character_gym_badges')
+                .select('leader_id')
+                .eq('character_id', charId);
+            if (badges) badges.forEach(b => this._gymDefeatedIds.add(b.leader_id));
+        }
+
+        await this.loadGymRegions();
     }
 
     closeGymLeaders() {
         const screen = document.getElementById('gym-screen');
         if (screen) screen.classList.add('hidden');
         this._gymLeaders = [];
+        this._gymRegions = [];
         this._selectedGymIndex = 0;
+    }
+
+    async loadGymRegions() {
+        const { data: regions, error } = await window.db
+            .from('gym_regions')
+            .select('*')
+            .order('sort_order');
+
+        if (error || !regions || regions.length === 0) {
+            this._gymRegions = [];
+            return;
+        }
+
+        this._gymRegions = regions;
+
+        const regionList = document.getElementById('gym-region-list');
+        if (regionList) {
+            regionList.innerHTML = '';
+            regions.forEach((region, i) => {
+                const item = document.createElement('div');
+                const isCurrentRegion = this._currentGymRegion?.id === region.id;
+                item.style.cssText = `padding:6px 10px;border-radius:6px;cursor:pointer;background:${isCurrentRegion ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isCurrentRegion ? 'rgba(233,69,96,0.4)' : 'transparent'};margin-bottom:4px;transition:all 0.2s;`;
+                item.innerHTML = `<div style="font-size:11px;font-weight:700;color:#fff;">${region.name}</div>`;
+                item.addEventListener('click', () => {
+                    this._currentGymRegion = region;
+                    this.loadGymRegions();
+                });
+                regionList.appendChild(item);
+            });
+        }
+
+        await this.loadGymLeaders();
     }
 
     async loadGymLeaders() {
@@ -4956,7 +5001,7 @@ class PokeFuryGame {
             .order('gym_number');
 
         if (error || !leaders || leaders.length === 0) {
-            this._gymLeaders = this.getDefaultGymLeaders(regionId);
+            this._gymLeaders = [];
         } else {
             this._gymLeaders = leaders;
         }
@@ -4965,20 +5010,18 @@ class PokeFuryGame {
         this.selectGym(0);
     }
 
-    getDefaultGymLeaders(regionId) {
-        const gyms = {
-            1: [
-                { id: 1, name: 'Brock', type: 'Rock', badge: 'Rock Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/rock.png', pokemon: ['Geodude', 'Onix'] },
-                { id: 2, name: 'Misty', type: 'Water', badge: 'Cascade Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/water.png', pokemon: ['Starmie'] },
-                { id: 3, name: 'Lt. Surge', type: 'Electric', badge: 'Thunder Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/electric.png', pokemon: ['Raichu'] },
-                { id: 4, name: 'Erika', type: 'Grass', badge: 'Rainbow Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/grass.png', pokemon: ['Victreebel', 'Tangela'] },
-                { id: 5, name: 'Koga', type: 'Poison', badge: 'Soul Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/poison.png', pokemon: ['Muk', 'Koffing'] },
-                { id: 6, name: 'Sabrina', type: 'Psychic', badge: 'Marsh Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/psychic.png', pokemon: ['Alakazam'] },
-                { id: 7, name: 'Blaine', type: 'Fire', badge: 'Volcano Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/fire.png', pokemon: ['Arcanine'] },
-                { id: 8, name: 'Giovanni', type: 'Ground', badge: 'Earth Badge', sprite_url: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/trainers/ground.png', pokemon: ['Nidoqueen', 'Rhyhorn'] }
-            ]
-        };
-        return gyms[regionId] || gyms[1];
+    _isGymUnlocked(leader, index) {
+        if (index === 0) return true;
+        if (leader.required_leader_id) {
+            return this._gymDefeatedIds.has(leader.required_leader_id);
+        }
+        const prevLeader = this._gymLeaders[index - 1];
+        if (!prevLeader) return true;
+        return this._gymDefeatedIds.has(prevLeader.id);
+    }
+
+    _isGymDefeated(leader) {
+        return this._gymDefeatedIds.has(leader.id);
     }
 
     renderGymList() {
@@ -4987,24 +5030,34 @@ class PokeFuryGame {
         list.innerHTML = '';
 
         this._gymLeaders.forEach((leader, i) => {
+            const unlocked = this._isGymUnlocked(leader, i);
+            const defeated = this._isGymDefeated(leader);
+            const selected = i === this._selectedGymIndex;
+
             const item = document.createElement('div');
-            item.style.cssText = `padding:8px;border-radius:6px;cursor:pointer;background:${i === this._selectedGymIndex ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${i === this._selectedGymIndex ? 'rgba(233,69,96,0.4)' : 'transparent'};transition:all 0.2s;`;
+            item.style.cssText = `padding:8px;border-radius:6px;cursor:${unlocked ? 'pointer' : 'not-allowed'};background:${selected ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.03)'};border:1px solid ${selected ? 'rgba(233,69,96,0.4)' : 'transparent'};opacity:${unlocked ? '1' : '0.4'};transition:all 0.2s;margin-bottom:4px;`;
+
+            let statusIcon = '';
+            if (defeated) {
+                statusIcon = '<div style="font-size:10px;color:#4CAF50;font-weight:700;">✅ Derrotado</div>';
+            } else if (!unlocked) {
+                statusIcon = '<div style="font-size:10px;color:#ff6b6b;font-weight:700;">🔒 Bloqueado</div>';
+            } else {
+                statusIcon = '<div style="font-size:10px;color:#ffd700;font-weight:700;">⚔️ Desafiar</div>';
+            }
+
             item.innerHTML = `
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#e94560;">${i + 1}</div>
-                    <div style="flex:1;">
+                    <div style="width:28px;height:28px;border-radius:50%;background:${defeated ? 'rgba(76,175,80,0.3)' : unlocked ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.05)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${defeated ? '#4CAF50' : '#e94560'};flex-shrink:0;">${i + 1}</div>
+                    <div style="flex:1;min-width:0;">
                         <div style="font-size:11px;font-weight:700;color:#fff;">${leader.name}</div>
-                        <div style="font-size:9px;color:rgba(255,255,255,0.5);">${leader.type}</div>
+                        <div style="font-size:9px;color:rgba(255,255,255,0.5);">${leader.type || ''} · ${leader.badge_name || ''}</div>
                     </div>
-                    <div style="font-size:10px;color:#ffd700;">🏅</div>
+                    ${statusIcon}
                 </div>
             `;
-            item.addEventListener('click', () => this.selectGym(i));
-            item.addEventListener('mouseenter', () => {
-                if (i !== this._selectedGymIndex) item.style.background = 'rgba(255,255,255,0.05)';
-            });
-            item.addEventListener('mouseleave', () => {
-                if (i !== this._selectedGymIndex) item.style.background = 'rgba(255,255,255,0.03)';
+            item.addEventListener('click', () => {
+                if (unlocked) this.selectGym(i);
             });
             list.appendChild(item);
         });
@@ -5015,14 +5068,50 @@ class PokeFuryGame {
         const leader = this._gymLeaders[index];
         if (!leader) return;
 
+        const defeated = this._isGymDefeated(leader);
+
         document.getElementById('gym-leader-name').textContent = leader.name;
-        document.getElementById('gym-leader-type').textContent = `Tipo: ${leader.type}`;
-        document.getElementById('gym-leader-badge').textContent = `🏅 ${leader.badge}`;
+        document.getElementById('gym-leader-type').textContent = `Tipo: ${leader.type || 'Desconhecido'}`;
+        document.getElementById('gym-leader-badge').textContent = `🏅 ${leader.badge_name || 'Sem badge'}`;
 
         const img = document.getElementById('gym-leader-img');
         if (img) {
             img.src = leader.sprite_url || '';
             img.style.display = leader.sprite_url ? 'block' : 'none';
+        }
+
+        const pokemonContainer = document.getElementById('gym-leader-pokemon');
+        if (pokemonContainer) {
+            pokemonContainer.innerHTML = '';
+            let pokemonList = [];
+            if (leader.pokemon_list) {
+                try {
+                    pokemonList = typeof leader.pokemon_list === 'string' ? JSON.parse(leader.pokemon_list) : leader.pokemon_list;
+                } catch(e) { pokemonList = []; }
+            }
+            if (pokemonList.length > 0) {
+                pokemonList.forEach(p => {
+                    const chip = document.createElement('div');
+                    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;background:rgba(255,255,255,0.08);font-size:10px;color:#fff;margin:2px;';
+                    const name = typeof p === 'string' ? p : (p.name || '?');
+                    const lvl = typeof p === 'object' ? (p.level || '?') : '?';
+                    chip.innerHTML = `<span style="color:rgba(255,255,255,0.5);">Lv${lvl}</span> ${name}`;
+                    pokemonContainer.appendChild(chip);
+                });
+            }
+        }
+
+        const btn = document.getElementById('gym-battle-btn');
+        if (btn) {
+            if (defeated) {
+                btn.textContent = '✅ Já Derrotado';
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            } else {
+                btn.textContent = '⚔️ Desafiar Líder';
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
         }
 
         this.renderGymList();
@@ -5038,14 +5127,24 @@ class PokeFuryGame {
         canvas.height = canvas.parentElement.clientHeight;
 
         const typeColors = {
-            'Rock': ['#8B7355', '#6B5B3D'],
-            'Water': ['#1E90FF', '#0066CC'],
-            'Electric': ['#FFD700', '#FFA500'],
-            'Grass': ['#228B22', '#006400'],
-            'Poison': ['#9370DB', '#6A0DAD'],
-            'Psychic': ['#FF69B4', '#C71585'],
+            'Normal': ['#A8A878', '#C6C6A7'],
             'Fire': ['#FF4500', '#CC3300'],
-            'Ground': ['#DEB887', '#D2691E']
+            'Water': ['#1E90FF', '#0066CC'],
+            'Grass': ['#228B22', '#006400'],
+            'Electric': ['#FFD700', '#FFA500'],
+            'Ice': ['#98D8E8', '#5F9EA0'],
+            'Fighting': ['#C03028', '#8B0000'],
+            'Poison': ['#9370DB', '#6A0DAD'],
+            'Ground': ['#DEB887', '#D2691E'],
+            'Flying': ['#A890F0', '#6A5ACD'],
+            'Psychic': ['#FF69B4', '#C71585'],
+            'Bug': ['#A8B820', '#6B8E23'],
+            'Rock': ['#8B7355', '#6B5B3D'],
+            'Ghost': ['#7B68EE', '#4B0082'],
+            'Dragon': ['#7038F8', '#483D8B'],
+            'Dark': ['#705848', '#3E2723'],
+            'Steel': ['#B8B8D0', '#71797E'],
+            'Fairy': ['#EE99AC', '#DB7093']
         };
 
         const colors = typeColors[leader.type] || ['#333', '#222'];
@@ -5078,17 +5177,40 @@ class PokeFuryGame {
         ctx.font = 'bold 120px Inter';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(leader.type, canvas.width / 2, canvas.height / 2);
+        ctx.fillText(leader.type || '?', canvas.width / 2, canvas.height / 2);
     }
 
     async startGymLeaderBattle() {
         const leader = this._gymLeaders[this._selectedGymIndex];
         if (!leader) return;
 
-        const pokemonName = leader.pokemon?.[0] || 'Geodude';
-        const level = 20 + (this._selectedGymIndex * 5);
+        if (this._isGymDefeated(leader)) {
+            this.showToast('Você já derrotou este líder!', 'info');
+            return;
+        }
+
+        if (!this._isGymUnlocked(leader, this._selectedGymIndex)) {
+            this.showToast('Derrote o ginásio anterior primeiro!', 'error');
+            return;
+        }
+
+        let pokemonList = [];
+        if (leader.pokemon_list) {
+            try {
+                pokemonList = typeof leader.pokemon_list === 'string' ? JSON.parse(leader.pokemon_list) : leader.pokemon_list;
+            } catch(e) { pokemonList = []; }
+        }
+
+        if (pokemonList.length === 0) {
+            this.showToast('Este líder não tem pokémons definidos!', 'error');
+            return;
+        }
 
         this.closeGymLeaders();
+
+        const firstPokemon = pokemonList[0];
+        const pokemonName = typeof firstPokemon === 'string' ? firstPokemon : (firstPokemon.name || 'Geodude');
+        const level = typeof firstPokemon === 'object' ? (firstPokemon.level || 20) : 20;
 
         const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
         if (pokemonData) {
