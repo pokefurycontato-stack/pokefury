@@ -4213,10 +4213,10 @@ class PokeFuryGame {
 
         let height = '?', weight = '?', genderRate = '?';
         let abilityName = '?', abilityEffect = '';
+        const apiId = p.basePokemonId || p.pokemonId || p.id;
         try {
-            const pid = p.pokemonId || p.id;
-            if (pid && pid <= 1025) {
-                const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${pid}`);
+            if (apiId && apiId <= 1025) {
+                const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${apiId}`);
                 if (resp.ok) {
                     const pData = await resp.json();
                     height = `${(pData.height / 10).toFixed(1)} m`;
@@ -4225,9 +4225,8 @@ class PokeFuryGame {
             }
         } catch (e) {}
         try {
-            const pid = p.pokemonId || p.id;
-            if (pid && pid <= 1025) {
-                const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${pid}`);
+            if (apiId && apiId <= 1025) {
+                const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${apiId}`);
                 if (resp.ok) {
                     const sData = await resp.json();
                     const gr = sData.gender_rate;

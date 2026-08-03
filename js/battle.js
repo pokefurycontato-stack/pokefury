@@ -131,6 +131,7 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         fainted: false,
         experience: 0,
         statusEffect: null,
+        basePokemonId: apiData.basePokemonId || null,
         _statStages: { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 },
         currentAbility: null,
         currentAbilityName: null
