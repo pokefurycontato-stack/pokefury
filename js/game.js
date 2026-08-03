@@ -1059,10 +1059,12 @@ class PokeFuryGame {
     }
 
     async onFight() {
+        if (this._turnLocked) return;
         const playerPokemon = getFirstAlive(this.playerTeam);
         const enemyPokemon = getFirstAlive(this.enemyTeam);
         if (!playerPokemon || !enemyPokemon) return;
 
+        this._turnLocked = true;
         showMoveSelection(playerPokemon.moves, async (move) => {
             try {
                 await this.executeBattleTurn(playerPokemon, enemyPokemon, move);
@@ -1071,19 +1073,23 @@ class PokeFuryGame {
                 drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                 updateBattleUI(this.playerTeam, this.enemyTeam);
             }
+            this._turnLocked = false;
+        });
         });
     }
 
     async onSwitchPokemon() {
+        if (this._turnLocked) return;
+        this._turnLocked = true;
         const playerPokemon = getFirstAlive(this.playerTeam);
         const enemyPokemon = getFirstAlive(this.enemyTeam);
-        if (!playerPokemon || !enemyPokemon) return;
+        if (!playerPokemon || !enemyPokemon) { this._turnLocked = false; return; }
 
         const activeIndex = this.playerTeam.indexOf(playerPokemon);
 
         showSwitchPokemonSelection(this.playerTeam, activeIndex, async (newIndex) => {
             const newPokemon = this.playerTeam[newIndex];
-            if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) return;
+            if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) { this._turnLocked = false; return; }
 
             const temp = this.playerTeam[activeIndex];
             this.playerTeam[activeIndex] = this.playerTeam[newIndex];
@@ -1098,12 +1104,15 @@ class PokeFuryGame {
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
             await this.enemyTurn();
+            this._turnLocked = false;
         });
     }
 
     async onRun() {
+        if (this._turnLocked) return;
+        this._turnLocked = true;
         const playerPokemon = getFirstAlive(this.playerTeam);
-        if (!playerPokemon) return;
+        if (!playerPokemon) { this._turnLocked = false; return; }
         const escaped = Math.random() < 0.5;
         if (escaped) {
             await showBattleMessage('Você fugiu do combate com sucesso!');
@@ -1111,20 +1120,25 @@ class PokeFuryGame {
         } else {
             await showBattleMessage('Não foi possível fugir do combate!');
             await this.enemyTurn();
+            this._turnLocked = false;
         }
     }
 
     async onBag() {
+        if (this._turnLocked) return;
+        this._turnLocked = true;
         const items = await window.GameData.getInventory();
         const usableItems = items.filter(inv => inv.items && inv.items.usable_in_battle && inv.items.category !== 'pokeball');
 
         if (usableItems.length === 0) {
             await showBattleMessage('Mochila vazia!');
+            this._turnLocked = false;
             return;
         }
 
         showBagSelection(usableItems, async (item) => {
             await this.useItemInBattle(item);
+            this._turnLocked = false;
         });
     }
 
@@ -1941,6 +1955,7 @@ class PokeFuryGame {
         setBattleSpeed(1);
         if (this.battleAnimations) this.battleAnimations.setSpeed(1);
         this._capturePromptOpen = false;
+        this._turnLocked = false;
 
         if (result) {
             const duration = Math.floor((Date.now() - this.battleStartTime) / 1000);
