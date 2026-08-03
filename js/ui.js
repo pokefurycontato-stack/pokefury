@@ -811,8 +811,12 @@ export function setPlayerSpriteSrc(url) {
 }
 
 export function initBattleUI(onFight, onBag, onMega, onRun) {
+    let battleReady = false;
+    setTimeout(() => { battleReady = true; }, 800);
+
     $$('.battle-action-zone[data-action]').forEach(zone => {
         zone.addEventListener('click', () => {
+            if (!battleReady) return;
             const action = zone.dataset.action;
             if (action === 'fight') onFight();
             else if (action === 'bag') onBag();
