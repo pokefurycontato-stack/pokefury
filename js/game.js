@@ -6431,22 +6431,26 @@ class PokeFuryGame {
         const buildTeam = async (teamData) => {
             const team = [];
             for (const p of teamData) {
-                const pokemonData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
-                if (!pokemonData) continue;
-                const pokemon = await createPokemon(pokemonData, p.level, {
-                    hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
-                    spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
-                }, {
-                    hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
-                    spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
-                }, p.nature, p.is_shiny);
-                pokemon.currentHp = p.current_hp || pokemon.stats.hp;
-                if (p.moves && Array.isArray(p.moves)) {
-                    const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
-                    if (moveIds.length > 0) {
-                        const { data: moveDetails } = await window.db.from('moves')
-                            .select('id, name, type, category, power, accuracy, pp')
-                            .in('id', moveIds);
+                try {
+                    const pokemonData = await Promise.race([
+                        PokeAPI.ensurePokemon(p.pokemon_id || p.species),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+                    ]);
+                    if (!pokemonData) { console.warn('[PVP] Skipping pokemon:', p.pokemon_id || p.species); continue; }
+                    const pokemon = await createPokemon(pokemonData, p.level, {
+                        hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
+                        spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
+                    }, {
+                        hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
+                        spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
+                    }, p.nature, p.is_shiny);
+                    pokemon.currentHp = p.current_hp || pokemon.stats.hp;
+                    if (p.moves && Array.isArray(p.moves)) {
+                        const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
+                        if (moveIds.length > 0) {
+                            const { data: moveDetails } = await window.db.from('moves')
+                                .select('id, name, type, category, power, accuracy, pp')
+                                .in('id', moveIds);
                         if (moveDetails) {
                             const moveMap = {};
                             moveDetails.forEach(m => { moveMap[m.id] = m; });
@@ -6459,6 +6463,9 @@ class PokeFuryGame {
                     }
                 }
                 team.push(pokemon);
+                } catch (e) {
+                    console.warn('[PVP] Error loading pokemon:', p.pokemon_id || p.species, e.message);
+                }
             }
             return team;
         };
