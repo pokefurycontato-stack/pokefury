@@ -162,19 +162,29 @@ const GameData = {
             return insert;
         });
 
-        const newIds = inserts.filter(i => i.id).map(i => i.id);
-        if (newIds.length > 0) {
+        const existingIds = inserts.filter(i => i.id).map(i => i.id);
+        if (existingIds.length > 0) {
             await window.db.from('pokemon_team').delete()
                 .eq('character_id', this.currentCharacterId)
-                .not('id', 'in', `(${newIds.join(',')})`);
+                .not('id', 'in', `(${existingIds.join(',')})`);
         } else {
             await window.db.from('pokemon_team').delete()
                 .eq('character_id', this.currentCharacterId);
         }
 
-        const { error } = await window.db
+        const { data: saved, error } = await window.db
             .from('pokemon_team')
-            .upsert(inserts, { onConflict: 'id' });
+            .upsert(inserts, { onConflict: 'id' })
+            .select();
+
+        if (saved) {
+            for (let i = 0; i < pokemonList.length && i < saved.length; i++) {
+                if (saved[i] && !pokemonList[i].dbId) {
+                    pokemonList[i].dbId = saved[i].id;
+                }
+            }
+        }
+
         return !error;
     },
 
