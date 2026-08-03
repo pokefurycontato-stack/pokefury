@@ -289,6 +289,7 @@ export class AFKManager {
         for (const move of attacker.moves) {
             if (!move || move.currentPp <= 0) continue;
             if (move.category === 'status') continue;
+            if (!move.power || move.power <= 0) continue;
             const score = this._evaluateMove(attacker, defender, move);
             if (score > bestScore) {
                 bestScore = score;
@@ -297,7 +298,18 @@ export class AFKManager {
         }
         if (!bestMove) {
             for (const move of attacker.moves) {
-                if (move && move.currentPp > 0) { bestMove = move; break; }
+                if (move && move.currentPp > 0 && move.power > 0 && move.category !== 'status') {
+                    bestMove = move;
+                    break;
+                }
+            }
+        }
+        if (!bestMove) {
+            for (const move of attacker.moves) {
+                if (move && move.currentPp > 0 && move.power > 0) {
+                    bestMove = move;
+                    break;
+                }
             }
         }
         return bestMove;
