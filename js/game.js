@@ -5864,6 +5864,7 @@ class PokeFuryGame {
 
         if (this.playerTeam && this.playerTeam.length > 0) {
             await this.saveTeam();
+            console.log('[Arena] Team saved. Pokemon dbIds:', this.playerTeam.map(p => p.dbId));
         }
 
         await this.pvp.loadTeams();
