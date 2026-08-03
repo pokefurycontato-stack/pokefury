@@ -5919,27 +5919,36 @@ class PokeFuryGame {
 
             let pokemonHtml = '';
             if (validSlots.length > 0) {
-                const { data: pokemonData } = await window.db.from('pokemon_team')
+                let pokemonData = [];
+                const { data: teamPokemon } = await window.db.from('pokemon_team')
                     .select('id, species, nickname, level')
                     .in('id', validSlots);
+                if (teamPokemon) pokemonData.push(...teamPokemon);
 
-                if (pokemonData) {
-                    for (const p of pokemonData) {
-                        let spriteUrl = '';
-                        try {
-                            const pData = await PokeAPI.ensurePokemon(p.species);
-                            if (pData?.spriteUrls) spriteUrl = pData.spriteUrls.front || pData.spriteUrls.home || '';
-                        } catch (e) {}
-                        pokemonHtml += `
-                            <div style="text-align:center;width:45px;">
-                                <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);overflow:hidden;margin:0 auto;">
-                                    <img src="${spriteUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
-                                </div>
-                                <div style="font-size:8px;color:rgba(255,255,255,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nickname || p.species}</div>
-                                <div style="font-size:7px;color:rgba(255,255,255,0.3);">Lv${p.level}</div>
+                const foundIds = new Set(pokemonData.map(p => p.id));
+                const missingIds = validSlots.filter(id => !foundIds.has(id));
+                if (missingIds.length > 0) {
+                    const { data: pcPokemon } = await window.db.from('pokemon_pc')
+                        .select('id, species, nickname, level')
+                        .in('id', missingIds);
+                    if (pcPokemon) pokemonData.push(...pcPokemon);
+                }
+
+                for (const p of pokemonData) {
+                    let spriteUrl = '';
+                    try {
+                        const pData = await PokeAPI.ensurePokemon(p.species);
+                        if (pData?.spriteUrls) spriteUrl = pData.spriteUrls.front || pData.spriteUrls.home || '';
+                    } catch (e) {}
+                    pokemonHtml += `
+                        <div style="text-align:center;width:45px;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);overflow:hidden;margin:0 auto;">
+                                <img src="${spriteUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
                             </div>
-                        `;
-                    }
+                            <div style="font-size:8px;color:rgba(255,255,255,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nickname || p.species}</div>
+                            <div style="font-size:7px;color:rgba(255,255,255,0.3);">Lv${p.level}</div>
+                        </div>
+                    `;
                 }
             }
 
@@ -5955,9 +5964,63 @@ class PokeFuryGame {
                         <button class="arena-delete-team" data-id="${team.id}" style="padding:4px 8px;background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.3);border-radius:4px;color:#f44336;font-size:10px;cursor:pointer;">✕</button>
                     </div>
                 </div>
-                <div style="display:flex;gap:6px;justify-content:center;">${pokemonHtml}</div>
+                <div class="arena-team-slots" data-team-id="${team.id}" style="display:flex;gap:6px;justify-content:center;">${pokemonHtml}</div>
             `;
             list.appendChild(card);
+
+            const slotsContainer = card.querySelector('.arena-team-slots');
+            if (slotsContainer) {
+                const slotEls = slotsContainer.children;
+                for (let s = 0; s < slotEls.length; s++) {
+                    const slotEl = slotEls[s];
+                    if (!validSlots[s]) continue;
+                    slotEl.draggable = true;
+                    slotEl.style.cursor = 'grab';
+                    slotEl.dataset.slotIndex = s;
+
+                    slotEl.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', s);
+                        e.dataTransfer.effectAllowed = 'move';
+                        slotEl.style.opacity = '0.4';
+                    });
+                    slotEl.addEventListener('dragend', () => {
+                        slotEl.style.opacity = '1';
+                    });
+                    slotEl.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        slotEl.style.border = '2px solid #e94560';
+                    });
+                    slotEl.addEventListener('dragleave', () => {
+                        slotEl.style.border = '';
+                    });
+                    slotEl.addEventListener('drop', async (e) => {
+                        e.preventDefault();
+                        slotEl.style.border = '';
+                        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                        const toIdx = s;
+                        if (fromIdx === toIdx) return;
+
+                        const newSlots = [...validSlots];
+                        const moved = newSlots.splice(fromIdx, 1)[0];
+                        newSlots.splice(toIdx, 0, moved);
+
+                        const paddedSlots = new Array(6).fill(null);
+                        for (let k = 0; k < newSlots.length; k++) paddedSlots[k] = newSlots[k];
+
+                        await window.db.from('pvp_teams').update({
+                            slot_1: paddedSlots[0], slot_2: paddedSlots[1], slot_3: paddedSlots[2],
+                            slot_4: paddedSlots[3], slot_5: paddedSlots[4], slot_6: paddedSlots[5]
+                        }).eq('id', team.id);
+
+                        team.slot_1 = paddedSlots[0]; team.slot_2 = paddedSlots[1];
+                        team.slot_3 = paddedSlots[2]; team.slot_4 = paddedSlots[3];
+                        team.slot_5 = paddedSlots[4]; team.slot_6 = paddedSlots[5];
+
+                        this.renderArenaTeams();
+                    });
+                }
+            }
         }
 
         list.querySelectorAll('.arena-edit-team').forEach(btn => {
