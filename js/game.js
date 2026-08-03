@@ -6361,6 +6361,7 @@ class PokeFuryGame {
 
         popup.querySelector('#challenge-accept').addEventListener('click', async () => {
             overlay.remove();
+            document.getElementById('arena-overlay')?.remove();
             const result = await this.pvp.respondToChallenge(challenge.id, true);
             if (result.error) {
                 this.showToast(result.error, 'error');
