@@ -1728,7 +1728,13 @@ class PokeFuryGame {
             const enemyPokemon = this.enemyTeam[0];
             if (!enemyPokemon || enemyPokemon.currentHp > 0) { clearTimeout(timeout); cleanup(); resolve(false); return; }
 
-            if (this.afkManager && this.afkManager.running && this.afkManager.autoCapture) {
+            if (this.afkManager && this.afkManager.running) {
+                if (!this.afkManager.autoCapture) {
+                    clearTimeout(timeout);
+                    cleanup();
+                    resolve(false);
+                    return;
+                }
                 const isShiny = enemyPokemon.isShiny;
                 const rarity = enemyPokemon.rarity || 'common';
 
