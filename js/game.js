@@ -5934,14 +5934,15 @@ class PokeFuryGame {
                     if (pcPokemon) pokemonData.push(...pcPokemon);
                 }
 
-                for (const p of pokemonData) {
+                for (let pi = 0; pi < pokemonData.length; pi++) {
+                    const p = pokemonData[pi];
                     let spriteUrl = '';
                     try {
                         const pData = await PokeAPI.ensurePokemon(p.species);
                         if (pData?.spriteUrls) spriteUrl = pData.spriteUrls.front || pData.spriteUrls.home || '';
                     } catch (e) {}
                     pokemonHtml += `
-                        <div class="arena-slot" data-slot="${s}" style="text-align:center;width:45px;">
+                        <div class="arena-slot" data-slot="${pi}" style="text-align:center;width:45px;">
                             <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);overflow:hidden;margin:0 auto;">
                                 <img src="${spriteUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
                             </div>
