@@ -6236,6 +6236,36 @@ class PokeFuryGame {
                     this.showToast('Selecione um time para batalhar!', 'error');
                     return;
                 }
+
+                const { data: lastActive } = await window.db.from('game_saves')
+                    .select('updated_at')
+                    .eq('id', selectedTarget.id)
+                    .single();
+
+                const isOnline = lastActive && (Date.now() - new Date(lastActive.updated_at).getTime()) < 300000;
+
+                if (!isOnline) {
+                    const proceed = await new Promise(resolve => {
+                        const overlay = document.createElement('div');
+                        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+                        overlay.innerHTML = `
+                            <div style="background:rgba(15,20,35,0.97);border:1px solid rgba(255,193,7,0.3);border-radius:12px;padding:20px;max-width:350px;width:90%;text-align:center;">
+                                <div style="font-size:14px;color:#ffc107;margin-bottom:8px;">⚠️ Jogador pode estar offline</div>
+                                <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:16px;">${selectedTarget.player_name} está sem atividade recente. Deseja enviar o desafio mesmo assim?</div>
+                                <div style="display:flex;gap:8px;">
+                                    <button id="offline-yes" style="flex:1;padding:8px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Enviar</button>
+                                    <button id="offline-no" style="flex:1;padding:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">Cancelar</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(overlay);
+                        overlay.querySelector('#offline-yes').onclick = () => { overlay.remove(); resolve(true); };
+                        overlay.querySelector('#offline-no').onclick = () => { overlay.remove(); resolve(false); };
+                        overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+                    });
+                    if (!proceed) return;
+                }
+
                 const betSilver = parseInt(document.getElementById('arena-bet-silver')?.value) || 0;
                 const betGold = parseInt(document.getElementById('arena-bet-gold')?.value) || 0;
                 const betDiamonds = parseInt(document.getElementById('arena-bet-diamonds')?.value) || 0;
