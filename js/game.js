@@ -2750,9 +2750,11 @@ class PokeFuryGame {
                 if (ok) {
                     p.heldItemId = item.id;
                     p.held_item_name = item.name;
-                    this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
+                    if (typeof this.showToast === 'function') this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
+                    else alert(`${item.name} equipado em ${p.name}!`);
                 } else {
-                    this.showToast('Erro ao equipar item!', 'error');
+                    if (typeof this.showToast === 'function') this.showToast('Erro ao equipar item!', 'error');
+                    else alert('Erro ao equipar item!');
                 }
                 overlay.remove();
                 this.updatePartyPanel();
@@ -2820,7 +2822,7 @@ class PokeFuryGame {
     async useItemOnPokemon(inv, pokemon, slotIndex) {
         const item = inv.items;
         const removed = await window.GameData.removeItem(inv.item_id, 1);
-        if (!removed) { this.showToast('Erro ao usar item!', 'error'); return; }
+        if (!removed) { console.error('Erro ao usar item!'); return; }
 
         if (item.effect === 'level_up') {
             pokemon.level = Math.min(100, pokemon.level + 1);
@@ -2832,7 +2834,8 @@ class PokeFuryGame {
                 pokemon.stats = newStats;
                 pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
             }
-            this.showToast(`${pokemon.name} subiu para Nv.${pokemon.level}!`, 'success');
+            if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} subiu para Nv.${pokemon.level}!`, 'success');
+            else alert(`${pokemon.name} subiu para Nv.${pokemon.level}!`);
         } else if (item.effect && item.effect.startsWith('exp_')) {
             const amount = item.effect_value || 100;
             pokemon.experience = (pokemon.experience || 0) + amount;
@@ -2847,7 +2850,8 @@ class PokeFuryGame {
                     pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
                 }
             }
-            this.showToast(`${pokemon.name} ganhou ${amount} EXP! Nv.${pokemon.level}`, 'success');
+            if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} ganhou ${amount} EXP! Nv.${pokemon.level}`, 'success');
+            else alert(`${pokemon.name} ganhou ${amount} EXP! Nv.${pokemon.level}`);
         }
 
         await this.saveTeam();
