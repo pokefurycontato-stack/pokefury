@@ -3411,6 +3411,7 @@ class PokeFuryGame {
             }
             afk.start();
             startBtn.style.display = 'none';
+            stopBtn.classList.remove('hidden');
             stopBtn.style.display = 'block';
             statusEl.textContent = 'Executando...';
             statusEl.style.color = '#4ecdc4';
@@ -3419,6 +3420,7 @@ class PokeFuryGame {
             afk.stop();
             startBtn.style.display = 'block';
             stopBtn.style.display = 'none';
+            stopBtn.classList.add('hidden');
             statusEl.textContent = 'Parado';
             statusEl.style.color = 'rgba(255,255,255,0.4)';
         };
