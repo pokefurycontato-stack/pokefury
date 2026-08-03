@@ -242,8 +242,19 @@ class PVPSystem {
         if (!team) return [];
         const pokemonIds = [team.slot_1, team.slot_2, team.slot_3, team.slot_4, team.slot_5, team.slot_6].filter(Boolean);
         if (pokemonIds.length === 0) return [];
-        const { data } = await window.db.from('pokemon_team').select('*').in('id', pokemonIds);
-        return data || [];
+
+        let pokemonData = [];
+        const { data: teamPokemon } = await window.db.from('pokemon_team').select('*').in('id', pokemonIds);
+        if (teamPokemon) pokemonData.push(...teamPokemon);
+
+        const foundIds = new Set(pokemonData.map(p => p.id));
+        const missingIds = pokemonIds.filter(id => !foundIds.has(id));
+        if (missingIds.length > 0) {
+            const { data: pcPokemon } = await window.db.from('pokemon_pc').select('*').in('id', missingIds);
+            if (pcPokemon) pokemonData.push(...pcPokemon);
+        }
+
+        return pokemonData;
     }
 }
 
