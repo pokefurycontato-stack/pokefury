@@ -6383,76 +6383,79 @@ class PokeFuryGame {
     }
 
     async startPVPBattle(challenge) {
-        const myTeamData = await this.pvp.loadTeamPokemon(challenge.pvp_team_id);
+        const isChallenger = challenge.challenger_id === this.currentCharacterId;
+
+        let myTeamId, enemyTeamId;
+        if (isChallenger) {
+            myTeamId = challenge.pvp_team_id;
+            const { data: enemyTeams } = await window.db.from('pvp_teams')
+                .select('id').eq('character_id', challenge.challenged_id).limit(1);
+            enemyTeamId = enemyTeams?.[0]?.id;
+        } else {
+            const { data: myTeams } = await window.db.from('pvp_teams')
+                .select('id').eq('character_id', this.currentCharacterId).limit(1);
+            myTeamId = myTeams?.[0]?.id;
+            enemyTeamId = challenge.pvp_team_id;
+        }
+
+        if (!myTeamId) {
+            this.showToast('Seu time está vazio! Monte um time na Arena.', 'error');
+            return;
+        }
+        if (!enemyTeamId) {
+            this.showToast('Oponente não tem time definido.', 'error');
+            return;
+        }
+
+        const myTeamData = await this.pvp.loadTeamPokemon(myTeamId);
+        const enemyTeamData = await this.pvp.loadTeamPokemon(enemyTeamId);
+
         if (!myTeamData || myTeamData.length === 0) {
             this.showToast('Seu time está vazio!', 'error');
             return;
         }
-
-        const myTeam = [];
-        for (const p of myTeamData) {
-            const pokemonData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
-            if (!pokemonData) continue;
-            const pokemon = await createPokemon(pokemonData, p.level, {
-                hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
-                spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
-            }, {
-                hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
-                spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
-            }, p.nature, p.is_shiny);
-            pokemon.currentHp = p.current_hp || pokemon.stats.hp;
-            if (p.moves && Array.isArray(p.moves)) {
-                const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
-                if (moveIds.length > 0) {
-                    const { data: moveDetails } = await window.db.from('moves')
-                        .select('id, name, type, category, power, accuracy, pp')
-                        .in('id', moveIds);
-                    if (moveDetails) {
-                        const moveMap = {};
-                        moveDetails.forEach(m => { moveMap[m.id] = m; });
-                        pokemon.moves = p.moves.map(sm => {
-                            const full = moveMap[Number(sm.id)];
-                            if (!full) return null;
-                            return { id: full.id, name: full.name, type: full.type, category: full.category || 'physical', power: full.power || 0, accuracy: full.accuracy || 100, pp: full.pp || 35, currentPp: sm.pp ?? full.pp ?? 35 };
-                        }).filter(Boolean);
-                    }
-                }
-            }
-            myTeam.push(pokemon);
+        if (!enemyTeamData || enemyTeamData.length === 0) {
+            this.showToast('Time do oponente está vazio!', 'error');
+            return;
         }
 
-        const enemyTeamData = await this.pvp.loadTeamPokemon(challenge.pvp_team_id);
-        const enemyTeam = [];
-        for (const p of enemyTeamData) {
-            const pokemonData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
-            if (!pokemonData) continue;
-            const pokemon = await createPokemon(pokemonData, p.level, {
-                hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
-                spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
-            }, {
-                hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
-                spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
-            }, p.nature, p.is_shiny);
-            pokemon.currentHp = p.current_hp || pokemon.stats.hp;
-            if (p.moves && Array.isArray(p.moves)) {
-                const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
-                if (moveIds.length > 0) {
-                    const { data: moveDetails } = await window.db.from('moves')
-                        .select('id, name, type, category, power, accuracy, pp')
-                        .in('id', moveIds);
-                    if (moveDetails) {
-                        const moveMap = {};
-                        moveDetails.forEach(m => { moveMap[m.id] = m; });
-                        pokemon.moves = p.moves.map(sm => {
-                            const full = moveMap[Number(sm.id)];
-                            if (!full) return null;
-                            return { id: full.id, name: full.name, type: full.type, category: full.category || 'physical', power: full.power || 0, accuracy: full.accuracy || 100, pp: full.pp || 35, currentPp: sm.pp ?? full.pp ?? 35 };
-                        }).filter(Boolean);
+        const buildTeam = async (teamData) => {
+            const team = [];
+            for (const p of teamData) {
+                const pokemonData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
+                if (!pokemonData) continue;
+                const pokemon = await createPokemon(pokemonData, p.level, {
+                    hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
+                    spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
+                }, {
+                    hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
+                    spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
+                }, p.nature, p.is_shiny);
+                pokemon.currentHp = p.current_hp || pokemon.stats.hp;
+                if (p.moves && Array.isArray(p.moves)) {
+                    const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
+                    if (moveIds.length > 0) {
+                        const { data: moveDetails } = await window.db.from('moves')
+                            .select('id, name, type, category, power, accuracy, pp')
+                            .in('id', moveIds);
+                        if (moveDetails) {
+                            const moveMap = {};
+                            moveDetails.forEach(m => { moveMap[m.id] = m; });
+                            pokemon.moves = p.moves.map(sm => {
+                                const full = moveMap[Number(sm.id)];
+                                if (!full) return null;
+                                return { id: full.id, name: full.name, type: full.type, category: full.category || 'physical', power: full.power || 0, accuracy: full.accuracy || 100, pp: full.pp || 35, currentPp: sm.pp ?? full.pp ?? 35 };
+                            }).filter(Boolean);
+                        }
                     }
                 }
+                team.push(pokemon);
             }
-            enemyTeam.push(pokemon);
-        }
+            return team;
+        };
+
+        const myTeam = await buildTeam(myTeamData);
+        const enemyTeam = await buildTeam(enemyTeamData);
 
         this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
         this.showPVPBattleUI();
