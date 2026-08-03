@@ -2736,8 +2736,14 @@ class PokeFuryGame {
             row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
             row.addEventListener('mouseleave', () => row.style.background = 'transparent');
             row.addEventListener('click', async () => {
-                await window.GameData.equipItem(p.id, item.id);
-                this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
+                const ok = await window.GameData.equipItem(p.id, item.id);
+                if (ok) {
+                    p.heldItemId = item.id;
+                    p.held_item_name = item.name;
+                    this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
+                } else {
+                    this.showToast('Erro ao equipar item!', 'error');
+                }
                 overlay.remove();
                 this.updatePartyPanel();
                 this.renderMochila();
@@ -2803,28 +2809,44 @@ class PokeFuryGame {
 
     async useItemOnPokemon(inv, pokemon, slotIndex) {
         const item = inv.items;
-        await window.GameData.removeItem(inv.item_id, 1);
+        const removed = await window.GameData.removeItem(inv.item_id, 1);
+        if (!removed) { this.showToast('Erro ao usar item!', 'error'); return; }
 
         if (item.effect === 'level_up') {
-            const prevLevel = pokemon.level;
-            pokemon.level += 1;
-            const expForNext = Math.floor(Math.pow(pokemon.level + 1, 3) * 0.8);
+            pokemon.level = Math.min(100, pokemon.level + 1);
             pokemon.experience = 0;
+            if (pokemon.baseStats) {
+                const { calculateAllStats } = await import('./utils.js');
+                const newStats = calculateAllStats(pokemon.baseStats, pokemon.level, pokemon.ivs, pokemon.evs, pokemon.nature);
+                const hpDiff = newStats.hp - pokemon.stats.hp;
+                pokemon.stats = newStats;
+                pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
+            }
             this.showToast(`${pokemon.name} subiu para Nv.${pokemon.level}!`, 'success');
-        } else if (item.effect.startsWith('exp_')) {
+        } else if (item.effect && item.effect.startsWith('exp_')) {
             const amount = item.effect_value || 100;
             pokemon.experience = (pokemon.experience || 0) + amount;
-            const expForNext = Math.floor(Math.pow(pokemon.level + 1, 3) * 0.8);
-            while (pokemon.experience >= expForNext && pokemon.level < 100) {
-                pokemon.experience -= expForNext;
+            const { calculateAllStats } = await import('./utils.js');
+            while (pokemon.experience >= this.getExpForNext(pokemon.level) && pokemon.level < 100) {
+                pokemon.experience -= this.getExpForNext(pokemon.level);
                 pokemon.level++;
+                if (pokemon.baseStats) {
+                    const newStats = calculateAllStats(pokemon.baseStats, pokemon.level, pokemon.ivs, pokemon.evs, pokemon.nature);
+                    const hpDiff = newStats.hp - pokemon.stats.hp;
+                    pokemon.stats = newStats;
+                    pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
+                }
             }
-            this.showToast(`${pokemon.name} ganhou ${amount} EXP!`, 'success');
+            this.showToast(`${pokemon.name} ganhou ${amount} EXP! Nv.${pokemon.level}`, 'success');
         }
 
         await this.saveTeam();
         this.updatePartyPanel();
         this.renderMochila();
+    }
+
+    getExpForNext(level) {
+        return Math.floor(Math.pow(level + 1, 3) * 0.8);
     }
 
     navigatePC(dir) {
