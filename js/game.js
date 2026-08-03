@@ -1075,7 +1075,6 @@ class PokeFuryGame {
             }
             this._turnLocked = false;
         });
-        });
     }
 
     async onSwitchPokemon() {
