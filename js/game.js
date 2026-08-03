@@ -5861,6 +5861,11 @@ class PokeFuryGame {
             return;
         }
         if (!this.pvp) this.pvp = new PVPSystem(this);
+
+        if (this.playerTeam && this.playerTeam.length > 0) {
+            await this.saveTeam();
+        }
+
         await this.pvp.loadTeams();
 
         showScreen('hud');
