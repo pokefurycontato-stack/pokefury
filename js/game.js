@@ -564,8 +564,8 @@ class PokeFuryGame {
         const adminPanel = document.getElementById('admin-panel');
         if (adminPanel && window.isAdmin) {
             adminPanel.classList.remove('hidden');
-            this.setupAdminButtons();
         }
+        this.setupAdminButtons();
 
         this._saveInBackground().catch(e =>
             console.error('[PokeFury] Background save error:', e)
