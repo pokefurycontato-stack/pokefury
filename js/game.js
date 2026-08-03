@@ -1085,11 +1085,16 @@ class PokeFuryGame {
             const newPokemon = this.playerTeam[newIndex];
             if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) return;
 
+            const temp = this.playerTeam[activeIndex];
+            this.playerTeam[activeIndex] = this.playerTeam[newIndex];
+            this.playerTeam[newIndex] = temp;
+
             await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
 
+            const switchedPokemon = this.playerTeam[activeIndex];
             hideBattlePokemonSprites();
-            await preloadBattleSprites(newPokemon, enemyPokemon);
-            drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+            await preloadBattleSprites(switchedPokemon, enemyPokemon);
+            drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
             await this.enemyTurn();
@@ -1443,10 +1448,16 @@ class PokeFuryGame {
                                     resolve();
                                     return;
                                 }
+
+                                const temp = this.playerTeam[activeIndex];
+                                this.playerTeam[activeIndex] = this.playerTeam[newIndex];
+                                this.playerTeam[newIndex] = temp;
+
                                 await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
+                                const switchedPokemon = this.playerTeam[activeIndex];
                                 hideBattlePokemonSprites();
-                                await preloadBattleSprites(newPokemon, enemyPokemon);
-                                drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                                await preloadBattleSprites(switchedPokemon, enemyPokemon);
+                                drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                                 updateBattleUI(this.playerTeam, this.enemyTeam);
                                 resolve();
                             });
