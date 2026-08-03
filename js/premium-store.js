@@ -31,13 +31,21 @@ class PremiumStore {
             const { data, error } = await window.db.rpc('get_currency_balance', {
                 p_character_id: this.currentCharId
             });
-            if (error) {
-                console.warn('[PremiumStore] diamonds fetch error:', error.message);
-                return 0;
+            if (!error && data) {
+                return data.diamonds || 0;
             }
+        } catch (e) {
+            console.warn('[PremiumStore] RPC failed, trying direct query');
+        }
+
+        try {
+            const { data } = await window.db
+                .from('character_currencies')
+                .select('diamonds')
+                .eq('character_id', this.currentCharId)
+                .single();
             return data?.diamonds || 0;
         } catch (e) {
-            console.error('[PremiumStore] diamonds fetch failed:', e);
             return 0;
         }
     }
