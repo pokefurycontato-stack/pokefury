@@ -254,6 +254,16 @@ class PVPSystem {
             if (pcPokemon) pokemonData.push(...pcPokemon);
         }
 
+        const stillMissing = pokemonIds.filter(id => !pokemonData.find(p => p.id === id));
+        if (stillMissing.length > 0) {
+            console.warn('[PVP] Some pokemon not found:', stillMissing.length, 'missing IDs');
+            const validSlots = ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6'];
+            const validIds = pokemonData.map(p => p.id);
+            const update = {};
+            validSlots.forEach((slot, i) => { update[slot] = validIds[i] || null; });
+            await window.db.from('pvp_teams').update(update).eq('id', teamId);
+        }
+
         return pokemonData;
     }
 }
