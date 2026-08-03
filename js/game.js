@@ -457,6 +457,7 @@ class PokeFuryGame {
                     pokemon.isMega = row.is_mega || false;
                     pokemon.heldItemId = row.held_item_id || null;
                     pokemon.statusEffect = row.status_effect || null;
+                    pokemon.dbId = row.id;
                     if (row.moves && Array.isArray(row.moves) && row.moves.length > 0) {
                         const savedMoveIds = row.moves.map(m => Number(m.id)).filter(Boolean);
                         if (savedMoveIds.length > 0) {
@@ -2746,7 +2747,7 @@ class PokeFuryGame {
             row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
             row.addEventListener('mouseleave', () => row.style.background = 'transparent');
             row.addEventListener('click', async () => {
-                const ok = await window.GameData.equipItem(p.id, item.id);
+                const ok = await window.GameData.equipItem(p.dbId || p.id, item.id);
                 if (ok) {
                     p.heldItemId = item.id;
                     p.held_item_name = item.name;
