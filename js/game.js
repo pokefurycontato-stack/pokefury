@@ -5900,7 +5900,7 @@ class PokeFuryGame {
         this.setupArenaEvents();
     }
 
-    renderArenaTeams() {
+    async renderArenaTeams() {
         const list = document.getElementById('arena-teams-list');
         if (!list || !this.pvp) return;
         list.innerHTML = '';
@@ -5910,33 +5910,55 @@ class PokeFuryGame {
             return;
         }
 
-        this.pvp.myTeams.forEach((team, i) => {
+        for (const team of this.pvp.myTeams) {
             const card = document.createElement('div');
             card.style.cssText = 'min-width:280px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;flex-shrink:0;';
 
-            let pokemonHtml = '';
             const slots = [team.slot_1, team.slot_2, team.slot_3, team.slot_4, team.slot_5, team.slot_6];
-            const pokemonNames = team.pokemon_names || [];
-            for (let j = 0; j < 6; j++) {
-                if (slots[j]) {
-                    pokemonHtml += `<div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;">${j + 1}</div>`;
-                } else {
-                    pokemonHtml += `<div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.2);">+</div>`;
+            const validSlots = slots.filter(Boolean);
+
+            let pokemonHtml = '';
+            if (validSlots.length > 0) {
+                const { data: pokemonData } = await window.db.from('pokemon_team')
+                    .select('id, species, nickname, level')
+                    .in('id', validSlots);
+
+                if (pokemonData) {
+                    for (const p of pokemonData) {
+                        let spriteUrl = '';
+                        try {
+                            const pData = await PokeAPI.ensurePokemon(p.species);
+                            if (pData?.spriteUrls) spriteUrl = pData.spriteUrls.front || pData.spriteUrls.home || '';
+                        } catch (e) {}
+                        pokemonHtml += `
+                            <div style="text-align:center;width:45px;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);overflow:hidden;margin:0 auto;">
+                                    <img src="${spriteUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                                </div>
+                                <div style="font-size:8px;color:rgba(255,255,255,0.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nickname || p.species}</div>
+                                <div style="font-size:7px;color:rgba(255,255,255,0.3);">Lv${p.level}</div>
+                            </div>
+                        `;
+                    }
                 }
+            }
+
+            for (let j = validSlots.length; j < 6; j++) {
+                pokemonHtml += `<div style="width:45px;text-align:center;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.2);margin:0 auto;">+</div></div>`;
             }
 
             card.innerHTML = `
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                     <div style="font-size:13px;font-weight:700;color:#fff;">${team.team_name}</div>
                     <div style="display:flex;gap:4px;">
-                        <button class="arena-edit-team" data-index="${i}" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:rgba(255,255,255,0.6);font-size:10px;cursor:pointer;">Editar</button>
+                        <button class="arena-edit-team" data-index="${this.pvp.myTeams.indexOf(team)}" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:rgba(255,255,255,0.6);font-size:10px;cursor:pointer;">Editar</button>
                         <button class="arena-delete-team" data-id="${team.id}" style="padding:4px 8px;background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.3);border-radius:4px;color:#f44336;font-size:10px;cursor:pointer;">✕</button>
                     </div>
                 </div>
-                <div style="display:flex;gap:4px;">${pokemonHtml}</div>
+                <div style="display:flex;gap:6px;justify-content:center;">${pokemonHtml}</div>
             `;
             list.appendChild(card);
-        });
+        }
 
         list.querySelectorAll('.arena-edit-team').forEach(btn => {
             btn.addEventListener('click', () => this.openTeamEditor(parseInt(btn.dataset.index)));
@@ -5977,20 +5999,27 @@ class PokeFuryGame {
         } catch (e) { console.warn('[PVP] Error loading box pokemon:', e); }
 
         const allPokemon = [...myPokemon];
-        boxPokemon.forEach(bp => {
+        for (const bp of boxPokemon) {
             if (!allPokemon.find(p => p.dbId === bp.id)) {
+                let spriteUrls = { front: '' };
+                try {
+                    const pData = await PokeAPI.ensurePokemon(bp.pokemon_id || bp.species);
+                    if (pData?.spriteUrls) {
+                        spriteUrls = pData.spriteUrls;
+                    }
+                } catch (e) {}
                 allPokemon.push({
                     dbId: bp.id,
                     name: bp.nickname || bp.species || 'Pokemon',
                     level: bp.level || 1,
                     currentHp: bp.current_hp || 0,
                     stats: { hp: bp.max_hp || 1 },
-                    spriteUrls: { front: '' },
+                    spriteUrls,
                     species: bp.species,
                     isFromBox: true
                 });
             }
-        });
+        }
 
         if (allPokemon.length === 0) {
             this.showToast('Você não tem pokémons!', 'error');
