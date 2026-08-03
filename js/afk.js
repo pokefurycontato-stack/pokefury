@@ -115,6 +115,13 @@ export class AFKManager {
                 this._walkIndex++;
                 return;
             }
+
+            if (ow.isCollisionAt(next.x, next.y)) {
+                this._walkPath = [];
+                this._walkIndex = 0;
+                return;
+            }
+
             let dir = null;
             if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'right' : 'left';
             else dir = dy > 0 ? 'down' : 'up';
@@ -130,6 +137,9 @@ export class AFKManager {
         const path = this._findPath(ow, { x: ow.player.x, y: ow.player.y }, { x: target.x, y: target.y });
         if (path && path.length > 1) {
             this._walkPath = path.slice(1);
+            this._walkIndex = 0;
+        } else {
+            this._walkPath = [];
             this._walkIndex = 0;
         }
     }
@@ -243,10 +253,13 @@ export class AFKManager {
         const game = this.game;
         if (game.state !== 'battle') return;
         if (!this.autoBattle) return;
+        if (game._turnLocked) return;
 
         const playerPokemon = getFirstAlive(game.playerTeam);
         const enemyPokemon = getFirstAlive(game.enemyTeam);
         if (!playerPokemon || !enemyPokemon) return;
+
+        if (playerPokemon.currentHp <= 0) return;
 
         const hpPct = (playerPokemon.currentHp / playerPokemon.stats.hp) * 100;
 
