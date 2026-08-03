@@ -27,25 +27,36 @@ class PVPSystem {
     async saveTeam(teamIndex, teamName, pokemonIds) {
         const charId = this.game.currentCharacterId;
         if (!charId) return false;
+
+        const { data: { session } } = await window.db.auth.getSession();
+        if (!session) {
+            console.error('[PVP] No active session');
+            return false;
+        }
+
         const slots = {};
         for (let i = 0; i < 6; i++) {
             slots[`slot_${i + 1}`] = pokemonIds[i] || null;
         }
         const existing = this.myTeams[teamIndex];
         if (existing) {
-            const { error } = await window.db.from('pvp_teams')
+            const { data, error } = await window.db.from('pvp_teams')
                 .update({ team_name: teamName, ...slots, updated_at: new Date().toISOString() })
-                .eq('id', existing.id);
+                .eq('id', existing.id)
+                .select();
+            if (error) console.error('[PVP] Update error:', error);
             return !error;
         } else {
             const { data, error } = await window.db.from('pvp_teams')
                 .insert({ character_id: charId, team_name: teamName, ...slots })
                 .select()
                 .single();
-            if (!error && data) {
-                this.myTeams.push(data);
+            if (error) {
+                console.error('[PVP] Insert error:', error);
+                return false;
             }
-            return !error;
+            if (data) this.myTeams.push(data);
+            return true;
         }
     }
 
