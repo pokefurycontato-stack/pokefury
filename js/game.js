@@ -5968,8 +5968,32 @@ class PokeFuryGame {
         if (!teamName) return;
 
         const myPokemon = this.playerTeam || [];
-        if (myPokemon.length === 0) {
-            this.showToast('Você não tem pokémons no time!', 'error');
+        let boxPokemon = [];
+        try {
+            for (let box = 1; box <= 20; box++) {
+                const boxData = await window.GameData.getBoxPokemon(box);
+                if (boxData && boxData.length > 0) boxPokemon.push(...boxData);
+            }
+        } catch (e) { console.warn('[PVP] Error loading box pokemon:', e); }
+
+        const allPokemon = [...myPokemon];
+        boxPokemon.forEach(bp => {
+            if (!allPokemon.find(p => p.dbId === bp.id)) {
+                allPokemon.push({
+                    dbId: bp.id,
+                    name: bp.nickname || bp.species || 'Pokemon',
+                    level: bp.level || 1,
+                    currentHp: bp.current_hp || 0,
+                    stats: { hp: bp.max_hp || 1 },
+                    spriteUrls: { front: '' },
+                    species: bp.species,
+                    isFromBox: true
+                });
+            }
+        });
+
+        if (allPokemon.length === 0) {
+            this.showToast('Você não tem pokémons!', 'error');
             return;
         }
 
@@ -5989,7 +6013,7 @@ class PokeFuryGame {
                 <div style="color:#e94560;font-size:16px;font-weight:700;">${existing ? 'Editar' : 'Criar'} Time</div>
                 <div style="color:#fff;font-size:13px;margin-top:2px;">${teamName}</div>
             </div>
-            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:8px;">Selecione até 6 pokémons:</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:8px;">Selecione até 6 pokémons (time + PC):</div>
             <div id="team-editor-list" style="display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;"></div>
             <div style="display:flex;gap:8px;margin-top:12px;">
                 <button id="team-editor-save" style="flex:1;padding:8px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Salvar</button>
@@ -6001,7 +6025,7 @@ class PokeFuryGame {
         document.body.appendChild(overlay);
 
         const listEl = popup.querySelector('#team-editor-list');
-        myPokemon.forEach((p, i) => {
+        allPokemon.forEach((p, i) => {
             const isSelected = selectedIds.includes(p.dbId);
             const row = document.createElement('div');
             row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer;transition:all 0.2s;border:1px solid ${isSelected ? 'rgba(233,69,96,0.4)' : 'rgba(255,255,255,0.06)'};background:${isSelected ? 'rgba(233,69,96,0.1)' : 'transparent'};`;
@@ -6020,7 +6044,7 @@ class PokeFuryGame {
                 } else if (selectedIds.length < 6) {
                     selectedIds.push(p.dbId);
                 }
-                this.refreshTeamEditor(listEl, myPokemon, selectedIds);
+                this.refreshTeamEditor(listEl, allPokemon, selectedIds);
             });
             listEl.appendChild(row);
         });
