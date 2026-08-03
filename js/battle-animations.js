@@ -150,6 +150,10 @@ export class BattleAnimations {
     cleanupEntrance() {
         this._playerEntranceSprite = null;
         this._clear();
+        if (this.overlay) {
+            this.overlay.remove();
+            this.overlay = null;
+        }
     }
 
     async playCaptureThrow(ballSpriteUrl, startX, startY, targetX, targetY) {

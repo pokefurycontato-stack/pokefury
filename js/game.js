@@ -1965,8 +1965,11 @@ class PokeFuryGame {
         this._lastBattleEnemy = null;
         showScreen('hud');
         hideBattlePokemonSprites();
+        removePlayerSprite();
         if (this.battleAnimations) this.battleAnimations.cleanupEntrance();
         stopBattleVideo();
+
+        document.querySelectorAll('#battle-anim-overlay, #battle-pokemon-sprites, .battle-pokeball, .battle-light-beam, .capture-star, .battle-trail').forEach(el => el.remove());
 
         const raidBossHp = this._isRaidBattle && this.enemyTeam[0]
             ? { maxHp: this.enemyTeam[0].maxHp, currentHp: this.enemyTeam[0].currentHp }
