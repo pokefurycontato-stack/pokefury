@@ -6362,6 +6362,7 @@ class PokeFuryGame {
             }
 
             this.showToast('Duelo aceito! Iniciando batalha...', 'success');
+            await this.startPVPBattle(challenge);
         });
 
         popup.querySelector('#challenge-decline').addEventListener('click', async () => {
@@ -6369,6 +6370,266 @@ class PokeFuryGame {
             await this.pvp.respondToChallenge(challenge.id, false);
             this.showToast('Duelo recusado.', 'info');
         });
+    }
+
+    async startPVPBattle(challenge) {
+        const myTeamData = await this.pvp.loadTeamPokemon(challenge.pvp_team_id);
+        if (!myTeamData || myTeamData.length === 0) {
+            this.showToast('Seu time está vazio!', 'error');
+            return;
+        }
+
+        const myTeam = [];
+        for (const p of myTeamData) {
+            const pokemonData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
+            if (!pokemonData) continue;
+            const pokemon = await createPokemon(pokemonData, p.level, {
+                hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
+                spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
+            }, {
+                hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
+                spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
+            }, p.nature, p.is_shiny);
+            pokemon.currentHp = p.current_hp || pokemon.stats.hp;
+            if (p.moves && Array.isArray(p.moves)) {
+                const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
+                if (moveIds.length > 0) {
+                    const { data: moveDetails } = await window.db.from('moves')
+                        .select('id, name, type, category, power, accuracy, pp')
+                        .in('id', moveIds);
+                    if (moveDetails) {
+                        const moveMap = {};
+                        moveDetails.forEach(m => { moveMap[m.id] = m; });
+                        pokemon.moves = p.moves.map(sm => {
+                            const full = moveMap[Number(sm.id)];
+                            if (!full) return null;
+                            return { id: full.id, name: full.name, type: full.type, category: full.category || 'physical', power: full.power || 0, accuracy: full.accuracy || 100, pp: full.pp || 35, currentPp: sm.pp ?? full.pp ?? 35 };
+                        }).filter(Boolean);
+                    }
+                }
+            }
+            myTeam.push(pokemon);
+        }
+
+        const enemyTeamData = await this.pvp.loadTeamPokemon(challenge.pvp_team_id);
+        const enemyTeam = [];
+        for (const p of enemyTeamData) {
+            const pokemonData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
+            if (!pokemonData) continue;
+            const pokemon = await createPokemon(pokemonData, p.level, {
+                hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
+                spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
+            }, {
+                hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
+                spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
+            }, p.nature, p.is_shiny);
+            pokemon.currentHp = p.current_hp || pokemon.stats.hp;
+            if (p.moves && Array.isArray(p.moves)) {
+                const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
+                if (moveIds.length > 0) {
+                    const { data: moveDetails } = await window.db.from('moves')
+                        .select('id, name, type, category, power, accuracy, pp')
+                        .in('id', moveIds);
+                    if (moveDetails) {
+                        const moveMap = {};
+                        moveDetails.forEach(m => { moveMap[m.id] = m; });
+                        pokemon.moves = p.moves.map(sm => {
+                            const full = moveMap[Number(sm.id)];
+                            if (!full) return null;
+                            return { id: full.id, name: full.name, type: full.type, category: full.category || 'physical', power: full.power || 0, accuracy: full.accuracy || 100, pp: full.pp || 35, currentPp: sm.pp ?? full.pp ?? 35 };
+                        }).filter(Boolean);
+                    }
+                }
+            }
+            enemyTeam.push(pokemon);
+        }
+
+        this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
+        this.showPVPBattleUI();
+        await this.pvpBattle.start();
+    }
+
+    showPVPBattleUI() {
+        const battle = this.pvpBattle;
+        if (!battle) return;
+
+        this.state = 'battle';
+        showScreen('battle-screen');
+        this.positionBattleScreen();
+
+        if (this.overworld2d) this.overworld2d.hide();
+
+        const battleEl = document.getElementById('battle-screen');
+        if (!battleEl) return;
+
+        battleEl.innerHTML = `
+            <div id="pvp-battle-ui" style="width:100%;height:100%;display:flex;flex-direction:column;position:relative;">
+                <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);">Sua vez!</div>
+                <div id="pvp-enemy-info" style="position:absolute;top:10px;right:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-enemy-name"></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-enemy-pokemon"></div>
+                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
+                        <div id="pvp-enemy-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
+                    </div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-enemy-hp-text"></div>
+                </div>
+                <div id="pvp-my-info" style="position:absolute;bottom:80px;left:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-my-name"></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-my-pokemon"></div>
+                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
+                        <div id="pvp-my-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
+                    </div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-my-hp-text"></div>
+                </div>
+                <div id="pvp-actions" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;">
+                    <button id="pvp-fight-btn" style="padding:8px 20px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">⚔️ Lutar</button>
+                    <button id="pvp-switch-btn" style="padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🔄 Trocar</button>
+                    <button id="pvp-forfeit-btn" style="padding:8px 20px;background:rgba(244,67,54,0.2);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🏳️ Desistir</button>
+                </div>
+                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;"></div>
+            </div>
+        `;
+
+        battle.onStateUpdate = () => this.updatePVPBattleUI();
+        battle.onBattleEnd = (result) => this.endPVPBattle(result);
+
+        this.updatePVPBattleUI();
+        this.setupPVPBattleEvents();
+    }
+
+    updatePVPBattleUI() {
+        const battle = this.pvpBattle;
+        if (!battle) return;
+
+        const myPokemon = battle.myActivePokemon;
+        const enemyPokemon = battle.enemyActivePokemon;
+
+        if (myPokemon) {
+            document.getElementById('pvp-my-name').textContent = this.game?.playerName || 'Você';
+            document.getElementById('pvp-my-pokemon').textContent = `${myPokemon.name} Lv.${myPokemon.level}`;
+            const myHpPct = (myPokemon.currentHp / myPokemon.stats.hp) * 100;
+            document.getElementById('pvp-my-hp-bar').style.width = myHpPct + '%';
+            document.getElementById('pvp-my-hp-bar').style.background = myHpPct > 50 ? '#4caf50' : myHpPct > 25 ? '#ff9800' : '#f44336';
+            document.getElementById('pvp-my-hp-text').textContent = `HP ${myPokemon.currentHp}/${myPokemon.stats.hp}`;
+        }
+
+        if (enemyPokemon) {
+            document.getElementById('pvp-enemy-name').textContent = battle.challenge.challenger_name || 'Oponente';
+            document.getElementById('pvp-enemy-pokemon').textContent = `${enemyPokemon.name} Lv.${enemyPokemon.level}`;
+            const enemyHpPct = (enemyPokemon.currentHp / enemyPokemon.stats.hp) * 100;
+            document.getElementById('pvp-enemy-hp-bar').style.width = enemyHpPct + '%';
+            document.getElementById('pvp-enemy-hp-bar').style.background = enemyHpPct > 50 ? '#4caf50' : enemyHpPct > 25 ? '#ff9800' : '#f44336';
+            document.getElementById('pvp-enemy-hp-text').textContent = `HP ${enemyPokemon.currentHp}/${enemyPokemon.stats.hp}`;
+        }
+
+        const turnIndicator = document.getElementById('pvp-turn-indicator');
+        const actions = document.getElementById('pvp-actions');
+        if (battle.isMyTurn && !battle.isFinished) {
+            turnIndicator.textContent = 'Sua vez!';
+            turnIndicator.style.borderColor = '#4caf50';
+            actions.style.opacity = '1';
+            actions.style.pointerEvents = 'auto';
+        } else if (!battle.isFinished) {
+            turnIndicator.textContent = 'Vez do oponente...';
+            turnIndicator.style.borderColor = '#ff9800';
+            actions.style.opacity = '0.5';
+            actions.style.pointerEvents = 'none';
+        }
+    }
+
+    setupPVPBattleEvents() {
+        const fightBtn = document.getElementById('pvp-fight-btn');
+        const switchBtn = document.getElementById('pvp-switch-btn');
+        const forfeitBtn = document.getElementById('pvp-forfeit-btn');
+        const moveSelection = document.getElementById('pvp-move-selection');
+
+        if (fightBtn) {
+            fightBtn.onclick = () => {
+                const myPokemon = this.pvpBattle.myActivePokemon;
+                if (!myPokemon || !myPokemon.moves) return;
+
+                moveSelection.innerHTML = '';
+                moveSelection.style.display = 'grid';
+                document.getElementById('pvp-actions').style.display = 'none';
+
+                myPokemon.moves.forEach(move => {
+                    if (!move || move.currentPp <= 0) return;
+                    const btn = document.createElement('button');
+                    const typeColor = TYPE_COLORS[move.type] || '#686868';
+                    btn.style.cssText = `padding:6px;border:1px solid ${typeColor}40;border-radius:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:Inter;text-align:center;`;
+                    btn.innerHTML = `<div style="font-size:10px">${move.name}</div><div style="font-size:8px;color:rgba(255,255,255,0.5);">${move.type.toUpperCase()} | PP ${move.currentPp}/${move.pp}</div>`;
+                    btn.onclick = async () => {
+                        moveSelection.style.display = 'none';
+                        document.getElementById('pvp-actions').style.display = 'flex';
+                        await this.pvpBattle.executeMyTurn('attack', { moveId: move.id });
+                    };
+                    moveSelection.appendChild(btn);
+                });
+
+                const backBtn = document.createElement('button');
+                backBtn.style.cssText = 'padding:6px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;background:rgba(255,255,255,0.06);color:#fff;font-size:10px;cursor:pointer;font-family:Inter;';
+                backBtn.textContent = 'Voltar';
+                backBtn.onclick = () => {
+                    moveSelection.style.display = 'none';
+                    document.getElementById('pvp-actions').style.display = 'flex';
+                };
+                moveSelection.appendChild(backBtn);
+            };
+        }
+
+        if (switchBtn) {
+            switchBtn.onclick = () => {
+                const myTeam = this.pvpBattle.myTeam;
+                const activeIdx = this.pvpBattle.myIndex;
+
+                moveSelection.innerHTML = '';
+                moveSelection.style.display = 'grid';
+                document.getElementById('pvp-actions').style.display = 'none';
+
+                myTeam.forEach((p, i) => {
+                    if (i === activeIdx || p.currentHp <= 0) return;
+                    const btn = document.createElement('button');
+                    btn.style.cssText = 'padding:6px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;cursor:pointer;font-family:Inter;text-align:center;';
+                    btn.innerHTML = `<div style="font-size:10px">${p.name}</div><div style="font-size:8px;color:rgba(255,255,255,0.5);">Lv.${p.level} | HP ${p.currentHp}/${p.stats.hp}</div>`;
+                    btn.onclick = async () => {
+                        moveSelection.style.display = 'none';
+                        document.getElementById('pvp-actions').style.display = 'flex';
+                        await this.pvpBattle.executeMyTurn('switch', { newIndex: i });
+                    };
+                    moveSelection.appendChild(btn);
+                });
+
+                const backBtn = document.createElement('button');
+                backBtn.style.cssText = 'padding:6px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;background:rgba(255,255,255,0.06);color:#fff;font-size:10px;cursor:pointer;font-family:Inter;';
+                backBtn.textContent = 'Voltar';
+                backBtn.onclick = () => {
+                    moveSelection.style.display = 'none';
+                    document.getElementById('pvp-actions').style.display = 'flex';
+                };
+                moveSelection.appendChild(backBtn);
+            };
+        }
+
+        if (forfeitBtn) {
+            forfeitBtn.onclick = async () => {
+                if (confirm('Tem certeza que deseja desistir?')) {
+                    await this.pvpBattle.forfeit();
+                }
+            };
+        }
+    }
+
+    endPVPBattle(result) {
+        this.state = 'overworld';
+        showScreen('hud');
+        if (this.overworld2d) this.overworld2d.show();
+        this.pvpBattle = null;
+
+        if (result === 'my_win') {
+            this.showToast('🏆 Você venceu o duelo!', 'success');
+        } else {
+            this.showToast('💀 Você perdeu o duelo.', 'error');
+        }
     }
 }
 
