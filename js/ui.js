@@ -480,35 +480,54 @@ export function hideMoveSelection() {
 }
 
 export function showSwitchPokemonSelection(team, activeIndex, onSelect) {
-    const moveSelection = $('#move-selection');
-    const moveButtons = $('#move-buttons');
-    const battleActions = $('#battle-actions');
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
 
-    moveButtons.innerHTML = '';
-    battleActions.classList.add('hidden');
-    moveSelection.classList.remove('hidden');
-    moveSelection.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
+    const popup = document.createElement('div');
+    popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:16px;max-width:350px;width:90%;max-height:80vh;overflow-y:auto';
 
+    popup.innerHTML = `
+        <div style="text-align:center;margin-bottom:12px;">
+            <div style="color:#e94560;font-size:14px;font-weight:700;">Trocar Pokémon</div>
+            <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:2px;">Escolha um Pokémon do seu time</div>
+        </div>
+        <div id="switch-team-list"></div>
+        <div style="text-align:center;margin-top:12px;">
+            <button id="switch-cancel" style="padding:8px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;font-family:Inter">Cancelar</button>
+        </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    const teamList = popup.querySelector('#switch-team-list');
     team.forEach((p, i) => {
         if (i === activeIndex || p.fainted) return;
-        const btn = document.createElement('button');
-        btn.className = 'move-btn';
-        btn.style.textAlign = 'center';
-        btn.innerHTML = `
-            <div style="font-size:9px;font-weight:700">${p.name}</div>
-            <div style="font-size:7px;color:rgba(255,255,255,0.5)">Lv${p.level}</div>
-            <div style="font-size:7px;color:${p.currentHp > p.stats.hp * 0.5 ? '#4caf50' : '#ff9800'}">${p.currentHp}/${p.stats.hp}</div>
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
+        row.innerHTML = `
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
+                <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
+                <div style="width:100%;height:5px;background:rgba(0,0,0,0.4);border-radius:3px;overflow:hidden;margin-top:3px;">
+                    <div style="height:100%;width:${(p.currentHp / p.stats.hp) * 100}%;background:${p.currentHp > p.stats.hp * 0.5 ? '#4caf50' : '#ff9800'};border-radius:3px;"></div>
+                </div>
+                <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:1px;">HP ${p.currentHp}/${p.stats.hp}</div>
+            </div>
         `;
-        btn.addEventListener('click', () => {
+        row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
+        row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+        row.addEventListener('click', () => {
+            overlay.remove();
             onSelect(i);
-            hideMoveSelection();
         });
-        moveButtons.appendChild(btn);
+        teamList.appendChild(row);
     });
 
-    $('#btn-back').onclick = () => {
-        hideMoveSelection();
-    };
+    popup.querySelector('#switch-cancel').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 }
 
 export function updateHpBar(pokemon) {

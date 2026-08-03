@@ -1087,6 +1087,8 @@ class PokeFuryGame {
 
             await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
 
+            hideBattlePokemonSprites();
+            await preloadBattleSprites(newPokemon, enemyPokemon);
             drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
             updateBattleUI(this.playerTeam, this.enemyTeam);
 
@@ -1442,6 +1444,8 @@ class PokeFuryGame {
                                     return;
                                 }
                                 await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
+                                hideBattlePokemonSprites();
+                                await preloadBattleSprites(newPokemon, enemyPokemon);
                                 drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                                 updateBattleUI(this.playerTeam, this.enemyTeam);
                                 resolve();
