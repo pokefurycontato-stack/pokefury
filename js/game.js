@@ -920,11 +920,20 @@ class PokeFuryGame {
         }
         this.isWildBattle = true;
         this._playerSpriteReady = false;
+        this._capturePromptOpen = false;
 
         try {
             const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
+            if (!pokemonData) {
+                console.error('[PokeFury] Failed to load pokemon data for:', pokemonName);
+                return;
+            }
             const isShiny = Math.random() < (1 / getShinyChance());
             const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
+            if (!pokemon || pokemon.currentHp <= 0) {
+                console.error('[PokeFury] Pokemon created with 0 HP, fixing...');
+                pokemon.currentHp = pokemon.stats.hp;
+            }
 
             // Force sprite URL from map entity if provided
             if (spriteUrl && pokemon.spriteUrls) {
@@ -1403,13 +1412,13 @@ class PokeFuryGame {
                     this.weatherAnim.setWeather(this._battleState.weather);
                 }
 
-                if (defender.fainted) {
+                if (defender.fainted && defender.currentHp <= 0) {
                     await showBattleMessage(`${defender.name} desmaiou!`);
 
                     if (isTeamFainted(this.enemyTeam)) {
                         await showBattleMessage('Você venceu a batalha!');
                         const isBoss = defender.isAlpha || defender.isRaidBoss;
-                        if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss) {
+                        if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen) {
                             const captured = await this.showCapturePrompt();
                             this.endBattle('win');
                             return;
@@ -1643,7 +1652,7 @@ class PokeFuryGame {
             const timeout = setTimeout(() => { cleanup(); resolve(false); }, 15000);
 
             const enemyPokemon = this.enemyTeam[0];
-            if (!enemyPokemon) { clearTimeout(timeout); cleanup(); resolve(false); return; }
+            if (!enemyPokemon || enemyPokemon.currentHp > 0) { clearTimeout(timeout); cleanup(); resolve(false); return; }
 
             if (this.afkManager && this.afkManager.running && this.afkManager.autoCapture) {
                 const isShiny = enemyPokemon.isShiny;
