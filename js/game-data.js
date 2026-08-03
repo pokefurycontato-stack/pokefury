@@ -92,6 +92,14 @@ const GameData = {
         return data || [];
     },
 
+    async equipItem(pokemonId, itemId) {
+        const { error } = await window.db
+            .from('pokemon_team')
+            .update({ held_item_id: itemId })
+            .eq('id', pokemonId);
+        return !error;
+    },
+
     async saveTeam(pokemonList) {
         if (!this.currentCharacterId || !this.userId) return;
         this._saveQueue = this._saveQueue.then(() => this._doSaveTeam(pokemonList));

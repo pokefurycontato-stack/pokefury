@@ -2652,6 +2652,20 @@ class PokeFuryGame {
                 slot.appendChild(qtyEl);
             }
 
+            const isEquipable = item.holdable || item.category === 'held' || item.category === 'mega_stone';
+            const isUsable = item.subcategory === 'exp' || item.effect === 'level_up';
+
+            if (isEquipable || isUsable) {
+                slot.style.cursor = 'pointer';
+                slot.addEventListener('click', () => {
+                    if (isEquipable) {
+                        this.showEquipItemPopup(inv);
+                    } else if (isUsable) {
+                        this.showUseItemPopup(inv);
+                    }
+                });
+            }
+
             slot.addEventListener('mouseenter', (e) => {
                 if (tooltipEl) tooltipEl.remove();
                 tooltipEl = document.createElement('div');
@@ -2678,6 +2692,139 @@ class PokeFuryGame {
 
             grid.appendChild(slot);
         }
+    }
+
+    showEquipItemPopup(inv) {
+        const item = inv.items;
+        const team = this.playerTeam || [];
+        if (team.length === 0) { this.showToast('Nenhum Pokémon no time!', 'error'); return; }
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+
+        const popup = document.createElement('div');
+        popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:16px;max-width:350px;width:90%;max-height:80vh;overflow-y:auto';
+
+        popup.innerHTML = `
+            <div style="text-align:center;margin-bottom:12px;">
+                <div style="color:#e94560;font-size:14px;font-weight:700;">Equipar Item</div>
+                <div style="color:#fff;font-size:12px;margin-top:4px;">${item.name}</div>
+                <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-top:2px;">${item.desc || ''}</div>
+            </div>
+            <div id="equip-team-list"></div>
+            <div style="text-align:center;margin-top:12px;">
+                <button id="equip-cancel" style="padding:8px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;font-family:Inter">Cancelar</button>
+            </div>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        const teamList = popup.querySelector('#equip-team-list');
+        team.forEach((p, i) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
+            row.innerHTML = `
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
+                    <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.4);">${p.held_item ? '📦 ' + (p.held_item_name || 'Item equipado') : 'Sem item'}</div>
+                </div>
+            `;
+            row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
+            row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+            row.addEventListener('click', async () => {
+                await window.GameData.equipItem(p.id, item.id);
+                this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
+                overlay.remove();
+                this.updatePartyPanel();
+                this.renderMochila();
+            });
+            teamList.appendChild(row);
+        });
+
+        popup.querySelector('#equip-cancel').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    showUseItemPopup(inv) {
+        const item = inv.items;
+        const team = this.playerTeam || [];
+        if (team.length === 0) { this.showToast('Nenhum Pokémon no time!', 'error'); return; }
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+
+        const popup = document.createElement('div');
+        popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:16px;max-width:350px;width:90%;max-height:80vh;overflow-y:auto';
+
+        popup.innerHTML = `
+            <div style="text-align:center;margin-bottom:12px;">
+                <div style="color:#e94560;font-size:14px;font-weight:700;">Usar Item</div>
+                <div style="color:#fff;font-size:12px;margin-top:4px;">${item.name}</div>
+                <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-top:2px;">${item.desc || ''}</div>
+            </div>
+            <div id="use-team-list"></div>
+            <div style="text-align:center;margin-top:12px;">
+                <button id="use-cancel" style="padding:8px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;font-family:Inter">Cancelar</button>
+            </div>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        const teamList = popup.querySelector('#use-team-list');
+        team.forEach((p, i) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
+            row.innerHTML = `
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
+                    <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.4);">EXP: ${p.experience || 0}</div>
+                </div>
+            `;
+            row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
+            row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+            row.addEventListener('click', async () => {
+                await this.useItemOnPokemon(inv, p, i);
+                overlay.remove();
+            });
+            teamList.appendChild(row);
+        });
+
+        popup.querySelector('#use-cancel').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    async useItemOnPokemon(inv, pokemon, slotIndex) {
+        const item = inv.items;
+        await window.GameData.removeItem(inv.item_id, 1);
+
+        if (item.effect === 'level_up') {
+            const prevLevel = pokemon.level;
+            pokemon.level += 1;
+            const expForNext = Math.floor(Math.pow(pokemon.level + 1, 3) * 0.8);
+            pokemon.experience = 0;
+            this.showToast(`${pokemon.name} subiu para Nv.${pokemon.level}!`, 'success');
+        } else if (item.effect.startsWith('exp_')) {
+            const amount = item.effect_value || 100;
+            pokemon.experience = (pokemon.experience || 0) + amount;
+            const expForNext = Math.floor(Math.pow(pokemon.level + 1, 3) * 0.8);
+            while (pokemon.experience >= expForNext && pokemon.level < 100) {
+                pokemon.experience -= expForNext;
+                pokemon.level++;
+            }
+            this.showToast(`${pokemon.name} ganhou ${amount} EXP!`, 'success');
+        }
+
+        await this.saveTeam();
+        this.updatePartyPanel();
+        this.renderMochila();
     }
 
     navigatePC(dir) {
