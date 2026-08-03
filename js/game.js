@@ -6384,6 +6384,7 @@ class PokeFuryGame {
 
     async startPVPBattle(challenge) {
         const isChallenger = challenge.challenger_id === this.currentCharacterId;
+        console.log('[PVP] Starting battle. isChallenger:', isChallenger, 'myCharId:', this.currentCharacterId);
 
         let myTeamId, enemyTeamId;
         if (isChallenger) {
@@ -6397,6 +6398,8 @@ class PokeFuryGame {
             myTeamId = myTeams?.[0]?.id;
             enemyTeamId = challenge.pvp_team_id;
         }
+
+        console.log('[PVP] myTeamId:', myTeamId, 'enemyTeamId:', enemyTeamId);
 
         if (!myTeamId) {
             this.showToast('Seu time está vazio! Monte um time na Arena.', 'error');
