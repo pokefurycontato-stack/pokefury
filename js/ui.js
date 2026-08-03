@@ -378,6 +378,16 @@ function updateTeamIndicators(selector, team) {
     });
 }
 
+let _battleSpeedMultiplier = 1;
+
+export function setBattleSpeed(multiplier) {
+    _battleSpeedMultiplier = multiplier || 1;
+}
+
+export function getBattleSpeed() {
+    return _battleSpeedMultiplier;
+}
+
 export function showBattleMessage(message, autoHideMs = 0) {
     return new Promise(resolve => {
         try {
@@ -399,6 +409,7 @@ export function showBattleMessage(message, autoHideMs = 0) {
 
             let i = 0;
             const fullText = String(message);
+            const charDelay = Math.round(25 / _battleSpeedMultiplier);
             battleMessageInterval = setInterval(() => {
                 try {
                     if (i < fullText.length) {
@@ -408,13 +419,14 @@ export function showBattleMessage(message, autoHideMs = 0) {
                     } else {
                         clearInterval(battleMessageInterval);
                         battleMessageInterval = null;
+                        const waitMs = autoHideMs > 0 ? Math.round(autoHideMs / _battleSpeedMultiplier) : Math.round(600 / _battleSpeedMultiplier);
                         if (autoHideMs > 0) {
                             setTimeout(() => {
                                 msgEl.classList.remove('visible');
-                                setTimeout(resolve, 300);
-                            }, autoHideMs);
+                                setTimeout(resolve, Math.round(300 / _battleSpeedMultiplier));
+                            }, waitMs);
                         } else {
-                            setTimeout(resolve, 600);
+                            setTimeout(resolve, waitMs);
                         }
                     }
                 } catch (e) {
@@ -422,7 +434,7 @@ export function showBattleMessage(message, autoHideMs = 0) {
                     battleMessageInterval = null;
                     resolve();
                 }
-            }, 25);
+            }, charDelay);
             battleMessageResolve = resolve;
         } catch (e) {
             resolve();

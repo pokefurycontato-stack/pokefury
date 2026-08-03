@@ -18,8 +18,12 @@ export class BattleAnimations {
         if (this.overlay) this.overlay.innerHTML = '';
     }
 
+    setSpeed(multiplier) {
+        this.speedMultiplier = multiplier || 1;
+    }
+
     _sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+        return new Promise(resolve => setTimeout(resolve, Math.round(ms / (this.speedMultiplier || 1))));
     }
 
     _createBall() {

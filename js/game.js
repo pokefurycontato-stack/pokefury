@@ -182,6 +182,14 @@ class PokeFuryGame {
         setTimeout(() => toast.remove(), 3000);
     }
 
+    toggleBattleSpeed() {
+        this._battleSpeed = this._battleSpeed === 2 ? 1 : 2;
+        setBattleSpeed(this._battleSpeed);
+        if (this.battleAnimations) this.battleAnimations.setSpeed(this._battleSpeed);
+        const btn = document.getElementById('battle-speed-btn');
+        if (btn) btn.textContent = this._battleSpeed === 2 ? '⚡ 2x' : '⚡ 1x';
+    }
+
     setupEventListeners() {
         document.querySelectorAll('.section-header[data-toggle]').forEach(header => {
             header.addEventListener('click', () => {
@@ -1622,9 +1630,20 @@ class PokeFuryGame {
     }
 
     showCapturePrompt() {
+        if (this._capturePromptOpen) return Promise.resolve(false);
+        this._capturePromptOpen = true;
+
         return new Promise(async (resolve) => {
+            const cleanup = () => {
+                this._capturePromptOpen = false;
+                const overlay = document.querySelector('[style*="z-index:1000"]');
+                if (overlay) overlay.remove();
+            };
+
+            const timeout = setTimeout(() => { cleanup(); resolve(false); }, 15000);
+
             const enemyPokemon = this.enemyTeam[0];
-            if (!enemyPokemon) { resolve(false); return; }
+            if (!enemyPokemon) { clearTimeout(timeout); cleanup(); resolve(false); return; }
 
             if (this.afkManager && this.afkManager.running && this.afkManager.autoCapture) {
                 const isShiny = enemyPokemon.isShiny;
@@ -1697,11 +1716,15 @@ class PokeFuryGame {
             });
 
             document.getElementById('cap-yes').onclick = () => {
+                clearTimeout(timeout);
                 overlay.remove();
+                this._capturePromptOpen = false;
                 this.showPokeballSelection().then(captured => resolve(captured));
             };
             document.getElementById('cap-no').onclick = () => {
+                clearTimeout(timeout);
                 overlay.remove();
+                this._capturePromptOpen = false;
                 resolve(false);
             };
         });
@@ -1843,6 +1866,11 @@ class PokeFuryGame {
     async endBattle(result) {
         if (this.state !== 'battle') return;
         if (this.weatherAnim) this.weatherAnim.setWeather(null);
+
+        this._battleSpeed = 1;
+        setBattleSpeed(1);
+        if (this.battleAnimations) this.battleAnimations.setSpeed(1);
+        this._capturePromptOpen = false;
 
         if (result) {
             const duration = Math.floor((Date.now() - this.battleStartTime) / 1000);
