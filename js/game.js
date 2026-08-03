@@ -2511,6 +2511,24 @@ class PokeFuryGame {
         return null;
     }
 
+    async getRandomPvpBattleBg() {
+        try {
+            const { data } = await window.db.from('region_maps')
+                .select('id, name, image_url')
+                .not('image_url', 'is', null);
+            if (!data || data.length === 0) return null;
+
+            const filtered = data.filter(m => !m.name.includes('Centro Pokemon'));
+            if (filtered.length === 0) return null;
+
+            const random = filtered[Math.floor(Math.random() * filtered.length)];
+            return random.image_url;
+        } catch (e) {
+            console.error('[PVP] Error getting random battle BG:', e);
+            return null;
+        }
+    }
+
     async saveTeam() {
         await window.GameData.saveTeam(this.playerTeam);
     }
@@ -6334,6 +6352,14 @@ class PokeFuryGame {
                 }
                 return;
             }
+
+            const randomBg = await this.getRandomPvpBattleBg();
+            if (randomBg) {
+                this.currentBattleBg = randomBg;
+                await preloadBattleBgImage(randomBg);
+                this.applyBattleNeonFromBg(randomBg);
+            }
+
             this.showToast('Duelo aceito! Iniciando batalha...', 'success');
         });
 
