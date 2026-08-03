@@ -2480,7 +2480,7 @@ class PokeFuryGame {
 
                 let itemIconHtml = '';
                 if (p.heldItemId) {
-                    const itemData = window ITEMS_DATA ? window.ITEMS_DATA.find(it => it.id === p.heldItemId) : null;
+                    const itemData = window.ITEMS_DATA ? window.ITEMS_DATA.find(it => it.id === p.heldItemId) : null;
                     const itemSprite = itemData?.sprite || '';
                     if (itemSprite) {
                         itemIconHtml = `<img src="${itemSprite}" style="position:absolute;bottom:0;right:0;width:16px;height:16px;border-radius:3px;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.3);object-fit:contain;z-index:2" title="${itemData?.name || 'Item equipado'}">`;
