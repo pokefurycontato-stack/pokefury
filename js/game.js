@@ -4214,20 +4214,26 @@ class PokeFuryGame {
         let height = '?', weight = '?', genderRate = '?';
         let abilityName = '?', abilityEffect = '';
         try {
-            const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${p.id}`);
-            if (resp.ok) {
-                const pData = await resp.json();
-                height = `${(pData.height / 10).toFixed(1)} m`;
-                weight = `${(pData.weight / 10).toFixed(1)} kg`;
+            const pid = p.pokemonId || p.id;
+            if (pid && pid <= 1025) {
+                const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${pid}`);
+                if (resp.ok) {
+                    const pData = await resp.json();
+                    height = `${(pData.height / 10).toFixed(1)} m`;
+                    weight = `${(pData.weight / 10).toFixed(1)} kg`;
+                }
             }
         } catch (e) {}
         try {
-            const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${p.id}`);
-            if (resp.ok) {
-                const sData = await resp.json();
-                const gr = sData.gender_rate;
-                if (gr === -1) genderRate = 'Sem gênero';
-                else { const f = (gr / 8) * 100; genderRate = `♂ ${100 - f}% / ♀ ${f}%`; }
+            const pid = p.pokemonId || p.id;
+            if (pid && pid <= 1025) {
+                const resp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${pid}`);
+                if (resp.ok) {
+                    const sData = await resp.json();
+                    const gr = sData.gender_rate;
+                    if (gr === -1) genderRate = 'Sem gênero';
+                    else { const f = (gr / 8) * 100; genderRate = `♂ ${100 - f}% / ♀ ${f}%`; }
+                }
             }
         } catch (e) {}
         try {
