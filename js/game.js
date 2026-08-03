@@ -878,9 +878,10 @@ class PokeFuryGame {
         initBattleUI(
             () => this.onFight(),
             () => this.onBag(),
-            () => this.onMega(),
+            () => this.onSwitchPokemon(),
             () => this.onRun()
         );
+
 
         const isShinyBattle = pokemon.isShiny;
         let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
@@ -1018,7 +1019,7 @@ class PokeFuryGame {
             initBattleUI(
                 () => this.onFight(),
                 () => this.onBag(),
-                () => this.onMega(),
+                () => this.onSwitchPokemon(),
                 () => this.onRun()
             );
 
@@ -1070,6 +1071,26 @@ class PokeFuryGame {
                 drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                 updateBattleUI(this.playerTeam, this.enemyTeam);
             }
+        });
+    }
+
+    async onSwitchPokemon() {
+        const playerPokemon = getFirstAlive(this.playerTeam);
+        const enemyPokemon = getFirstAlive(this.enemyTeam);
+        if (!playerPokemon || !enemyPokemon) return;
+
+        const activeIndex = this.playerTeam.indexOf(playerPokemon);
+
+        showSwitchPokemonSelection(this.playerTeam, activeIndex, async (newIndex) => {
+            const newPokemon = this.playerTeam[newIndex];
+            if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) return;
+
+            await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
+
+            drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+            updateBattleUI(this.playerTeam, this.enemyTeam);
+
+            await this.enemyTurn();
         });
     }
 
@@ -1401,6 +1422,31 @@ class PokeFuryGame {
 
                     for (const msg of (result.messages || [])) {
                         await showBattleMessage(msg);
+                    }
+                }
+
+                const moveEffect = getMoveEffect(move);
+                if (moveEffect && moveEffect.effect === 'pivot' && !defender.fainted && isPlayer) {
+                    const aliveCount = this.playerTeam.filter(p => !p.fainted).length;
+                    if (aliveCount > 1) {
+                        await showBattleMessage(`${attacker.name} vai trocar!`);
+                        drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                        updateBattleUI(this.playerTeam, this.enemyTeam);
+
+                        const activeIndex = this.playerTeam.indexOf(attacker);
+                        await new Promise(resolve => {
+                            showSwitchPokemonSelection(this.playerTeam, activeIndex, async (newIndex) => {
+                                const newPokemon = this.playerTeam[newIndex];
+                                if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) {
+                                    resolve();
+                                    return;
+                                }
+                                await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
+                                drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                                updateBattleUI(this.playerTeam, this.enemyTeam);
+                                resolve();
+                            });
+                        });
                     }
                 }
 

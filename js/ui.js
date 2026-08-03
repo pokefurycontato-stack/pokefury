@@ -479,6 +479,38 @@ export function hideMoveSelection() {
     $('#battle-actions').classList.remove('hidden');
 }
 
+export function showSwitchPokemonSelection(team, activeIndex, onSelect) {
+    const moveSelection = $('#move-selection');
+    const moveButtons = $('#move-buttons');
+    const battleActions = $('#battle-actions');
+
+    moveButtons.innerHTML = '';
+    battleActions.classList.add('hidden');
+    moveSelection.classList.remove('hidden');
+    moveSelection.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
+
+    team.forEach((p, i) => {
+        if (i === activeIndex || p.fainted) return;
+        const btn = document.createElement('button');
+        btn.className = 'move-btn';
+        btn.style.textAlign = 'center';
+        btn.innerHTML = `
+            <div style="font-size:9px;font-weight:700">${p.name}</div>
+            <div style="font-size:7px;color:rgba(255,255,255,0.5)">Lv${p.level}</div>
+            <div style="font-size:7px;color:${p.currentHp > p.stats.hp * 0.5 ? '#4caf50' : '#ff9800'}">${p.currentHp}/${p.stats.hp}</div>
+        `;
+        btn.addEventListener('click', () => {
+            onSelect(i);
+            hideMoveSelection();
+        });
+        moveButtons.appendChild(btn);
+    });
+
+    $('#btn-back').onclick = () => {
+        hideMoveSelection();
+    };
+}
+
 export function updateHpBar(pokemon) {
     const hpPercent = (pokemon.currentHp / pokemon.stats.hp) * 100;
     return `${pokemon.name}: ${pokemon.currentHp}/${pokemon.stats.hp} HP (${hpPercent.toFixed(0)}%)`;
@@ -822,7 +854,7 @@ export function setPlayerSpriteSrc(url) {
     }
 }
 
-export function initBattleUI(onFight, onBag, onMega, onRun) {
+export function initBattleUI(onFight, onBag, onSwitch, onRun) {
     let battleReady = false;
     setTimeout(() => { battleReady = true; }, 800);
 
@@ -832,7 +864,7 @@ export function initBattleUI(onFight, onBag, onMega, onRun) {
             const action = zone.dataset.action;
             if (action === 'fight') onFight();
             else if (action === 'bag') onBag();
-            else if (action === 'pokemon') onMega();
+            else if (action === 'pokemon') onSwitch();
             else if (action === 'run') onRun();
         });
     });
