@@ -67,14 +67,18 @@ export class PVPBattle {
             activeIndex: this.enemyIndex
         };
 
-        await window.db.from('pvp_battle_state').upsert({
+        await window.db.from('pvp_battle_state').delete()
+            .eq('challenge_id', this.challenge.id)
+            .eq('player_id', this.game.currentCharacterId);
+
+        await window.db.from('pvp_battle_state').insert({
             challenge_id: this.challenge.id,
             player_id: this.game.currentCharacterId,
             player_team: myState,
             current_pokemon_index: this.myIndex,
             is_ready: true,
             updated_at: new Date().toISOString()
-        }, { onConflict: 'challenge_id,player_id' });
+        });
 
         this.myTurn = this.determineFirstAttacker();
         if (this.onStateUpdate) this.onStateUpdate();
