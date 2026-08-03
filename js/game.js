@@ -6298,6 +6298,9 @@ class PokeFuryGame {
             const result = await this.pvp.respondToChallenge(challenge.id, true);
             if (result.error) {
                 this.showToast(result.error, 'error');
+                if (result.noTeam) {
+                    this.showToast('Monte seu time na Arena antes de aceitar duelos!', 'warning');
+                }
                 return;
             }
             this.showToast('Duelo aceito! Iniciando batalha...', 'success');

@@ -127,8 +127,22 @@ class PVPSystem {
                 .eq('id', challengeId)
                 .single();
 
-            if (challenge && (challenge.bet_silver > 0 || challenge.bet_gold > 0 || challenge.bet_diamonds > 0)) {
-                const charId = this.game.currentCharacterId;
+            if (!challenge) return { error: 'Desafio não encontrado.' };
+
+            const charId = this.game.currentCharacterId;
+            const { data: myTeams } = await window.db.from('pvp_teams')
+                .select('id, slot_1')
+                .eq('character_id', charId);
+            const hasTeam = myTeams && myTeams.length > 0 && myTeams.some(t => t.slot_1);
+
+            if (!hasTeam) {
+                await window.db.from('pvp_challenges')
+                    .update({ status: 'declined', responded_at: new Date().toISOString() })
+                    .eq('id', challengeId);
+                return { error: 'Você precisa montar um time de pelo menos 1 pokémon antes de aceitar duelos!', noTeam: true };
+            }
+
+            if ((challenge.bet_silver || 0) > 0 || (challenge.bet_gold || 0) > 0 || (challenge.bet_diamonds || 0) > 0) {
                 const { data: currencies } = await window.db.from('character_currencies')
                     .select('silver, gold, diamonds')
                     .eq('character_id', charId)
