@@ -6430,13 +6430,16 @@ class PokeFuryGame {
 
         const buildTeam = async (teamData) => {
             const team = [];
-            for (const p of teamData) {
+            for (let pi = 0; pi < teamData.length; pi++) {
+                const p = teamData[pi];
                 try {
+                    console.log(`[PVP] Loading pokemon ${pi+1}/${teamData.length}:`, p.pokemon_id || p.species);
                     const pokemonData = await Promise.race([
                         PokeAPI.ensurePokemon(p.pokemon_id || p.species),
                         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
                     ]);
                     if (!pokemonData) { console.warn('[PVP] Skipping pokemon:', p.pokemon_id || p.species); continue; }
+                    console.log(`[PVP] Loaded pokemon ${pi+1}:`, pokemonData.name);
                     const pokemon = await createPokemon(pokemonData, p.level, {
                         hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
                         spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
