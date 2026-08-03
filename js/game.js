@@ -5941,7 +5941,7 @@ class PokeFuryGame {
                         if (pData?.spriteUrls) spriteUrl = pData.spriteUrls.front || pData.spriteUrls.home || '';
                     } catch (e) {}
                     pokemonHtml += `
-                        <div style="text-align:center;width:45px;">
+                        <div class="arena-slot" data-slot="${s}" style="text-align:center;width:45px;">
                             <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);overflow:hidden;margin:0 auto;">
                                 <img src="${spriteUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
                             </div>
@@ -5969,17 +5969,16 @@ class PokeFuryGame {
             list.appendChild(card);
 
             const slotsContainer = card.querySelector('.arena-team-slots');
-            if (slotsContainer) {
-                const slotEls = slotsContainer.children;
+            if (slotsContainer && validSlots.length > 0) {
+                const slotEls = slotsContainer.querySelectorAll('.arena-slot');
                 for (let s = 0; s < slotEls.length; s++) {
                     const slotEl = slotEls[s];
-                    if (!validSlots[s]) continue;
                     slotEl.draggable = true;
                     slotEl.style.cursor = 'grab';
                     slotEl.dataset.slotIndex = s;
 
                     slotEl.addEventListener('dragstart', (e) => {
-                        e.dataTransfer.setData('text/plain', s);
+                        e.dataTransfer.setData('text/plain', String(s));
                         e.dataTransfer.effectAllowed = 'move';
                         slotEl.style.opacity = '0.4';
                     });
@@ -6001,21 +6000,17 @@ class PokeFuryGame {
                         const toIdx = s;
                         if (fromIdx === toIdx) return;
 
-                        const newSlots = [...validSlots];
-                        const moved = newSlots.splice(fromIdx, 1)[0];
-                        newSlots.splice(toIdx, 0, moved);
+                        const slotKeys = ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6'];
+                        const currentSlots = slotKeys.map(k => team[k]);
+                        const moved = currentSlots[fromIdx];
+                        currentSlots.splice(fromIdx, 1);
+                        currentSlots.splice(toIdx, 0, moved);
 
-                        const paddedSlots = new Array(6).fill(null);
-                        for (let k = 0; k < newSlots.length; k++) paddedSlots[k] = newSlots[k];
+                        const update = {};
+                        slotKeys.forEach((k, i) => { update[k] = currentSlots[i]; });
 
-                        await window.db.from('pvp_teams').update({
-                            slot_1: paddedSlots[0], slot_2: paddedSlots[1], slot_3: paddedSlots[2],
-                            slot_4: paddedSlots[3], slot_5: paddedSlots[4], slot_6: paddedSlots[5]
-                        }).eq('id', team.id);
-
-                        team.slot_1 = paddedSlots[0]; team.slot_2 = paddedSlots[1];
-                        team.slot_3 = paddedSlots[2]; team.slot_4 = paddedSlots[3];
-                        team.slot_5 = paddedSlots[4]; team.slot_6 = paddedSlots[5];
+                        await window.db.from('pvp_teams').update(update).eq('id', team.id);
+                        slotKeys.forEach((k, i) => { team[k] = currentSlots[i]; });
 
                         this.renderArenaTeams();
                     });
