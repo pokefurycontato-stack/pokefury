@@ -3487,38 +3487,20 @@ class PokeFuryGame {
         let moves = [];
 
         try {
-            const { data, error } = await window.db
-                .from('pokemon_moves_v2')
-                .select('move_id, learn_method, level_learned')
-                .eq('pokemon_id', pokeId)
-                .order('level_learned');
+            const { data: allMoves } = await window.db
+                .from('moves')
+                .select('id, name, type, category, power')
+                .order('name');
 
-            if (!error && data && data.length > 0) {
-                const moveIds = [...new Set(data.map(r => r.move_id))];
-                const { data: moveDetails } = await window.db
-                    .from('moves')
-                    .select('id, name, type, category, power')
-                    .in('id', moveIds);
-                const moveMap = {};
-                if (moveDetails) moveDetails.forEach(m => { moveMap[m.id] = m; });
-
-                moves = data.map(r => ({
-                    id: r.move_id,
-                    name: moveMap[r.move_id]?.name || `Move ${r.move_id}`,
-                    type: moveMap[r.move_id]?.type || '?',
-                    power: moveMap[r.move_id]?.power,
-                    method: r.learn_method,
-                    level: r.level_learned
-                }));
-            }
+            if (allMoves) moves = allMoves.map(m => ({ ...m, method: '', level: 0 }));
         } catch (e) {
-            console.warn('[Donate] Error loading pokemon moves:', e);
+            console.warn('[Donate] Error loading moves:', e);
         }
 
         if (moves.length === 0) {
             try {
                 const { data } = await window.db.from('moves').select('id, name, type, category, power').limit(50);
-                if (data) moves = data.map(m => ({ ...m, method: '?', level: 0 }));
+                if (data) moves = data.map(m => ({ ...m, method: '', level: 0 }));
             } catch (e) {}
         }
 
@@ -3526,7 +3508,7 @@ class PokeFuryGame {
         wrapper.style.cssText = 'display:flex;gap:6px;align-items:center';
 
         const select = document.createElement('select');
-        select.style.cssText = 'flex:1;padding:6px 8px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none';
+        select.style.cssText = 'flex:1;padding:6px 8px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;max-height:200px;overflow-y:auto';
 
         const emptyOpt = document.createElement('option');
         emptyOpt.value = '';
@@ -3536,8 +3518,7 @@ class PokeFuryGame {
         for (const m of moves) {
             const opt = document.createElement('option');
             opt.value = m.id;
-            const methodLabel = m.method === 'level-up' ? `Lv${m.level}` : m.method === 'machine' ? 'TM' : m.method === 'egg' ? 'Egg' : m.method === 'tutor' ? 'Tutor' : '';
-            opt.textContent = `${m.name} (${m.type})${m.power ? ' ' + m.power + 'pw' : ''} [${methodLabel}]`;
+            opt.textContent = `${m.name} (${m.type})${m.power ? ' ' + m.power + 'pw' : ''}`;
             select.appendChild(opt);
         }
 
