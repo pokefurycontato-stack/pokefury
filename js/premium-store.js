@@ -26,13 +26,14 @@ class PremiumStore {
     }
 
     async _getDiamonds() {
-        if (!this.currentCharId) return 0;
+        if (!this.currentCharId) { this.diamonds = 0; return 0; }
         try {
             const { data, error } = await window.db.rpc('get_currency_balance', {
                 p_character_id: this.currentCharId
             });
             if (!error && data) {
-                return data.diamonds || 0;
+                this.diamonds = data.diamonds || 0;
+                return this.diamonds;
             }
         } catch (e) {
             console.warn('[PremiumStore] RPC failed, trying direct query');
@@ -44,8 +45,10 @@ class PremiumStore {
                 .select('diamonds')
                 .eq('character_id', this.currentCharId)
                 .single();
-            return data?.diamonds || 0;
+            this.diamonds = data?.diamonds || 0;
+            return this.diamonds;
         } catch (e) {
+            this.diamonds = 0;
             return 0;
         }
     }
