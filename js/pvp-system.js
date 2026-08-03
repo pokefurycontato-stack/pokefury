@@ -60,18 +60,19 @@ class PVPSystem {
 
     async searchPlayers(query) {
         if (!query || query.length < 2) return [];
+        const { data: chars } = await window.db.from('characters')
+            .select('id, player_name, user_id')
+            .ilike('player_name', `%${query}%`)
+            .limit(10);
+        if (!chars || chars.length === 0) return [];
+
+        const userIds = [...new Set(chars.map(c => c.user_id))];
         const { data: profiles } = await window.db.from('profiles')
             .select('id, username')
-            .ilike('username', `%${query}%`)
-            .limit(10);
-        if (!profiles || profiles.length === 0) return [];
-        const userIds = profiles.map(p => p.id);
-        const { data: chars } = await window.db.from('game_saves')
-            .select('id, player_name, user_id, starter_pokemon')
-            .in('user_id', userIds)
-            .limit(20);
-        return (chars || []).map(c => {
-            const profile = profiles.find(p => p.id === c.user_id);
+            .in('id', userIds);
+
+        return chars.map(c => {
+            const profile = profiles?.find(p => p.id === c.user_id);
             return { ...c, username: profile?.username || '' };
         });
     }

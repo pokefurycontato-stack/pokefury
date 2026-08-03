@@ -6069,6 +6069,17 @@ class PokeFuryGame {
     }
 
     setupArenaEvents() {
+        const newTeamBtn = document.getElementById('arena-new-team');
+        if (newTeamBtn) {
+            newTeamBtn.addEventListener('click', () => {
+                if (this.pvp.myTeams.length >= 5) {
+                    this.showToast('Máximo de 5 times!', 'error');
+                    return;
+                }
+                this.openTeamEditor(this.pvp.myTeams.length);
+            });
+        }
+
         const searchInput = document.getElementById('arena-search-player');
         const searchResults = document.getElementById('arena-search-results');
         let selectedTarget = null;
