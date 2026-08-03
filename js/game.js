@@ -154,9 +154,19 @@ class PokeFuryGame {
                         window.GameData.setUserId(session.user.id);
 
                         try {
-                            const { data: profile } = await window.db.from('profiles').select('is_admin').eq('id', session.user.id).single();
+                            let { data: profile } = await window.db.from('profiles').select('is_admin, username').eq('id', session.user.id).single();
+                            if (!profile) {
+                                await window.db.from('profiles').upsert({
+                                    id: session.user.id,
+                                    username: session.user.email?.split('@')[0] || 'Jogador',
+                                    display_email: session.user.email,
+                                    is_admin: false
+                                }, { onConflict: 'id' });
+                                profile = { is_admin: false };
+                            }
                             window.isAdmin = !!(profile && profile.is_admin);
                         } catch (e) {
+                            console.warn('[PokeFury] Profile check/create failed:', e);
                             window.isAdmin = false;
                         }
 

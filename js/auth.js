@@ -118,9 +118,19 @@ async function handleLogin() {
         window.GameData.setUserId(data.user.id);
 
         try {
-            const { data: profile } = await window.db.from('profiles').select('is_admin').eq('id', data.user.id).single();
+            let { data: profile } = await window.db.from('profiles').select('is_admin, username').eq('id', data.user.id).single();
+            if (!profile) {
+                await window.db.from('profiles').upsert({
+                    id: data.user.id,
+                    username: data.user.email?.split('@')[0] || 'Jogador',
+                    display_email: data.user.email,
+                    is_admin: false
+                }, { onConflict: 'id' });
+                profile = { is_admin: false };
+            }
             window.isAdmin = !!(profile && profile.is_admin);
         } catch (e) {
+            console.warn('[PokeFury Auth] Profile check/create failed:', e);
             window.isAdmin = false;
         }
         console.log('[PokeFury Auth] Admin:', window.isAdmin);
