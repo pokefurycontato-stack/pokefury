@@ -466,6 +466,7 @@ const MOVE_EFFECTS_BY_NAME = {
     'hydro cannon': { effect: 'recharge' },
     'rock wrecker': { effect: 'recharge' },
     'roost': { effect: 'heal', healPercent: 0.5 },
+    'transform': { effect: 'transform' },
     'synthesis': { effect: 'heal', healPercent: 0.5, weatherBoost: { sun: 2/3, rain: 0.25, sandstorm: 0.25, hail: 0.25 } },
     'moonlight': { effect: 'heal', healPercent: 0.5, weatherBoost: { sun: 2/3, rain: 0.25, sandstorm: 0.25, hail: 0.25 } },
     'morning sun': { effect: 'heal', healPercent: 0.5, weatherBoost: { sun: 2/3, rain: 0.25, sandstorm: 0.25, hail: 0.25 } },
@@ -1126,6 +1127,39 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
                 defender._flinched = true;
             }
         }
+        return messages;
+    }
+
+    // Transform
+    if (effect.effect === 'transform') {
+        if (attacker._transformed) {
+            messages.push(`${attacker.name} já está transformado!`);
+            return messages;
+        }
+
+        attacker._transformed = true;
+        attacker._originalName = attacker.name;
+        attacker._originalTypes = [...attacker.types];
+        attacker._originalStats = { ...attacker.stats };
+        attacker._originalMoves = attacker.moves.map(m => ({ ...m }));
+        attacker._originalSpriteUrl = attacker.spriteUrls ? { ...attacker.spriteUrls } : null;
+        attacker._originalAbility = attacker.currentAbility;
+        attacker._originalAbilityName = attacker.currentAbilityName;
+
+        attacker.name = defender.name;
+        attacker.types = [...defender.types];
+        attacker.stats = { ...defender.stats };
+        const hpRatio = attacker.currentHp / (attacker._originalStats?.hp || attacker.stats.hp);
+        attacker.currentHp = Math.max(1, Math.floor(attacker.stats.hp * hpRatio));
+        attacker.moves = defender.moves.map(m => ({ ...m, currentPp: m.pp || 35 }));
+        if (defender.spriteUrls) attacker.spriteUrls = { ...defender.spriteUrls };
+        if (defender.currentAbility) {
+            attacker.currentAbility = defender.currentAbility;
+            attacker.currentAbilityName = defender.currentAbilityName;
+        }
+        attacker._statStages = { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 };
+
+        messages.push(`${attacker._originalName} se transformou em ${attacker.name}!`);
         return messages;
     }
 

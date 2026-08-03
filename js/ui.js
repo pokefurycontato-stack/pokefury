@@ -696,7 +696,7 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
         return;
     }
 
-    const stateKey = `${pokemon.id}_${pokemon.isShiny}_${pokemon.isMega}`;
+    const stateKey = `${pokemon.id}_${pokemon.isShiny}_${pokemon.isMega}_${pokemon._transformed || ''}_${pokemon._transformed ? pokemon.name : ''}`;
 
     if (!el) {
         el = document.createElement('img');
