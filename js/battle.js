@@ -63,6 +63,34 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
             }
 
             levelMoves = dbMoves.slice(0, 4);
+
+            const hasTypeAttack = levelMoves.some(m => m.type === apiData.types[0] && m.power > 0);
+            if (!hasTypeAttack) {
+                const { data: allMoves } = await window.db
+                    .from('pokemon_moves_v2')
+                    .select('move_id, level_learned')
+                    .eq('pokemon_id', apiData.id)
+                    .eq('learn_method', 'level-up')
+                    .order('level_learned');
+                if (allMoves && allMoves.length > 0) {
+                    const allMoveIds = allMoves.map(m => m.move_id);
+                    const { data: allMoveDetails } = await window.db
+                        .from('moves')
+                        .select('id, name, type, category, power, accuracy, pp')
+                        .in('id', allMoveIds);
+                    if (allMoveDetails) {
+                        const firstTypeMove = allMoveDetails.find(m => m.type === apiData.types[0] && m.power > 0);
+                        if (firstTypeMove && !levelMoves.find(m => m.id === firstTypeMove.id)) {
+                            levelMoves.unshift({
+                                id: firstTypeMove.id, name: firstTypeMove.name, type: firstTypeMove.type,
+                                category: firstTypeMove.category || 'physical', power: firstTypeMove.power || 0,
+                                accuracy: firstTypeMove.accuracy || 100, pp: firstTypeMove.pp || 35
+                            });
+                            levelMoves = levelMoves.slice(0, 4);
+                        }
+                    }
+                }
+            }
         }
     } catch (e) {
         console.warn('[Battle] Error fetching level-up moves:', e);
