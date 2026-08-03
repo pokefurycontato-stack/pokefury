@@ -265,6 +265,11 @@ class PokeFuryGame {
             gymBattleBtn.addEventListener('click', () => this.startGymLeaderBattle());
         }
 
+        const arenaBtn = document.getElementById('btn-arena');
+        if (arenaBtn) {
+            arenaBtn.addEventListener('click', () => this.openArena());
+        }
+
         const logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
@@ -558,6 +563,13 @@ class PokeFuryGame {
             this.chat.init(window.GameData.userId, this.playerName);
             this.chat._initialized = true;
         }
+
+        if (!this.pvp) this.pvp = new PVPSystem(this);
+        this.pvp.subscribeToChallenges((challenge) => {
+            if (this.state === 'overworld') {
+                this.showChallengePopup(challenge);
+            }
+        });
 
         try {
             if (this.overworld2d) this.overworld2d.show();
@@ -5808,6 +5820,372 @@ class PokeFuryGame {
                 `${leader.name} - Líder de Ginásio`
             );
         }
+    }
+
+    // ============================================================
+    //  PVP ARENA
+    // ============================================================
+
+    async openArena() {
+        if (!window.PVPSystem) {
+            this.showToast('Sistema PVP não carregado.', 'error');
+            return;
+        }
+        if (!this.pvp) this.pvp = new PVPSystem(this);
+        await this.pvp.loadTeams();
+
+        showScreen('hud');
+        const mainArea = document.getElementById('main-area');
+        if (this.overworld2d) this.overworld2d.hide();
+
+        let arenaEl = document.getElementById('arena-overlay');
+        if (arenaEl) arenaEl.remove();
+
+        arenaEl = document.createElement('div');
+        arenaEl.id = 'arena-overlay';
+        arenaEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;background:#0a0e1a;overflow-y:auto;font-family:Inter,sans-serif;color:#fff;';
+
+        arenaEl.innerHTML = `
+            <div style="max-width:800px;margin:0 auto;padding:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                    <h1 style="margin:0;font-size:22px;color:#e94560;">⚔️ Arena PVP</h1>
+                    <button id="arena-close" style="padding:8px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">✕ Fechar</button>
+                </div>
+
+                <!-- MONTAR TIME -->
+                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;margin-bottom:20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <h2 style="margin:0;font-size:16px;color:#fff;">Monte seu Time para Duelos</h2>
+                        <button id="arena-new-team" style="padding:8px 16px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Novo Time</button>
+                    </div>
+                    <div id="arena-teams-list" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;"></div>
+                </div>
+
+                <!-- PVP CASUAL -->
+                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
+                    <h2 style="margin:0 0 12px;font-size:16px;color:#fff;">PVP Casual</h2>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+                        <div style="flex:2;min-width:200px;">
+                            <label style="display:block;font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">Desafiar Treinador</label>
+                            <input id="arena-search-player" type="text" placeholder="Digite o nome..." style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter;">
+                            <div id="arena-search-results" style="display:none;background:rgba(15,20,35,0.98);border:1px solid rgba(255,255,255,0.12);border-radius:6px;margin-top:4px;max-height:200px;overflow-y:auto;"></div>
+                        </div>
+                        <div style="flex:1;min-width:120px;">
+                            <label style="display:block;font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">Time para batalhar</label>
+                            <select id="arena-pvp-team" style="width:100%;padding:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:12px;font-family:Inter;"></select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                        <div style="flex:1;min-width:100px;">
+                            <label style="display:block;font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">⚪ Prata</label>
+                            <input id="arena-bet-silver" type="number" min="0" placeholder="0" style="width:100%;padding:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;font-size:12px;font-family:Inter;">
+                        </div>
+                        <div style="flex:1;min-width:100px;">
+                            <label style="display:block;font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">🪙 Ouro</label>
+                            <input id="arena-bet-gold" type="number" min="0" placeholder="0" style="width:100%;padding:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;font-size:12px;font-family:Inter;">
+                        </div>
+                        <div style="flex:1;min-width:100px;">
+                            <label style="display:block;font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">💎 Diamantes</label>
+                            <input id="arena-bet-diamonds" type="number" min="0" placeholder="0" style="width:100%;padding:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;font-size:12px;font-family:Inter;">
+                        </div>
+                    </div>
+                    <button id="arena-send-challenge" style="width:100%;padding:10px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">📤 Enviar Solicitação PVP</button>
+                </div>
+            </div>
+        `;
+
+        mainArea.appendChild(arenaEl);
+
+        this.renderArenaTeams();
+        this.setupArenaEvents();
+    }
+
+    renderArenaTeams() {
+        const list = document.getElementById('arena-teams-list');
+        if (!list || !this.pvp) return;
+        list.innerHTML = '';
+
+        if (this.pvp.myTeams.length === 0) {
+            list.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:8px;">Nenhum time salvo. Clique em "+ Novo Time" para criar.</div>';
+            return;
+        }
+
+        this.pvp.myTeams.forEach((team, i) => {
+            const card = document.createElement('div');
+            card.style.cssText = 'min-width:280px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;flex-shrink:0;';
+
+            let pokemonHtml = '';
+            const slots = [team.slot_1, team.slot_2, team.slot_3, team.slot_4, team.slot_5, team.slot_6];
+            const pokemonNames = team.pokemon_names || [];
+            for (let j = 0; j < 6; j++) {
+                if (slots[j]) {
+                    pokemonHtml += `<div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;">${j + 1}</div>`;
+                } else {
+                    pokemonHtml += `<div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.2);">+</div>`;
+                }
+            }
+
+            card.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <div style="font-size:13px;font-weight:700;color:#fff;">${team.team_name}</div>
+                    <div style="display:flex;gap:4px;">
+                        <button class="arena-edit-team" data-index="${i}" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:rgba(255,255,255,0.6);font-size:10px;cursor:pointer;">Editar</button>
+                        <button class="arena-delete-team" data-id="${team.id}" style="padding:4px 8px;background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.3);border-radius:4px;color:#f44336;font-size:10px;cursor:pointer;">✕</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:4px;">${pokemonHtml}</div>
+            `;
+            list.appendChild(card);
+        });
+
+        list.querySelectorAll('.arena-edit-team').forEach(btn => {
+            btn.addEventListener('click', () => this.openTeamEditor(parseInt(btn.dataset.index)));
+        });
+        list.querySelectorAll('.arena-delete-team').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm('Deletar este time?')) {
+                    await this.pvp.deleteTeam(btn.dataset.id);
+                    this.renderArenaTeams();
+                }
+            });
+        });
+
+        const pvpTeamSelect = document.getElementById('arena-pvp-team');
+        if (pvpTeamSelect) {
+            pvpTeamSelect.innerHTML = '';
+            this.pvp.myTeams.forEach((t, i) => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.team_name;
+                pvpTeamSelect.appendChild(opt);
+            });
+        }
+    }
+
+    async openTeamEditor(teamIndex) {
+        const existing = this.pvp.myTeams[teamIndex];
+        const teamName = prompt('Nome do time:', existing ? existing.team_name : `Time ${this.pvp.myTeams.length + 1}`);
+        if (!teamName) return;
+
+        const myPokemon = this.playerTeam || [];
+        if (myPokemon.length === 0) {
+            this.showToast('Você não tem pokémons no time!', 'error');
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+
+        const popup = document.createElement('div');
+        popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:16px;max-width:500px;width:95%;max-height:85vh;overflow-y:auto';
+
+        let selectedIds = [];
+        if (existing) {
+            selectedIds = [existing.slot_1, existing.slot_2, existing.slot_3, existing.slot_4, existing.slot_5, existing.slot_6].filter(Boolean);
+        }
+
+        popup.innerHTML = `
+            <div style="text-align:center;margin-bottom:12px;">
+                <div style="color:#e94560;font-size:16px;font-weight:700;">${existing ? 'Editar' : 'Criar'} Time</div>
+                <div style="color:#fff;font-size:13px;margin-top:2px;">${teamName}</div>
+            </div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:8px;">Selecione até 6 pokémons:</div>
+            <div id="team-editor-list" style="display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;"></div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button id="team-editor-save" style="flex:1;padding:8px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Salvar</button>
+                <button id="team-editor-cancel" style="flex:1;padding:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">Cancelar</button>
+            </div>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        const listEl = popup.querySelector('#team-editor-list');
+        myPokemon.forEach((p, i) => {
+            const isSelected = selectedIds.includes(p.dbId);
+            const row = document.createElement('div');
+            row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer;transition:all 0.2s;border:1px solid ${isSelected ? 'rgba(233,69,96,0.4)' : 'rgba(255,255,255,0.06)'};background:${isSelected ? 'rgba(233,69,96,0.1)' : 'transparent'};`;
+            row.innerHTML = `
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
+                    <img src="${p.spriteUrls?.front || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);">Lv.${p.level}</span></div>
+                </div>
+                <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${isSelected ? '#e94560' : 'rgba(255,255,255,0.2)'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#e94560;">${isSelected ? '✓' : ''}</div>
+            `;
+            row.addEventListener('click', () => {
+                if (isSelected) {
+                    selectedIds = selectedIds.filter(id => id !== p.dbId);
+                } else if (selectedIds.length < 6) {
+                    selectedIds.push(p.dbId);
+                }
+                this.refreshTeamEditor(listEl, myPokemon, selectedIds);
+            });
+            listEl.appendChild(row);
+        });
+
+        popup.querySelector('#team-editor-save').addEventListener('click', async () => {
+            if (selectedIds.length === 0) {
+                this.showToast('Selecione pelo menos 1 pokémon!', 'error');
+                return;
+            }
+            await this.pvp.saveTeam(teamIndex, teamName, selectedIds);
+            overlay.remove();
+            this.renderArenaTeams();
+            this.showToast('Time salvo!', 'success');
+        });
+
+        popup.querySelector('#team-editor-cancel').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    refreshTeamEditor(listEl, myPokemon, selectedIds) {
+        listEl.innerHTML = '';
+        myPokemon.forEach((p, i) => {
+            const isSelected = selectedIds.includes(p.dbId);
+            const row = document.createElement('div');
+            row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer;transition:all 0.2s;border:1px solid ${isSelected ? 'rgba(233,69,96,0.4)' : 'rgba(255,255,255,0.06)'};background:${isSelected ? 'rgba(233,69,96,0.1)' : 'transparent'};`;
+            row.innerHTML = `
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
+                    <img src="${p.spriteUrls?.front || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);">Lv.${p.level}</span></div>
+                </div>
+                <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${isSelected ? '#e94560' : 'rgba(255,255,255,0.2)'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#e94560;">${isSelected ? '✓' : ''}</div>
+            `;
+            row.addEventListener('click', () => {
+                if (isSelected) {
+                    const idx = selectedIds.indexOf(p.dbId);
+                    if (idx >= 0) selectedIds.splice(idx, 1);
+                } else if (selectedIds.length < 6) {
+                    selectedIds.push(p.dbId);
+                }
+                this.refreshTeamEditor(listEl, myPokemon, selectedIds);
+            });
+            listEl.appendChild(row);
+        });
+    }
+
+    setupArenaEvents() {
+        const searchInput = document.getElementById('arena-search-player');
+        const searchResults = document.getElementById('arena-search-results');
+        let selectedTarget = null;
+        let debounce = null;
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounce);
+                const q = searchInput.value.trim();
+                if (q.length < 2) { searchResults.style.display = 'none'; return; }
+                debounce = setTimeout(async () => {
+                    const players = await this.pvp.searchPlayers(q);
+                    searchResults.innerHTML = '';
+                    searchResults.style.display = players.length > 0 ? 'block' : 'none';
+                    players.forEach(p => {
+                        const row = document.createElement('div');
+                        row.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.05);';
+                        row.innerHTML = `<span style="color:#fff;font-weight:600;">${p.player_name}</span> <span style="color:rgba(255,255,255,0.4);">(${p.username})</span>`;
+                        row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
+                        row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+                        row.addEventListener('click', () => {
+                            selectedTarget = p;
+                            searchInput.value = p.player_name;
+                            searchResults.style.display = 'none';
+                        });
+                        searchResults.appendChild(row);
+                    });
+                }, 300);
+            });
+        }
+
+        const sendBtn = document.getElementById('arena-send-challenge');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', async () => {
+                if (!selectedTarget) {
+                    this.showToast('Selecione um treinador para desafiar!', 'error');
+                    return;
+                }
+                const teamSelect = document.getElementById('arena-pvp-team');
+                const teamId = teamSelect?.value;
+                if (!teamId) {
+                    this.showToast('Selecione um time para batalhar!', 'error');
+                    return;
+                }
+                const betSilver = parseInt(document.getElementById('arena-bet-silver')?.value) || 0;
+                const betGold = parseInt(document.getElementById('arena-bet-gold')?.value) || 0;
+                const betDiamonds = parseInt(document.getElementById('arena-bet-diamonds')?.value) || 0;
+
+                const result = await this.pvp.sendChallenge(selectedTarget.id, selectedTarget.player_name, teamId, betSilver, betGold, betDiamonds);
+                if (result.error) {
+                    this.showToast(result.error, 'error');
+                    return;
+                }
+                this.showToast(`Desafio enviado para ${selectedTarget.player_name}!`, 'success');
+                searchInput.value = '';
+                selectedTarget = null;
+            });
+        }
+
+        document.getElementById('arena-close')?.addEventListener('click', () => {
+            document.getElementById('arena-overlay')?.remove();
+            if (this.overworld2d) this.overworld2d.show();
+        });
+    }
+
+    showChallengePopup(challenge) {
+        const hasBet = (challenge.bet_silver || 0) > 0 || (challenge.bet_gold || 0) > 0 || (challenge.bet_diamonds || 0) > 0;
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+
+        const popup = document.createElement('div');
+        popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:20px;max-width:380px;width:90%;text-align:center;';
+
+        let betHtml = '';
+        if (hasBet) {
+            let betParts = [];
+            if (challenge.bet_silver > 0) betParts.push(`${challenge.bet_silver} Prata`);
+            if (challenge.bet_gold > 0) betParts.push(`${challenge.bet_gold} Ouro`);
+            if (challenge.bet_diamonds > 0) betParts.push(`${challenge.bet_diamonds} Diamantes`);
+            betHtml = `
+                <div style="background:linear-gradient(135deg,rgba(233,69,96,0.15),rgba(233,69,96,0.05));border:1px solid rgba(233,69,96,0.3);border-radius:8px;padding:10px;margin:12px 0;">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">💰 APOSTA ATIVA</div>
+                    <div style="font-size:14px;font-weight:700;color:#e94560;">${betParts.join(' + ')}</div>
+                </div>
+            `;
+        }
+
+        popup.innerHTML = `
+            <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:8px;">⚔️ DESAFIO PVP</div>
+            <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;">${challenge.challenger_name}</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:8px;">te desafiou para um duelo!</div>
+            ${betHtml}
+            <div style="display:flex;gap:8px;margin-top:16px;">
+                <button id="challenge-accept" style="flex:1;padding:10px;background:linear-gradient(135deg,#4caf50,#388e3c);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Aceitar</button>
+                <button id="challenge-decline" style="flex:1;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.6);font-size:13px;font-weight:600;cursor:pointer;">Recusar</button>
+            </div>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        popup.querySelector('#challenge-accept').addEventListener('click', async () => {
+            overlay.remove();
+            const result = await this.pvp.respondToChallenge(challenge.id, true);
+            if (result.error) {
+                this.showToast(result.error, 'error');
+                return;
+            }
+            this.showToast('Duelo aceito! Iniciando batalha...', 'success');
+        });
+
+        popup.querySelector('#challenge-decline').addEventListener('click', async () => {
+            overlay.remove();
+            await this.pvp.respondToChallenge(challenge.id, false);
+            this.showToast('Duelo recusado.', 'info');
+        });
     }
 }
 
