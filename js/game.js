@@ -2514,15 +2514,16 @@ class PokeFuryGame {
     async getRandomPvpBattleBg() {
         try {
             const { data } = await window.db.from('region_maps')
-                .select('id, name, image_url')
-                .not('image_url', 'is', null);
+                .select('id, name, battle_bg_url')
+                .not('battle_bg_url', 'is', null);
             if (!data || data.length === 0) return null;
 
             const filtered = data.filter(m => !m.name.includes('Centro Pokemon'));
             if (filtered.length === 0) return null;
 
             const random = filtered[Math.floor(Math.random() * filtered.length)];
-            return random.image_url;
+            console.log('[PVP] Random battle BG:', random.name, random.battle_bg_url);
+            return random.battle_bg_url;
         } catch (e) {
             console.error('[PVP] Error getting random battle BG:', e);
             return null;
