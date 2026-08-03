@@ -29,6 +29,20 @@ export class PVPBattle {
         return this.myTurn;
     }
 
+    getEffectiveSpeed(pokemon) {
+        let speed = pokemon.stats?.speed || 100;
+        const stages = pokemon._statStages?.speed || 0;
+        if (stages > 0) speed = Math.floor(speed * (1 + stages * 0.5));
+        else if (stages < 0) speed = Math.floor(speed / (1 + Math.abs(stages) * 0.5));
+        return speed;
+    }
+
+    determineFirstAttacker() {
+        const mySpeed = this.getEffectiveSpeed(this.myActivePokemon);
+        const enemySpeed = this.getEffectiveSpeed(this.enemyActivePokemon);
+        return mySpeed >= enemySpeed;
+    }
+
     async start() {
         await this.syncInitialState();
         this.subscribeToEnemyActions();
@@ -62,7 +76,7 @@ export class PVPBattle {
             updated_at: new Date().toISOString()
         }, { onConflict: 'challenge_id,player_id' });
 
-        this.myTurn = true;
+        this.myTurn = this.determineFirstAttacker();
         if (this.onStateUpdate) this.onStateUpdate();
     }
 
@@ -104,7 +118,7 @@ export class PVPBattle {
             return;
         }
 
-        this.myTurn = true;
+        this.myTurn = this.determineFirstAttacker();
         if (this.onStateUpdate) this.onStateUpdate();
 
         if (this.myTeam.every(p => p.currentHp <= 0)) {
