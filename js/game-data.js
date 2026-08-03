@@ -126,46 +126,55 @@ const GameData = {
     },
 
     async _doSaveTeam(pokemonList) {
-        await window.db
-            .from('pokemon_team')
-            .delete()
-            .eq('character_id', this.currentCharacterId);
+        const inserts = pokemonList.map((pokemon, i) => {
+            const insert = {
+                user_id: this.userId,
+                character_id: this.currentCharacterId,
+                species: pokemon.species,
+                nickname: pokemon.nickname || pokemon.name,
+                level: pokemon.level,
+                current_hp: pokemon.currentHp,
+                max_hp: pokemon.stats.hp,
+                experience: pokemon.experience || 0,
+                moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
+                is_active: i === 0,
+                slot: i + 1,
+                pokemon_id: pokemon.id || null,
+                iv_hp: pokemon.ivs?.hp ?? 15,
+                iv_attack: pokemon.ivs?.attack ?? 15,
+                iv_defense: pokemon.ivs?.defense ?? 15,
+                iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
+                iv_sp_def: pokemon.ivs?.spDef ?? 15,
+                iv_speed: pokemon.ivs?.speed ?? 15,
+                ev_hp: pokemon.evs?.hp ?? 0,
+                ev_attack: pokemon.evs?.attack ?? 0,
+                ev_defense: pokemon.evs?.defense ?? 0,
+                ev_sp_atk: pokemon.evs?.spAtk ?? 0,
+                ev_sp_def: pokemon.evs?.spDef ?? 0,
+                ev_speed: pokemon.evs?.speed ?? 0,
+                nature: pokemon.nature || 'hardy',
+                happiness: pokemon.happiness ?? 70,
+                is_shiny: pokemon.isShiny || false,
+                is_mega: pokemon.isMega || false,
+                held_item_id: pokemon.heldItemId || null
+            };
+            if (pokemon.dbId) insert.id = pokemon.dbId;
+            return insert;
+        });
 
-        const inserts = pokemonList.map((pokemon, i) => ({
-            user_id: this.userId,
-            character_id: this.currentCharacterId,
-            species: pokemon.species,
-            nickname: pokemon.nickname || pokemon.name,
-            level: pokemon.level,
-            current_hp: pokemon.currentHp,
-            max_hp: pokemon.stats.hp,
-            experience: pokemon.experience || 0,
-            moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
-            is_active: i === 0,
-            slot: i + 1,
-            pokemon_id: pokemon.id || null,
-            iv_hp: pokemon.ivs?.hp ?? 15,
-            iv_attack: pokemon.ivs?.attack ?? 15,
-            iv_defense: pokemon.ivs?.defense ?? 15,
-            iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
-            iv_sp_def: pokemon.ivs?.spDef ?? 15,
-            iv_speed: pokemon.ivs?.speed ?? 15,
-            ev_hp: pokemon.evs?.hp ?? 0,
-            ev_attack: pokemon.evs?.attack ?? 0,
-            ev_defense: pokemon.evs?.defense ?? 0,
-            ev_sp_atk: pokemon.evs?.spAtk ?? 0,
-            ev_sp_def: pokemon.evs?.spDef ?? 0,
-            ev_speed: pokemon.evs?.speed ?? 0,
-            nature: pokemon.nature || 'hardy',
-            happiness: pokemon.happiness ?? 70,
-            is_shiny: pokemon.isShiny || false,
-            is_mega: pokemon.isMega || false,
-            held_item_id: pokemon.heldItemId || null
-        }));
+        const newIds = inserts.filter(i => i.id).map(i => i.id);
+        if (newIds.length > 0) {
+            await window.db.from('pokemon_team').delete()
+                .eq('character_id', this.currentCharacterId)
+                .not('id', 'in', `(${newIds.join(',')})`);
+        } else {
+            await window.db.from('pokemon_team').delete()
+                .eq('character_id', this.currentCharacterId);
+        }
 
         const { error } = await window.db
             .from('pokemon_team')
-            .insert(inserts);
+            .upsert(inserts, { onConflict: 'id' });
         return !error;
     },
 
