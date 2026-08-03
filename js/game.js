@@ -6473,7 +6473,7 @@ class PokeFuryGame {
                     </div>
                     <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-enemy-hp-text"></div>
                 </div>
-                <div id="pvp-my-info" style="position:absolute;bottom:80px;left:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
+                <div id="pvp-my-info" style="position:absolute;top:10px;left:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
                     <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-my-name"></div>
                     <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-my-pokemon"></div>
                     <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
