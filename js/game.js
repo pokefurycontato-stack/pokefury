@@ -172,6 +172,16 @@ class PokeFuryGame {
         }
     }
 
+    showToast(msg, type = 'info') {
+        const toast = document.createElement('div');
+        const colors = { success: '#4caf50', error: '#f44336', info: '#2196f3', warning: '#ff9800' };
+        toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;padding:12px 20px;background:${colors[type] || colors.info};color:#fff;border-radius:8px;font-size:13px;font-weight:600;font-family:Inter,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:350px;`;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; }, 2500);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
     setupEventListeners() {
         document.querySelectorAll('.section-header[data-toggle]').forEach(header => {
             header.addEventListener('click', () => {
