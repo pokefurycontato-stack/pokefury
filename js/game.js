@@ -6477,9 +6477,12 @@ class PokeFuryGame {
         const enemyTeam = await buildTeam(enemyTeamData);
 
         this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
+        console.log('[PVP] PVPBattle created. Showing UI...');
         this.showPVPBattleUI();
+        console.log('[PVP] UI shown. Starting battle...');
         try {
             await this.pvpBattle.start();
+            console.log('[PVP] Battle started successfully');
         } catch (e) {
             console.error('[PVP] Battle start error:', e);
             this.showToast('Erro ao iniciar batalha: ' + e.message, 'error');
