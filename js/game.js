@@ -6468,7 +6468,12 @@ class PokeFuryGame {
 
         this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
         this.showPVPBattleUI();
-        await this.pvpBattle.start();
+        try {
+            await this.pvpBattle.start();
+        } catch (e) {
+            console.error('[PVP] Battle start error:', e);
+            this.showToast('Erro ao iniciar batalha: ' + e.message, 'error');
+        }
     }
 
     showPVPBattleUI() {
