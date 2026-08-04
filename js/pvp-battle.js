@@ -416,7 +416,18 @@ export class PVPBattle {
             if (action.action === 'switch') {
                 const next = team[action.newIndex];
                 if (next && next.currentHp > 0 && action.newIndex !== currentIndex) {
-                    clearChoiceLock(team[currentIndex]);
+                    const outgoing = team[currentIndex];
+                    const outgoingAbility = (outgoing.currentAbilityName || '').toLowerCase();
+                    if (outgoingAbility === 'regenerator') {
+                        const heal = Math.floor(outgoing.stats.hp / 3);
+                        outgoing.currentHp = Math.min(outgoing.stats.hp, outgoing.currentHp + heal);
+                        result.logs.push(`${outgoing.name} recuperou HP com Regenerator!`);
+                    }
+                    if (outgoingAbility === 'natural cure') {
+                        outgoing.statusEffect = null;
+                        result.logs.push(`${outgoing.name} foi curado por Natural Cure!`);
+                    }
+                    clearChoiceLock(outgoing);
                     if (isChallenger) this.myIndex = action.newIndex;
                     else this.enemyIndex = action.newIndex;
                     result.switchedSides.push(side);

@@ -1094,6 +1094,11 @@ class PokeFuryGame {
 
             try {
                 const temp = this.playerTeam[activeIndex];
+                const outgoingAbility = (playerPokemon.currentAbilityName || '').toLowerCase();
+                if (outgoingAbility === 'regenerator') {
+                    playerPokemon.currentHp = Math.min(playerPokemon.stats.hp, playerPokemon.currentHp + Math.floor(playerPokemon.stats.hp / 3));
+                }
+                if (outgoingAbility === 'natural cure') playerPokemon.statusEffect = null;
                 this.playerTeam[activeIndex] = this.playerTeam[newIndex];
                 this.playerTeam[newIndex] = temp;
                 clearChoiceLock(playerPokemon);
