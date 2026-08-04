@@ -6786,6 +6786,7 @@ openEventsPanel() {
                 </div>
                 <div id="pvp-actions" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;pointer-events:auto;">
                     <button id="pvp-fight-btn" style="padding:8px 20px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">⚔️ Lutar</button>
+                    <button id="pvp-tera-btn" style="padding:8px 14px;background:rgba(106,90,205,.25);border:1px solid rgba(147,112,219,.7);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">💎 Tera</button>
                     <button id="pvp-switch-btn" style="padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🔄 Trocar</button>
                     <button id="pvp-forfeit-btn" style="padding:8px 20px;background:rgba(244,67,54,0.2);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🏳️ Desistir</button>
                 </div>
@@ -6958,6 +6959,7 @@ openEventsPanel() {
         const turnIndicator = document.getElementById('pvp-turn-indicator');
         const actions = document.getElementById('pvp-actions');
         const fightBtn = document.getElementById('pvp-fight-btn');
+        const teraBtn = document.getElementById('pvp-tera-btn');
         const switchBtn = document.getElementById('pvp-switch-btn');
         if (battle.needsForcedSwitch && !battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Escolha o próximo Pokémon';
@@ -6966,6 +6968,7 @@ openEventsPanel() {
             actions.style.pointerEvents = 'none';
             if (fightBtn) fightBtn.disabled = true;
             if (switchBtn) switchBtn.disabled = true;
+            if (teraBtn) teraBtn.disabled = true;
             this.openPVPSwitchSelector(true);
         } else if (battle.phase === 'switch' && !battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Aguardando a troca do oponente...';
@@ -6974,6 +6977,7 @@ openEventsPanel() {
             actions.style.pointerEvents = 'none';
             if (fightBtn) fightBtn.disabled = true;
             if (switchBtn) switchBtn.disabled = true;
+            if (teraBtn) teraBtn.disabled = true;
         } else if (battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Ação enviada. Aguardando o oponente...';
             turnIndicator.style.borderColor = '#ff9800';
@@ -6981,6 +6985,7 @@ openEventsPanel() {
             actions.style.pointerEvents = 'none';
             if (fightBtn) fightBtn.disabled = true;
             if (switchBtn) switchBtn.disabled = true;
+            if (teraBtn) teraBtn.disabled = true;
         } else if (battle.isMyTurn && !battle.isFinished) {
             turnIndicator.textContent = 'Escolha sua ação';
             turnIndicator.style.borderColor = '#4caf50';
@@ -6988,6 +6993,12 @@ openEventsPanel() {
             actions.style.pointerEvents = 'auto';
             if (fightBtn) fightBtn.disabled = !myPokemon || myPokemon.currentHp <= 0;
             if (switchBtn) switchBtn.disabled = false;
+            if (teraBtn) {
+                teraBtn.disabled = battle.teraUsed;
+                teraBtn.style.opacity = battle.teraUsed ? '.45' : '1';
+                teraBtn.style.background = battle.teraSelected ? 'rgba(147,112,219,.8)' : 'rgba(106,90,205,.25)';
+                teraBtn.textContent = battle.teraSelected ? '💎 Tera ✓' : '💎 Tera';
+            }
         } else if (!battle.isFinished) {
             turnIndicator.textContent = 'Aguardando o oponente...';
             turnIndicator.style.borderColor = '#ff9800';
@@ -6995,6 +7006,7 @@ openEventsPanel() {
             actions.style.pointerEvents = 'none';
             if (fightBtn) fightBtn.disabled = true;
             if (switchBtn) switchBtn.disabled = true;
+            if (teraBtn) teraBtn.disabled = true;
         }
 
         if (this.currentBattleBg && this.ctx && this.canvas) {
@@ -7093,6 +7105,7 @@ openEventsPanel() {
 
     setupPVPBattleEvents() {
         const fightBtn = document.getElementById('pvp-fight-btn');
+        const teraBtn = document.getElementById('pvp-tera-btn');
         const switchBtn = document.getElementById('pvp-switch-btn');
         const forfeitBtn = document.getElementById('pvp-forfeit-btn');
         const moveSelection = document.getElementById('pvp-move-selection');
@@ -7116,7 +7129,8 @@ openEventsPanel() {
                         moveSelection.style.display = 'none';
                         document.getElementById('pvp-actions').style.display = 'flex';
                         try {
-                            await this.pvpBattle.executeMyTurn('attack', { moveId: move.id });
+                            await this.pvpBattle.executeMyTurn('attack', { moveId: move.id, tera: this.pvpBattle.teraSelected });
+                            this.pvpBattle.teraSelected = false;
                         } catch (error) {
                             this.showToast(`Não foi possível enviar a ação: ${error.message || error}`, 'error');
                         }
@@ -7132,6 +7146,14 @@ openEventsPanel() {
                     document.getElementById('pvp-actions').style.display = 'flex';
                 };
                 moveSelection.appendChild(backBtn);
+            };
+        }
+
+        if (teraBtn) {
+            teraBtn.onclick = () => {
+                if (!this.pvpBattle.isMyTurn || this.pvpBattle.teraUsed) return;
+                this.pvpBattle.teraSelected = !this.pvpBattle.teraSelected;
+                this.updatePVPBattleUI();
             };
         }
 

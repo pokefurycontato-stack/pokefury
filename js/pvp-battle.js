@@ -1,6 +1,6 @@
 /* Real-time simultaneous-action PVP battle. */
 import { executeTurn, getEffectivenessText } from './battle.js';
-import { getMovePriority } from './battle-mechanics.js';
+import { getMovePriority, activateTerastal } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -11,6 +11,9 @@ export class PVPBattle {
         this.enemyIndex = 0;
         this.round = 1;
         this.phase = 'action';
+        this.teraUsed = false;
+        this.enemyTeraUsed = false;
+        this.teraSelected = false;
         this.pendingAction = null;
         this.pendingSwitchIndex = null;
         this.isFinished = false;
@@ -63,7 +66,7 @@ export class PVPBattle {
         const { error } = await window.db.from('pvp_battle_state').insert({
             challenge_id: this.challenge.id,
             player_id: this.game.currentCharacterId,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase, teraUsed: this.teraUsed },
             current_pokemon_index: this.myIndex,
             pending_action: null,
             round_number: 1,
@@ -95,6 +98,7 @@ export class PVPBattle {
             this.enemyTeam = this.applySnapshot(this.enemyTeam, state.player_team.team);
             this.enemyIndex = state.current_pokemon_index || 0;
             this.phase = state.player_team.phase || this.phase;
+            this.enemyTeraUsed = !!state.player_team.teraUsed;
         }
         await this.tryResolveRound();
         this.onStateUpdate?.();
@@ -133,6 +137,7 @@ export class PVPBattle {
             const next = this.myTeam[data.newIndex];
             if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return false;
         }
+        if (action === 'attack' && data.tera && this.teraUsed) return false;
         this.pendingAction = { action, ...data };
 
         const { error } = await window.db.from('pvp_battle_state').update({
@@ -185,6 +190,8 @@ export class PVPBattle {
             previousChallengedIndex,
             challengerTeam: this.serializeTeam(this.myTeam),
             challengedTeam: this.serializeTeam(this.enemyTeam),
+            challengerTeraUsed: this.teraUsed,
+            challengedTeraUsed: this.enemyTeraUsed,
             challengerIndex: this.myIndex,
             challengedIndex: this.enemyIndex,
             result
@@ -193,7 +200,7 @@ export class PVPBattle {
         const { error: resolutionError } = await window.db.from('pvp_battle_state').update({
             last_action: 'resolved', last_action_data: payload,
             pending_action: null, resolved_round: this.round,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: nextPhase },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: nextPhase, teraUsed: this.teraUsed },
             current_pokemon_index: this.myIndex,
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
@@ -209,6 +216,13 @@ export class PVPBattle {
     async resolveActions(challengerAction, challengedAction) {
         if (challengerAction.action === 'forfeit') return { winner: 'challenged' };
         if (challengedAction.action === 'forfeit') return { winner: 'challenger' };
+
+        if (challengerAction.action === 'attack' && challengerAction.tera && !this.teraUsed) {
+            if (activateTerastal(this.myActivePokemon)) this.teraUsed = true;
+        }
+        if (challengedAction.action === 'attack' && challengedAction.tera && !this.enemyTeraUsed) {
+            if (activateTerastal(this.enemyActivePokemon)) this.enemyTeraUsed = true;
+        }
 
         const challengerMove = this.myActivePokemon?.moves.find(m => String(m.id) === String(challengerAction.moveId));
         const challengedMove = this.enemyActivePokemon?.moves.find(m => String(m.id) === String(challengedAction.moveId));
@@ -228,6 +242,8 @@ export class PVPBattle {
         ];
         this.battleState.turn = this.round;
         const result = { order: order.map(x => x[0]), winner: null, damage: [], logs: [], effects: [], faintedSides: [] };
+        if (challengerAction.tera && this.myActivePokemon?.isTerastallized) result.logs.push(`${this.myActivePokemon.name} Terastalizou!`);
+        if (challengedAction.tera && this.enemyActivePokemon?.isTerastallized) result.logs.push(`${this.enemyActivePokemon.name} Terastalizou!`);
 
         for (const [side, action] of order) {
             const isChallenger = side === 'challenger';
@@ -330,6 +346,8 @@ export class PVPBattle {
         this.enemyTeam = this.applySnapshot(this.enemyTeam, enemySnapshot);
         this.myIndex = isChallenger ? payload.challengerIndex : payload.challengedIndex;
         this.enemyIndex = isChallenger ? payload.challengedIndex : payload.challengerIndex;
+        this.teraUsed = isChallenger ? !!payload.challengerTeraUsed : !!payload.challengedTeraUsed;
+        this.enemyTeraUsed = isChallenger ? !!payload.challengedTeraUsed : !!payload.challengerTeraUsed;
         this.pendingAction = null;
         this.pendingSwitchIndex = null;
         this.phase = payload.phase === 'switch' ? 'switch' : 'action';
@@ -368,7 +386,7 @@ export class PVPBattle {
             last_action_data: null,
             round_number: this.round,
             resolved_round: this.round - 1,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase, teraUsed: this.teraUsed },
             current_pokemon_index: this.myIndex,
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
