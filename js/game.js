@@ -1959,13 +1959,23 @@ class PokeFuryGame {
 
     async endBattle(result) {
         if (this.state !== 'battle') return;
+        console.log('[Battle] Ending battle:', result);
         if (this.weatherAnim) this.weatherAnim.setWeather(null);
 
         // Restore the overworld immediately; rewards and persistence can take time.
-        this.exitWildBattleFullscreen();
         this.state = 'overworld';
-        showScreen('hud');
-        this.overworld2d?.show();
+        const restoreBattleView = () => {
+            try { this.exitWildBattleFullscreen(); } catch (error) { console.error('[Battle] Fullscreen cleanup error:', error); }
+            document.getElementById('wild-fullscreen')?.remove();
+            document.getElementById('pvp-fullscreen')?.remove();
+            document.getElementById('battle-screen')?.classList.add('hidden');
+            const wrapper = document.getElementById('game-wrapper');
+            if (wrapper) wrapper.style.display = '';
+            showScreen('hud');
+            this.overworld2d?.show();
+        };
+        restoreBattleView();
+        setTimeout(restoreBattleView, 100);
 
         this._battleSpeed = 1;
         setBattleSpeed(1);
