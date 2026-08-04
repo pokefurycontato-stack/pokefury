@@ -7004,6 +7004,14 @@ openEventsPanel() {
         const fullscreen = document.getElementById('pvp-fullscreen');
         const activeFullscreen = fullscreen || document.getElementById('wild-fullscreen');
         if (!activeFullscreen || !pokemon) return;
+        if (!this._entryAnimations) this._entryAnimations = { player: new Set(), enemy: new Set() };
+        const activeEntries = this._entryAnimations[side] || (this._entryAnimations[side] = new Set());
+        if (activeEntries.has(pokemon)) {
+            console.warn('[Battle] Duplicate entrance ignored:', side, pokemon.name);
+            return;
+        }
+        activeEntries.add(pokemon);
+        try {
         await new Promise(resolve => requestAnimationFrame(resolve));
         const sprites = getBattlePokemonSprites();
         const sprite = sprites[side];
@@ -7040,6 +7048,9 @@ openEventsPanel() {
         sprite.style.transform = '';
         sprite.style.transition = '';
         overlay.remove();
+        } finally {
+            activeEntries.delete(pokemon);
+        }
     }
 
     addPVPBattleLog(lines) {
