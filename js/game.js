@@ -6384,7 +6384,7 @@ openEventsPanel() {
                 const { data: lastActive } = await window.db.from('game_saves')
                     .select('updated_at')
                     .eq('id', selectedTarget.id)
-                    .single();
+                    .maybeSingle();
 
                 const isOnline = lastActive && (Date.now() - new Date(lastActive.updated_at).getTime()) < 300000;
 
@@ -6665,12 +6665,12 @@ openEventsPanel() {
                     </div>
                     <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-my-hp-text"></div>
                 </div>
-                <div id="pvp-actions" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;">
+                <div id="pvp-actions" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;pointer-events:auto;">
                     <button id="pvp-fight-btn" style="padding:8px 20px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">⚔️ Lutar</button>
                     <button id="pvp-switch-btn" style="padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🔄 Trocar</button>
                     <button id="pvp-forfeit-btn" style="padding:8px 20px;background:rgba(244,67,54,0.2);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🏳️ Desistir</button>
                 </div>
-                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;"></div>
+                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;pointer-events:auto;"></div>
         `;
         pvpFullscreen.appendChild(pvpUI);
 
