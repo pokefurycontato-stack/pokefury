@@ -694,7 +694,7 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
 
     if (!el) {
         el = document.createElement('img');
-        el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;';
+        el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;object-fit:contain;';
         container.appendChild(el);
         battlePokemonSprites[side] = el;
         battlePokemonState[side] = null;
