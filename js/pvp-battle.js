@@ -2,7 +2,7 @@
 import { executeTurn, getEffectivenessText } from './battle.js';
 import { getHeldItemEffect, processHeldItemTurnEnd } from './utils.js';
 import { getChoiceLockedMove, clearChoiceLock } from './utils.js';
-import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed, processEntryAbilities, processEntryHazards, isGrounded } from './battle-mechanics.js';
+import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, processFieldTurnEnd, initFieldEffects, getWeatherSpeed, processEntryAbilities, processEntryHazards, isGrounded } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -369,6 +369,14 @@ export class PVPBattle {
             result.logs.push(...processEndOfTurn(pokemon, this.battleState));
             result.logs.push(...processHeldItemTurnEnd(pokemon));
         }
+        const fieldsBefore = [this.myFieldEffects, this.enemyFieldEffects].map(field => ({ ...field }));
+        processFieldTurnEnd(this.myFieldEffects);
+        processFieldTurnEnd(this.enemyFieldEffects);
+        [this.myFieldEffects, this.enemyFieldEffects].forEach((field, index) => {
+            for (const key of ['_lightScreen', '_reflect', '_auroraVeil', '_safeguard', '_mist', '_tailwind']) {
+                if (fieldsBefore[index][key] > 0 && field[key] === 0) result.logs.push(`${key.replace('_', '')} terminou.`);
+            }
+        });
         for (const field of ['weatherTurns', 'terrainTurns']) {
             if (this.battleState[field] > 0) this.battleState[field]--;
         }
