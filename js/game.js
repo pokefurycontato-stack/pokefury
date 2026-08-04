@@ -3080,6 +3080,18 @@ class PokeFuryGame {
                 this.showToast(`Movimento não encontrado: ${moveName}`, 'error');
                 return;
             }
+            const learnPokemonId = pokemon.basePokemonId || pokemon.id;
+            if (learnPokemonId) {
+                const { data: machineLearn } = await window.db.from('pokemon_moves_v2')
+                    .select('move_id')
+                    .eq('pokemon_id', learnPokemonId)
+                    .eq('move_id', move.id)
+                    .in('learn_method', ['machine', 'tm', 'tr']);
+                if (!machineLearn || machineLearn.length === 0) {
+                    this.showToast(`${pokemon.name} não pode aprender ${move.name}.`, 'warning');
+                    return;
+                }
+            }
             if (pokemon.moves.some(existing => String(existing.id) === String(move.id))) {
                 this.showToast(`${pokemon.name} já conhece ${move.name}.`, 'warning');
                 return;
