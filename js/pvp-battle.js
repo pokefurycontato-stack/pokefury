@@ -247,6 +247,7 @@ export class PVPBattle {
             if (!move || move.currentPp <= 0) continue;
             result.logs.push(`${attacker.name} usou ${move.name}!`);
             const turnResult = await executeTurn(attacker, defender, move, this.battleState);
+            move.currentPp = Math.max(0, (move.currentPp || 0) - 1);
             result.effects.push({
                 type: move.type || 'normal', category: move.category || 'physical',
                 attackerSide: isChallenger ? 'challenger' : 'challenged',

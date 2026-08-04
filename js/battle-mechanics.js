@@ -1171,18 +1171,18 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
             const weatherMult = effect.weatherBoost[battleState.weather];
             if (weatherMult) healMult = healMult * (weatherMult / 0.5);
         }
-        const healAmount = Math.floor(pokemon.stats.hp * healMult);
-        pokemon.currentHp = Math.min(pokemon.stats.hp, pokemon.currentHp + healAmount);
-        messages.push(`${pokemon.name} recuperou ${healAmount} HP!`);
+        const healAmount = Math.floor(attacker.stats.hp * healMult);
+        attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + healAmount);
+        messages.push(`${attacker.name} recuperou ${healAmount} HP!`);
         return messages;
     }
 
     // Rest
     if (effect.effect === 'rest') {
-        pokemon.currentHp = pokemon.stats.hp;
-        pokemon.statusEffect = STATUS.SLEEP;
-        pokemon._sleepTurns = 0;
-        messages.push(`${pokemon.name} dormiu e recuperou todo o HP!`);
+        attacker.currentHp = attacker.stats.hp;
+        attacker.statusEffect = STATUS.SLEEP;
+        attacker._sleepTurns = 0;
+        messages.push(`${attacker.name} dormiu e recuperou todo o HP!`);
         return messages;
     }
 
@@ -1308,11 +1308,11 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
         const stages = defender._statStages || {};
         const atkStage = stages.attack || 0;
         const atkMult = getStatMult(atkStage);
-        const healAmt = Math.floor(pokemon.stats.hp * atkMult * 0.3);
+        const healAmt = Math.floor(attacker.stats.hp * atkMult * 0.3);
         defender._statStages = defender._statStages || {};
         defender._statStages.attack = Math.max(-6, (defender._statStages.attack || 0) - 1);
-        pokemon.currentHp = Math.min(pokemon.stats.hp, pokemon.currentHp + healAmt);
-        messages.push(`${pokemon.name} drenou ${healAmt} HP! Ataque de ${defender.name} caiu!`);
+        attacker.currentHp = Math.min(attacker.stats.hp, attacker.currentHp + healAmt);
+        messages.push(`${attacker.name} drenou ${healAmt} HP! Ataque de ${defender.name} caiu!`);
         return messages;
     }
 
