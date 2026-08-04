@@ -120,6 +120,7 @@ export class PVPBattle {
             .eq('player_id', this.game.currentCharacterId);
         if (error) {
             this.pendingAction = null;
+            console.error('[PVP] Failed to submit action:', error);
             throw error;
         }
         this.onStateUpdate?.();
@@ -129,8 +130,12 @@ export class PVPBattle {
     async tryResolveRound() {
         if (this.isFinished || this.challenge.challenger_id !== this.game.currentCharacterId) return;
 
-        const { data: states } = await window.db.from('pvp_battle_state')
+        const { data: states, error: statesError } = await window.db.from('pvp_battle_state')
             .select('*').eq('challenge_id', this.challenge.id);
+        if (statesError) {
+            console.error('[PVP] Failed to read round state:', statesError);
+            return;
+        }
         if (!states || states.length < 2) return;
 
         const challengerState = states.find(s => s.player_id === this.challenge.challenger_id);
@@ -149,7 +154,7 @@ export class PVPBattle {
             result
         };
 
-        await window.db.from('pvp_battle_state').update({
+        const { error: resolutionError } = await window.db.from('pvp_battle_state').update({
             last_action: 'resolved', last_action_data: payload,
             pending_action: null, resolved_round: this.round,
             player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex },
@@ -157,6 +162,10 @@ export class PVPBattle {
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
             .eq('player_id', this.game.currentCharacterId);
+        if (resolutionError) {
+            console.error('[PVP] Failed to publish round resolution:', resolutionError);
+            return;
+        }
 
         this.applyResolution(payload);
     }
@@ -225,7 +234,7 @@ export class PVPBattle {
 
     async persistReadyState() {
         if (this.isFinished) return;
-        await window.db.from('pvp_battle_state').update({
+        const { error } = await window.db.from('pvp_battle_state').update({
             pending_action: null,
             last_action: 'ready',
             last_action_data: null,
@@ -236,6 +245,7 @@ export class PVPBattle {
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
             .eq('player_id', this.game.currentCharacterId);
+        if (error) console.error('[PVP] Failed to reset round state:', error);
     }
 
     calculateDamage(attacker, defender, move) {

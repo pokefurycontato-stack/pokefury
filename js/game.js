@@ -6759,7 +6759,11 @@ openEventsPanel() {
                     btn.onclick = async () => {
                         moveSelection.style.display = 'none';
                         document.getElementById('pvp-actions').style.display = 'flex';
-                        await this.pvpBattle.executeMyTurn('attack', { moveId: move.id });
+                        try {
+                            await this.pvpBattle.executeMyTurn('attack', { moveId: move.id });
+                        } catch (error) {
+                            this.showToast(`Não foi possível enviar a ação: ${error.message || error}`, 'error');
+                        }
                     };
                     moveSelection.appendChild(btn);
                 });
