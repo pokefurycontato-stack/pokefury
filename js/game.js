@@ -6668,6 +6668,7 @@ openEventsPanel() {
         pvpUI.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;';
         pvpUI.innerHTML = `
                 <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);pointer-events:auto;">Sua vez!</div>
+                <div id="pvp-battle-log" style="position:absolute;left:50%;bottom:58px;transform:translateX(-50%);z-index:30;width:min(520px,80vw);max-height:116px;overflow-y:auto;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.68);color:rgba(255,255,255,.82);font-size:10px;line-height:1.45;font-family:Inter;pointer-events:none;"></div>
                 <div id="pvp-enemy-info" style="position:absolute;top:10px;right:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;pointer-events:auto;">
                     <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-enemy-name"></div>
                     <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-enemy-pokemon"></div>
@@ -6698,6 +6699,18 @@ openEventsPanel() {
 
         this.updatePVPBattleUI();
         this.setupPVPBattleEvents();
+    }
+
+    addPVPBattleLog(lines) {
+        const log = document.getElementById('pvp-battle-log');
+        if (!log || !Array.isArray(lines)) return;
+        lines.filter(Boolean).forEach(line => {
+            const entry = document.createElement('div');
+            entry.textContent = line;
+            log.appendChild(entry);
+        });
+        while (log.children.length > 32) log.removeChild(log.firstChild);
+        log.scrollTop = log.scrollHeight;
     }
 
     updatePVPBattleUI() {

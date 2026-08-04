@@ -1,4 +1,6 @@
 /* Real-time simultaneous-action PVP battle. */
+import { executeTurn, getEffectivenessText } from './battle.js';
+import { getMovePriority } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -10,6 +12,7 @@ export class PVPBattle {
         this.round = 1;
         this.pendingAction = null;
         this.isFinished = false;
+        this.battleState = { weather: null, terrain: null, weatherTurns: 0, terrainTurns: 0, turn: 0 };
         this.subscription = null;
         this.onStateUpdate = null;
         this.onBattleEnd = null;
@@ -32,7 +35,8 @@ export class PVPBattle {
             name: p.name, species: p.species, level: p.level,
             currentHp: p.currentHp, maxHp: p.stats?.hp || 1,
             stats: p.stats, types: p.types, spriteUrl: p.spriteUrls?.front || '',
-            statStages: p._statStages || {},
+            statStages: p._statStages || {}, statusEffect: p.statusEffect || null,
+            fainted: p.currentHp <= 0,
             moves: (p.moves || []).map(m => ({
                 id: m.id, name: m.name, type: m.type, power: m.power,
                 category: m.category, currentPp: m.currentPp, pp: m.pp
@@ -98,6 +102,8 @@ export class PVPBattle {
             p.stats = s.stats || p.stats;
             p.types = s.types || p.types;
             p._statStages = s.statStages || p._statStages;
+            p.statusEffect = s.statusEffect || null;
+            p.fainted = p.currentHp <= 0;
             if (s.moves) p.moves = p.moves.map(m => {
                 const saved = s.moves.find(x => String(x.id) === String(m.id));
                 return saved ? { ...m, currentPp: saved.currentPp } : m;
@@ -153,7 +159,7 @@ export class PVPBattle {
         const b = challengedState?.pending_action;
         if (!a || !b || challengerState.round_number !== this.round || challengedState.round_number !== this.round) return;
 
-        const result = this.resolveActions(a, b);
+        const result = await this.resolveActions(a, b);
         const payload = {
             round: this.round,
             challengerTeam: this.serializeTeam(this.myTeam),
@@ -179,15 +185,19 @@ export class PVPBattle {
         await this.applyResolution(payload);
     }
 
-    resolveActions(challengerAction, challengedAction) {
+    async resolveActions(challengerAction, challengedAction) {
         if (challengerAction.action === 'forfeit') return { winner: 'challenged' };
         if (challengedAction.action === 'forfeit') return { winner: 'challenger' };
 
+        const challengerMove = this.myActivePokemon?.moves.find(m => String(m.id) === String(challengerAction.moveId));
+        const challengedMove = this.enemyActivePokemon?.moves.find(m => String(m.id) === String(challengedAction.moveId));
         const challengerSpeed = this.getEffectiveSpeed(this.myActivePokemon);
         const challengedSpeed = this.getEffectiveSpeed(this.enemyActivePokemon);
-        const priority = action => action.action === 'switch' ? 2 : 1;
-        const challengerFirst = priority(challengerAction) !== priority(challengedAction)
-            ? priority(challengerAction) > priority(challengedAction)
+        const priority = (action, move) => action.action === 'switch' ? 6 : 1 + getMovePriority(move);
+        const challengerPriority = priority(challengerAction, challengerMove);
+        const challengedPriority = priority(challengedAction, challengedMove);
+        const challengerFirst = challengerPriority !== challengedPriority
+            ? challengerPriority > challengedPriority
             : challengerSpeed >= challengedSpeed;
 
         const order = challengerFirst ? [
@@ -195,27 +205,44 @@ export class PVPBattle {
         ] : [
             ['challenged', challengedAction], ['challenger', challengerAction]
         ];
-        const result = { order: order.map(x => x[0]), winner: null, damage: [] };
+        this.battleState.turn = this.round;
+        const result = { order: order.map(x => x[0]), winner: null, damage: [], logs: [] };
 
         for (const [side, action] of order) {
             const isChallenger = side === 'challenger';
             const attacker = isChallenger ? this.myActivePokemon : this.enemyActivePokemon;
             const defender = isChallenger ? this.enemyActivePokemon : this.myActivePokemon;
-            if (!attacker || attacker.currentHp <= 0) continue;
+            const sideName = isChallenger ? this.challenge.challenger_name : this.challenge.challenged_name;
+            if (!attacker || attacker.currentHp <= 0) {
+                if (action.action === 'attack') result.logs.push(`${sideName} não pode agir porque seu Pokémon está fora de combate.`);
+                continue;
+            }
 
             if (action.action === 'switch') {
                 if (isChallenger) this.myIndex = action.newIndex;
                 else this.enemyIndex = action.newIndex;
+                result.logs.push(`${sideName} enviou ${isChallenger ? this.myActivePokemon.name : this.enemyActivePokemon.name}!`);
                 continue;
             }
             if (action.action !== 'attack' || defender.currentHp <= 0) continue;
 
             const move = attacker.moves.find(m => String(m.id) === String(action.moveId));
             if (!move || move.currentPp <= 0) continue;
-            const damage = this.calculateDamage(attacker, defender, move);
-            defender.currentHp = Math.max(0, defender.currentHp - damage);
-            move.currentPp = Math.max(0, move.currentPp - 1);
-            result.damage.push({ side, name: attacker.name, move: move.name, damage });
+            result.logs.push(`${attacker.name} usou ${move.name}!`);
+            const turnResult = await executeTurn(attacker, defender, move, this.battleState);
+            const effectText = getEffectivenessText(turnResult.effectiveness);
+            if (turnResult.missed) result.logs.push(`${attacker.name} errou!`);
+            if (turnResult.protected) result.logs.push(`${defender.name} se protegeu!`);
+            if (turnResult.damage > 0) result.logs.push(`${defender.name} perdeu ${turnResult.damage} HP.`);
+            if (effectText) result.logs.push(effectText);
+            if (turnResult.critical) result.logs.push('Golpe crítico!');
+            if (turnResult.hits > 1) result.logs.push(`Acertou ${turnResult.hits} vezes!`);
+            result.logs.push(...(turnResult.messages || turnResult.statusMessages || []));
+            result.damage.push({ side, name: attacker.name, move: move.name, damage: turnResult.damage || 0 });
+            if (turnResult.fainted || defender.currentHp <= 0) {
+                defender.fainted = true;
+                result.logs.push(`${defender.name} desmaiou!`);
+            }
         }
 
         if (this.enemyTeam.every(p => p.currentHp <= 0)) result.winner = 'challenger';
@@ -235,6 +262,7 @@ export class PVPBattle {
         this.pendingAction = null;
         this.round++;
         await this.persistReadyState();
+        this.game.addPVPBattleLog?.(payload.result?.logs || []);
         this.onStateUpdate?.();
         if (this.needsForcedSwitch) this.game.openPVPSwitchSelector?.(true);
 
