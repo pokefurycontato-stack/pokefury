@@ -1,4 +1,4 @@
-import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs, processHeldItemOnHit, processLifeOrbRecoil, setChoiceLock, getChoiceLockedMove } from './utils.js';
+import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs, processHeldItemOnHit, processLifeOrbRecoil, setChoiceLock, getChoiceLockedMove, getHeldItemEffect } from './utils.js';
 import { getMoveEffect, getEffectiveMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, processEntryHazards, processEntryAbilities, getWeatherSpeed, cacheAbilityName, isGrounded } from './battle-mechanics.js';
 
 const NATURE_NAMES = [
@@ -411,9 +411,16 @@ function applyStatusEffect(attacker, defender, move) {
     return messages;
 }
 
-export function determineTurnOrder(pokemon1, pokemon2) {
-    if (pokemon1.stats.speed > pokemon2.stats.speed) return [pokemon1, pokemon2];
-    if (pokemon2.stats.speed > pokemon1.stats.speed) return [pokemon2, pokemon1];
+export function determineTurnOrder(pokemon1, pokemon2, battleState = null) {
+    const getSpeed = pokemon => {
+        let speed = battleState ? getWeatherSpeed(pokemon, battleState) : (pokemon.stats.speed || 0);
+        if (getHeldItemEffect(pokemon.heldItemId)?.effect === 'choice_scarf') speed *= 1.5;
+        return speed;
+    };
+    const speed1 = getSpeed(pokemon1);
+    const speed2 = getSpeed(pokemon2);
+    if (speed1 > speed2) return [pokemon1, pokemon2];
+    if (speed2 > speed1) return [pokemon2, pokemon1];
     return Math.random() < 0.5 ? [pokemon1, pokemon2] : [pokemon2, pokemon1];
 }
 

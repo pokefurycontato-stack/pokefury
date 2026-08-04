@@ -1,6 +1,7 @@
 /* Real-time simultaneous-action PVP battle. */
 import { executeTurn, getEffectivenessText } from './battle.js';
-import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects } from './battle-mechanics.js';
+import { getHeldItemEffect } from './utils.js';
+import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -39,7 +40,10 @@ export class PVPBattle {
         if (!pokemon) return 0;
         const stages = pokemon._statStages?.speed || 0;
         let multiplier = stages >= 0 ? (2 + stages) / 2 : 2 / (2 - stages);
-        return Math.max(1, Math.floor((pokemon.stats?.speed || 1) * multiplier));
+        let speed = (pokemon.stats?.speed || 1) * multiplier;
+        if (this.battleState) speed = getWeatherSpeed(pokemon, this.battleState) * multiplier;
+        if (getHeldItemEffect(pokemon.heldItemId)?.effect === 'choice_scarf') speed *= 1.5;
+        return Math.max(1, Math.floor(speed));
     }
 
     serializeTeam(team) {

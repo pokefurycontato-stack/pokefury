@@ -1318,7 +1318,7 @@ class PokeFuryGame {
                 order = [enemyPokemon, playerPokemon];
                 await showBattleMessage(`${enemyPokemon.name} agiu primeiro com Quick Claw!`);
             } else {
-                order = determineTurnOrder(playerPokemon, enemyPokemon);
+                order = determineTurnOrder(playerPokemon, enemyPokemon, this._battleState);
             }
 
             for (const pokemon of order) {
