@@ -4887,28 +4887,28 @@ openEventsPanel() {
         const initEnemyFx = globalLayout?.enemy_fx || map.battle_enemy_fx || 'none';
 
         grid.innerHTML = '';
-        grid.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;';
+        grid.style.cssText = 'position:fixed;inset:0;z-index:10000;display:block;padding:0;background:#000;overflow:hidden;';
 
         const label = document.createElement('div');
-        label.style.cssText = 'color:rgba(255,255,255,0.6);font-size:12px;text-align:center;';
+        label.style.cssText = 'position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:4;padding:8px 14px;border-radius:8px;background:rgba(0,0,0,.68);backdrop-filter:blur(6px);color:#fff;font-size:12px;text-align:center;white-space:nowrap;';
         label.textContent = 'Arraste os pokemons para posição desejada e escolha o efeito nos pés';
         grid.appendChild(label);
 
         const preview = document.createElement('div');
-        preview.style.cssText = 'position:relative;width:100%;max-width:700px;aspect-ratio:16/10;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.15);cursor:crosshair;';
+        preview.style.cssText = 'position:absolute;inset:0;width:100vw;height:100vh;max-width:none;aspect-ratio:auto;overflow:hidden;border:0;cursor:crosshair;';
 
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.src = bgUrl;
-        img.style.cssText = 'width:100%;height:100%;object-fit:cover;pointer-events:none;display:block;';
+        img.style.cssText = 'width:100%;height:100%;object-fit:fill;pointer-events:none;display:block;';
         preview.appendChild(img);
 
         function createMarker(label, color, initX, initY) {
             const m = document.createElement('div');
             m.className = 'battle-pos-marker';
-            m.style.cssText = `position:absolute;left:${initX*100}%;top:${initY*100}%;width:48px;height:48px;transform:translate(-50%,-80%);cursor:grab;z-index:2;`;
-            m.innerHTML = `<div style="width:40px;height:40px;border-radius:50%;background:${color};border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 10px ${color}">${label === 'player' ? '🟢' : '🔴'}</div>
-                <div style="text-align:center;font-size:9px;color:#fff;font-weight:700;text-shadow:0 0 4px #000;margin-top:-2px">${label === 'player' ? 'TREINADOR' : 'INIMIGO'}</div>`;
+            m.style.cssText = `position:absolute;left:${initX*100}%;top:${initY*100}%;width:64px;height:38px;transform:translate(-50%,-100%);cursor:grab;z-index:2;`;
+            m.innerHTML = `<div style="width:48px;height:22px;margin:0 auto;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 14px ${color};display:flex;align-items:center;justify-content:center;font-size:16px;">${label === 'player' ? '🟢' : '🔴'}</div>
+                <div style="text-align:center;font-size:9px;color:#fff;font-weight:800;text-shadow:0 0 4px #000;margin-top:1px">${label === 'player' ? 'PÉS TREINADOR' : 'PÉS SELVAGEM'}</div>`;
             return m;
         }
 
@@ -4942,7 +4942,7 @@ openEventsPanel() {
         grid.appendChild(preview);
 
         const fxSection = document.createElement('div');
-        fxSection.style.cssText = 'width:100%;max-width:700px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;';
+        fxSection.style.cssText = 'position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:4;width:min(760px,94vw);display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);';
 
         function createFxSelector(title, initVal, onChange) {
             const col = document.createElement('div');
@@ -4988,7 +4988,7 @@ openEventsPanel() {
         grid.appendChild(fxSection);
 
         const btnRow = document.createElement('div');
-        btnRow.style.cssText = 'display:flex;gap:10px;margin-top:8px;';
+        btnRow.style.cssText = 'position:absolute;top:12px;right:12px;z-index:5;display:flex;gap:8px;';
 
         const cancelBtn = document.createElement('button');
         cancelBtn.textContent = 'Voltar';
