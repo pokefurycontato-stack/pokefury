@@ -1213,6 +1213,21 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
         const chance = effect.statusChance || effect.chance || 100;
         if (Math.random() * 100 < chance) {
             if (!defender.statusEffect) {
+                const statusImmuneTypes = {
+                    [STATUS.BURN]: ['fire'],
+                    [STATUS.PARALYSIS]: ['electric'],
+                    [STATUS.FREEZE]: ['ice'],
+                    [STATUS.POISON]: ['poison', 'steel'],
+                    [STATUS.TOXIC]: ['poison', 'steel']
+                };
+                if (statusImmuneTypes[effect.status]?.some(type => defender.types?.includes(type))) {
+                    messages.push(`${defender.name} é imune a ${effect.status}!`);
+                    return messages;
+                }
+                if (battleState?.terrain === 'misty' && isGrounded(defender)) {
+                    messages.push(`${defender.name} está protegido pelo Misty Terrain!`);
+                    return messages;
+                }
                 // Safeguard check
                 if (defender._teamEffects && defender._teamEffects._safeguard > 0) {
                     messages.push(`${defender.name} está protegido pelo Safeguard!`);
