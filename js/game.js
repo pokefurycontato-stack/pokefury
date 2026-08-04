@@ -908,14 +908,12 @@ class PokeFuryGame {
         if (isShinyBattle) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
         if (pokemon.variant !== 'normal') introMsg = `Um ${pokemon.name} (${pokemon.variant}) selvagem apareceu!`;
 
-        if (this.battleAnimations) {
-            const sprites = getBattlePokemonSprites();
-            await this.battleAnimations.playWildEntrance(sprites.enemy);
-            await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc, activePlayer);
-            if (this.battleAnimations._playerEntranceSprite) {
-                setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
-            }
-        }
+        setSkipPlayerRender(false);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
+        await Promise.all([
+            this.playPVPEntrance('player', activePlayer),
+            this.playPVPEntrance('enemy', pokemon)
+        ]);
         setSkipPlayerRender(false);
         this._playerSpriteReady = true;
 
@@ -1031,14 +1029,12 @@ class PokeFuryGame {
             let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
             if (isShiny) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
 
-            if (this.battleAnimations) {
-                const sprites = getBattlePokemonSprites();
-                await this.battleAnimations.playWildEntrance(sprites.enemy);
-                await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc, activePlayer);
-                if (this.battleAnimations._playerEntranceSprite) {
-                    setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
-                }
-            }
+            setSkipPlayerRender(false);
+            drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect2);
+            await Promise.all([
+                this.playPVPEntrance('player', activePlayer),
+                this.playPVPEntrance('enemy', pokemon)
+            ]);
             setSkipPlayerRender(false);
             this._playerSpriteReady = true;
 
@@ -1106,6 +1102,7 @@ class PokeFuryGame {
             await preloadBattleSprites(switchedPokemon, enemyPokemon);
             drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
             updateBattleUI(this.playerTeam, this.enemyTeam);
+            await this.playPVPReplacementAnimation('player', playerPokemon, switchedPokemon);
 
             await this.enemyTurn();
             this._turnLocked = false;
@@ -2206,14 +2203,12 @@ class PokeFuryGame {
             () => this.onRun()
         );
 
-        if (this.battleAnimations) {
-            const sprites = getBattlePokemonSprites();
-            await this.battleAnimations.playWildEntrance(sprites.enemy);
-            await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc, activePlayer);
-            if (this.battleAnimations._playerEntranceSprite) {
-                setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
-            }
-        }
+        setSkipPlayerRender(false);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
+        await Promise.all([
+            this.playPVPEntrance('player', activePlayer),
+            this.playPVPEntrance('enemy', pokemon)
+        ]);
         setSkipPlayerRender(false);
         this._playerSpriteReady = true;
 
@@ -2323,14 +2318,12 @@ class PokeFuryGame {
             () => this.onRun()
         );
 
-        if (this.battleAnimations) {
-            const sprites = getBattlePokemonSprites();
-            await this.battleAnimations.playWildEntrance(sprites.enemy);
-            await this.battleAnimations.playPlayerEntrance(playerEndX, playerEndY, this._savedPlayerSpriteSrc, activePlayer);
-            if (this.battleAnimations._playerEntranceSprite) {
-                setPlayerSpriteRef(this.battleAnimations._playerEntranceSprite);
-            }
-        }
+        setSkipPlayerRender(false);
+        drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
+        await Promise.all([
+            this.playPVPEntrance('player', activePlayer),
+            this.playPVPEntrance('enemy', pokemon)
+        ]);
         setSkipPlayerRender(false);
         this._playerSpriteReady = true;
 
