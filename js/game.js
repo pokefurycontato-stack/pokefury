@@ -1091,22 +1091,28 @@ class PokeFuryGame {
             const newPokemon = this.playerTeam[newIndex];
             if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) { this._turnLocked = false; return; }
 
-            const temp = this.playerTeam[activeIndex];
-            this.playerTeam[activeIndex] = this.playerTeam[newIndex];
-            this.playerTeam[newIndex] = temp;
+            try {
+                const temp = this.playerTeam[activeIndex];
+                this.playerTeam[activeIndex] = this.playerTeam[newIndex];
+                this.playerTeam[newIndex] = temp;
 
-            await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
+                await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
 
-            const switchedPokemon = this.playerTeam[activeIndex];
-            hideBattlePokemonSprites();
-            await preloadBattleSprites(switchedPokemon, enemyPokemon);
-            drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
-            updateBattleUI(this.playerTeam, this.enemyTeam);
-            await this.playPVPReplacementAnimation('player', playerPokemon, switchedPokemon);
+                const switchedPokemon = this.playerTeam[activeIndex];
+                hideBattlePokemonSprites();
+                await preloadBattleSprites(switchedPokemon, enemyPokemon);
+                drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                updateBattleUI(this.playerTeam, this.enemyTeam);
+                await this.playPVPReplacementAnimation('player', playerPokemon, switchedPokemon);
 
-            await this.enemyTurn();
-            this._turnLocked = false;
-        });
+                await this.enemyTurn();
+            } catch (error) {
+                console.error('[Battle] Switch error:', error);
+                this.showToast('Não foi possível trocar o Pokémon.', 'error');
+            } finally {
+                this._turnLocked = false;
+            }
+        }, () => { this._turnLocked = false; });
     }
 
     async onRun() {
@@ -1475,7 +1481,7 @@ class PokeFuryGame {
                                 drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                                 updateBattleUI(this.playerTeam, this.enemyTeam);
                                 resolve();
-                            });
+                            }, resolve);
                         });
                     }
                 }

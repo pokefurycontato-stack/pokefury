@@ -497,9 +497,10 @@ export function hideMoveSelection() {
     $('#battle-actions').classList.remove('hidden');
 }
 
-export function showSwitchPokemonSelection(team, activeIndex, onSelect) {
+export function showSwitchPokemonSelection(team, activeIndex, onSelect, onCancel = null) {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+    overlay.id = 'wild-switch-selection';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);pointer-events:auto';
 
     const popup = document.createElement('div');
     popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:16px;max-width:350px;width:90%;max-height:80vh;overflow-y:auto';
@@ -544,8 +545,16 @@ export function showSwitchPokemonSelection(team, activeIndex, onSelect) {
         teamList.appendChild(row);
     });
 
-    popup.querySelector('#switch-cancel').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    popup.querySelector('#switch-cancel').addEventListener('click', () => {
+        overlay.remove();
+        onCancel?.();
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+            onCancel?.();
+        }
+    });
 }
 
 export function updateHpBar(pokemon) {
