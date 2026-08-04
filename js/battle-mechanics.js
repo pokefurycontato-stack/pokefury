@@ -389,6 +389,7 @@ const MOVE_EFFECTS_BY_NAME = {
     'topsy-turvy': { effect: 'invert_defender_stages' },
     'curse': { effect: 'curse' },
     'perish song': { effect: 'perish_song' },
+    'leech seed': { effect: 'leech_seed' },
     'thunder wave': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
     'will-o-wisp': { effect: 'status', status: STATUS.BURN, chance: 85 },
     'glare': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
@@ -1011,6 +1012,15 @@ export function processEndOfTurn(pokemon, battleState) {
         if (pokemon.currentHp <= 0) pokemon.fainted = true;
         messages.push(`${pokemon.name} sofreu dano da maldição! (-${damage} HP)`);
     }
+    if (pokemon._leechSeeded && !magicGuard) {
+        const damage = Math.max(1, Math.floor(pokemon.stats.hp / 8));
+        pokemon.currentHp = Math.max(0, pokemon.currentHp - damage);
+        if (pokemon.currentHp <= 0) pokemon.fainted = true;
+        const source = pokemon._leechSeedSource;
+        if (source && !source.fainted) source.currentHp = Math.min(source.stats.hp, source.currentHp + damage);
+        messages.push(`${pokemon.name} perdeu ${damage} HP para Leech Seed!`);
+        if (source) messages.push(`${source.name} recuperou ${damage} HP com Leech Seed!`);
+    }
     if (pokemon._perishTurns > 0) {
         pokemon._perishTurns--;
         messages.push(`${pokemon.name} tem ${pokemon._perishTurns} turnos restantes pela Perish Song!`);
@@ -1181,6 +1191,16 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
         attacker._perishTurns = 3;
         defender._perishTurns = 3;
         messages.push('Todos os Pokémon ouviram a Canção do Fim!');
+        return messages;
+    }
+    if (effect.effect === 'leech_seed') {
+        if (defender.types?.includes('grass')) {
+            messages.push(`${defender.name} é imune a Leech Seed!`);
+        } else if (!defender._leechSeeded) {
+            defender._leechSeeded = true;
+            defender._leechSeedSource = attacker;
+            messages.push(`${defender.name} foi atingido por Leech Seed!`);
+        }
         return messages;
     }
 
