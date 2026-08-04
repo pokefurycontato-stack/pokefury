@@ -6753,6 +6753,13 @@ openEventsPanel() {
             if (fightBtn) fightBtn.disabled = true;
             if (switchBtn) switchBtn.disabled = true;
             this.openPVPSwitchSelector(true);
+        } else if (battle.phase === 'switch' && !battle.pendingAction && !battle.isFinished) {
+            turnIndicator.textContent = 'Aguardando a troca do oponente...';
+            turnIndicator.style.borderColor = '#ff9800';
+            actions.style.opacity = '0.5';
+            actions.style.pointerEvents = 'none';
+            if (fightBtn) fightBtn.disabled = true;
+            if (switchBtn) switchBtn.disabled = true;
         } else if (battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Ação enviada. Aguardando o oponente...';
             turnIndicator.style.borderColor = '#ff9800';

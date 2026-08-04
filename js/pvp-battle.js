@@ -10,6 +10,7 @@ export class PVPBattle {
         this.myIndex = 0;
         this.enemyIndex = 0;
         this.round = 1;
+        this.phase = 'action';
         this.pendingAction = null;
         this.pendingSwitchIndex = null;
         this.isFinished = false;
@@ -62,7 +63,7 @@ export class PVPBattle {
         const { error } = await window.db.from('pvp_battle_state').insert({
             challenge_id: this.challenge.id,
             player_id: this.game.currentCharacterId,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase },
             current_pokemon_index: this.myIndex,
             pending_action: null,
             round_number: 1,
@@ -93,6 +94,7 @@ export class PVPBattle {
         if (state.player_team?.team) {
             this.enemyTeam = this.applySnapshot(this.enemyTeam, state.player_team.team);
             this.enemyIndex = state.current_pokemon_index || 0;
+            this.phase = state.player_team.phase || this.phase;
         }
         await this.tryResolveRound();
         this.onStateUpdate?.();
@@ -121,7 +123,10 @@ export class PVPBattle {
             console.warn('[PVP] Action ignored because the round is not ready:', action, this.round, this.pendingAction);
             return false;
         }
-        if (action === 'attack' && (!this.myActivePokemon || this.myActivePokemon.currentHp <= 0)) return false;
+        if (this.phase === 'switch') {
+            if (action === 'switch_ready' && this.needsForcedSwitch) return false;
+            if (action === 'switch' && !this.needsForcedSwitch) return false;
+        } else if (action === 'attack' && (!this.myActivePokemon || this.myActivePokemon.currentHp <= 0)) return false;
         if (action === 'switch') {
             const next = this.myTeam[data.newIndex];
             if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return false;
@@ -164,9 +169,15 @@ export class PVPBattle {
         const b = challengedState?.pending_action;
         if (!a || !b || challengerState.round_number !== this.round || challengedState.round_number !== this.round) return;
 
-        const result = await this.resolveActions(a, b);
+        const result = this.phase === 'switch'
+            ? this.resolveSwitchActions(a, b)
+            : await this.resolveActions(a, b);
+        const nextPhase = this.phase === 'switch'
+            ? 'action'
+            : (this.myActivePokemon?.currentHp <= 0 || this.enemyActivePokemon?.currentHp <= 0 ? 'switch' : 'action');
         const payload = {
             round: this.round,
+            phase: nextPhase,
             challengerTeam: this.serializeTeam(this.myTeam),
             challengedTeam: this.serializeTeam(this.enemyTeam),
             challengerIndex: this.myIndex,
@@ -177,7 +188,7 @@ export class PVPBattle {
         const { error: resolutionError } = await window.db.from('pvp_battle_state').update({
             last_action: 'resolved', last_action_data: payload,
             pending_action: null, resolved_round: this.round,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: nextPhase },
             current_pokemon_index: this.myIndex,
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
@@ -255,6 +266,31 @@ export class PVPBattle {
         return result;
     }
 
+    resolveSwitchActions(challengerAction, challengedAction) {
+        const result = { order: ['challenger', 'challenged'], winner: null, damage: [], logs: [] };
+        const actions = [
+            ['challenger', challengerAction],
+            ['challenged', challengedAction]
+        ];
+        for (const [side, action] of actions) {
+            const isChallenger = side === 'challenger';
+            const team = isChallenger ? this.myTeam : this.enemyTeam;
+            const currentIndex = isChallenger ? this.myIndex : this.enemyIndex;
+            const name = isChallenger ? this.challenge.challenger_name : this.challenge.challenged_name;
+            if (action.action === 'switch') {
+                const next = team[action.newIndex];
+                if (next && next.currentHp > 0 && action.newIndex !== currentIndex) {
+                    if (isChallenger) this.myIndex = action.newIndex;
+                    else this.enemyIndex = action.newIndex;
+                    result.logs.push(`${name} enviou ${next.name}!`);
+                }
+            } else {
+                result.logs.push(`${name} está pronto para o próximo turno.`);
+            }
+        }
+        return result;
+    }
+
     async applyResolution(payload) {
         if (!payload || payload.round !== this.round) return;
         const isChallenger = this.game.currentCharacterId === this.challenge.challenger_id;
@@ -266,11 +302,13 @@ export class PVPBattle {
         this.enemyIndex = isChallenger ? payload.challengedIndex : payload.challengerIndex;
         this.pendingAction = null;
         this.pendingSwitchIndex = null;
+        this.phase = payload.phase === 'switch' ? 'switch' : 'action';
         this.round++;
         await this.persistReadyState();
         this.game.addPVPBattleLog?.(payload.result?.logs || []);
         this.onStateUpdate?.();
         if (this.needsForcedSwitch) this.game.openPVPSwitchSelector?.(true);
+        else if (this.phase === 'switch') this.executeMyTurn('switch_ready', {});
 
         if (payload.result?.winner === 'challenger') this.endBattle(isChallenger ? 'my_win' : 'enemy_win');
         else if (payload.result?.winner === 'challenged') this.endBattle(isChallenger ? 'enemy_win' : 'my_win');
@@ -284,7 +322,7 @@ export class PVPBattle {
             last_action_data: null,
             round_number: this.round,
             resolved_round: this.round - 1,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase },
             current_pokemon_index: this.myIndex,
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
