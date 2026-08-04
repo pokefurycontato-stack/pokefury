@@ -1471,17 +1471,21 @@ export function clearProtect(pokemon) {
 export function applyStatStages(attacker, defender, move, baseDamage, critical = false) {
     const aStages = attacker._statStages || {};
     const dStages = defender._statStages || {};
+    const attackerAbility = getAbilityName(attacker.currentAbility);
+    const defenderAbility = getAbilityName(defender.currentAbility);
+    const ignoreAttackerStages = defenderAbility === 'unaware';
+    const ignoreDefenderStages = attackerAbility === 'unaware';
 
     let atkMult = 1;
     let defMult = 1;
 
     if (move.category === 'physical') {
-        atkMult = getStatMult(critical ? Math.max(0, aStages.attack || 0) : (aStages.attack || 0));
-        defMult = getStatMult(critical ? Math.min(0, dStages.defense || 0) : (dStages.defense || 0));
+        atkMult = getStatMult(ignoreAttackerStages ? 0 : (critical ? Math.max(0, aStages.attack || 0) : (aStages.attack || 0)));
+        defMult = getStatMult(ignoreDefenderStages ? 0 : (critical ? Math.min(0, dStages.defense || 0) : (dStages.defense || 0)));
         if (attacker.statusEffect === STATUS.BURN) atkMult *= 0.5;
     } else if (move.category === 'special') {
-        atkMult = getStatMult(critical ? Math.max(0, aStages.spAtk || 0) : (aStages.spAtk || 0));
-        defMult = getStatMult(critical ? Math.min(0, dStages.spDef || 0) : (dStages.spDef || 0));
+        atkMult = getStatMult(ignoreAttackerStages ? 0 : (critical ? Math.max(0, aStages.spAtk || 0) : (aStages.spAtk || 0)));
+        defMult = getStatMult(ignoreDefenderStages ? 0 : (critical ? Math.min(0, dStages.spDef || 0) : (dStages.spDef || 0)));
     }
 
     return Math.max(1, Math.floor(baseDamage * atkMult / defMult));
