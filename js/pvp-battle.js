@@ -1,6 +1,6 @@
 /* Real-time simultaneous-action PVP battle. */
 import { executeTurn, getEffectivenessText } from './battle.js';
-import { getHeldItemEffect } from './utils.js';
+import { getHeldItemEffect, processHeldItemTurnEnd } from './utils.js';
 import { getChoiceLockedMove, clearChoiceLock } from './utils.js';
 import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed, processEntryAbilities } from './battle-mechanics.js';
 export class PVPBattle {
@@ -73,6 +73,8 @@ export class PVPBattle {
             lockedMoveId: p._lockedMoveId || null,
             lockedTurns: p._lockedTurns || 0,
             lastMoveId: p._lastMove?.id || null,
+            focusSashUsed: !!p._focusSashUsed,
+            berryUsed: !!p._berryUsed,
             moves: (p.moves || []).map(m => ({
                 id: m.id, name: m.name, type: m.type, power: m.power,
                 category: m.category, currentPp: m.currentPp, pp: m.pp
@@ -172,6 +174,8 @@ export class PVPBattle {
             p._lockedMoveId = s.lockedMoveId || null;
             p._lockedTurns = s.lockedTurns || 0;
             p._lastMove = s.lastMoveId ? p.moves.find(m => String(m.id) === String(s.lastMoveId)) || null : null;
+            p._focusSashUsed = !!s.focusSashUsed;
+            p._berryUsed = !!s.berryUsed;
             if (s.moves) p.moves = p.moves.map(m => {
                 const saved = s.moves.find(x => String(x.id) === String(m.id));
                 return saved ? { ...m, currentPp: saved.currentPp } : m;
@@ -361,6 +365,7 @@ export class PVPBattle {
 
         for (const pokemon of [this.myActivePokemon, this.enemyActivePokemon]) {
             result.logs.push(...processEndOfTurn(pokemon, this.battleState));
+            result.logs.push(...processHeldItemTurnEnd(pokemon));
         }
         for (const field of ['weatherTurns', 'terrainTurns']) {
             if (this.battleState[field] > 0) this.battleState[field]--;
