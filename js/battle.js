@@ -198,6 +198,11 @@ export async function executeTurn(attacker, defender, move, battleState) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
 
+    if (attacker._rechargeTurns > 0) {
+        attacker._rechargeTurns--;
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, recharge: true, messages: [`${attacker.name} precisa recarregar!`] };
+    }
+
     // Check if defender is protected
     if (isProtected(defender)) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, protected: true };
@@ -205,6 +210,10 @@ export async function executeTurn(attacker, defender, move, battleState) {
 
     // Status moves
     if (move.category === 'status') {
+        const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
+        if (!accuracyCheck) {
+            return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
+        }
         const secondaryMessages = applySecondaryEffect(attacker, defender, move, 1, battleState);
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true, statusMessages: secondaryMessages };
     }
@@ -221,6 +230,7 @@ export async function executeTurn(attacker, defender, move, battleState) {
 
     // Handle multi-hit moves
     const effect = getMoveEffect(move);
+
     let totalDamage = 0;
     let hits = 1;
     if (effect && effect.effect === 'multi_hit') {
@@ -272,6 +282,15 @@ export async function executeTurn(attacker, defender, move, battleState) {
     // Apply secondary effects (status, stat drops, flinch, weather, terrain, hazards, screens)
     const secondaryMsgs = applySecondaryEffect(attacker, defender, move, result.effectiveness, battleState);
     messages.push(...secondaryMsgs);
+
+    if (effect?.effect === 'recharge' && !defender.fainted) {
+        attacker._rechargeTurns = 1;
+        messages.push(`${attacker.name} precisa recarregar no próximo turno!`);
+    }
+    if (effect?.effect === 'multi_turn') {
+        attacker._lockedMoveId = move.id;
+        attacker._lockedTurns = attacker._lockedTurns || 1;
+    }
 
     // Process contact abilities (flame body, static, etc.)
     if (move.category === 'physical' || move.makesContact) {
