@@ -1030,7 +1030,9 @@ export async function loadBattleMask(backgroundUrl) {
         const mctx = maskCanvas.getContext('2d');
         mctx.drawImage(img, 0, 0, VIRTUAL_W, VIRTUAL_H);
         const maskData = mctx.getImageData(0, 0, VIRTUAL_W, VIRTUAL_H);
-        const result = { canvas: maskCanvas, data: maskData, type: data.effect_type };
+        const points = indexMaskPixels(maskData);
+        console.log('[BattleMask] Indexed', points.length, 'mask points');
+        const result = { canvas: maskCanvas, data: maskData, points, type: data.effect_type };
         maskCache.set(backgroundUrl, result);
         console.log('[BattleMask] Loaded mask:', data.effect_type, 'size:', maskData.data.length);
         return result;
@@ -1049,12 +1051,26 @@ function isMasked(maskData, x, y) {
     return maskData.data[idx] > 128;
 }
 
-function spawnMaskParticle(type, maskData) {
-    for (let attempt = 0; attempt < 20; attempt++) {
-        const x = Math.random() * VIRTUAL_W;
-        const y = Math.random() * VIRTUAL_H;
-        if (!isMasked(maskData, x, y)) continue;
-        const p = { x, y, type, age: 0, maxAge: 60 + Math.random() * 40 };
+function indexMaskPixels(maskData) {
+    const points = [];
+    const step = 8;
+    for (let y = 0; y < VIRTUAL_H; y += step) {
+        for (let x = 0; x < VIRTUAL_W; x += step) {
+            if (isMasked(maskData, x, y)) {
+                points.push({ x, y });
+            }
+        }
+    }
+    return points;
+}
+
+function spawnMaskParticle(type, maskPoints) {
+    if (!maskPoints || maskPoints.length === 0) return null;
+    const base = maskPoints[Math.floor(Math.random() * maskPoints.length)];
+    const spread = 30;
+    const x = base.x + (Math.random() - 0.5) * spread;
+    const y = base.y + (Math.random() - 0.5) * spread;
+    const p = { x, y, type, age: 0, maxAge: 60 + Math.random() * 40 };
         switch (type) {
             case 'glow':
                 p.radius = 15 + Math.random() * 30;
@@ -1105,7 +1121,7 @@ export function drawMaskFx(ctx, backgroundUrl) {
     }
 
     if (maskParticles.length < 80 && maskAnimFrame % 3 === 0) {
-        const p = spawnMaskParticle(mask.type, mask);
+        const p = spawnMaskParticle(mask.type, mask.points);
         if (p) maskParticles.push(p);
     }
     maskAnimFrame++;
