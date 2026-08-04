@@ -6774,7 +6774,7 @@ openEventsPanel() {
 
         const overlay = document.createElement('div');
         overlay.id = 'pvp-switch-overlay';
-        overlay.style.cssText = 'position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,6,18,0.78);backdrop-filter:blur(8px);pointer-events:auto;';
+        overlay.style.cssText = 'position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,6,18,0.78);backdrop-filter:blur(8px);pointer-events:auto;touch-action:auto;';
 
         const panel = document.createElement('div');
         panel.style.cssText = 'width:min(720px,94vw);max-height:90vh;overflow:auto;padding:22px;border:1px solid rgba(111,184,255,0.35);border-radius:20px;background:linear-gradient(145deg,rgba(18,28,55,0.98),rgba(9,14,30,0.98));box-shadow:0 20px 70px rgba(0,0,0,0.55);font-family:Inter;color:#fff;';
@@ -6789,7 +6789,7 @@ openEventsPanel() {
         available.forEach(({ pokemon, index }) => {
             const card = document.createElement('button');
             card.type = 'button';
-            card.style.cssText = 'min-height:170px;padding:12px 8px;border:1px solid rgba(111,184,255,.24);border-radius:14px;background:linear-gradient(160deg,rgba(39,61,103,.72),rgba(18,28,55,.88));color:#fff;cursor:pointer;font-family:Inter;transition:transform .16s,border-color .16s,background .16s;';
+            card.style.cssText = 'min-height:170px;padding:12px 8px;border:1px solid rgba(111,184,255,.24);border-radius:14px;background:linear-gradient(160deg,rgba(39,61,103,.72),rgba(18,28,55,.88));color:#fff;cursor:pointer;font-family:Inter;transition:transform .16s,border-color .16s,background .16s;pointer-events:auto;touch-action:manipulation;';
             card.onmouseenter = () => { card.style.transform = 'translateY(-3px)'; card.style.borderColor = '#6fb8ff'; };
             card.onmouseleave = () => { card.style.transform = 'none'; card.style.borderColor = 'rgba(111,184,255,.24)'; };
 
@@ -6809,14 +6809,23 @@ openEventsPanel() {
             level.style.cssText = 'margin-top:4px;color:rgba(255,255,255,.62);font-size:11px;';
             card.appendChild(level);
             const hp = document.createElement('div');
-            hp.textContent = `HP ${pokemon.currentHp}/${pokemon.stats.hp}`;
-            hp.style.cssText = 'margin-top:7px;color:#7ee787;font-size:10px;font-weight:700;';
+            const currentHp = Math.max(0, Number(pokemon.currentHp || 0));
+            const maxHp = Math.max(1, Number(pokemon.stats?.hp || 1));
+            hp.textContent = `HP ${currentHp}/${maxHp}`;
+            hp.style.cssText = `margin-top:7px;color:${currentHp / maxHp > .5 ? '#7ee787' : '#ffb86b'};font-size:10px;font-weight:700;`;
             card.appendChild(hp);
+            const hpBar = document.createElement('div');
+            hpBar.style.cssText = 'height:4px;margin:6px 8px 0;border-radius:4px;background:rgba(0,0,0,.35);overflow:hidden;';
+            hpBar.innerHTML = `<div style="height:100%;width:${Math.min(100, currentHp / maxHp * 100)}%;background:${currentHp / maxHp > .5 ? '#4caf50' : '#ff9800'};"></div>`;
+            card.appendChild(hpBar);
 
             card.onclick = async () => {
                 grid.querySelectorAll('button').forEach(button => { button.disabled = true; button.style.opacity = '.55'; });
                 try {
-                    await battle.executeMyTurn('switch', { newIndex: index });
+                    const submitted = await battle.executeMyTurn('switch', { newIndex: index });
+                    if (!submitted) {
+                        throw new Error('A rodada ainda não está pronta para receber a troca.');
+                    }
                     overlay.remove();
                     this.updatePVPBattleUI();
                 } catch (error) {

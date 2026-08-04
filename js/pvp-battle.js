@@ -78,7 +78,7 @@ export class PVPBattle {
         if (!state || state.player_id === this.game.currentCharacterId || this.isFinished) return;
 
         if (state.last_action === 'resolved' && state.last_action_data) {
-            this.applyResolution(state.last_action_data);
+            await this.applyResolution(state.last_action_data);
             return;
         }
 
@@ -107,11 +107,14 @@ export class PVPBattle {
     }
 
     async executeMyTurn(action, data) {
-        if (!this.isMyTurn) return;
-        if (action === 'attack' && (!this.myActivePokemon || this.myActivePokemon.currentHp <= 0)) return;
+        if (!this.isMyTurn) {
+            console.warn('[PVP] Action ignored because the round is not ready:', action, this.round, this.pendingAction);
+            return false;
+        }
+        if (action === 'attack' && (!this.myActivePokemon || this.myActivePokemon.currentHp <= 0)) return false;
         if (action === 'switch') {
             const next = this.myTeam[data.newIndex];
-            if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return;
+            if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return false;
         }
         this.pendingAction = { action, ...data };
 
@@ -130,6 +133,7 @@ export class PVPBattle {
         }
         this.onStateUpdate?.();
         await this.tryResolveRound();
+        return true;
     }
 
     async tryResolveRound() {
@@ -172,7 +176,7 @@ export class PVPBattle {
             return;
         }
 
-        this.applyResolution(payload);
+        await this.applyResolution(payload);
     }
 
     resolveActions(challengerAction, challengedAction) {
@@ -219,7 +223,7 @@ export class PVPBattle {
         return result;
     }
 
-    applyResolution(payload) {
+    async applyResolution(payload) {
         if (!payload || payload.round !== this.round) return;
         const isChallenger = this.game.currentCharacterId === this.challenge.challenger_id;
         const mySnapshot = isChallenger ? payload.challengerTeam : payload.challengedTeam;
@@ -230,8 +234,8 @@ export class PVPBattle {
         this.enemyIndex = isChallenger ? payload.challengedIndex : payload.challengerIndex;
         this.pendingAction = null;
         this.round++;
+        await this.persistReadyState();
         this.onStateUpdate?.();
-        this.persistReadyState();
         if (this.needsForcedSwitch) this.game.openPVPSwitchSelector?.(true);
 
         if (payload.result?.winner === 'challenger') this.endBattle(isChallenger ? 'my_win' : 'enemy_win');
