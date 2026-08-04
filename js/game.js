@@ -576,7 +576,16 @@ class PokeFuryGame {
 
         if (!this.pvp) this.pvp = new PVPSystem(this);
         this.pvp.subscribeToChallenges((challenge) => {
-            if (this.state === 'overworld') {
+            if (challenge.status === 'accepted' && challenge.challenger_id === this.currentCharacterId && !this._pvpBattleStarting) {
+                this._pvpBattleStarting = true;
+                this.showToast('Desafio aceito! Iniciando batalha...', 'success');
+                document.getElementById('arena-overlay')?.remove();
+                const randomBg = this.currentBattleBg;
+                this.startPVPBattle(challenge);
+                setTimeout(() => { this._pvpBattleStarting = false; }, 3000);
+            } else if (challenge.status === 'declined' && challenge.challenger_id === this.currentCharacterId) {
+                this.showToast(`${challenge.challenged_name} recusou seu desafio.`, 'info');
+            } else if (challenge.status === 'pending' && challenge.challenged_id === this.currentCharacterId) {
                 this.showChallengePopup(challenge);
             }
         });
@@ -6499,6 +6508,11 @@ class PokeFuryGame {
         this.positionBattleScreen();
 
         if (this.overworld2d) this.overworld2d.hide();
+
+        if (this.currentBattleBg && this.ctx && this.canvas) {
+            const clip = this.getBattleClipRect();
+            drawBattleScene(this.ctx, this.canvas, null, null, this.currentBattleBg, clip);
+        }
 
         const battleEl = document.getElementById('battle-screen');
         if (!battleEl) return;

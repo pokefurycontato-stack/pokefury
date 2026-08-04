@@ -180,8 +180,11 @@ class PVPSystem {
         if (this._subscription) this._subscription.unsubscribe();
         this._subscription = window.db
             .channel('pvp-challenges')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pvp_challenges', filter: `challenged_id=eq.${this.game.currentCharacterId}` }, payload => {
-                callback(payload.new);
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pvp_challenges' }, payload => {
+                const d = payload.new;
+                if (d && (d.challenged_id === this.game.currentCharacterId || d.challenger_id === this.game.currentCharacterId)) {
+                    callback(d);
+                }
             })
             .subscribe();
     }
