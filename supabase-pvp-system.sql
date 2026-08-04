@@ -80,9 +80,16 @@ CREATE TABLE IF NOT EXISTS pvp_battle_state (
     current_pokemon_index INTEGER DEFAULT 0,
     last_action TEXT,
     last_action_data JSONB,
+    round_number INTEGER DEFAULT 1,
+    pending_action JSONB,
+    resolved_round INTEGER DEFAULT 0,
     is_ready BOOLEAN DEFAULT false,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE pvp_battle_state ADD COLUMN IF NOT EXISTS round_number INTEGER DEFAULT 1;
+ALTER TABLE pvp_battle_state ADD COLUMN IF NOT EXISTS pending_action JSONB;
+ALTER TABLE pvp_battle_state ADD COLUMN IF NOT EXISTS resolved_round INTEGER DEFAULT 0;
 
 ALTER TABLE pvp_battle_state ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "pvp_battle_state_all" ON pvp_battle_state;

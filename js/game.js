@@ -6689,7 +6689,7 @@ openEventsPanel() {
         const enemyPokemon = battle.enemyActivePokemon;
 
         if (myPokemon) {
-            document.getElementById('pvp-my-name').textContent = this.game?.playerName || 'Você';
+            document.getElementById('pvp-my-name').textContent = this.playerName || 'Você';
             document.getElementById('pvp-my-pokemon').textContent = `${myPokemon.name} Lv.${myPokemon.level}`;
             const myHpPct = (myPokemon.currentHp / myPokemon.stats.hp) * 100;
             document.getElementById('pvp-my-hp-bar').style.width = myHpPct + '%';
@@ -6698,7 +6698,10 @@ openEventsPanel() {
         }
 
         if (enemyPokemon) {
-            document.getElementById('pvp-enemy-name').textContent = battle.challenge.challenger_name || 'Oponente';
+            const isChallenger = battle.challenge.challenger_id === this.currentCharacterId;
+            document.getElementById('pvp-enemy-name').textContent = isChallenger
+                ? battle.challenge.challenged_name
+                : battle.challenge.challenger_name;
             document.getElementById('pvp-enemy-pokemon').textContent = `${enemyPokemon.name} Lv.${enemyPokemon.level}`;
             const enemyHpPct = (enemyPokemon.currentHp / enemyPokemon.stats.hp) * 100;
             document.getElementById('pvp-enemy-hp-bar').style.width = enemyHpPct + '%';
@@ -6708,16 +6711,22 @@ openEventsPanel() {
 
         const turnIndicator = document.getElementById('pvp-turn-indicator');
         const actions = document.getElementById('pvp-actions');
+        const fightBtn = document.getElementById('pvp-fight-btn');
+        const switchBtn = document.getElementById('pvp-switch-btn');
         if (battle.isMyTurn && !battle.isFinished) {
-            turnIndicator.textContent = 'Sua vez!';
+            turnIndicator.textContent = 'Escolha sua ação';
             turnIndicator.style.borderColor = '#4caf50';
             actions.style.opacity = '1';
             actions.style.pointerEvents = 'auto';
+            if (fightBtn) fightBtn.disabled = !myPokemon || myPokemon.currentHp <= 0;
+            if (switchBtn) switchBtn.disabled = false;
         } else if (!battle.isFinished) {
-            turnIndicator.textContent = 'Vez do oponente...';
+            turnIndicator.textContent = 'Aguardando o oponente...';
             turnIndicator.style.borderColor = '#ff9800';
             actions.style.opacity = '0.5';
             actions.style.pointerEvents = 'none';
+            if (fightBtn) fightBtn.disabled = true;
+            if (switchBtn) switchBtn.disabled = true;
         }
 
         if (this.currentBattleBg && this.ctx && this.canvas) {
