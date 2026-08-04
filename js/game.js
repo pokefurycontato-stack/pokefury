@@ -6734,6 +6734,50 @@ openEventsPanel() {
         }
     }
 
+    async playPVPReplacementAnimation(side, outgoing, incoming) {
+        await this.playPVPExit(side, outgoing);
+        await this.playPVPEntrance(side, incoming);
+    }
+
+    async playPVPExit(side, pokemon) {
+        const fullscreen = document.getElementById('pvp-fullscreen');
+        if (!fullscreen || !pokemon) return;
+        const sprites = getBattlePokemonSprites();
+        const sprite = sprites[side];
+        const point = this.getPVPBattlePoint(side);
+        const direction = side === 'player' ? -1 : 1;
+        const spriteUrl = side === 'player'
+            ? (pokemon.spriteUrls?.back || pokemon.spriteUrls?.front || '')
+            : (pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official || '');
+        if (sprite) sprite.style.opacity = '0';
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;';
+        const oldSprite = document.createElement('img');
+        oldSprite.src = spriteUrl;
+        oldSprite.style.cssText = `position:absolute;left:${point.x - 60}px;top:${point.y - 120}px;width:120px;height:120px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 8px 5px rgba(0,0,0,.45));`;
+        overlay.appendChild(oldSprite);
+        const ball = document.createElement('div');
+        const ballX = point.x + direction * 170;
+        ball.style.cssText = `position:absolute;left:${ballX - 14}px;top:${point.y - 14}px;width:28px;height:28px;border:3px solid #20242e;border-radius:50%;background:linear-gradient(#e53935 0 47%,#20242e 47% 55%,#f5f7fa 55%);box-shadow:0 0 14px rgba(255,255,255,.7);opacity:0;`;
+        overlay.appendChild(ball);
+        fullscreen.appendChild(overlay);
+
+        oldSprite.animate([
+            { transform: 'translate(0,0) scale(1)', opacity: 1 },
+            { transform: `translate(${direction * 80}px,-20px) scale(.7)`, opacity: 1, offset: .55 },
+            { transform: `translate(${direction * 170}px,0) scale(.18)`, opacity: 0 }
+        ], { duration: 620, easing: 'ease-in', fill: 'forwards' });
+        await new Promise(resolve => setTimeout(resolve, 450));
+        ball.animate([
+            { opacity: 0, transform: 'scale(.5)' },
+            { opacity: 1, transform: 'scale(1.15)' },
+            { opacity: 1, transform: 'scale(1)' }
+        ], { duration: 260, fill: 'forwards' });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        overlay.remove();
+    }
+
     async playPVPEntrance(side, pokemon) {
         const fullscreen = document.getElementById('pvp-fullscreen');
         if (!fullscreen || !pokemon) return;

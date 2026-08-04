@@ -302,6 +302,8 @@ export class PVPBattle {
         const isChallenger = this.game.currentCharacterId === this.challenge.challenger_id;
         const previousMyIndex = this.myIndex;
         const previousEnemyIndex = this.enemyIndex;
+        const previousMyPokemon = this.myActivePokemon;
+        const previousEnemyPokemon = this.enemyActivePokemon;
         const mySnapshot = isChallenger ? payload.challengerTeam : payload.challengedTeam;
         const enemySnapshot = isChallenger ? payload.challengedTeam : payload.challengerTeam;
         this.myTeam = this.applySnapshot(this.myTeam, mySnapshot);
@@ -315,8 +317,18 @@ export class PVPBattle {
         await this.persistReadyState();
         this.game.addPVPBattleLog?.(payload.result?.logs || []);
         this.onStateUpdate?.();
-        if (previousMyIndex !== this.myIndex) this.game.playPVPEntrance?.('player', this.visibleMyActivePokemon);
-        if (previousEnemyIndex !== this.enemyIndex) this.game.playPVPEntrance?.('enemy', this.enemyActivePokemon);
+        if (previousMyIndex !== this.myIndex) {
+            const animation = previousMyPokemon?.currentHp <= 0
+                ? this.game.playPVPReplacementAnimation
+                : this.game.playPVPEntrance;
+            animation?.call(this.game, 'player', previousMyPokemon, this.visibleMyActivePokemon);
+        }
+        if (previousEnemyIndex !== this.enemyIndex) {
+            const animation = previousEnemyPokemon?.currentHp <= 0
+                ? this.game.playPVPReplacementAnimation
+                : this.game.playPVPEntrance;
+            animation?.call(this.game, 'enemy', previousEnemyPokemon, this.enemyActivePokemon);
+        }
         this.game.playPVPActionEffects?.(payload.result?.effects || [], isChallenger);
         if (this.needsForcedSwitch) this.game.openPVPSwitchSelector?.(true);
         else if (this.phase === 'switch') this.executeMyTurn('switch_ready', {});
