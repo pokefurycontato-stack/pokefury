@@ -568,7 +568,7 @@ const MOVE_EFFECTS_BY_NAME = {
 
     // Hazard removal
     'defog': { effect: 'hazard_remove', removeBoth: true },
-    'rapid spin': { effect: 'hazard_remove', removeBoth: false },
+    'rapid spin': { effect: 'rapid_spin' },
 
     // Pivot moves
     'uturn': { effect: 'pivot' },
@@ -1477,8 +1477,24 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
             defender._teamEffects._spikes = 0;
             defender._teamEffects._toxicSpikes = 0;
             defender._teamEffects._stickyWeb = false;
+            defender._teamEffects._lightScreen = 0;
+            defender._teamEffects._reflect = 0;
+            defender._teamEffects._auroraVeil = 0;
             messages.push('Os hazards do oponente foram removidos!');
         }
+        return messages;
+    }
+
+    if (effect.effect === 'rapid_spin') {
+        if (attacker._teamEffects) {
+            attacker._teamEffects._stealthRock = false;
+            attacker._teamEffects._spikes = 0;
+            attacker._teamEffects._toxicSpikes = 0;
+            attacker._teamEffects._stickyWeb = false;
+        }
+        attacker._statStages = attacker._statStages || {};
+        attacker._statStages.speed = Math.min(6, (attacker._statStages.speed || 0) + 1);
+        messages.push(`${attacker.name} limpou os hazards e aumentou sua Speed!`);
         return messages;
     }
 
