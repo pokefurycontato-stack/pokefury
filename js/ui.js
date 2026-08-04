@@ -346,6 +346,24 @@ export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activ
     const playerPokemon = playerTeam[activePlayerIdx];
     const enemyPokemon = enemyTeam[activeEnemyIdx];
 
+    if (playerPokemon) {
+        const hpName = document.getElementById('player-hp-name');
+        const hpLevel = document.getElementById('player-hp-level');
+        const hpBarFill = document.getElementById('player-hp-bar-fill');
+        const hpText = document.getElementById('player-hp-text');
+
+        if (hpName) hpName.textContent = playerPokemon.name;
+        if (hpLevel) hpLevel.textContent = `Lv. ${playerPokemon.level}`;
+        const hpPct = playerPokemon.stats.hp > 0 ? (playerPokemon.currentHp / playerPokemon.stats.hp) * 100 : 0;
+        if (hpBarFill) {
+            hpBarFill.style.width = hpPct + '%';
+            if (hpPct > 50) hpBarFill.style.background = '#4caf50';
+            else if (hpPct > 20) hpBarFill.style.background = '#ff9800';
+            else hpBarFill.style.background = '#f44336';
+        }
+        if (hpText) hpText.textContent = `${playerPokemon.currentHp} / ${playerPokemon.stats.hp}`;
+    }
+
     if (enemyPokemon) {
         const hpName = document.getElementById('enemy-hp-name');
         const hpLevel = document.getElementById('enemy-hp-level');
