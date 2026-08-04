@@ -235,8 +235,14 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     else if (moveName === 'endeavor') damage = Math.max(0, defender.currentHp - attacker.currentHp);
     else damage = ((2 * level / 5 + 2) * movePower * attack / defense) / 50 + 2;
 
-    const effectiveness = getEffectiveness(chart, moveType, defender.types);
+    let effectiveness = getEffectiveness(chart, moveType, defender.types);
+    if (defAbilityName === 'thick fat' && (moveType === 'fire' || moveType === 'ice')) effectiveness *= 0.5;
+    if (defAbilityName === 'wonder guard' && effectiveness <= 1) {
+        return { damage: 0, effectiveness, critical: false, missed: false, immune: true };
+    }
     damage *= effectiveness;
+    if (defAbilityName === 'multiscale' && defender.currentHp >= defender.stats.hp) damage *= 0.5;
+    if (effectiveness > 1 && ['filter', 'solid rock', 'prism armor'].includes(defAbilityName)) damage *= 0.75;
 
     const isSTAB = attacker.types && attacker.types.includes(moveType);
     let stabMult = isSTAB ? 1.5 : 1;

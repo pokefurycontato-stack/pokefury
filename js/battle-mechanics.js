@@ -935,10 +935,12 @@ export function canPokemonAct(pokemon) {
 export function processEndOfTurn(pokemon, battleState) {
     if (!pokemon || pokemon.fainted) return [];
     const messages = [];
+    const abilityNameAtStart = getAbilityName(pokemon.currentAbility);
+    const magicGuard = abilityNameAtStart === 'magic guard';
 
     // Status damage
     const status = pokemon.statusEffect;
-    if (status) {
+    if (status && !magicGuard) {
         const info = STATUS_INFO[status];
 
         if (status === STATUS.BURN) {
@@ -973,7 +975,7 @@ export function processEndOfTurn(pokemon, battleState) {
         }
     }
 
-    if (pokemon._boundTurns > 0) {
+    if (pokemon._boundTurns > 0 && !magicGuard) {
         const bindDamage = Math.max(1, Math.floor(pokemon.stats.hp * (pokemon._boundDamage || 1 / 8)));
         pokemon.currentHp = Math.max(0, pokemon.currentHp - bindDamage);
         if (pokemon.currentHp <= 0) pokemon.fainted = true;
@@ -991,7 +993,7 @@ export function processEndOfTurn(pokemon, battleState) {
         const abilityName = getAbilityName(pokemon.currentAbility);
 
         // Immunity abilities
-        if (abilityName === 'magic guard' || abilityName === 'overcoat' || abilityName === 'flower veil') {
+        if (magicGuard || abilityName === 'overcoat' || abilityName === 'flower veil') {
             // No weather damage
         } else if (weather === 'sandstorm') {
             const immuneTypes = ['rock', 'ground', 'steel'];
