@@ -6736,6 +6736,9 @@ openEventsPanel() {
                             }).filter(Boolean);
                         }
                     }
+                    pokemon.heldItemId = p.held_item_id || null;
+                    pokemon.teraType = p.tera_type || pokemon.teraType;
+                    await checkAbilityChange(pokemon);
                 }
                 team.push(pokemon);
                 } catch (e) {
