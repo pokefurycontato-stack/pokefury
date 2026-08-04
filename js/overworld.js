@@ -61,6 +61,7 @@ export class Overworld2D {
 
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
+        this.pokemonFollowBackSprite = null;
         this.pokemonFollowPos = { x: 16, y: 12 };
         this.pokemonFollowRenderPos = { x: 16, y: 12 };
         this.pokemonFollowDirection = 'down';
@@ -341,6 +342,7 @@ export class Overworld2D {
         this.pokemonFollowTrail = [];
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
+        this.pokemonFollowBackSprite = null;
         const follower = this.game.playerTeam?.find(pokemon => !pokemon.fainted);
         if (follower) await this.loadPokemonFollowSprite(follower);
 
@@ -380,12 +382,18 @@ export class Overworld2D {
 
     async loadPokemonFollowSprite(pokemon) {
         if (!pokemon) return;
-        const staticUrl = pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official;
-        if (staticUrl) {
-            this.pokemonFollowSprite = await PokeAPI.preloadSprite(staticUrl);
-        }
         this.pokemonFollowing = pokemon;
         this.pokemonFollowDirection = 'down';
+
+        const staticFront = pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official;
+        if (staticFront) {
+            this.pokemonFollowSprite = await PokeAPI.preloadSprite(staticFront);
+        }
+
+        const backUrl = pokemon.spriteUrls?.back;
+        if (backUrl) {
+            this.pokemonFollowBackSprite = await PokeAPI.preloadSprite(backUrl);
+        }
 
         const animUrl = window.PokeAPI && PokeAPI.getAnimatedFrontUrl(pokemon.id);
         if (animUrl) {
@@ -971,14 +979,18 @@ export class Overworld2D {
             const rpy = this.pokemonFollowRenderPos.y * this.tileH - this.camera.y + this.mapOffsetY;
             const fScale = Math.min(1.25, getPokemonScale(this.pokemonFollowing));
             const fSize = this.tileW * fScale;
-            const flipX = this.pokemonFollowDirection === 'right';
+
+            const useBack = this.player.direction === 'up' && this.pokemonFollowBackSprite && this.pokemonFollowBackSprite.complete;
+            const currentSprite = useBack ? this.pokemonFollowBackSprite : this.pokemonFollowSprite;
+            const flipX = !useBack && this.player.direction === 'right';
+
             ctx.save();
             if (flipX) {
                 ctx.translate(rpx + this.tileW / 2, 0);
                 ctx.scale(-1, 1);
                 ctx.translate(-(rpx + this.tileW / 2), 0);
             }
-            ctx.drawImage(this.pokemonFollowSprite, rpx + (this.tileW - fSize) / 2, rpy + (this.tileH - fSize) / 2, fSize, fSize);
+            ctx.drawImage(currentSprite, rpx + (this.tileW - fSize) / 2, rpy + (this.tileH - fSize) / 2, fSize, fSize);
             ctx.restore();
         }
 
