@@ -779,11 +779,13 @@ class PokeFuryGame {
     }
 
     async startWildBattle(minLevel = 2, maxLevel = 8) {
+        if (this._battleStarting || this.state === 'battle') return;
         if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
             console.warn('[PokeFury] No alive pokemon, skipping wild battle');
             hideBattlePokemonSprites();
             return;
         }
+        this._battleStarting = true;
         this.isWildBattle = true;
         this._playerSpriteReady = false;
 
@@ -916,6 +918,7 @@ class PokeFuryGame {
         ]);
         setSkipPlayerRender(false);
         this._playerSpriteReady = true;
+        this._battleStarting = false;
 
         await showBattleMessage(introMsg, 2000);
 
@@ -932,9 +935,12 @@ class PokeFuryGame {
     }
 
     async startBattleWithPokemon(pokemonName, level, spriteUrl) {
+        if (this._battleStarting || this.state === 'battle') return;
+        this._battleStarting = true;
         hideBattlePokemonSprites();
         if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
             console.warn('[PokeFury] No alive pokemon, skipping battle');
+            this._battleStarting = false;
             return;
         }
         this.isWildBattle = true;
@@ -1037,6 +1043,7 @@ class PokeFuryGame {
             ]);
             setSkipPlayerRender(false);
             this._playerSpriteReady = true;
+            this._battleStarting = false;
 
             await showBattleMessage(introMsg, 2000);
 
@@ -1052,6 +1059,7 @@ class PokeFuryGame {
             }
         } catch (e) {
             console.error('[PokeFury] Error starting battle:', e);
+            this._battleStarting = false;
             hideBattlePokemonSprites();
             this.state = 'overworld';
             if (this.overworld2d) this.overworld2d.show();
@@ -2026,6 +2034,7 @@ class PokeFuryGame {
 
     async endBattle(result) {
         if (this.state !== 'battle') return;
+        this._battleStarting = false;
         console.log('[Battle] Ending battle:', result);
         if (this.weatherAnim) this.weatherAnim.setWeather(null);
 
