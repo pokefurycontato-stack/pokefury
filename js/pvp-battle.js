@@ -65,6 +65,7 @@ export class PVPBattle {
             disabled: p._disabled || 0,
             disabledMove: p._disabledMove || null,
             tormented: p._tormented || 0,
+            substituteHp: p._substituteHp || 0,
             sleepTurns: p._sleepTurns || 0,
             toxicCounter: p._toxicCounter || 0,
             boundTurns: p._boundTurns || 0,
@@ -166,6 +167,7 @@ export class PVPBattle {
             p._disabled = s.disabled || 0;
             p._disabledMove = s.disabledMove || null;
             p._tormented = s.tormented || 0;
+            p._substituteHp = s.substituteHp || 0;
             p._sleepTurns = s.sleepTurns || 0;
             p._toxicCounter = s.toxicCounter || 0;
             p._boundTurns = s.boundTurns || 0;

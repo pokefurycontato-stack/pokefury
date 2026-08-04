@@ -382,6 +382,7 @@ const MOVE_EFFECTS = {
 
 // --- MOVE EFFECTS BY NAME ---
 const MOVE_EFFECTS_BY_NAME = {
+    'substitute': { effect: 'substitute' },
     'thunder wave': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
     'will-o-wisp': { effect: 'status', status: STATUS.BURN, chance: 85 },
     'glare': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
@@ -1100,6 +1101,18 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
         } else {
             attacker._protected = false;
             messages.push(`${attacker.name} falhou ao usar Protect!`);
+        }
+        return messages;
+    }
+
+    if (effect.effect === 'substitute') {
+        const cost = Math.floor(attacker.stats.hp / 4);
+        if (attacker._substituteHp > 0) messages.push(`${attacker.name} já possui um Substitute!`);
+        else if (attacker.currentHp <= cost) messages.push(`${attacker.name} não tem HP suficiente para criar Substitute!`);
+        else {
+            attacker.currentHp -= cost;
+            attacker._substituteHp = cost;
+            messages.push(`${attacker.name} criou um Substitute! (-${cost} HP)`);
         }
         return messages;
     }

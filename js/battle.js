@@ -238,6 +238,9 @@ export async function executeTurn(attacker, defender, move, battleState) {
         if (getHeldItemEffect(attacker.heldItemId)?.effect === 'assault_vest') {
             return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`${attacker.name} não pode usar golpes de status com Assault Vest!`] };
         }
+        if (defender._substituteHp > 0) {
+            return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`O Substitute protegeu ${defender.name}!`] };
+        }
         const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
         if (!accuracyCheck) {
             return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
@@ -293,6 +296,17 @@ export async function executeTurn(attacker, defender, move, battleState) {
         damage = applyWeatherDamageModifier(attacker, move, damage, battleState);
         damage = applyTerrainDamageModifier(attacker, defender, move, damage, battleState);
         damage = applyScreenReduction(defender, move, damage);
+    }
+
+    if (defender._substituteHp > 0) {
+        const substituteDamage = Math.min(defender._substituteHp, Math.max(0, damage));
+        defender._substituteHp -= substituteDamage;
+        const messages = [`O Substitute de ${defender.name} absorveu ${substituteDamage} de dano!`];
+        if (defender._substituteHp <= 0) {
+            defender._substituteHp = 0;
+            messages.push(`O Substitute de ${defender.name} quebrou!`);
+        }
+        return { attacker, defender, move, damage: substituteDamage, effectiveness: result.effectiveness, critical: result.critical, missed: false, fainted: false, messages };
     }
 
     // Apply damage
