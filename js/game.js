@@ -4886,6 +4886,14 @@ openEventsPanel() {
         const initPlayerFx = globalLayout?.player_fx || map.battle_player_fx || 'none';
         const initEnemyFx = globalLayout?.enemy_fx || map.battle_enemy_fx || 'none';
 
+        const gridParent = grid.parentElement;
+        const restoreGrid = () => {
+            if (gridParent && grid.parentElement !== gridParent) gridParent.appendChild(grid);
+            grid.style.cssText = '';
+        };
+        document.body.appendChild(grid);
+        modal.classList.add('hidden');
+
         grid.innerHTML = '';
         grid.style.cssText = 'position:fixed;inset:0;z-index:10000;display:block;padding:0;background:#000;overflow:hidden;';
 
@@ -4994,7 +5002,10 @@ openEventsPanel() {
         cancelBtn.textContent = 'Voltar';
         cancelBtn.className = 'action-btn small';
         cancelBtn.style.cssText = 'grid-column:auto;';
-        cancelBtn.onclick = () => { this.openBattleBackgroundPicker(map, region); };
+        cancelBtn.onclick = () => {
+            restoreGrid();
+            this.openBattleBackgroundPicker(map, region);
+        };
 
         const saveBtn = document.createElement('button');
         saveBtn.textContent = 'Salvar BG + Posições';
@@ -5029,8 +5040,8 @@ openEventsPanel() {
                         battle_enemy_fx: finalEnemyFx
                     });
                 }
+                restoreGrid();
                 modal.classList.add('hidden');
-                grid.style.cssText = '';
                 this.loadRegionDetail(region);
             } catch (e) {
                 console.error('[BattlePos] Error saving:', e);
