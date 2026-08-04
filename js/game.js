@@ -2472,6 +2472,12 @@ class PokeFuryGame {
     }
 
     getBattleClipRect() {
+        if (this.pvpBattle) {
+            const mainArea = document.getElementById('main-area');
+            if (mainArea) {
+                return { x: 0, y: 0, w: mainArea.clientWidth, h: mainArea.clientHeight };
+            }
+        }
         if (!this.overworld2d) return null;
         return {
             x: this.overworld2d.mapOffsetX,
