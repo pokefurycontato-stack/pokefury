@@ -6613,6 +6613,10 @@ openEventsPanel() {
 
         if (this.overworld2d) this.overworld2d.hide();
 
+        // PVP uses its own universal positions, never the current map positions.
+        setBattlePositions(null);
+        setBattleEffects('none', 'none');
+
         const clip = this.getBattleClipRect();
         if (this.currentBattleBg && this.ctx && this.canvas) {
             drawBattleScene(this.ctx, this.canvas, battle.myActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
