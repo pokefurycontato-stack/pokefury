@@ -757,6 +757,7 @@ export class Overworld2D {
         ctx.clearRect(0, 0, w, h);
 
         if (this.game.state !== 'overworld') return;
+        if (this.game.pvpBattle) return;
 
         if (this.currentMapImage && this.currentMapImage.complete) {
             const mapDrawW = this.worldCols * this.tileW;
