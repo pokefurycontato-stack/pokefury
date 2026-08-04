@@ -580,9 +580,11 @@ class PokeFuryGame {
                 this._pvpBattleStarting = true;
                 this.showToast('Desafio aceito! Iniciando batalha...', 'success');
                 document.getElementById('arena-overlay')?.remove();
-                const randomBg = this.currentBattleBg;
-                this.startPVPBattle(challenge);
-                setTimeout(() => { this._pvpBattleStarting = false; }, 3000);
+                this.getRandomPvpBattleBg().then(bg => {
+                    if (bg) this.currentBattleBg = bg;
+                    this.startPVPBattle(challenge);
+                    setTimeout(() => { this._pvpBattleStarting = false; }, 3000);
+                });
             } else if (challenge.status === 'declined' && challenge.challenger_id === this.currentCharacterId) {
                 this.showToast(`${challenge.challenged_name} recusou seu desafio.`, 'info');
             } else if (challenge.status === 'pending' && challenge.challenged_id === this.currentCharacterId) {
