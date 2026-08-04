@@ -643,7 +643,7 @@ function syncBattleContainerToCanvas() {
     if (!gameCanvas || !battlePokemonContainer) return;
     const canvasRect = gameCanvas.getBoundingClientRect();
 
-    const fullscreen = document.getElementById('pvp-fullscreen');
+    const fullscreen = document.getElementById('pvp-fullscreen') || document.getElementById('wild-fullscreen');
     if (fullscreen) {
         battlePokemonContainer.style.left = '0';
         battlePokemonContainer.style.top = '0';
@@ -662,7 +662,7 @@ function syncBattleContainerToCanvas() {
 function ensureBattlePokemonContainer() {
     if (battlePokemonContainer) return battlePokemonContainer;
 
-    const fullscreen = document.getElementById('pvp-fullscreen');
+    const fullscreen = document.getElementById('pvp-fullscreen') || document.getElementById('wild-fullscreen');
     if (fullscreen) {
         battlePokemonContainer = document.createElement('div');
         battlePokemonContainer.id = 'battle-pokemon-sprites';
@@ -727,7 +727,7 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     }
     el.style.display = 'block';
 
-    const fullscreen = document.getElementById('pvp-fullscreen');
+    const fullscreen = document.getElementById('pvp-fullscreen') || document.getElementById('wild-fullscreen');
     let sx, sy;
     if (fullscreen) {
         sx = window.innerWidth / VIRTUAL_W;
@@ -743,7 +743,7 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     const maxDim = Math.round(fixedSize * Math.min(sx, sy));
     el.style.width = Math.round(maxDim) + 'px';
     el.style.height = Math.round(maxDim) + 'px';
-    if (document.getElementById('pvp-fullscreen')) {
+    if (document.getElementById('pvp-fullscreen') || document.getElementById('wild-fullscreen')) {
         // PVP positions are floor anchors: the saved point is the feet/shadow.
         el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
         el.style.top = Math.round(y * sy - maxDim) + 'px';

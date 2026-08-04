@@ -792,18 +792,7 @@ class PokeFuryGame {
             await preloadBattleBgImage(this.currentBattleBg);
             this.applyBattleNeonFromBg(this.currentBattleBg);
         }
-        if (this.currentMap && this.currentMap.battle_player_x != null) {
-            setBattlePositions({
-                playerX: this.currentMap.battle_player_x,
-                playerY: this.currentMap.battle_player_y,
-                enemyX: this.currentMap.battle_enemy_x,
-                enemyY: this.currentMap.battle_enemy_y
-            });
-            setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
-        } else {
-            setBattlePositions(null);
-            setBattleEffects('none', 'none');
-        }
+        await this.loadWildBattleLayout();
 
         let pokemon = null;
 
@@ -889,13 +878,9 @@ class PokeFuryGame {
         const dx = 0;
         const dy = 0;
         let playerEndX, playerEndY;
-        if (this.currentMap && this.currentMap.battle_player_x != null) {
-            playerEndX = dx + this.currentMap.battle_player_x * dw;
-            playerEndY = dy + this.currentMap.battle_player_y * dh;
-        } else {
-            playerEndX = dx + 0.25 * dw;
-            playerEndY = dy + 0.75 * dh;
-        }
+        const wildLayout = this.battlePositionSettings || { playerX: 0.25, playerY: 0.75 };
+        playerEndX = dx + wildLayout.playerX * dw;
+        playerEndY = dy + wildLayout.playerY * dh;
 
         const isShinyPlayer = activePlayer.isShiny;
         const spriteUrls = activePlayer.spriteUrls || {};
@@ -997,18 +982,7 @@ class PokeFuryGame {
                 await preloadBattleBgImage(this.currentBattleBg);
                 this.applyBattleNeonFromBg(this.currentBattleBg);
             }
-            if (this.currentMap && this.currentMap.battle_player_x != null) {
-                setBattlePositions({
-                    playerX: this.currentMap.battle_player_x,
-                    playerY: this.currentMap.battle_player_y,
-                    enemyX: this.currentMap.battle_enemy_x,
-                    enemyY: this.currentMap.battle_enemy_y
-                });
-                setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
-            } else {
-                setBattlePositions(null);
-                setBattleEffects('none', 'none');
-            }
+            await this.loadWildBattleLayout();
             this.state = 'battle';
             this._lastBattlePlayer = activePlayer;
             this._lastBattleEnemy = pokemon;
@@ -1030,13 +1004,9 @@ class PokeFuryGame {
             const dx2 = 0;
             const dy2 = 0;
             let playerEndX, playerEndY;
-            if (this.currentMap && this.currentMap.battle_player_x != null) {
-                playerEndX = dx2 + this.currentMap.battle_player_x * dw2;
-                playerEndY = dy2 + this.currentMap.battle_player_y * dh2;
-            } else {
-                playerEndX = dx2 + 0.25 * dw2;
-                playerEndY = dy2 + 0.75 * dh2;
-            }
+            const wildLayout2 = this.battlePositionSettings || { playerX: 0.25, playerY: 0.75 };
+            playerEndX = dx2 + wildLayout2.playerX * dw2;
+            playerEndY = dy2 + wildLayout2.playerY * dh2;
 
             const isShinyP2 = activePlayer.isShiny;
             const sUrls2 = activePlayer.spriteUrls || {};
@@ -2085,6 +2055,7 @@ class PokeFuryGame {
 
         await this.saveTeam();
 
+        this.exitWildBattleFullscreen();
         this.state = 'overworld';
         this._lastBattlePlayer = null;
         this._lastBattleEnemy = null;
@@ -2172,18 +2143,7 @@ class PokeFuryGame {
             await preloadBattleBgImage(this.currentBattleBg);
             this.applyBattleNeonFromBg(this.currentBattleBg);
         }
-        if (this.currentMap && this.currentMap.battle_player_x != null) {
-            setBattlePositions({
-                playerX: this.currentMap.battle_player_x,
-                playerY: this.currentMap.battle_player_y,
-                enemyX: this.currentMap.battle_enemy_x,
-                enemyY: this.currentMap.battle_enemy_y
-            });
-            setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
-        } else {
-            setBattlePositions(null);
-            setBattleEffects('none', 'none');
-        }
+        await this.loadWildBattleLayout();
 
         this.state = 'battle';
         this._lastBattlePlayer = activePlayer;
@@ -2208,13 +2168,9 @@ class PokeFuryGame {
         const dx = clipRect ? clipRect.x : 0;
         const dy = clipRect ? clipRect.y : 0;
         let playerEndX, playerEndY;
-        if (this.currentMap && this.currentMap.battle_player_x != null) {
-            playerEndX = dx + this.currentMap.battle_player_x * dw;
-            playerEndY = dy + this.currentMap.battle_player_y * dh;
-        } else {
-            playerEndX = dx + 0.25 * dw;
-            playerEndY = dy + 0.75 * dh;
-        }
+        const wildLayout3 = this.battlePositionSettings || { playerX: 0.25, playerY: 0.75 };
+        playerEndX = dx + wildLayout3.playerX * dw;
+        playerEndY = dy + wildLayout3.playerY * dh;
 
         setSkipPlayerRender(true);
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
@@ -2302,18 +2258,7 @@ class PokeFuryGame {
             await preloadBattleBgImage(this.currentBattleBg);
             this.applyBattleNeonFromBg(this.currentBattleBg);
         }
-        if (this.currentMap && this.currentMap.battle_player_x != null) {
-            setBattlePositions({
-                playerX: this.currentMap.battle_player_x,
-                playerY: this.currentMap.battle_player_y,
-                enemyX: this.currentMap.battle_enemy_x,
-                enemyY: this.currentMap.battle_enemy_y
-            });
-            setBattleEffects(this.currentMap.battle_player_fx, this.currentMap.battle_enemy_fx);
-        } else {
-            setBattlePositions(null);
-            setBattleEffects('none', 'none');
-        }
+        await this.loadWildBattleLayout();
 
         this.state = 'battle';
         this._lastBattlePlayer = activePlayer;
@@ -2340,13 +2285,9 @@ class PokeFuryGame {
         const dx = 0;
         const dy = 0;
         let playerEndX, playerEndY;
-        if (this.currentMap && this.currentMap.battle_player_x != null) {
-            playerEndX = dx + this.currentMap.battle_player_x * dw;
-            playerEndY = dy + this.currentMap.battle_player_y * dh;
-        } else {
-            playerEndX = dx + 0.25 * dw;
-            playerEndY = dy + 0.75 * dh;
-        }
+        const wildLayout4 = this.battlePositionSettings || { playerX: 0.25, playerY: 0.75 };
+        playerEndX = dx + wildLayout4.playerX * dw;
+        playerEndY = dy + wildLayout4.playerY * dh;
 
         setSkipPlayerRender(true);
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
@@ -2463,6 +2404,7 @@ class PokeFuryGame {
     }
 
     positionBattleScreen() {
+        this.enterWildBattleFullscreen();
         const battleEl = document.getElementById('battle-screen');
         if (battleEl) {
             battleEl.style.left = '0';
@@ -2472,8 +2414,73 @@ class PokeFuryGame {
         }
     }
 
+    enterWildBattleFullscreen() {
+        if (this.pvpBattle || document.getElementById('wild-fullscreen')) return;
+        const battleScreen = document.getElementById('battle-screen');
+        const canvas = document.getElementById('game-canvas') || this.canvas;
+        const mainArea = document.getElementById('main-area');
+        if (!battleScreen || !canvas || !mainArea) return;
+
+        this._battleScreenParent = battleScreen.parentElement;
+        this._battleScreenStyle = battleScreen.getAttribute('style') || '';
+        this._battleCanvasStyle = canvas.getAttribute('style') || '';
+        const fullscreen = document.createElement('div');
+        fullscreen.id = 'wild-fullscreen';
+        fullscreen.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000;overflow:hidden;';
+        document.body.appendChild(fullscreen);
+        document.getElementById('game-wrapper').style.display = 'none';
+
+        canvas.width = VIRTUAL_W;
+        canvas.height = VIRTUAL_H;
+        canvas.style.cssText = 'position:absolute;inset:0;width:100vw;height:100vh;transform:none;';
+        fullscreen.appendChild(canvas);
+
+        battleScreen.classList.remove('hidden');
+        battleScreen.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;box-shadow:none;animation:none;z-index:20;';
+        fullscreen.appendChild(battleScreen);
+
+        if (this.battleAnimations) {
+            this.battleAnimations.container = fullscreen;
+            this.battleAnimations._ensureOverlay();
+        }
+        if (this.typeEffects?.canvas) {
+            this.typeEffects.canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:40;';
+            fullscreen.appendChild(this.typeEffects.canvas);
+            this.typeEffects._resize();
+        }
+        this.overworld2d?.hide();
+    }
+
+    exitWildBattleFullscreen() {
+        const fullscreen = document.getElementById('wild-fullscreen');
+        if (!fullscreen) return;
+        const canvas = document.getElementById('game-canvas') || this.canvas;
+        const battleScreen = document.getElementById('battle-screen');
+        const mainArea = document.getElementById('main-area');
+        if (canvas && mainArea && canvas.parentElement !== mainArea) mainArea.insertBefore(canvas, mainArea.firstChild);
+        if (battleScreen && this._battleScreenParent && battleScreen.parentElement !== this._battleScreenParent) {
+            this._battleScreenParent.appendChild(battleScreen);
+        }
+        if (battleScreen) {
+            if (this._battleScreenStyle) battleScreen.setAttribute('style', this._battleScreenStyle);
+            else battleScreen.removeAttribute('style');
+        }
+        if (canvas) {
+            if (this._battleCanvasStyle) canvas.setAttribute('style', this._battleCanvasStyle);
+            else canvas.removeAttribute('style');
+        }
+        if (this.typeEffects?.canvas && mainArea && this.typeEffects.canvas.parentElement !== mainArea) {
+            mainArea.appendChild(this.typeEffects.canvas);
+            this.typeEffects._resize();
+        }
+        if (this.battleAnimations) this.battleAnimations.container = document.getElementById('game-wrapper');
+        fullscreen.remove();
+        const wrapper = document.getElementById('game-wrapper');
+        if (wrapper) wrapper.style.display = '';
+    }
+
     getBattleClipRect() {
-        if (this.pvpBattle) {
+        if (this.pvpBattle || document.getElementById('wild-fullscreen')) {
             return { x: 0, y: 0, w: VIRTUAL_W, h: VIRTUAL_H };
         }
         if (!this.overworld2d) return null;
@@ -2539,6 +2546,36 @@ class PokeFuryGame {
 
     async getRandomPvpBattleBg() {
         return 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png';
+    }
+
+    async loadWildBattleLayout() {
+        const map = this.currentMap || {};
+        const fallback = {
+            playerX: map.battle_player_x ?? 0.25,
+            playerY: map.battle_player_y ?? 0.75,
+            enemyX: map.battle_enemy_x ?? 0.72,
+            enemyY: map.battle_enemy_y ?? 0.4,
+            playerFx: map.battle_player_fx || 'none',
+            enemyFx: map.battle_enemy_fx || 'none'
+        };
+        let layout = fallback;
+        if (this.currentBattleBg) {
+            const { data } = await window.db.from('battle_position_settings')
+                .select('player_x, player_y, enemy_x, enemy_y, player_fx, enemy_fx')
+                .eq('background_url', this.currentBattleBg)
+                .maybeSingle();
+            if (data) {
+                layout = {
+                    playerX: Number(data.player_x), playerY: Number(data.player_y),
+                    enemyX: Number(data.enemy_x), enemyY: Number(data.enemy_y),
+                    playerFx: data.player_fx || 'none', enemyFx: data.enemy_fx || 'none'
+                };
+            }
+        }
+        this.battlePositionSettings = layout;
+        setBattlePositions(layout);
+        setBattleEffects(layout.playerFx, layout.enemyFx);
+        return layout;
     }
 
     async saveTeam() {
@@ -4834,16 +4871,20 @@ openEventsPanel() {
         });
     }
 
-    openBattlePositionEditor(map, region, bgUrl, bgName) {
+    async openBattlePositionEditor(map, region, bgUrl, bgName) {
         const modal = document.getElementById('map-picker-modal');
         const grid = document.getElementById('map-picker-grid');
 
-        const px = map.battle_player_x != null ? map.battle_player_x : 0.25;
-        const py = map.battle_player_y != null ? map.battle_player_y : 0.75;
-        const ex = map.battle_enemy_x != null ? map.battle_enemy_x : 0.72;
-        const ey = map.battle_enemy_y != null ? map.battle_enemy_y : 0.4;
-        const initPlayerFx = map.battle_player_fx || 'none';
-        const initEnemyFx = map.battle_enemy_fx || 'none';
+        const { data: globalLayout } = await window.db.from('battle_position_settings')
+            .select('player_x, player_y, enemy_x, enemy_y, player_fx, enemy_fx')
+            .eq('background_url', bgUrl)
+            .maybeSingle();
+        const px = globalLayout?.player_x ?? map.battle_player_x ?? 0.25;
+        const py = globalLayout?.player_y ?? map.battle_player_y ?? 0.75;
+        const ex = globalLayout?.enemy_x ?? map.battle_enemy_x ?? 0.72;
+        const ey = globalLayout?.enemy_y ?? map.battle_enemy_y ?? 0.4;
+        const initPlayerFx = globalLayout?.player_fx || map.battle_player_fx || 'none';
+        const initEnemyFx = globalLayout?.enemy_fx || map.battle_enemy_fx || 'none';
 
         grid.innerHTML = '';
         grid.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;';
@@ -4970,6 +5011,13 @@ openEventsPanel() {
                     battle_player_fx: finalPlayerFx,
                     battle_enemy_fx: finalEnemyFx
                 });
+                await window.db.from('battle_position_settings').upsert({
+                    background_url: bgUrl,
+                    player_x: finalPx, player_y: finalPy,
+                    enemy_x: finalEx, enemy_y: finalEy,
+                    player_fx: finalPlayerFx, enemy_fx: finalEnemyFx,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'background_url' });
                 if (this.currentMap && this.currentMap.id === map.id) {
                     Object.assign(this.currentMap, {
                         battle_bg_url: bgUrl,

@@ -27,7 +27,7 @@ export class TypeEffects {
 
     _resize() {
         const mainArea = document.getElementById('main-area');
-        const fullscreen = document.getElementById('pvp-fullscreen');
+        const fullscreen = document.getElementById('pvp-fullscreen') || document.getElementById('wild-fullscreen');
         if (!this.canvas) return;
         if (fullscreen) {
             this.canvas.width = window.innerWidth;
