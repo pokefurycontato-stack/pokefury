@@ -639,8 +639,9 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
 
     const playerScale = getPokemonScale(playerPokemon);
     const enemyScale = getPokemonScale(enemyPokemon);
+    const wildEnemyScale = document.getElementById('wild-fullscreen') ? 0.4 : 0.45;
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5 * playerScale);
-    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45 * enemyScale);
+    updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, wildEnemyScale * enemyScale);
 
     drawBattleFx(ctx, 'player', battleEffects.player, playerX, playerY + 50, 16);
     drawBattleFx(ctx, 'enemy', battleEffects.enemy, enemyX, enemyY + 50, 16);
