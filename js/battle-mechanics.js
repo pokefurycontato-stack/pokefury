@@ -1591,7 +1591,9 @@ export function getWeatherSpeed(pokemon, battleState) {
 // ============================================================
 export function processContactAbilities(defender, attacker) {
     if (!defender || (!defender.currentAbility && !defender.currentAbilityName)) return [];
-    if (getAbilityName(defender.currentAbility) === 'neutralizing gas' || getAbilityName(attacker?.currentAbility) === 'neutralizing gas') return [];
+    const defenderAbilityName = (defender.currentAbilityName || getAbilityName(defender.currentAbility)).toLowerCase();
+    const attackerAbilityName = (attacker?.currentAbilityName || getAbilityName(attacker?.currentAbility)).toLowerCase();
+    if (defenderAbilityName === 'neutralizing gas' || attackerAbilityName === 'neutralizing gas') return [];
     const abilityName = (defender.currentAbilityName || getAbilityName(defender.currentAbility)).toLowerCase();
     const abilityEffect = ABILITY_EFFECTS[abilityName];
     if (!abilityEffect) return [];
