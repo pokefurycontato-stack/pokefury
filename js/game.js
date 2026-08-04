@@ -3353,6 +3353,8 @@ class PokeFuryGame {
         document.getElementById('pos-close').addEventListener('click', () => overlay.remove());
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     }
+
+    openEventsPanel() {
         if (!window.isAdmin) return;
         const em = this.eventManager;
         if (!em) return;
