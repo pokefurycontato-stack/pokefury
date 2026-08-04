@@ -613,25 +613,7 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
             }
 
             if (img.complete && img.naturalWidth > 0) {
-                const dw = clipRect ? clipRect.w : w;
-                const dh = clipRect ? clipRect.h : h;
-                const dx = clipRect ? clipRect.x : 0;
-                const dy = clipRect ? clipRect.y : 0;
-                const imgRatio = img.naturalWidth / img.naturalHeight;
-                const areaRatio = dw / dh;
-                let sx, sy, sw, sh;
-                if (imgRatio > areaRatio) {
-                    sh = img.naturalHeight;
-                    sw = sh * areaRatio;
-                    sx = (img.naturalWidth - sw) / 2;
-                    sy = 0;
-                } else {
-                    sw = img.naturalWidth;
-                    sh = sw / areaRatio;
-                    sx = 0;
-                    sy = (img.naturalHeight - sh) / 2;
-                }
-                ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+                ctx.drawImage(img, 0, 0, w, h);
             } else {
                 const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
                 skyGrad.addColorStop(0, '#0f3460');
