@@ -397,11 +397,13 @@ export class Overworld2D {
 
         const animUrl = window.PokeAPI && PokeAPI.getAnimatedFrontUrl(pokemon.id);
         if (animUrl) {
-            PokeAPI.preloadSprite(animUrl).then(img => {
-                if (img && this.pokemonFollowing && this.pokemonFollowing.id === pokemon.id) {
-                    this.pokemonFollowSprite = img;
-                }
-            });
+            const animSprite = await PokeAPI.preloadSprite(animUrl);
+            if (animSprite) {
+                this.pokemonFollowSprite = animSprite;
+                console.log('[Follower] Animated sprite loaded:', animUrl);
+            } else {
+                console.log('[Follower] Animated sprite failed, using static:', staticFront);
+            }
         }
     }
 
