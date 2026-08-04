@@ -1404,6 +1404,8 @@ class PokeFuryGame {
                 }
 
                 const result = await executeTurn(attacker, defender, move, this._battleState);
+                if (attacker.currentHp <= 0) attacker.fainted = true;
+                if (defender.currentHp <= 0) defender.fainted = true;
 
                 attacker.moves.forEach(m => {
                     if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
@@ -1652,6 +1654,22 @@ class PokeFuryGame {
 
             clearProtect(playerPokemon);
             clearProtect(enemyPokemon);
+
+            if (isTeamFainted(this.enemyTeam)) {
+                await showBattleMessage('Você venceu a batalha!');
+                const defeated = this.enemyTeam[0];
+                const isBoss = defeated?.isAlpha || defeated?.isRaidBoss;
+                if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen) {
+                    await this.showCapturePrompt();
+                }
+                this.endBattle('win');
+                return;
+            }
+            if (isTeamFainted(this.playerTeam)) {
+                await showBattleMessage('Todos seus Pokémon desmaiaram...');
+                this.endBattle('lose');
+                return;
+            }
 
             drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
             updateBattleUI(this.playerTeam, this.enemyTeam);

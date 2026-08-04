@@ -269,6 +269,10 @@ export class AFKManager {
         }
 
         if (this._allMovesExhausted(playerPokemon)) {
+            await game.executeBattleTurn(playerPokemon, enemyPokemon, {
+                id: 'struggle', name: 'Struggle', type: 'normal', category: 'physical',
+                power: 50, accuracy: 100, pp: 1, currentPp: 1
+            });
             return;
         }
 
