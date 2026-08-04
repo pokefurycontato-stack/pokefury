@@ -6,7 +6,8 @@ import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
-    removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection
+    removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
+    VIRTUAL_W, VIRTUAL_H
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js';
@@ -2473,10 +2474,7 @@ class PokeFuryGame {
 
     getBattleClipRect() {
         if (this.pvpBattle) {
-            const mainArea = document.getElementById('main-area');
-            if (mainArea) {
-                return { x: 0, y: 0, w: mainArea.clientWidth, h: mainArea.clientHeight };
-            }
+            return { x: 0, y: 0, w: VIRTUAL_W, h: VIRTUAL_H };
         }
         if (!this.overworld2d) return null;
         return {
@@ -6603,6 +6601,8 @@ openEventsPanel() {
         document.body.appendChild(pvpFullscreen);
 
         const canvas = document.getElementById('game-canvas');
+        canvas.width = VIRTUAL_W;
+        canvas.height = VIRTUAL_H;
         canvas.style.position = 'fixed';
         canvas.style.top = '0';
         canvas.style.left = '0';
