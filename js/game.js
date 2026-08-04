@@ -6713,7 +6713,15 @@ openEventsPanel() {
         const actions = document.getElementById('pvp-actions');
         const fightBtn = document.getElementById('pvp-fight-btn');
         const switchBtn = document.getElementById('pvp-switch-btn');
-        if (battle.isMyTurn && !battle.isFinished) {
+        if (battle.needsForcedSwitch && !battle.isFinished) {
+            turnIndicator.textContent = 'Escolha o próximo Pokémon';
+            turnIndicator.style.borderColor = '#ff9800';
+            actions.style.opacity = '0';
+            actions.style.pointerEvents = 'none';
+            if (fightBtn) fightBtn.disabled = true;
+            if (switchBtn) switchBtn.disabled = true;
+            this.openPVPSwitchSelector(true);
+        } else if (battle.isMyTurn && !battle.isFinished) {
             turnIndicator.textContent = 'Escolha sua ação';
             turnIndicator.style.borderColor = '#4caf50';
             actions.style.opacity = '1';
@@ -6733,6 +6741,85 @@ openEventsPanel() {
             const clip = this.getBattleClipRect();
             drawBattleScene(this.ctx, this.canvas, battle.myActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
+    }
+
+    openPVPSwitchSelector(force = false) {
+        const battle = this.pvpBattle;
+        if (!battle || battle.isFinished || document.getElementById('pvp-switch-overlay')) return;
+        if (!force && !battle.isMyTurn) return;
+
+        const available = battle.myTeam
+            .map((pokemon, index) => ({ pokemon, index }))
+            .filter(({ pokemon, index }) => index !== battle.myIndex && pokemon.currentHp > 0);
+        if (available.length === 0) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'pvp-switch-overlay';
+        overlay.style.cssText = 'position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,6,18,0.78);backdrop-filter:blur(8px);pointer-events:auto;';
+
+        const panel = document.createElement('div');
+        panel.style.cssText = 'width:min(720px,94vw);max-height:90vh;overflow:auto;padding:22px;border:1px solid rgba(111,184,255,0.35);border-radius:20px;background:linear-gradient(145deg,rgba(18,28,55,0.98),rgba(9,14,30,0.98));box-shadow:0 20px 70px rgba(0,0,0,0.55);font-family:Inter;color:#fff;';
+
+        const title = document.createElement('div');
+        title.style.cssText = 'text-align:center;margin-bottom:16px;';
+        title.innerHTML = `<div style="font-size:20px;font-weight:800;letter-spacing:.2px;">${force ? 'Seu Pokémon foi derrotado' : 'Trocar Pokémon'}</div><div style="margin-top:5px;color:rgba(255,255,255,.62);font-size:12px;">Escolha quem entrará na batalha</div>`;
+        panel.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;';
+        available.forEach(({ pokemon, index }) => {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.style.cssText = 'min-height:170px;padding:12px 8px;border:1px solid rgba(111,184,255,.24);border-radius:14px;background:linear-gradient(160deg,rgba(39,61,103,.72),rgba(18,28,55,.88));color:#fff;cursor:pointer;font-family:Inter;transition:transform .16s,border-color .16s,background .16s;';
+            card.onmouseenter = () => { card.style.transform = 'translateY(-3px)'; card.style.borderColor = '#6fb8ff'; };
+            card.onmouseleave = () => { card.style.transform = 'none'; card.style.borderColor = 'rgba(111,184,255,.24)'; };
+
+            const image = document.createElement('img');
+            image.src = pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official || pokemon.spriteUrl || '';
+            image.alt = pokemon.name;
+            image.style.cssText = 'display:block;width:92px;height:92px;margin:0 auto 5px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 5px 5px rgba(0,0,0,.35));';
+            image.onerror = () => { image.style.visibility = 'hidden'; };
+            card.appendChild(image);
+
+            const name = document.createElement('div');
+            name.textContent = pokemon.name;
+            name.style.cssText = 'font-size:13px;font-weight:800;text-transform:capitalize;';
+            card.appendChild(name);
+            const level = document.createElement('div');
+            level.textContent = `Nível ${pokemon.level}`;
+            level.style.cssText = 'margin-top:4px;color:rgba(255,255,255,.62);font-size:11px;';
+            card.appendChild(level);
+            const hp = document.createElement('div');
+            hp.textContent = `HP ${pokemon.currentHp}/${pokemon.stats.hp}`;
+            hp.style.cssText = 'margin-top:7px;color:#7ee787;font-size:10px;font-weight:700;';
+            card.appendChild(hp);
+
+            card.onclick = async () => {
+                grid.querySelectorAll('button').forEach(button => { button.disabled = true; button.style.opacity = '.55'; });
+                try {
+                    await battle.executeMyTurn('switch', { newIndex: index });
+                    overlay.remove();
+                    this.updatePVPBattleUI();
+                } catch (error) {
+                    grid.querySelectorAll('button').forEach(button => { button.disabled = false; button.style.opacity = '1'; });
+                    this.showToast(`Não foi possível trocar: ${error.message || error}`, 'error');
+                }
+            };
+            grid.appendChild(card);
+        });
+        panel.appendChild(grid);
+
+        if (!force) {
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.textContent = 'Cancelar';
+            close.style.cssText = 'display:block;margin:16px auto 0;padding:8px 22px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.75);cursor:pointer;font-family:Inter;font-weight:700;';
+            close.onclick = () => overlay.remove();
+            panel.appendChild(close);
+        }
+
+        overlay.appendChild(panel);
+        document.getElementById('pvp-fullscreen')?.appendChild(overlay);
     }
 
     setupPVPBattleEvents() {
@@ -6780,36 +6867,7 @@ openEventsPanel() {
         }
 
         if (switchBtn) {
-            switchBtn.onclick = () => {
-                const myTeam = this.pvpBattle.myTeam;
-                const activeIdx = this.pvpBattle.myIndex;
-
-                moveSelection.innerHTML = '';
-                moveSelection.style.display = 'grid';
-                document.getElementById('pvp-actions').style.display = 'none';
-
-                myTeam.forEach((p, i) => {
-                    if (i === activeIdx || p.currentHp <= 0) return;
-                    const btn = document.createElement('button');
-                    btn.style.cssText = 'padding:6px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;cursor:pointer;font-family:Inter;text-align:center;';
-                    btn.innerHTML = `<div style="font-size:10px">${p.name}</div><div style="font-size:8px;color:rgba(255,255,255,0.5);">Lv.${p.level} | HP ${p.currentHp}/${p.stats.hp}</div>`;
-                    btn.onclick = async () => {
-                        moveSelection.style.display = 'none';
-                        document.getElementById('pvp-actions').style.display = 'flex';
-                        await this.pvpBattle.executeMyTurn('switch', { newIndex: i });
-                    };
-                    moveSelection.appendChild(btn);
-                });
-
-                const backBtn = document.createElement('button');
-                backBtn.style.cssText = 'padding:6px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;background:rgba(255,255,255,0.06);color:#fff;font-size:10px;cursor:pointer;font-family:Inter;';
-                backBtn.textContent = 'Voltar';
-                backBtn.onclick = () => {
-                    moveSelection.style.display = 'none';
-                    document.getElementById('pvp-actions').style.display = 'flex';
-                };
-                moveSelection.appendChild(backBtn);
-            };
+            switchBtn.onclick = () => this.openPVPSwitchSelector(false);
         }
 
         if (forfeitBtn) {

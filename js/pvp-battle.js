@@ -18,6 +18,7 @@ export class PVPBattle {
     get myActivePokemon() { return this.myTeam[this.myIndex] || null; }
     get enemyActivePokemon() { return this.enemyTeam[this.enemyIndex] || null; }
     get isMyTurn() { return !this.pendingAction && !this.isFinished; }
+    get needsForcedSwitch() { return this.myActivePokemon?.currentHp <= 0; }
 
     getEffectiveSpeed(pokemon) {
         if (!pokemon) return 0;
@@ -108,6 +109,10 @@ export class PVPBattle {
     async executeMyTurn(action, data) {
         if (!this.isMyTurn) return;
         if (action === 'attack' && (!this.myActivePokemon || this.myActivePokemon.currentHp <= 0)) return;
+        if (action === 'switch') {
+            const next = this.myTeam[data.newIndex];
+            if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return;
+        }
         this.pendingAction = { action, ...data };
 
         const { error } = await window.db.from('pvp_battle_state').update({
@@ -227,6 +232,7 @@ export class PVPBattle {
         this.round++;
         this.onStateUpdate?.();
         this.persistReadyState();
+        if (this.needsForcedSwitch) this.game.openPVPSwitchSelector?.(true);
 
         if (payload.result?.winner === 'challenger') this.endBattle(isChallenger ? 'my_win' : 'enemy_win');
         else if (payload.result?.winner === 'challenged') this.endBattle(isChallenger ? 'enemy_win' : 'my_win');
