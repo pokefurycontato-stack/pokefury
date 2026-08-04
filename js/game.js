@@ -7,7 +7,7 @@ import {
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
-    VIRTUAL_W, VIRTUAL_H
+    VIRTUAL_W, VIRTUAL_H, clearMaskFx
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js';
@@ -2083,6 +2083,7 @@ class PokeFuryGame {
         this._battleSpeed = 1;
         setBattleSpeed(1);
         if (this.battleAnimations) this.battleAnimations.setSpeed(1);
+        clearMaskFx();
         this._capturePromptOpen = false;
         this._turnLocked = false;
 
@@ -5227,6 +5228,225 @@ openEventsPanel() {
         btnRow.appendChild(cancelBtn);
         btnRow.appendChild(saveBtn);
         grid.appendChild(btnRow);
+
+        const MASK_W = 960;
+        const MASK_H = 540;
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = MASK_W;
+        maskCanvas.height = MASK_H;
+        const maskCtx = maskCanvas.getContext('2d');
+        maskCtx.fillStyle = '#000';
+        maskCtx.fillRect(0, 0, MASK_W, MASK_H);
+
+        const brushCanvas = document.createElement('canvas');
+        brushCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:3;cursor:crosshair;display:none;';
+        const brushCtx = brushCanvas.getContext('2d');
+        preview.appendChild(brushCanvas);
+
+        let brushActive = false;
+        let brushSize = 40;
+        let brushEffect = 'glow';
+        let isPainting = false;
+
+        const MASK_EFFECTS = [
+            { id: 'glow', name: 'Brilho', icon: '✨' },
+            { id: 'grass', name: 'Grama', icon: '🌿' },
+            { id: 'water', name: 'Água', icon: '💧' },
+            { id: 'fire', name: 'Fogo', icon: '🔥' },
+            { id: 'fog', name: 'Névoa', icon: '🌫️' },
+            { id: 'sparkles', name: 'Faíscas', icon: '⚡' },
+        ];
+
+        const brushPanel = document.createElement('div');
+        brushPanel.style.cssText = 'position:absolute;top:12px;left:12px;z-index:5;display:none;flex-direction:column;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);min-width:180px;';
+
+        const brushTitle = document.createElement('div');
+        brushTitle.style.cssText = 'color:#e94560;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;';
+        brushTitle.textContent = 'Pincel de Efeito';
+        brushPanel.appendChild(brushTitle);
+
+        const effectRow = document.createElement('div');
+        effectRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
+        MASK_EFFECTS.forEach(fx => {
+            const btn = document.createElement('button');
+            btn.style.cssText = `width:32px;height:32px;border-radius:6px;border:2px solid ${fx.id === brushEffect ? '#e94560' : 'rgba(255,255,255,0.15)'};background:${fx.id === brushEffect ? 'rgba(233,69,96,0.3)' : 'rgba(0,0,0,0.4)'};cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;`;
+            btn.textContent = fx.icon;
+            btn.title = fx.name;
+            btn.onclick = () => {
+                brushEffect = fx.id;
+                effectRow.querySelectorAll('button').forEach(b => {
+                    b.style.borderColor = 'rgba(255,255,255,0.15)';
+                    b.style.background = 'rgba(0,0,0,0.4)';
+                });
+                btn.style.borderColor = '#e94560';
+                btn.style.background = 'rgba(233,69,96,0.3)';
+            };
+            effectRow.appendChild(btn);
+        });
+        brushPanel.appendChild(effectRow);
+
+        const sizeRow = document.createElement('div');
+        sizeRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        const sizeLabel = document.createElement('span');
+        sizeLabel.style.cssText = 'color:rgba(255,255,255,0.5);font-size:10px;min-width:50px;';
+        sizeLabel.textContent = 'Tamanho:';
+        const sizeSlider = document.createElement('input');
+        sizeSlider.type = 'range';
+        sizeSlider.min = '10';
+        sizeSlider.max = '120';
+        sizeSlider.value = String(brushSize);
+        sizeSlider.style.cssText = 'flex:1;accent-color:#e94560;';
+        const sizeVal = document.createElement('span');
+        sizeVal.style.cssText = 'color:#fff;font-size:11px;min-width:24px;text-align:right;';
+        sizeVal.textContent = brushSize;
+        sizeSlider.oninput = () => { brushSize = parseInt(sizeSlider.value); sizeVal.textContent = brushSize; };
+        sizeRow.appendChild(sizeLabel);
+        sizeRow.appendChild(sizeSlider);
+        sizeRow.appendChild(sizeVal);
+        brushPanel.appendChild(sizeRow);
+
+        const clearBrushBtn = document.createElement('button');
+        clearBrushBtn.textContent = '🗑 Limpar Máscara';
+        clearBrushBtn.style.cssText = 'padding:6px 10px;border-radius:6px;border:1px solid rgba(244,67,54,0.4);background:rgba(244,67,54,0.15);color:#f44336;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s;';
+        clearBrushBtn.onmouseenter = () => { clearBrushBtn.style.background = 'rgba(244,67,54,0.3)'; };
+        clearBrushBtn.onmouseleave = () => { clearBrushBtn.style.background = 'rgba(244,67,54,0.15)'; };
+        clearBrushBtn.onclick = () => {
+            maskCtx.fillStyle = '#000';
+            maskCtx.fillRect(0, 0, MASK_W, MASK_H);
+            renderBrushPreview();
+        };
+        brushPanel.appendChild(clearBrushBtn);
+
+        const brushCursor = document.createElement('div');
+        brushCursor.style.cssText = 'position:absolute;border:2px solid rgba(233,69,96,0.8);border-radius:50%;pointer-events:none;z-index:4;display:none;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(233,69,96,0.4);';
+        preview.appendChild(brushCursor);
+
+        function resizeBrushCanvas() {
+            brushCanvas.width = preview.clientWidth;
+            brushCanvas.height = preview.clientHeight;
+        }
+
+        function getBrushPos(e) {
+            const rect = preview.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = (clientX - rect.left) / rect.width;
+            const y = (clientY - rect.top) / rect.height;
+            return { x, y, px: clientX - rect.left, py: clientY - rect.top };
+        }
+
+        function paintBrush(x, y) {
+            const mx = x * MASK_W;
+            const my = y * MASK_H;
+            const bs = brushSize * (MASK_W / preview.clientWidth);
+            maskCtx.beginPath();
+            maskCtx.arc(mx, my, bs / 2, 0, Math.PI * 2);
+            maskCtx.fillStyle = '#fff';
+            maskCtx.fill();
+            renderBrushPreview();
+        }
+
+        function eraseBrush(x, y) {
+            const mx = x * MASK_W;
+            const my = y * MASK_H;
+            const bs = brushSize * (MASK_W / preview.clientWidth);
+            maskCtx.save();
+            maskCtx.globalCompositeOperation = 'destination-out';
+            maskCtx.beginPath();
+            maskCtx.arc(mx, my, bs / 2, 0, Math.PI * 2);
+            maskCtx.fill();
+            maskCtx.restore();
+            renderBrushPreview();
+        }
+
+        function renderBrushPreview() {
+            brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
+            brushCtx.drawImage(maskCanvas, 0, 0, brushCanvas.width, brushCanvas.height);
+        }
+
+        brushCanvas.addEventListener('mousedown', (e) => {
+            isPainting = true;
+            const pos = getBrushPos(e);
+            if (e.button === 2 || e.ctrlKey) eraseBrush(pos.x, pos.y);
+            else paintBrush(pos.x, pos.y);
+        });
+        brushCanvas.addEventListener('mousemove', (e) => {
+            const pos = getBrushPos(e);
+            brushCursor.style.left = pos.px + 'px';
+            brushCursor.style.top = pos.py + 'px';
+            brushCursor.style.width = brushSize + 'px';
+            brushCursor.style.height = brushSize + 'px';
+            if (isPainting) {
+                if (e.buttons === 2 || e.ctrlKey) eraseBrush(pos.x, pos.y);
+                else paintBrush(pos.x, pos.y);
+            }
+        });
+        brushCanvas.addEventListener('mouseup', () => { isPainting = false; });
+        brushCanvas.addEventListener('mouseleave', () => { isPainting = false; brushCursor.style.display = 'none'; });
+        brushCanvas.addEventListener('mouseenter', () => { if (brushActive) brushCursor.style.display = 'block'; });
+        brushCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        brushCanvas.addEventListener('touchstart', (e) => {
+            isPainting = true;
+            const pos = getBrushPos(e);
+            paintBrush(pos.x, pos.y);
+        }, { passive: true });
+        brushCanvas.addEventListener('touchmove', (e) => {
+            const pos = getBrushPos(e);
+            paintBrush(pos.x, pos.y);
+        }, { passive: true });
+        brushCanvas.addEventListener('touchend', () => { isPainting = false; });
+
+        const brushBtn = document.createElement('button');
+        brushBtn.textContent = '🖌️ Pincel';
+        brushBtn.className = 'action-btn small';
+        brushBtn.style.cssText = 'grid-column:auto;background:rgba(156,39,176,0.4);border:1px solid rgba(156,39,176,0.5);';
+        brushBtn.onclick = () => {
+            brushActive = !brushActive;
+            brushCanvas.style.display = brushActive ? 'block' : 'none';
+            brushPanel.style.display = brushActive ? 'flex' : 'none';
+            brushCursor.style.display = brushActive ? 'block' : 'none';
+            brushBtn.style.background = brushActive ? 'rgba(156,39,176,0.8)' : 'rgba(156,39,176,0.4)';
+            if (brushActive) resizeBrushCanvas();
+        };
+        btnRow.insertBefore(brushBtn, btnRow.firstChild);
+
+        const resizeObs = new ResizeObserver(() => { if (brushActive) resizeBrushCanvas(); });
+        resizeObs.observe(preview);
+
+        const { data: savedMask } = await window.db.from('battle_effect_masks')
+            .select('mask_data, effect_type, brush_size')
+            .eq('background_url', bgUrl)
+            .maybeSingle();
+
+        if (savedMask?.mask_data) {
+            const tmpImg = new Image();
+            tmpImg.onload = () => {
+                maskCtx.clearRect(0, 0, MASK_W, MASK_H);
+                maskCtx.drawImage(tmpImg, 0, 0, MASK_W, MASK_H);
+                renderBrushPreview();
+            };
+            tmpImg.src = savedMask.mask_data;
+        }
+        if (savedMask?.effect_type) brushEffect = savedMask.effect_type;
+        if (savedMask?.brush_size) { brushSize = savedMask.brush_size; sizeSlider.value = brushSize; sizeVal.textContent = brushSize; }
+
+        const origSave = saveBtn.onclick;
+        saveBtn.onclick = async () => {
+            const maskBase64 = maskCanvas.toDataURL('image/png');
+            try {
+                await window.db.from('battle_effect_masks').upsert({
+                    background_url: bgUrl,
+                    mask_data: maskBase64,
+                    effect_type: brushEffect,
+                    brush_size: brushSize,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'background_url' });
+            } catch (e) {
+                console.error('[BattleMask] Error saving mask:', e);
+            }
+            origSave();
+        };
     }
 
     async loadAllMapImages(folders, storageUrl, grid, region, modal) {

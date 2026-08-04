@@ -578,11 +578,11 @@ export function preloadBattleBgImage(url) {
         if (!url) { resolve(); return; }
         if (/\.(mp4|webm|ogg)$/i.test(url)) { resolve(); return; }
         let img = bgCache.get(url);
-        if (img && img.complete && img.naturalWidth > 0) { resolve(); return; }
+        if (img && img.complete && img.naturalWidth > 0) { loadBattleMask(url).then(resolve); return; }
         img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => { bgCache.set(url, img); resolve(); };
-        img.onerror = () => { resolve(); };
+        img.onload = () => { bgCache.set(url, img); loadBattleMask(url).then(resolve); };
+        img.onerror = () => { loadBattleMask(url).then(resolve); };
         img.src = url;
     });
 }
@@ -632,6 +632,10 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         }
     } else {
         // Fallback was painted before attempting the background.
+    }
+
+    if (backgroundUrl) {
+        drawMaskFx(ctx, backgroundUrl);
     }
 
     let playerX, playerY, enemyX, enemyY;
@@ -992,4 +996,200 @@ export function showMoveLearnPopup(pokemon, newMove, currentMoves) {
         });
         btnsEl.appendChild(skipBtn);
     });
+}
+
+const maskCache = new Map();
+const maskParticles = [];
+let maskAnimFrame = 0;
+
+export async function loadBattleMask(backgroundUrl) {
+    if (!backgroundUrl || !window.db) return null;
+    if (maskCache.has(backgroundUrl)) return maskCache.get(backgroundUrl);
+    try {
+        const { data } = await window.db.from('battle_effect_masks')
+            .select('mask_data, effect_type')
+            .eq('background_url', backgroundUrl)
+            .maybeSingle();
+        if (!data?.mask_data || !data?.effect_type || data.effect_type === 'none') {
+            maskCache.set(backgroundUrl, null);
+            return null;
+        }
+        const img = new Image();
+        await new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+            img.src = data.mask_data;
+        });
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = VIRTUAL_W;
+        maskCanvas.height = VIRTUAL_H;
+        const mctx = maskCanvas.getContext('2d');
+        mctx.drawImage(img, 0, 0, VIRTUAL_W, VIRTUAL_H);
+        const maskData = mctx.getImageData(0, 0, VIRTUAL_W, VIRTUAL_H);
+        const result = { canvas: maskCanvas, data: maskData, type: data.effect_type };
+        maskCache.set(backgroundUrl, result);
+        return result;
+    } catch (e) {
+        console.warn('[BattleMask] Failed to load mask:', e);
+        maskCache.set(backgroundUrl, null);
+        return null;
+    }
+}
+
+function isMasked(maskData, x, y) {
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    if (ix < 0 || ix >= VIRTUAL_W || iy < 0 || iy >= VIRTUAL_H) return false;
+    const idx = (iy * VIRTUAL_W + ix) * 4;
+    return maskData.data[idx] > 128;
+}
+
+function spawnMaskParticle(type, maskData) {
+    for (let attempt = 0; attempt < 20; attempt++) {
+        const x = Math.random() * VIRTUAL_W;
+        const y = Math.random() * VIRTUAL_H;
+        if (!isMasked(maskData, x, y)) continue;
+        const p = { x, y, type, age: 0, maxAge: 60 + Math.random() * 40 };
+        switch (type) {
+            case 'glow':
+                p.radius = 15 + Math.random() * 30;
+                p.maxRadius = p.radius + 10 + Math.random() * 15;
+                p.color = `rgba(255,255,${150 + Math.random() * 105},`;
+                break;
+            case 'grass':
+                p.h = 6 + Math.random() * 12;
+                p.w = 2 + Math.random() * 2;
+                p.sway = Math.random() * Math.PI * 2;
+                p.color = `hsl(${100 + Math.random() * 30},${60 + Math.random() * 20}%,${30 + Math.random() * 15}%)`;
+                break;
+            case 'water':
+                p.radius = 2 + Math.random() * 4;
+                p.maxRadius = p.radius + 6 + Math.random() * 5;
+                p.color = 'rgba(80,160,255,';
+                break;
+            case 'fire':
+                p.vx = (Math.random() - 0.5) * 1.2;
+                p.vy = -1 - Math.random() * 1.5;
+                p.size = 2 + Math.random() * 4;
+                p.maxAge = 25 + Math.random() * 20;
+                break;
+            case 'fog':
+                p.vx = (Math.random() - 0.5) * 0.4;
+                p.vy = -0.1 - Math.random() * 0.2;
+                p.radius = 20 + Math.random() * 40;
+                p.color = 'rgba(200,200,220,';
+                break;
+            case 'sparkles':
+                p.size = 1 + Math.random() * 2.5;
+                p.maxAge = 20 + Math.random() * 15;
+                p.boltAngle = Math.random() * Math.PI * 2;
+                p.boltLen = 5 + Math.random() * 10;
+                break;
+        }
+        return p;
+    }
+    return null;
+}
+
+export function drawMaskFx(ctx, backgroundUrl) {
+    const mask = maskCache.get(backgroundUrl);
+    if (!mask) return;
+
+    if (maskParticles.length < 60 && maskAnimFrame % 4 === 0) {
+        const p = spawnMaskParticle(mask.type, mask);
+        if (p) maskParticles.push(p);
+    }
+    maskAnimFrame++;
+
+    for (let i = maskParticles.length - 1; i >= 0; i--) {
+        const p = maskParticles[i];
+        p.age++;
+        if (p.age >= p.maxAge) {
+            maskParticles.splice(i, 1);
+            continue;
+        }
+        if (!isMasked(mask.data, p.x, p.y)) {
+            maskParticles.splice(i, 1);
+            continue;
+        }
+        const progress = p.age / p.maxAge;
+        ctx.save();
+        switch (p.type) {
+            case 'glow': {
+                const r = p.radius + (p.maxRadius - p.radius) * progress;
+            const alpha = 0.3 * (1 - progress);
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+            grad.addColorStop(0, p.color + alpha + ')');
+            grad.addColorStop(1, p.color + '0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        }
+            case 'grass': {
+            const sway = Math.sin(p.sway + p.age * 0.1) * 3;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x + sway - p.w / 2, p.y - p.h, p.w, p.h);
+            break;
+        }
+            case 'water': {
+            const r = p.radius + (p.maxRadius - p.radius) * progress;
+            const alpha = 0.35 * (1 - progress);
+            ctx.strokeStyle = p.color + alpha + ')';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            break;
+        }
+            case 'fire': {
+            p.x += p.vx;
+            p.y += p.vy;
+            const alpha = 0.7 * (1 - progress);
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+            grad.addColorStop(0, `rgba(255,200,50,${alpha})`);
+            grad.addColorStop(0.5, `rgba(255,100,20,${alpha * 0.6})`);
+            grad.addColorStop(1, `rgba(200,30,0,0)`);
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        }
+            case 'fog': {
+            p.x += p.vx;
+            p.y += p.vy;
+            const alpha = 0.12 * (1 - progress);
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+            grad.addColorStop(0, p.color + alpha + ')');
+            grad.addColorStop(1, p.color + '0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        }
+            case 'sparkles': {
+            const alpha = 0.8 * (1 - progress);
+            ctx.strokeStyle = `rgba(255,255,200,${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + Math.cos(p.boltAngle) * p.boltLen, p.y + Math.sin(p.boltAngle) * p.boltLen);
+            ctx.stroke();
+            ctx.fillStyle = `rgba(255,255,150,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        }
+        }
+        ctx.restore();
+    }
+}
+
+export function clearMaskFx() {
+    maskParticles.length = 0;
+    maskAnimFrame = 0;
 }
