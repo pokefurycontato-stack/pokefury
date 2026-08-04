@@ -132,7 +132,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         ? ((attacker.stats.attack || 0) > (attacker.stats.spAtk || 0) ? 'physical' : 'special')
         : move.category;
     const moveName = String(move.name || '').toLowerCase().trim();
-    const dynamicMove = ['endeavor', 'dragon rage', 'sonic boom', 'seismic toss', 'night shade', 'super fang'];
+    const dynamicMove = ['endeavor', 'dragon rage', 'sonic boom', 'seismic toss', 'night shade', 'super fang', 'fissure', 'horn drill', 'sheer cold', 'guillotine'];
     if (moveCategory === 'status' || (!move.power && !dynamicMove.includes(moveName))) {
         const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
         return { damage: 0, effectiveness: 1, critical: false, missed: !accuracyCheck };
@@ -158,6 +158,12 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     };
     if (abilityImmuneTypes[defAbilityName]?.includes(moveType)) {
         return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
+    }
+
+    if (['fissure', 'horn drill', 'sheer cold', 'guillotine'].includes(moveName)) {
+        const chance = Math.max(0, Math.min(100, 30 + (attacker.level || 1) - (defender.level || 1)));
+        if (Math.random() * 100 >= chance) return { damage: 0, effectiveness: 1, critical: false, missed: true };
+        return { damage: defender.currentHp, effectiveness: 1, critical: false, missed: false, fainted: true, ohko: true };
     }
 
     let movePower = move.power;

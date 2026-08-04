@@ -1037,8 +1037,14 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
 
     // Protect
     if (effect.effect === 'protect') {
-        attacker._protected = true;
-        messages.push(`${attacker.name} se protegeu!`);
+        const streak = attacker._protectStreak || 0;
+        if (Math.random() < (1 / Math.pow(2, streak))) {
+            attacker._protected = true;
+            messages.push(`${attacker.name} se protegeu!`);
+        } else {
+            attacker._protected = false;
+            messages.push(`${attacker.name} falhou ao usar Protect!`);
+        }
         return messages;
     }
 
@@ -1357,7 +1363,10 @@ export function isProtected(defender) {
 }
 
 export function clearProtect(pokemon) {
-    if (pokemon) pokemon._protected = false;
+    if (!pokemon) return;
+    if (pokemon._protected) pokemon._protectStreak = (pokemon._protectStreak || 0) + 1;
+    else pokemon._protectStreak = 0;
+    pokemon._protected = false;
 }
 
 // ============================================================
