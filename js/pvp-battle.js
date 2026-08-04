@@ -22,9 +22,7 @@ export class PVPBattle {
 
     get myActivePokemon() { return this.myTeam[this.myIndex] || null; }
     get enemyActivePokemon() { return this.enemyTeam[this.enemyIndex] || null; }
-    get visibleMyActivePokemon() {
-        return this.myTeam[this.pendingSwitchIndex ?? this.myIndex] || this.myActivePokemon;
-    }
+    get visibleMyActivePokemon() { return this.myActivePokemon; }
     get isMyTurn() { return !this.pendingAction && !this.isFinished; }
     get needsForcedSwitch() { return this.myActivePokemon?.currentHp <= 0; }
 
@@ -146,7 +144,6 @@ export class PVPBattle {
             console.error('[PVP] Failed to submit action:', error);
             throw error;
         }
-        if (action === 'switch') this.pendingSwitchIndex = data.newIndex;
         this.onStateUpdate?.();
         await this.tryResolveRound();
         return true;
