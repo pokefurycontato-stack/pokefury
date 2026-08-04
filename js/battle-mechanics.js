@@ -643,7 +643,7 @@ export const ABILITY_EFFECTS = {
     'poison point': { trigger: 'contacted', effect: 'status', status: STATUS.POISON, chance: 30 },
     'cute charm': { trigger: 'contacted', effect: 'none' },
     'effect spore': { trigger: 'contacted', effect: 'random_status', chance: 30 },
-    'poison touch': { trigger: 'contact', effect: 'status', status: STATUS.POISON, chance: 30 },
+    'poison touch': { trigger: 'contacted', effect: 'status', status: STATUS.POISON, chance: 30 },
     'cursed body': { trigger: 'contacted', effect: 'disable', chance: 30 },
 
     // === DAMAGE ON CONTACT ===
@@ -1582,14 +1582,23 @@ export function getWeatherSpeed(pokemon, battleState) {
 // PROCESS CONTACT ABILITIES
 // ============================================================
 export function processContactAbilities(defender, attacker) {
-    if (!defender || !defender.currentAbility) return [];
-    const abilityName = getAbilityName(defender.currentAbility);
+    if (!defender || (!defender.currentAbility && !defender.currentAbilityName)) return [];
+    const abilityName = (defender.currentAbilityName || getAbilityName(defender.currentAbility)).toLowerCase();
     const abilityEffect = ABILITY_EFFECTS[abilityName];
     if (!abilityEffect) return [];
 
     const messages = [];
 
-    if (abilityEffect.trigger === 'contacted') {
+    if (abilityEffect.trigger === 'contacted' || abilityEffect.trigger === 'contact') {
+        if (abilityEffect.effect === 'random_status') {
+            if (Math.random() * 100 < (abilityEffect.chance || 0) && !attacker.statusEffect) {
+                const statuses = [STATUS.PARALYSIS, STATUS.POISON, STATUS.SLEEP];
+                const status = statuses[Math.floor(Math.random() * statuses.length)];
+                attacker.statusEffect = status;
+                messages.push(`${abilityName} de ${defender.name} causou ${STATUS_INFO[status]?.name.toLowerCase() || status}!`);
+            }
+            return messages;
+        }
         if (abilityEffect.effect === 'status') {
             if (Math.random() * 100 < (abilityEffect.chance || 0)) {
                 if (!attacker.statusEffect) {
