@@ -62,6 +62,8 @@ export class Overworld2D {
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
         this.pokemonFollowBackSprite = null;
+        this.pokemonFollowGifCanvas = null;
+        this.pokemonFollowGifCtx = null;
         this.pokemonFollowPos = { x: 16, y: 12 };
         this.pokemonFollowRenderPos = { x: 16, y: 12 };
         this.pokemonFollowDirection = 'down';
@@ -343,6 +345,8 @@ export class Overworld2D {
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
         this.pokemonFollowBackSprite = null;
+        this.pokemonFollowGifCanvas = null;
+        this.pokemonFollowGifCtx = null;
         const follower = this.game.playerTeam?.find(pokemon => !pokemon.fainted);
         if (follower) await this.loadPokemonFollowSprite(follower);
 
@@ -380,6 +384,16 @@ export class Overworld2D {
         return false;
     }
 
+    createGifCanvas(img) {
+        if (!img) return null;
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth || img.width || 96;
+        c.height = img.naturalHeight || img.height || 96;
+        const cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0, c.width, c.height);
+        return c;
+    }
+
     async loadPokemonFollowSprite(pokemon) {
         if (!pokemon) return;
         this.pokemonFollowing = pokemon;
@@ -415,6 +429,8 @@ export class Overworld2D {
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
         this.pokemonFollowBackSprite = null;
+        this.pokemonFollowGifCanvas = null;
+        this.pokemonFollowGifCtx = null;
         this.pokemonFollowTrail = [];
         if (follower) {
             await this.loadPokemonFollowSprite(follower);
@@ -1004,13 +1020,34 @@ export class Overworld2D {
             const currentSprite = useBack ? this.pokemonFollowBackSprite : this.pokemonFollowSprite;
             const flipX = !useBack && this.player.direction === 'right';
 
+            const drawW = fSize;
+            const drawH = fSize;
+            const drawXf = rpx + (this.tileW - drawW) / 2;
+            const drawYf = rpy + (this.tileH - drawH) / 2;
+
             ctx.save();
             if (flipX) {
                 ctx.translate(rpx + this.tileW / 2, 0);
                 ctx.scale(-1, 1);
                 ctx.translate(-(rpx + this.tileW / 2), 0);
             }
-            ctx.drawImage(currentSprite, rpx + (this.tileW - fSize) / 2, rpy + (this.tileH - fSize) / 2, fSize, fSize);
+
+            const isGif = currentSprite.src && currentSprite.src.endsWith('.gif');
+            if (isGif) {
+                if (!this.pokemonFollowGifCanvas) {
+                    this.pokemonFollowGifCanvas = document.createElement('canvas');
+                    this.pokemonFollowGifCtx = this.pokemonFollowGifCanvas.getContext('2d');
+                }
+                const gc = this.pokemonFollowGifCanvas;
+                const gctx = this.pokemonFollowGifCtx;
+                gc.width = currentSprite.naturalWidth || currentSprite.width || 96;
+                gc.height = currentSprite.naturalHeight || currentSprite.height || 96;
+                gctx.clearRect(0, 0, gc.width, gc.height);
+                gctx.drawImage(currentSprite, 0, 0, gc.width, gc.height);
+                ctx.drawImage(gc, drawXf, drawYf, drawW, drawH);
+            } else {
+                ctx.drawImage(currentSprite, drawXf, drawYf, drawW, drawH);
+            }
             ctx.restore();
         }
 
