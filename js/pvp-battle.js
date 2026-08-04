@@ -169,6 +169,8 @@ export class PVPBattle {
         const b = challengedState?.pending_action;
         if (!a || !b || challengerState.round_number !== this.round || challengedState.round_number !== this.round) return;
 
+        const previousChallengerIndex = this.myIndex;
+        const previousChallengedIndex = this.enemyIndex;
         const result = this.phase === 'switch'
             ? this.resolveSwitchActions(a, b)
             : await this.resolveActions(a, b);
@@ -178,6 +180,8 @@ export class PVPBattle {
         const payload = {
             round: this.round,
             phase: nextPhase,
+            previousChallengerIndex,
+            previousChallengedIndex,
             challengerTeam: this.serializeTeam(this.myTeam),
             challengedTeam: this.serializeTeam(this.enemyTeam),
             challengerIndex: this.myIndex,
@@ -302,10 +306,14 @@ export class PVPBattle {
     async applyResolution(payload) {
         if (!payload || payload.round !== this.round) return;
         const isChallenger = this.game.currentCharacterId === this.challenge.challenger_id;
-        const previousMyIndex = this.myIndex;
-        const previousEnemyIndex = this.enemyIndex;
-        const previousMyPokemon = this.myActivePokemon;
-        const previousEnemyPokemon = this.enemyActivePokemon;
+        const previousMyIndex = isChallenger
+            ? (payload.previousChallengerIndex ?? this.myIndex)
+            : (payload.previousChallengedIndex ?? this.myIndex);
+        const previousEnemyIndex = isChallenger
+            ? (payload.previousChallengedIndex ?? this.enemyIndex)
+            : (payload.previousChallengerIndex ?? this.enemyIndex);
+        const previousMyPokemon = this.myTeam[previousMyIndex] || this.myActivePokemon;
+        const previousEnemyPokemon = this.enemyTeam[previousEnemyIndex] || this.enemyActivePokemon;
         const previousPhase = this.phase;
         const previousMyHp = previousMyPokemon?.currentHp ?? 0;
         const previousEnemyHp = previousEnemyPokemon?.currentHp ?? 0;
