@@ -2161,7 +2161,7 @@ class PokeFuryGame {
                 this.showToast('A recompensa será sincronizada novamente.', 'warning');
             }
             await this.refreshCurrencies();
-            if (!rewardError) await showBattleMessage(`+${silverDrop} Prata!`);
+            if (!rewardError) this.showToast(`+${silverDrop} Prata recebida!`, 'success');
         }
 
         if (result === 'lose' && this.playerTeam) {
