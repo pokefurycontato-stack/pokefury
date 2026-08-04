@@ -1003,14 +1003,18 @@ const maskParticles = [];
 let maskAnimFrame = 0;
 
 export async function loadBattleMask(backgroundUrl) {
-    if (!backgroundUrl || !window.db) return null;
+    if (!backgroundUrl || !window.db) { console.log('[BattleMask] Skip load: no url or db'); return null; }
     if (maskCache.has(backgroundUrl)) return maskCache.get(backgroundUrl);
+    console.log('[BattleMask] Loading mask for:', backgroundUrl);
     try {
-        const { data } = await window.db.from('battle_effect_masks')
+        const { data, error } = await window.db.from('battle_effect_masks')
             .select('mask_data, effect_type')
             .eq('background_url', backgroundUrl)
             .maybeSingle();
-        if (!data?.mask_data || !data?.effect_type || data.effect_type === 'none') {
+        if (error) { console.error('[BattleMask] DB error:', error); maskCache.set(backgroundUrl, null); return null; }
+        if (!data) { console.log('[BattleMask] No mask row found'); maskCache.set(backgroundUrl, null); return null; }
+        if (!data.mask_data || !data.effect_type || data.effect_type === 'none') {
+            console.log('[BattleMask] Mask incomplete:', { hasData: !!data.mask_data, effect: data.effect_type });
             maskCache.set(backgroundUrl, null);
             return null;
         }
@@ -1095,6 +1099,10 @@ function spawnMaskParticle(type, maskData) {
 export function drawMaskFx(ctx, backgroundUrl) {
     const mask = maskCache.get(backgroundUrl);
     if (!mask) return;
+
+    if (maskAnimFrame === 0) {
+        console.log('[BattleMask] drawMaskFx START, type:', mask.type, 'particles:', maskParticles.length);
+    }
 
     if (maskParticles.length < 80 && maskAnimFrame % 3 === 0) {
         const p = spawnMaskParticle(mask.type, mask);

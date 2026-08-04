@@ -5462,14 +5462,17 @@ openEventsPanel() {
         const origSave = saveBtn.onclick;
         saveBtn.onclick = async () => {
             const maskBase64 = maskCanvas.toDataURL('image/png');
+            console.log('[BattleMask] Saving mask, size:', maskBase64.length, 'effect:', brushEffect);
             try {
-                await window.db.from('battle_effect_masks').upsert({
+                const { error } = await window.db.from('battle_effect_masks').upsert({
                     background_url: bgUrl,
                     mask_data: maskBase64,
                     effect_type: brushEffect,
                     brush_size: brushSize,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'background_url' });
+                if (error) console.error('[BattleMask] Save error:', error);
+                else console.log('[BattleMask] Saved OK for:', bgUrl);
             } catch (e) {
                 console.error('[BattleMask] Error saving mask:', e);
             }
