@@ -830,6 +830,11 @@ export const ABILITY_EFFECTS = {
     'protean': { trigger: 'move_type_change' },
     'libero': { trigger: 'move_type_change' },
     'color change': { trigger: 'damaged_type_change' },
+    'reflect type': { effect: 'copy_type' },
+    'soak': { effect: 'set_type', type: 'water' },
+    'magic powder': { effect: 'set_type', type: 'psychic' },
+    'trick-or-treat': { effect: 'add_type', type: 'ghost' },
+    'forest curse': { effect: 'add_type', type: 'grass' },
     'unnerve': { trigger: 'entry', effect: 'prevent_berry' },
     'anticipation': { trigger: 'entry', effect: 'none' },
     'forewarn': { trigger: 'entry', effect: 'none' },
@@ -1176,6 +1181,21 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
             attacker._substituteHp = cost;
             messages.push(`${attacker.name} criou um Substitute! (-${cost} HP)`);
         }
+        return messages;
+    }
+    if (effect.effect === 'copy_type') {
+        attacker.types = [...(defender.types || ['normal'])];
+        messages.push(`${attacker.name} copiou o tipo de ${defender.name}!`);
+        return messages;
+    }
+    if (effect.effect === 'set_type') {
+        defender.types = [effect.type];
+        messages.push(`${defender.name} tornou-se do tipo ${effect.type}!`);
+        return messages;
+    }
+    if (effect.effect === 'add_type') {
+        if (!defender.types?.includes(effect.type)) defender.types = [...(defender.types || []), effect.type];
+        messages.push(`${defender.name} recebeu o tipo ${effect.type}!`);
         return messages;
     }
 
