@@ -1058,8 +1058,8 @@ export class Overworld2D {
         const flipX = !useBack && this.player.direction === 'right';
         const flipCss = flipX ? 'scaleX(-1)' : 'none';
         const drawLeft = offsetX + (rpx + (this.tileW - spriteSize) / 2) * scaleX;
-        const followerBehind = this.player.direction === 'up';
-        const drawTop = offsetY + (rpy + (followerBehind ? this.tileH * 0.35 : 0)) * scaleY;
+        const followerBehind = this.player.direction === 'up' || this.player.direction === 'down';
+        const drawTop = offsetY + rpy * scaleY;
         const followerZ = followerBehind ? '3' : '5';
 
         this.pokemonFollowEl.style.display = 'block';
