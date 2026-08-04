@@ -133,15 +133,19 @@ export class Overworld2D {
         const mapW = this.worldCols * this.tileW;
         const mapH = this.worldRows * this.tileH;
 
-        this.canvas.width = 1920;
-        this.canvas.height = 1080;
+        this.canvas.width = mapW;
+        this.canvas.height = mapH;
+
+        const scaleX = containerW / mapW;
+        const scaleY = containerH / mapH;
+        const scale = Math.max(scaleX, scaleY);
 
         const canvasEl = this.canvas;
-        canvasEl.style.width = '100%';
-        canvasEl.style.height = '100%';
-        canvasEl.style.left = '0';
-        canvasEl.style.top = '0';
-        canvasEl.style.transform = 'none';
+        canvasEl.style.width = Math.floor(mapW * scale) + 'px';
+        canvasEl.style.height = Math.floor(mapH * scale) + 'px';
+        canvasEl.style.left = '50%';
+        canvasEl.style.top = '50%';
+        canvasEl.style.transform = 'translate(-50%, -50%)';
 
         if (!this.neonEl) {
             this.neonEl = document.createElement('div');
@@ -152,10 +156,10 @@ export class Overworld2D {
         this.mapOffsetX = 0;
         this.mapOffsetY = 0;
 
-        this.neonEl.style.left = '0';
-        this.neonEl.style.top = '0';
-        this.neonEl.style.width = '100%';
-        this.neonEl.style.height = '100%';
+        this.neonEl.style.left = Math.floor((containerW - mapW * scale) / 2) + 'px';
+        this.neonEl.style.top = Math.floor((containerH - mapH * scale) / 2) + 'px';
+        this.neonEl.style.width = Math.floor(mapW * scale) + 'px';
+        this.neonEl.style.height = Math.floor(mapH * scale) + 'px';
     }
 
     setNeonColor(mapName) {
