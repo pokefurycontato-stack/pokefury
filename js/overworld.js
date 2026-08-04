@@ -635,6 +635,23 @@ export class Overworld2D {
         }
     }
 
+    async clearAndRespawnMapPokemon() {
+        const db = window.db;
+        const charId = this.game.currentCharacterId;
+        const mapId = this.game.currentMap?.id;
+        if (!db || !charId || !mapId) return;
+
+        for (const [, el] of this.pokemonSpriteElements) el.remove();
+        this.pokemonSpriteElements.clear();
+        this.mapPokemonEntities = [];
+
+        await db.from('map_pokemon_entities').delete()
+            .eq('character_id', charId)
+            .eq('map_id', mapId);
+
+        await this.loadOrSpawnMapPokemon(mapId);
+    }
+
     async loadOrSpawnMapPokemon(mapId) {
         const db = window.db;
         const charId = this.game.currentCharacterId;
