@@ -3338,21 +3338,32 @@ class PokeFuryGame {
             updateMarkers();
         });
 
-        overlay.querySelector('#pos-save').addEventListener('click', () => {
-            localStorage.setItem('pvpBattlePositions', JSON.stringify({
+        overlay.querySelector('#pos-save').addEventListener('click', async () => {
+            const positions = {
                 playerX: playerPos.x, playerY: playerPos.y,
                 enemyX: enemyPos.x, enemyY: enemyPos.y
-            }));
+            };
+            await window.db.from('pvp_position_settings').upsert({
+                id: 1, player_x: positions.playerX, player_y: positions.playerY,
+                enemy_x: positions.enemyX, enemy_y: positions.enemyY,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+            setBattlePositions(positions);
             this.showToast('Posições salvas!', 'success');
         });
 
-        overlay.querySelector('#pos-reset').addEventListener('click', () => {
+        overlay.querySelector('#pos-reset').addEventListener('click', async () => {
             playerPos = { x: 0.25, y: 0.75 };
             enemyPos = { x: 0.72, y: 0.4 };
             step = 'player';
             instruction.textContent = 'Clique onde quer posicionar o SEU pokémon';
             instruction.style.color = '#4caf50';
             updateMarkers();
+            await window.db.from('pvp_position_settings').upsert({
+                id: 1, player_x: playerPos.x, player_y: playerPos.y,
+                enemy_x: enemyPos.x, enemy_y: enemyPos.y,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
             this.showToast('Posições resetadas!', 'info');
         });
 
@@ -6577,7 +6588,7 @@ openEventsPanel() {
 
         this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
         console.log('[PVP] PVPBattle created. Showing UI...');
-        this.showPVPBattleUI();
+        await this.showPVPBattleUI();
         console.log('[PVP] UI shown. Starting battle...');
         try {
             await this.pvpBattle.start();
@@ -6588,7 +6599,19 @@ openEventsPanel() {
         }
     }
 
-    showPVPBattleUI() {
+    async loadPvpPositionSettings() {
+        const fallback = { playerX: 0.25, playerY: 0.75, enemyX: 0.72, enemyY: 0.4 };
+        const { data } = await window.db.from('pvp_position_settings')
+            .select('player_x, player_y, enemy_x, enemy_y')
+            .eq('id', 1)
+            .maybeSingle();
+        setBattlePositions(data ? {
+            playerX: Number(data.player_x), playerY: Number(data.player_y),
+            enemyX: Number(data.enemy_x), enemyY: Number(data.enemy_y)
+        } : fallback);
+    }
+
+    async showPVPBattleUI() {
         const battle = this.pvpBattle;
         if (!battle) return;
 
@@ -6614,7 +6637,7 @@ openEventsPanel() {
         if (this.overworld2d) this.overworld2d.hide();
 
         // PVP uses its own universal positions, never the current map positions.
-        setBattlePositions(null);
+        await this.loadPvpPositionSettings();
         setBattleEffects('none', 'none');
 
         const clip = this.getBattleClipRect();
