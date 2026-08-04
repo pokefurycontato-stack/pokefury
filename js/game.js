@@ -3275,7 +3275,7 @@ class PokeFuryGame {
 
         const overlay = document.createElement('div');
         overlay.id = 'battle-pos-editor';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10000;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:20px;';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10000;background:#000;';
 
         const saved = JSON.parse(localStorage.getItem('pvpBattlePositions') || '{"playerX":0.25,"playerY":0.75,"enemyX":0.72,"enemyY":0.4}');
         let step = 'player';
@@ -3283,17 +3283,16 @@ class PokeFuryGame {
         let enemyPos = { x: saved.enemyX, y: saved.enemyY };
 
         overlay.innerHTML = `
-            <div style="color:#fff;font-size:14px;font-weight:700;text-align:center;">🎯 Editor de Posições PVP</div>
-            <div id="pos-instruction" style="color:#4caf50;font-size:12px;text-align:center;">Clique onde quer posicionar o SEU pokémon</div>
-            <div id="pos-image-container" style="position:relative;width:100vw;height:calc(100vh - 100px);border:2px solid #e94560;border-radius:8px;overflow:hidden;cursor:crosshair;">
-                <img id="pos-bg-image" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png" style="width:100%;height:100%;object-fit:cover;display:block;">
-                <div id="pos-player-marker" style="position:absolute;width:24px;height:24px;border-radius:50%;background:#4caf50;border:3px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:5;box-shadow:0 0 8px #4caf50;"></div>
-                <div id="pos-enemy-marker" style="position:absolute;width:24px;height:24px;border-radius:50%;background:#f44336;border:3px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:5;box-shadow:0 0 8px #f44336;"></div>
+            <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10002;display:flex;gap:8px;background:rgba(0,0,0,0.6);padding:8px 16px;border-radius:8px;backdrop-filter:blur(4px);">
+                <span id="pos-instruction" style="color:#4caf50;font-size:12px;font-weight:700;display:flex;align-items:center;">Clique para posicionar</span>
+                <button id="pos-save" style="padding:6px 14px;background:linear-gradient(135deg,#4caf50,#388e3c);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Salvar</button>
+                <button id="pos-reset" style="padding:6px 14px;background:rgba(255,255,255,0.15);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Resetar</button>
+                <button id="pos-close" style="padding:6px 14px;background:rgba(244,67,54,0.8);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Fechar</button>
             </div>
-            <div style="display:flex;gap:8px;">
-                <button id="pos-save" style="padding:8px 20px;background:linear-gradient(135deg,#4caf50,#388e3c);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Salvar</button>
-                <button id="pos-reset" style="padding:8px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;">Resetar</button>
-                <button id="pos-close" style="padding:8px 20px;background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.3);border-radius:6px;color:#f44336;font-size:12px;cursor:pointer;">Fechar</button>
+            <div id="pos-image-container" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;">
+                <img id="pos-bg-image" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <div id="pos-player-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#4caf50;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #4caf50;"></div>
+                <div id="pos-enemy-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#f44336;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #f44336;"></div>
             </div>
         `;
 
