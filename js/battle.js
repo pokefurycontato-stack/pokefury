@@ -206,7 +206,7 @@ export async function executeTurn(attacker, defender, move, battleState) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, statusMove: true, statusMessages: secondaryMessages };
     }
 
-    const result = await calculateDamage(attacker, defender, move);
+    const result = await calculateDamage(attacker, defender, move, battleState);
 
     if (result.missed) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
@@ -223,7 +223,7 @@ export async function executeTurn(attacker, defender, move, battleState) {
     if (effect && effect.effect === 'multi_hit') {
         hits = randomInt(effect.minHits, effect.maxHits);
         for (let i = 0; i < hits; i++) {
-            const hitResult = await calculateDamage(attacker, defender, move);
+            const hitResult = await calculateDamage(attacker, defender, move, battleState);
             if (!hitResult.missed) {
                 let hitDmg = applyStatStages(attacker, defender, move, hitResult.damage);
                 hitDmg = applyWeatherDamageModifier(attacker, move, hitDmg, battleState);

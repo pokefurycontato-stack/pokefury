@@ -45,6 +45,7 @@ export const WEATHER = {
     RAIN: 'rain',
     SUN: 'sun',
     SANDSTORM: 'sandstorm',
+    SNOW: 'snow',
     HAIL: 'hail'
 };
 
@@ -52,6 +53,7 @@ export const WEATHER_INFO = {
     rain: { name: 'Chuva', duration: 5, icon: '🌧️' },
     sun: { name: 'Sol Intenso', duration: 5, icon: '☀️' },
     sandstorm: { name: 'Tempestade de Areia', duration: 5, icon: '🏜️' },
+    snow: { name: 'Neve', duration: 5, icon: '❄️' },
     hail: { name: 'Neve', duration: 5, icon: '❄️' }
 };
 
@@ -78,7 +80,7 @@ export function getWeatherSpeedMult(weather, abilityName) {
     if (weather === 'rain' && name === 'swift swim') return 2;
     if (weather === 'sun' && name === 'chlorophyll') return 2;
     if (weather === 'sandstorm' && name === 'sand rush') return 2;
-    if (weather === 'hail' && name === 'slush rush') return 2;
+    if ((weather === 'snow' || weather === 'hail') && name === 'slush rush') return 2;
     return 1;
 }
 
@@ -495,7 +497,8 @@ const MOVE_EFFECTS_BY_NAME = {
     'rain dance': { effect: 'weather', weather: 'rain' },
     'sunny day': { effect: 'weather', weather: 'sun' },
     'sandstorm': { effect: 'weather', weather: 'sandstorm' },
-    'hail': { effect: 'weather', weather: 'hail' },
+    'hail': { effect: 'weather', weather: 'snow' },
+    'snowscape': { effect: 'weather', weather: 'snow' },
 
     // Self stat drop moves
     'close combat': { effect: 'stat_drop', stat: 'defense', stages: 1, selfStatDrop: { stat: 'spDef', stages: 1 } },
@@ -640,7 +643,7 @@ export const ABILITY_EFFECTS = {
     // === WEATHER ENTRY ===
     'drizzle': { trigger: 'entry', effect: 'weather', weather: 'rain' },
     'drought': { trigger: 'entry', effect: 'weather', weather: 'sun' },
-    'snow warning': { trigger: 'entry', effect: 'weather', weather: 'hail' },
+    'snow warning': { trigger: 'entry', effect: 'weather', weather: 'snow' },
     'sand stream': { trigger: 'entry', effect: 'weather', weather: 'sandstorm' },
 
     // === TERRAIN ENTRY ===
@@ -671,11 +674,11 @@ export const ABILITY_EFFECTS = {
     'swift swim': { trigger: 'weather_speed', weather: 'rain', multiplier: 2 },
     'chlorophyll': { trigger: 'weather_speed', weather: 'sun', multiplier: 2 },
     'sand rush': { trigger: 'weather_speed', weather: 'sandstorm', multiplier: 2 },
-    'slush rush': { trigger: 'weather_speed', weather: 'hail', multiplier: 2 },
+    'slush rush': { trigger: 'weather_speed', weather: 'snow', multiplier: 2 },
 
     // === WEATHER CONDITIONAL ===
     'rain dish': { trigger: 'end_of_turn', condition: 'rain', effect: 'heal', healPercent: 1/16 },
-    'ice body': { trigger: 'end_of_turn', condition: 'hail', effect: 'heal', healPercent: 1/16 },
+    'ice body': { trigger: 'end_of_turn', condition: 'snow', effect: 'heal', healPercent: 1/16 },
     'dry skin': { trigger: 'weather_heal', rainHeal: 1/8, sunDmg: 1/8, fireWeakness: 1.25 },
     'leaf guard': { trigger: 'weather_status_immune', weather: 'sun', statuses: [STATUS.BURN, STATUS.POISON, STATUS.PARALYSIS, STATUS.SLEEP, STATUS.FREEZE] },
     'water compaction': { trigger: 'weather_stat', weather: 'rain', stat: 'defense', stages: 1 },

@@ -122,7 +122,7 @@ export function getPokemonItemEffect(pokemon) {
 // ============================================================
 // DAMAGE CALCULATION with held items
 // ============================================================
-export async function calculateDamage(attacker, defender, move) {
+export async function calculateDamage(attacker, defender, move, battleState = null) {
     if (!attacker?.stats || !defender?.stats) {
         return { damage: 0, effectiveness: 1, critical: false, missed: true };
     }
@@ -150,6 +150,11 @@ export async function calculateDamage(attacker, defender, move) {
         if (defenderItem.effect === 'eviolite' && defender.isFullyEvolved === false) {
             defense *= 1.5;
         }
+    }
+
+    // Gen 9 Snow grants Ice-types 1.5x Defense against physical moves.
+    if (battleState?.weather === 'snow' && move.category === 'physical' && defender.types?.includes('ice')) {
+        defense *= 1.5;
     }
 
     if (attackerAbilityName === 'huge power' || attackerAbilityName === 'pure power') {
