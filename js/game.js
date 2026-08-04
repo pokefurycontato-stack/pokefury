@@ -2542,7 +2542,7 @@ class PokeFuryGame {
     }
 
     async saveTeam() {
-        await window.GameData.saveTeam(this.playerTeam);
+        return window.GameData.saveTeam(this.playerTeam);
     }
 
     updateBiomeGrid() {
@@ -3193,9 +3193,16 @@ class PokeFuryGame {
             }
         }
 
-        await window.GameData.deleteBoxPokemon(boxData.id);
+        pokemon.dbId = boxData.id;
+        pokemon.nickname = boxData.nickname || pokemon.nickname;
         this.playerTeam.push(pokemon);
-        await this.saveTeam();
+        const saved = await this.saveTeam();
+        if (!saved) {
+            this.playerTeam.pop();
+            this.showToast('Não foi possível mover o Pokémon. Ele continua no PC.', 'error');
+            return;
+        }
+        await window.GameData.deleteBoxPokemon(boxData.id);
         this.updatePartyPanel();
         this.renderPCBox();
     }
@@ -6258,8 +6265,10 @@ openEventsPanel() {
 
         const listEl = popup.querySelector('#team-editor-list');
         allPokemon.forEach((p, i) => {
-            const isSelected = selectedIds.includes(p.dbId);
+            const pokemonId = p.dbId || p.id;
+            const isSelected = pokemonId ? selectedIds.includes(pokemonId) : false;
             const row = document.createElement('div');
+            if (!pokemonId) row.style.opacity = '0.5';
             row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer;transition:all 0.2s;border:1px solid ${isSelected ? 'rgba(233,69,96,0.4)' : 'rgba(255,255,255,0.06)'};background:${isSelected ? 'rgba(233,69,96,0.1)' : 'transparent'};`;
             row.innerHTML = `
                 <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
@@ -6271,10 +6280,14 @@ openEventsPanel() {
                 <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${isSelected ? '#e94560' : 'rgba(255,255,255,0.2)'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#e94560;">${isSelected ? '✓' : ''}</div>
             `;
             row.addEventListener('click', () => {
+                if (!pokemonId) {
+                    this.showToast('Este Pokémon ainda está sendo salvo. Tente novamente.', 'warning');
+                    return;
+                }
                 if (isSelected) {
-                    selectedIds = selectedIds.filter(id => id !== p.dbId);
+                    selectedIds = selectedIds.filter(id => id !== pokemonId);
                 } else if (selectedIds.length < 6) {
-                    selectedIds.push(p.dbId);
+                    selectedIds.push(pokemonId);
                 }
                 this.refreshTeamEditor(listEl, allPokemon, selectedIds);
             });
@@ -6299,8 +6312,10 @@ openEventsPanel() {
     refreshTeamEditor(listEl, myPokemon, selectedIds) {
         listEl.innerHTML = '';
         myPokemon.forEach((p, i) => {
-            const isSelected = selectedIds.includes(p.dbId);
+            const pokemonId = p.dbId || p.id;
+            const isSelected = pokemonId ? selectedIds.includes(pokemonId) : false;
             const row = document.createElement('div');
+            if (!pokemonId) row.style.opacity = '0.5';
             row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer;transition:all 0.2s;border:1px solid ${isSelected ? 'rgba(233,69,96,0.4)' : 'rgba(255,255,255,0.06)'};background:${isSelected ? 'rgba(233,69,96,0.1)' : 'transparent'};`;
             row.innerHTML = `
                 <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
@@ -6312,11 +6327,15 @@ openEventsPanel() {
                 <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${isSelected ? '#e94560' : 'rgba(255,255,255,0.2)'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#e94560;">${isSelected ? '✓' : ''}</div>
             `;
             row.addEventListener('click', () => {
+                if (!pokemonId) {
+                    this.showToast('Este Pokémon ainda está sendo salvo. Tente novamente.', 'warning');
+                    return;
+                }
                 if (isSelected) {
-                    const idx = selectedIds.indexOf(p.dbId);
+                    const idx = selectedIds.indexOf(pokemonId);
                     if (idx >= 0) selectedIds.splice(idx, 1);
                 } else if (selectedIds.length < 6) {
-                    selectedIds.push(p.dbId);
+                    selectedIds.push(pokemonId);
                 }
                 this.refreshTeamEditor(listEl, myPokemon, selectedIds);
             });

@@ -126,6 +126,11 @@ const GameData = {
     },
 
     async _doSaveTeam(pokemonList) {
+        if (!pokemonList || pokemonList.length === 0) {
+            console.warn('[GameData] Refusing to replace team with an empty list');
+            return false;
+        }
+
         const inserts = pokemonList.map((pokemon, i) => {
             const insert = {
                 user_id: this.userId,
@@ -162,20 +167,23 @@ const GameData = {
             return insert;
         });
 
-        const existingIds = inserts.filter(i => i.id).map(i => i.id);
-        if (existingIds.length > 0) {
-            await window.db.from('pokemon_team').delete()
-                .eq('character_id', this.currentCharacterId)
-                .not('id', 'in', `(${existingIds.join(',')})`);
-        } else {
-            await window.db.from('pokemon_team').delete()
-                .eq('character_id', this.currentCharacterId);
-        }
-
         const { data: saved, error } = await window.db
             .from('pokemon_team')
             .upsert(inserts, { onConflict: 'id' })
             .select();
+
+        if (error || !saved || saved.length !== inserts.length) {
+            console.error('[GameData] Team save failed; existing rows were preserved:', error || 'incomplete response');
+            return false;
+        }
+
+        const savedIds = saved.map(row => row.id).filter(Boolean);
+        if (savedIds.length > 0) {
+            const { error: cleanupError } = await window.db.from('pokemon_team').delete()
+                .eq('character_id', this.currentCharacterId)
+                .not('id', 'in', `(${savedIds.join(',')})`);
+            if (cleanupError) console.error('[GameData] Old team cleanup failed:', cleanupError);
+        }
 
         if (saved) {
             for (let i = 0; i < pokemonList.length && i < saved.length; i++) {
@@ -185,7 +193,7 @@ const GameData = {
             }
         }
 
-        return !error;
+        return true;
     },
 
     async addPokemonToTeam(pokemon) {
