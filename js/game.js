@@ -2075,6 +2075,7 @@ class PokeFuryGame {
             if (wrapper) wrapper.style.display = '';
             showScreen('hud');
             this.overworld2d?.show();
+            if (this.overworld2d) this.overworld2d.updateFollower();
         };
         restoreBattleView();
         setTimeout(restoreBattleView, 100);
