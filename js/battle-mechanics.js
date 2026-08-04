@@ -736,6 +736,11 @@ export const ABILITY_EFFECTS = {
     'vital spirit': { trigger: 'status_immune', statuses: [STATUS.SLEEP] },
     'own tempo': { trigger: 'status_immune', statuses: ['confusion'] },
     'oblivious': { trigger: 'status_immune', statuses: ['attract'] },
+    'clear body': { trigger: 'stat_drop_immune' },
+    'white smoke': { trigger: 'stat_drop_immune' },
+    'full metal body': { trigger: 'stat_drop_immune' },
+    'hyper cutter': { trigger: 'stat_drop_immune', stats: ['attack'] },
+    'big pecks': { trigger: 'stat_drop_immune', stats: ['defense'] },
     'pasteveil': { trigger: 'status_immune', statuses: [STATUS.POISON] },
 
     // === MISC IMMUNE ===
@@ -1138,6 +1143,13 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
     if (effect.effect === 'stat_drop') {
         defender._statStages = defender._statStages || {};
 
+        const statAbility = getAbilityName(defender.currentAbility);
+        const statAbilityEffect = ABILITY_EFFECTS[statAbility];
+        if (statAbilityEffect?.trigger === 'stat_drop_immune' && (!statAbilityEffect.stats || statAbilityEffect.stats.includes(effect.stat))) {
+            messages.push(`${defender.name} não teve ${effect.stat} reduzido por ${statAbility}!`);
+            return messages;
+        }
+
         // Check Mist
         if (defender._teamEffects && defender._teamEffects._mist > 0) {
             messages.push(`${defender.name} está protegido pela Névoa!`);
@@ -1536,6 +1548,12 @@ export function processEntryAbilities(pokemon, opponent, battleState) {
             messages.push(`${info ? info.icon : ''} Terreno ${info ? info.name : effect.terrain} ativado!`);
         }
         if (effect.effect === 'stat_drop_opponent' && opponent) {
+            const opponentAbility = getAbilityName(opponent.currentAbility);
+            const opponentAbilityEffect = ABILITY_EFFECTS[opponentAbility];
+            if (opponentAbilityEffect?.trigger === 'stat_drop_immune' && (!opponentAbilityEffect.stats || opponentAbilityEffect.stats.includes(effect.stat))) {
+                messages.push(`${opponent.name} ignorou Intimidate por ${opponentAbility}!`);
+                return messages;
+            }
             opponent._statStages = opponent._statStages || {};
             opponent._statStages[effect.stat] = Math.max(-6, (opponent._statStages[effect.stat] || 0) - effect.stages);
             messages.push(`${abilityName} de ${pokemon.name} reduziu o ${effect.stat === 'attack' ? 'Ataque' : effect.stat} de ${opponent.name}!`);
