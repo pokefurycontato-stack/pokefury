@@ -757,7 +757,8 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
         sy = canvasRect.height / VIRTUAL_H;
     }
 
-    const fixedSize = 120;
+    const isWildFullscreen = document.getElementById('wild-fullscreen');
+    const fixedSize = isWildFullscreen ? Math.round(240 * sizeScale) : 120;
     const maxDim = Math.round(fixedSize * Math.min(sx, sy));
     el.style.width = Math.round(maxDim) + 'px';
     el.style.height = Math.round(maxDim) + 'px';

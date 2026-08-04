@@ -6814,7 +6814,8 @@ openEventsPanel() {
 
     async playPVPExit(side, pokemon) {
         const fullscreen = document.getElementById('pvp-fullscreen');
-        if (!fullscreen || !pokemon) return;
+        const activeFullscreen = fullscreen || document.getElementById('wild-fullscreen');
+        if (!activeFullscreen || !pokemon) return;
         const sprites = getBattlePokemonSprites();
         const sprite = sprites[side];
         const point = this.getPVPBattlePoint(side);
@@ -6834,7 +6835,7 @@ openEventsPanel() {
         const ballX = point.x + direction * 170;
         ball.style.cssText = `position:absolute;left:${ballX - 14}px;top:${point.y - 14}px;width:28px;height:28px;border:3px solid #20242e;border-radius:50%;background:linear-gradient(#e53935 0 47%,#20242e 47% 55%,#f5f7fa 55%);box-shadow:0 0 14px rgba(255,255,255,.7);opacity:0;`;
         overlay.appendChild(ball);
-        fullscreen.appendChild(overlay);
+        activeFullscreen.appendChild(overlay);
 
         oldSprite.animate([
             { transform: 'translate(0,0) scale(1)', opacity: 1 },
@@ -6853,7 +6854,9 @@ openEventsPanel() {
 
     async playPVPEntrance(side, pokemon) {
         const fullscreen = document.getElementById('pvp-fullscreen');
-        if (!fullscreen || !pokemon) return;
+        const activeFullscreen = fullscreen || document.getElementById('wild-fullscreen');
+        if (!activeFullscreen || !pokemon) return;
+        await new Promise(resolve => requestAnimationFrame(resolve));
         const sprites = getBattlePokemonSprites();
         const sprite = sprites[side];
         if (!sprite) return;
@@ -6868,7 +6871,7 @@ openEventsPanel() {
         const flash = document.createElement('div');
         flash.style.cssText = `position:absolute;left:${point.x - 55}px;top:${point.y - 55}px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95),rgba(111,184,255,.35),transparent 70%);opacity:0;`;
         overlay.appendChild(flash);
-        fullscreen.appendChild(overlay);
+        activeFullscreen.appendChild(overlay);
 
         sprite.style.opacity = '0';
         ball.animate([
