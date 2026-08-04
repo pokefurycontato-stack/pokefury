@@ -1028,6 +1028,7 @@ export async function loadBattleMask(backgroundUrl) {
         const maskData = mctx.getImageData(0, 0, VIRTUAL_W, VIRTUAL_H);
         const result = { canvas: maskCanvas, data: maskData, type: data.effect_type };
         maskCache.set(backgroundUrl, result);
+        console.log('[BattleMask] Loaded mask:', data.effect_type, 'size:', maskData.data.length);
         return result;
     } catch (e) {
         console.warn('[BattleMask] Failed to load mask:', e);
@@ -1095,11 +1096,15 @@ export function drawMaskFx(ctx, backgroundUrl) {
     const mask = maskCache.get(backgroundUrl);
     if (!mask) return;
 
-    if (maskParticles.length < 60 && maskAnimFrame % 4 === 0) {
+    if (maskParticles.length < 80 && maskAnimFrame % 3 === 0) {
         const p = spawnMaskParticle(mask.type, mask);
         if (p) maskParticles.push(p);
     }
     maskAnimFrame++;
+
+    if (maskAnimFrame % 60 === 0) {
+        console.log('[BattleMask] Particles:', maskParticles.length, 'type:', mask.type);
+    }
 
     for (let i = maskParticles.length - 1; i >= 0; i--) {
         const p = maskParticles[i];
@@ -1117,16 +1122,16 @@ export function drawMaskFx(ctx, backgroundUrl) {
         switch (p.type) {
             case 'glow': {
                 const r = p.radius + (p.maxRadius - p.radius) * progress;
-            const alpha = 0.3 * (1 - progress);
-            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-            grad.addColorStop(0, p.color + alpha + ')');
-            grad.addColorStop(1, p.color + '0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-            ctx.fill();
-            break;
-        }
+                const alpha = 0.5 * (1 - progress);
+                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+                grad.addColorStop(0, p.color + alpha + ')');
+                grad.addColorStop(1, p.color + '0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
             case 'grass': {
             const sway = Math.sin(p.sway + p.age * 0.1) * 3;
             ctx.fillStyle = p.color;
@@ -1144,36 +1149,36 @@ export function drawMaskFx(ctx, backgroundUrl) {
             break;
         }
             case 'fire': {
-            p.x += p.vx;
-            p.y += p.vy;
-            const alpha = 0.7 * (1 - progress);
-            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-            grad.addColorStop(0, `rgba(255,200,50,${alpha})`);
-            grad.addColorStop(0.5, `rgba(255,100,20,${alpha * 0.6})`);
-            grad.addColorStop(1, `rgba(200,30,0,0)`);
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-            break;
-        }
+                p.x += p.vx;
+                p.y += p.vy;
+                const alpha = 0.9 * (1 - progress);
+                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                grad.addColorStop(0, `rgba(255,200,50,${alpha})`);
+                grad.addColorStop(0.5, `rgba(255,100,20,${alpha * 0.7})`);
+                grad.addColorStop(1, `rgba(200,30,0,0)`);
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
             case 'fog': {
-            p.x += p.vx;
-            p.y += p.vy;
-            const alpha = 0.12 * (1 - progress);
-            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
-            grad.addColorStop(0, p.color + alpha + ')');
-            grad.addColorStop(1, p.color + '0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-            ctx.fill();
-            break;
-        }
+                p.x += p.vx;
+                p.y += p.vy;
+                const alpha = 0.2 * (1 - progress);
+                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+                grad.addColorStop(0, p.color + alpha + ')');
+                grad.addColorStop(1, p.color + '0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
             case 'sparkles': {
-            const alpha = 0.8 * (1 - progress);
-            ctx.strokeStyle = `rgba(255,255,200,${alpha})`;
-            ctx.lineWidth = 1;
+                const alpha = 1.0 * (1 - progress);
+                ctx.strokeStyle = `rgba(255,255,150,${alpha})`;
+                ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p.x + Math.cos(p.boltAngle) * p.boltLen, p.y + Math.sin(p.boltAngle) * p.boltLen);
