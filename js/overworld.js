@@ -72,13 +72,6 @@ export class Overworld2D {
         this.wallpaperImg = new Image();
         this.wallpaperImg.src = 'assets/wallpapergrid.jpeg';
 
-        this.bgVideo = document.getElementById('game-bg-video');
-        this.bgVideo.src = 'assets/campobatalha.mp4';
-        this.bgVideo.loop = true;
-        this.bgVideo.muted = true;
-        this.bgVideo.playsInline = true;
-        this.bgVideo.play().catch(() => {});
-
         this.playerSprites = {};
         this.loaded = false;
         this.frameCount = 0;
