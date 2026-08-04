@@ -5324,31 +5324,60 @@ openEventsPanel() {
         function resizeBrushCanvas() {
             brushCanvas.width = preview.clientWidth;
             brushCanvas.height = preview.clientHeight;
-        }
-
-        function getBrushPos(e) {
-            const rect = preview.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            const x = (clientX - rect.left) / rect.width;
-            const y = (clientY - rect.top) / rect.height;
-            return { x, y, px: clientX - rect.left, py: clientY - rect.top };
-        }
-
-        function paintBrush(x, y) {
-            const mx = x * MASK_W;
-            const my = y * MASK_H;
-            const bs = brushSize * (MASK_W / preview.clientWidth);
-            maskCtx.beginPath();
-            maskCtx.arc(mx, my, bs / 2, 0, Math.PI * 2);
-            maskCtx.fillStyle = '#fff';
-            maskCtx.fill();
             renderBrushPreview();
         }
 
-        function eraseBrush(x, y) {
-            const mx = x * MASK_W;
-            const my = y * MASK_H;
+        function renderBrushPreview() {
+            brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
+            if (!brushActive) return;
+            brushCtx.save();
+            brushCtx.fillStyle = 'rgba(233,69,96,0.35)';
+            const sw = brushCanvas.width / MASK_W;
+            const sh = brushCanvas.height / MASK_H;
+            const imgData = maskCtx.getImageData(0, 0, MASK_W, MASK_H);
+            for (let y = 0; y < MASK_H; y += 4) {
+                for (let x = 0; x < MASK_W; x += 4) {
+                    const idx = (y * MASK_W + x) * 4;
+                    if (imgData.data[idx] > 128) {
+                        brushCtx.fillRect(x * sw, y * sh, 4 * sw + 1, 4 * sh + 1);
+                    }
+                }
+            }
+            brushCtx.restore();
+        }
+
+        function handleBrushMove(clientX, clientY) {
+            if (!brushActive) return;
+            const rect = preview.getBoundingClientRect();
+            const nx = (clientX - rect.left) / rect.width;
+            const ny = (clientY - rect.top) / rect.height;
+            if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return;
+
+            brushCursor.style.left = (clientX - rect.left) + 'px';
+            brushCursor.style.top = (clientY - rect.top) + 'px';
+            brushCursor.style.width = brushSize + 'px';
+            brushCursor.style.height = brushSize + 'px';
+
+            if (isPainting) {
+                const mx = nx * MASK_W;
+                const my = ny * MASK_H;
+                const bs = brushSize * (MASK_W / preview.clientWidth);
+                maskCtx.beginPath();
+                maskCtx.arc(mx, my, bs / 2, 0, Math.PI * 2);
+                maskCtx.fillStyle = '#fff';
+                maskCtx.fill();
+                renderBrushPreview();
+            }
+        }
+
+        function handleBrushErase(clientX, clientY) {
+            if (!brushActive) return;
+            const rect = preview.getBoundingClientRect();
+            const nx = (clientX - rect.left) / rect.width;
+            const ny = (clientY - rect.top) / rect.height;
+            if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return;
+            const mx = nx * MASK_W;
+            const my = ny * MASK_H;
             const bs = brushSize * (MASK_W / preview.clientWidth);
             maskCtx.save();
             maskCtx.globalCompositeOperation = 'destination-out';
@@ -5359,49 +5388,40 @@ openEventsPanel() {
             renderBrushPreview();
         }
 
-        function renderBrushPreview() {
-            brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
-            brushCtx.save();
-            brushCtx.globalCompositeOperation = 'source-over';
-            brushCtx.fillStyle = 'rgba(233,69,96,0.25)';
-            brushCtx.fillRect(0, 0, brushCanvas.width, brushCanvas.height);
-            brushCtx.globalCompositeOperation = 'destination-out';
-            brushCtx.drawImage(maskCanvas, 0, 0, brushCanvas.width, brushCanvas.height);
-            brushCtx.restore();
-        }
-
-        brushCanvas.addEventListener('mousedown', (e) => {
+        preview.addEventListener('mousedown', (e) => {
+            if (!brushActive) return;
+            e.preventDefault();
             isPainting = true;
-            const pos = getBrushPos(e);
-            if (e.button === 2 || e.ctrlKey) eraseBrush(pos.x, pos.y);
-            else paintBrush(pos.x, pos.y);
+            if (e.button === 2 || e.ctrlKey) handleBrushErase(e.clientX, e.clientY);
+            else handleBrushMove(e.clientX, e.clientY);
         });
-        brushCanvas.addEventListener('mousemove', (e) => {
-            const pos = getBrushPos(e);
-            brushCursor.style.left = pos.px + 'px';
-            brushCursor.style.top = pos.py + 'px';
-            brushCursor.style.width = brushSize + 'px';
-            brushCursor.style.height = brushSize + 'px';
+        preview.addEventListener('mousemove', (e) => {
+            if (!brushActive) return;
             if (isPainting) {
-                if (e.buttons === 2 || e.ctrlKey) eraseBrush(pos.x, pos.y);
-                else paintBrush(pos.x, pos.y);
+                if (e.buttons === 2 || e.ctrlKey) handleBrushErase(e.clientX, e.clientY);
+                else handleBrushMove(e.clientX, e.clientY);
+            } else {
+                brushCursor.style.left = (e.clientX - preview.getBoundingClientRect().left) + 'px';
+                brushCursor.style.top = (e.clientY - preview.getBoundingClientRect().top) + 'px';
+                brushCursor.style.width = brushSize + 'px';
+                brushCursor.style.height = brushSize + 'px';
             }
         });
-        brushCanvas.addEventListener('mouseup', () => { isPainting = false; });
-        brushCanvas.addEventListener('mouseleave', () => { isPainting = false; brushCursor.style.display = 'none'; });
-        brushCanvas.addEventListener('mouseenter', () => { if (brushActive) brushCursor.style.display = 'block'; });
-        brushCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        preview.addEventListener('mouseup', () => { isPainting = false; });
+        preview.addEventListener('mouseleave', () => { isPainting = false; brushCursor.style.display = 'none'; });
+        preview.addEventListener('mouseenter', () => { if (brushActive) brushCursor.style.display = 'block'; });
+        preview.addEventListener('contextmenu', (e) => { if (brushActive) e.preventDefault(); });
 
-        brushCanvas.addEventListener('touchstart', (e) => {
+        preview.addEventListener('touchstart', (e) => {
+            if (!brushActive) return;
             isPainting = true;
-            const pos = getBrushPos(e);
-            paintBrush(pos.x, pos.y);
+            handleBrushMove(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
-        brushCanvas.addEventListener('touchmove', (e) => {
-            const pos = getBrushPos(e);
-            paintBrush(pos.x, pos.y);
+        preview.addEventListener('touchmove', (e) => {
+            if (!brushActive) return;
+            handleBrushMove(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
-        brushCanvas.addEventListener('touchend', () => { isPainting = false; });
+        preview.addEventListener('touchend', () => { isPainting = false; });
 
         const brushBtn = document.createElement('button');
         brushBtn.textContent = '🖌️ Pincel';
