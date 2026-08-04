@@ -304,6 +304,8 @@ export class PVPBattle {
         const previousEnemyIndex = this.enemyIndex;
         const previousMyPokemon = this.myActivePokemon;
         const previousEnemyPokemon = this.enemyActivePokemon;
+        const previousMyHp = previousMyPokemon?.currentHp ?? 0;
+        const previousEnemyHp = previousEnemyPokemon?.currentHp ?? 0;
         const mySnapshot = isChallenger ? payload.challengerTeam : payload.challengedTeam;
         const enemySnapshot = isChallenger ? payload.challengedTeam : payload.challengerTeam;
         this.myTeam = this.applySnapshot(this.myTeam, mySnapshot);
@@ -317,17 +319,19 @@ export class PVPBattle {
         await this.persistReadyState();
         this.game.addPVPBattleLog?.(payload.result?.logs || []);
         this.onStateUpdate?.();
+        if (previousMyHp > 0 && this.myTeam[previousMyIndex]?.currentHp <= 0) {
+            this.game.playPVPExit?.('player', previousMyPokemon);
+        }
+        if (previousEnemyHp > 0 && this.enemyTeam[previousEnemyIndex]?.currentHp <= 0) {
+            this.game.playPVPExit?.('enemy', previousEnemyPokemon);
+        }
         if (previousMyIndex !== this.myIndex) {
-            const animation = previousMyPokemon?.currentHp <= 0
-                ? this.game.playPVPReplacementAnimation
-                : this.game.playPVPEntrance;
-            animation?.call(this.game, 'player', previousMyPokemon, this.visibleMyActivePokemon);
+            if (previousMyHp <= 0) this.game.playPVPEntrance?.('player', this.visibleMyActivePokemon);
+            else this.game.playPVPReplacementAnimation?.('player', previousMyPokemon, this.visibleMyActivePokemon);
         }
         if (previousEnemyIndex !== this.enemyIndex) {
-            const animation = previousEnemyPokemon?.currentHp <= 0
-                ? this.game.playPVPReplacementAnimation
-                : this.game.playPVPEntrance;
-            animation?.call(this.game, 'enemy', previousEnemyPokemon, this.enemyActivePokemon);
+            if (previousEnemyHp <= 0) this.game.playPVPEntrance?.('enemy', this.enemyActivePokemon);
+            else this.game.playPVPReplacementAnimation?.('enemy', previousEnemyPokemon, this.enemyActivePokemon);
         }
         this.game.playPVPActionEffects?.(payload.result?.effects || [], isChallenger);
         if (this.needsForcedSwitch) this.game.openPVPSwitchSelector?.(true);
