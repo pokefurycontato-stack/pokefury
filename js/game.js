@@ -3245,7 +3245,7 @@ class PokeFuryGame {
 
         const battlePosBtn = document.getElementById('admin-btn-battle-pos');
         if (battlePosBtn) {
-            battlePosBtn.onclick = () => this.openBattlePositionEditor();
+            battlePosBtn.onclick = () => this.openPvpPositionEditor();
         }
 
         // Sidebar Premium buttons
@@ -3270,7 +3270,7 @@ class PokeFuryGame {
         }
     }
 
-    openBattlePositionEditor() {
+    openPvpPositionEditor() {
         if (!window.isAdmin) return;
 
         const overlay = document.createElement('div');
