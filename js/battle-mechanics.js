@@ -383,6 +383,10 @@ const MOVE_EFFECTS = {
 // --- MOVE EFFECTS BY NAME ---
 const MOVE_EFFECTS_BY_NAME = {
     'substitute': { effect: 'substitute' },
+    'haze': { effect: 'clear_stages' },
+    'clear smog': { effect: 'clear_defender_stages' },
+    'psych up': { effect: 'copy_stages' },
+    'topsy-turvy': { effect: 'invert_defender_stages' },
     'thunder wave': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
     'will-o-wisp': { effect: 'status', status: STATUS.BURN, chance: 85 },
     'glare': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
@@ -1117,6 +1121,28 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
             attacker._substituteHp = cost;
             messages.push(`${attacker.name} criou um Substitute! (-${cost} HP)`);
         }
+        return messages;
+    }
+
+    if (effect.effect === 'clear_stages') {
+        attacker._statStages = { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0, accuracy: 0 };
+        defender._statStages = { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0, accuracy: 0 };
+        messages.push('Todos os estágios de atributos foram zerados!');
+        return messages;
+    }
+    if (effect.effect === 'clear_defender_stages') {
+        defender._statStages = { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0, accuracy: 0 };
+        messages.push(`Os estágios de ${defender.name} foram zerados!`);
+        return messages;
+    }
+    if (effect.effect === 'copy_stages') {
+        attacker._statStages = { ...(defender._statStages || {}) };
+        messages.push(`${attacker.name} copiou os estágios de atributos de ${defender.name}!`);
+        return messages;
+    }
+    if (effect.effect === 'invert_defender_stages') {
+        defender._statStages = Object.fromEntries(Object.entries(defender._statStages || {}).map(([stat, value]) => [stat, -value]));
+        messages.push(`Os estágios de ${defender.name} foram invertidos!`);
         return messages;
     }
 
