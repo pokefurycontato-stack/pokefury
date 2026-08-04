@@ -27,9 +27,15 @@ export class TypeEffects {
 
     _resize() {
         const mainArea = document.getElementById('main-area');
-        if (!mainArea || !this.canvas) return;
-        this.canvas.width = mainArea.offsetWidth;
-        this.canvas.height = mainArea.offsetHeight;
+        const fullscreen = document.getElementById('pvp-fullscreen');
+        if (!this.canvas) return;
+        if (fullscreen) {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+        } else if (mainArea) {
+            this.canvas.width = mainArea.offsetWidth;
+            this.canvas.height = mainArea.offsetHeight;
+        }
     }
 
     _sleep(ms) {

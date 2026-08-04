@@ -6612,6 +6612,10 @@ openEventsPanel() {
         try {
             await this.pvpBattle.start();
             console.log('[PVP] Battle started successfully');
+            await Promise.all([
+                this.playPVPEntrance('player', this.pvpBattle.visibleMyActivePokemon),
+                this.playPVPEntrance('enemy', this.pvpBattle.enemyActivePokemon)
+            ]);
         } catch (e) {
             console.error('[PVP] Battle start error:', e);
             this.showToast('Erro ao iniciar batalha: ' + e.message, 'error');
@@ -6624,10 +6628,11 @@ openEventsPanel() {
             .select('player_x, player_y, enemy_x, enemy_y')
             .eq('id', 1)
             .maybeSingle();
-        setBattlePositions(data ? {
+        this.pvpPositionSettings = data ? {
             playerX: Number(data.player_x), playerY: Number(data.player_y),
             enemyX: Number(data.enemy_x), enemyY: Number(data.enemy_y)
-        } : fallback);
+        } : fallback;
+        setBattlePositions(this.pvpPositionSettings);
     }
 
     async showPVPBattleUI() {
@@ -6694,11 +6699,79 @@ openEventsPanel() {
         `;
         pvpFullscreen.appendChild(pvpUI);
 
+        if (this.typeEffects?.canvas) {
+            this.typeEffects.canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:40;';
+            pvpFullscreen.appendChild(this.typeEffects.canvas);
+            this.typeEffects._resize();
+        }
+
         battle.onStateUpdate = () => this.updatePVPBattleUI();
         battle.onBattleEnd = (result) => this.endPVPBattle(result);
 
         this.updatePVPBattleUI();
         this.setupPVPBattleEvents();
+    }
+
+    getPVPBattlePoint(side) {
+        const positions = this.pvpPositionSettings || { playerX: .25, playerY: .75, enemyX: .72, enemyY: .4 };
+        return side === 'player'
+            ? { x: positions.playerX * window.innerWidth, y: positions.playerY * window.innerHeight }
+            : { x: positions.enemyX * window.innerWidth, y: positions.enemyY * window.innerHeight };
+    }
+
+    async playPVPActionEffects(effects, isChallenger) {
+        if (!this.typeEffects || !Array.isArray(effects)) return;
+        for (const effect of effects) {
+            const targetSide = (effect.targetSide === 'challenger') === isChallenger ? 'player' : 'enemy';
+            const attackerSide = (effect.attackerSide === 'challenger') === isChallenger ? 'player' : 'enemy';
+            const target = this.getPVPBattlePoint(targetSide);
+            const attacker = this.getPVPBattlePoint(attackerSide);
+            if (effect.category === 'status') {
+                await this.typeEffects.playBuffEffect(attacker.x, attacker.y, effect.type);
+            } else {
+                await this.typeEffects.playEffect(effect.type, target.x, target.y, effect.power || 50);
+            }
+        }
+    }
+
+    async playPVPEntrance(side, pokemon) {
+        const fullscreen = document.getElementById('pvp-fullscreen');
+        if (!fullscreen || !pokemon) return;
+        const sprites = getBattlePokemonSprites();
+        const sprite = sprites[side];
+        if (!sprite) return;
+        const point = this.getPVPBattlePoint(side);
+        const direction = side === 'player' ? -1 : 1;
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;';
+
+        const ball = document.createElement('div');
+        ball.style.cssText = `position:absolute;left:${point.x - 15}px;top:${point.y - 15}px;width:30px;height:30px;border:3px solid #20242e;border-radius:50%;background:linear-gradient(#e53935 0 47%,#20242e 47% 55%,#f5f7fa 55%);box-shadow:0 0 16px rgba(255,255,255,.8);`;
+        overlay.appendChild(ball);
+        const flash = document.createElement('div');
+        flash.style.cssText = `position:absolute;left:${point.x - 55}px;top:${point.y - 55}px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95),rgba(111,184,255,.35),transparent 70%);opacity:0;`;
+        overlay.appendChild(flash);
+        fullscreen.appendChild(overlay);
+
+        sprite.style.opacity = '0';
+        ball.animate([
+            { transform: `translateX(${direction * 180}px) translateY(35px) rotate(0deg) scale(.65)` },
+            { transform: `translateX(${direction * 65}px) translateY(-55px) rotate(220deg) scale(1.05)`, offset: .55 },
+            { transform: 'translateX(0) translateY(0) rotate(400deg) scale(.9)' }
+        ], { duration: 560, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        flash.animate([{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.5)' }], { duration: 420, fill: 'forwards' });
+        ball.style.opacity = '0';
+        await new Promise(resolve => setTimeout(resolve, 120));
+        sprite.style.transition = 'opacity .35s, filter .35s, transform .35s';
+        sprite.style.filter = 'brightness(3) blur(5px)';
+        sprite.style.opacity = '1';
+        sprite.style.transform = 'scale(.45)';
+        await new Promise(resolve => setTimeout(resolve, 380));
+        sprite.style.filter = '';
+        sprite.style.transform = '';
+        sprite.style.transition = '';
+        overlay.remove();
     }
 
     addPVPBattleLog(lines) {
@@ -6943,6 +7016,11 @@ openEventsPanel() {
         const mainArea = document.getElementById('main-area');
         if (canvas && mainArea && canvas.parentElement !== mainArea) {
             mainArea.insertBefore(canvas, mainArea.firstChild);
+        }
+        if (this.typeEffects?.canvas && mainArea && this.typeEffects.canvas.parentElement !== mainArea) {
+            this.typeEffects.canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:30;';
+            mainArea.appendChild(this.typeEffects.canvas);
+            this.typeEffects._resize();
         }
         if (pvpFullscreen) pvpFullscreen.remove();
 

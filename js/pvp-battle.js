@@ -222,7 +222,7 @@ export class PVPBattle {
             ['challenged', challengedAction], ['challenger', challengerAction]
         ];
         this.battleState.turn = this.round;
-        const result = { order: order.map(x => x[0]), winner: null, damage: [], logs: [] };
+        const result = { order: order.map(x => x[0]), winner: null, damage: [], logs: [], effects: [] };
 
         for (const [side, action] of order) {
             const isChallenger = side === 'challenger';
@@ -246,6 +246,12 @@ export class PVPBattle {
             if (!move || move.currentPp <= 0) continue;
             result.logs.push(`${attacker.name} usou ${move.name}!`);
             const turnResult = await executeTurn(attacker, defender, move, this.battleState);
+            result.effects.push({
+                type: move.type || 'normal', category: move.category || 'physical',
+                attackerSide: isChallenger ? 'challenger' : 'challenged',
+                targetSide: isChallenger ? 'challenged' : 'challenger',
+                power: move.power || 50
+            });
             const effectText = getEffectivenessText(turnResult.effectiveness);
             if (turnResult.missed) result.logs.push(`${attacker.name} errou!`);
             if (turnResult.protected) result.logs.push(`${defender.name} se protegeu!`);
@@ -294,6 +300,8 @@ export class PVPBattle {
     async applyResolution(payload) {
         if (!payload || payload.round !== this.round) return;
         const isChallenger = this.game.currentCharacterId === this.challenge.challenger_id;
+        const previousMyIndex = this.myIndex;
+        const previousEnemyIndex = this.enemyIndex;
         const mySnapshot = isChallenger ? payload.challengerTeam : payload.challengedTeam;
         const enemySnapshot = isChallenger ? payload.challengedTeam : payload.challengerTeam;
         this.myTeam = this.applySnapshot(this.myTeam, mySnapshot);
@@ -307,6 +315,9 @@ export class PVPBattle {
         await this.persistReadyState();
         this.game.addPVPBattleLog?.(payload.result?.logs || []);
         this.onStateUpdate?.();
+        if (previousMyIndex !== this.myIndex) this.game.playPVPEntrance?.('player', this.visibleMyActivePokemon);
+        if (previousEnemyIndex !== this.enemyIndex) this.game.playPVPEntrance?.('enemy', this.enemyActivePokemon);
+        this.game.playPVPActionEffects?.(payload.result?.effects || [], isChallenger);
         if (this.needsForcedSwitch) this.game.openPVPSwitchSelector?.(true);
         else if (this.phase === 'switch') this.executeMyTurn('switch_ready', {});
 
