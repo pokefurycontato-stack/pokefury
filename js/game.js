@@ -3289,14 +3289,22 @@ class PokeFuryGame {
                 <button id="pos-reset" style="padding:6px 14px;background:rgba(255,255,255,0.15);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Resetar</button>
                 <button id="pos-close" style="padding:6px 14px;background:rgba(244,67,54,0.8);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Fechar</button>
             </div>
-            <div id="pos-image-container" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;">
-                <img id="pos-bg-image" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png" style="width:100%;height:100%;object-fit:cover;display:block;">
-                <div id="pos-player-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#4caf50;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #4caf50;"></div>
-                <div id="pos-enemy-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#f44336;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #f44336;"></div>
-            </div>
+            <canvas id="pos-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;"></canvas>
+            <div id="pos-player-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#4caf50;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #4caf50;"></div>
+            <div id="pos-enemy-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#f44336;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #f44336;"></div>
         `;
 
         document.body.appendChild(overlay);
+
+        const posCanvas = overlay.querySelector('#pos-canvas');
+        posCanvas.width = 1920;
+        posCanvas.height = 1080;
+        const posCtx = posCanvas.getContext('2d');
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png';
+        img.onload = () => { posCtx.drawImage(img, 0, 0, 1920, 1080); };
 
         const imgContainer = overlay.querySelector('#pos-image-container');
         const playerMarker = overlay.querySelector('#pos-player-marker');
