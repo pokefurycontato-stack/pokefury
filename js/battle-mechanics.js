@@ -1363,7 +1363,7 @@ export function clearProtect(pokemon) {
 // ============================================================
 // APPLY STAT STAGES TO DAMAGE CALC
 // ============================================================
-export function applyStatStages(attacker, defender, move, baseDamage) {
+export function applyStatStages(attacker, defender, move, baseDamage, critical = false) {
     const aStages = attacker._statStages || {};
     const dStages = defender._statStages || {};
 
@@ -1371,12 +1371,12 @@ export function applyStatStages(attacker, defender, move, baseDamage) {
     let defMult = 1;
 
     if (move.category === 'physical') {
-        atkMult = getStatMult(aStages.attack || 0);
-        defMult = getStatMult(dStages.defense || 0);
+        atkMult = getStatMult(critical ? Math.max(0, aStages.attack || 0) : (aStages.attack || 0));
+        defMult = getStatMult(critical ? Math.min(0, dStages.defense || 0) : (dStages.defense || 0));
         if (attacker.statusEffect === STATUS.BURN) atkMult *= 0.5;
     } else if (move.category === 'special') {
-        atkMult = getStatMult(aStages.spAtk || 0);
-        defMult = getStatMult(dStages.spDef || 0);
+        atkMult = getStatMult(critical ? Math.max(0, aStages.spAtk || 0) : (aStages.spAtk || 0));
+        defMult = getStatMult(critical ? Math.min(0, dStages.spDef || 0) : (dStages.spDef || 0));
     }
 
     return Math.max(1, Math.floor(baseDamage * atkMult / defMult));

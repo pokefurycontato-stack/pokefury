@@ -233,7 +233,7 @@ export async function executeTurn(attacker, defender, move, battleState) {
 
     // Calculate damage with stat stages
     let damage = result.damage;
-    damage = applyStatStages(attacker, defender, move, damage);
+    damage = applyStatStages(attacker, defender, move, damage, result.critical);
 
     // Handle multi-hit moves
     const effect = getMoveEffect(move);
@@ -245,7 +245,7 @@ export async function executeTurn(attacker, defender, move, battleState) {
         for (let i = 0; i < hits; i++) {
             const hitResult = await calculateDamage(attacker, defender, move, battleState);
             if (!hitResult.missed) {
-                let hitDmg = applyStatStages(attacker, defender, move, hitResult.damage);
+                let hitDmg = applyStatStages(attacker, defender, move, hitResult.damage, hitResult.critical);
                 hitDmg = applyWeatherDamageModifier(attacker, move, hitDmg, battleState);
                 hitDmg = applyTerrainDamageModifier(attacker, defender, move, hitDmg, battleState);
                 hitDmg = applyScreenReduction(defender, move, hitDmg);

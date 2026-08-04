@@ -238,7 +238,8 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         damage *= 1.5;
     }
 
-    const critical = Math.random() < 1 / 16 ? 1.5 : 1;
+    const criticalBlocked = defAbilityName === 'battle armor' || defAbilityName === 'shell armor';
+    const critical = !criticalBlocked && Math.random() < 1 / 16 ? 1.5 : 1;
     damage *= critical;
 
     if (attackerItem) {
