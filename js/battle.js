@@ -235,6 +235,9 @@ export async function executeTurn(attacker, defender, move, battleState) {
 
     // Status moves
     if (move.category === 'status') {
+        if (getHeldItemEffect(attacker.heldItemId)?.effect === 'assault_vest') {
+            return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`${attacker.name} não pode usar golpes de status com Assault Vest!`] };
+        }
         const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
         if (!accuracyCheck) {
             return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
