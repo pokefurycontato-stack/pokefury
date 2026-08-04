@@ -329,7 +329,10 @@ export class Overworld2D {
         this.player.moving = false;
         this.player.direction = 'down';
 
-        this.pokemonFollowPos = { x: this.player.x, y: this.player.y };
+        this.pokemonFollowPos = {
+            x: this.player.x,
+            y: this.player.y > 0 ? this.player.y - 1 : this.player.y + 1
+        };
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
         const follower = this.game.playerTeam?.find(pokemon => !pokemon.fainted);
@@ -500,9 +503,6 @@ export class Overworld2D {
         if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
             if (Math.abs(dx) >= Math.abs(dy)) this.pokemonFollowPos.x += Math.sign(dx);
             else this.pokemonFollowPos.y += Math.sign(dy);
-        } else {
-            if (Math.abs(dx) === 1) this.pokemonFollowPos.x += Math.sign(dx);
-            if (Math.abs(dy) === 1) this.pokemonFollowPos.y += Math.sign(dy);
         }
     }
 
