@@ -214,7 +214,7 @@ export async function executeTurn(attacker, defender, move, battleState) {
     if ((attackerAbility === 'protean' || attackerAbility === 'libero') && !attacker._proteanUsed && move.type && move.category !== 'status') {
         attacker.types = [move.type];
         attacker._proteanUsed = true;
-        abilityMessage = `${attacker.name mudou para o tipo ${move.type}!`;
+        abilityMessage = `${attacker.name} mudou para o tipo ${move.type}!`;
     }
     if (move.category === 'status' && attacker._taunted > 0) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`${attacker.name} está sob Taunt e não pode usar golpes de status!`] };
