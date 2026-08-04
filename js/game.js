@@ -6509,9 +6509,9 @@ class PokeFuryGame {
 
         if (this.overworld2d) this.overworld2d.hide();
 
+        const clip = this.getBattleClipRect();
         if (this.currentBattleBg && this.ctx && this.canvas) {
-            const clip = this.getBattleClipRect();
-            drawBattleScene(this.ctx, this.canvas, null, null, this.currentBattleBg, clip);
+            drawBattleScene(this.ctx, this.canvas, battle.myActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
 
         const battleEl = document.getElementById('battle-screen');
@@ -6589,6 +6589,11 @@ class PokeFuryGame {
             turnIndicator.style.borderColor = '#ff9800';
             actions.style.opacity = '0.5';
             actions.style.pointerEvents = 'none';
+        }
+
+        if (this.currentBattleBg && this.ctx && this.canvas) {
+            const clip = this.getBattleClipRect();
+            drawBattleScene(this.ctx, this.canvas, battle.myActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
     }
 
