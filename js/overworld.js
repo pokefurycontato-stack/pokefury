@@ -1058,9 +1058,12 @@ export class Overworld2D {
         const flipX = !useBack && this.player.direction === 'right';
         const flipCss = flipX ? 'scaleX(-1)' : 'none';
         const drawLeft = offsetX + (rpx + (this.tileW - spriteSize) / 2) * scaleX;
-        const drawTop = offsetY + rpy * scaleY;
+        const followerBehind = this.player.direction === 'up';
+        const drawTop = offsetY + (rpy + (followerBehind ? this.tileH * 0.35 : 0)) * scaleY;
+        const followerZ = followerBehind ? '3' : '5';
 
         this.pokemonFollowEl.style.display = 'block';
+        this.pokemonFollowEl.style.zIndex = followerZ;
         this.pokemonFollowEl.style.left = drawLeft + 'px';
         this.pokemonFollowEl.style.top = drawTop + 'px';
         this.pokemonFollowEl.style.width = (spriteSize * scaleX) + 'px';
@@ -1073,6 +1076,7 @@ export class Overworld2D {
             const shadowLeft = drawLeft + (spriteSize * scaleX - shadowW) / 2;
             const shadowTop = drawTop + spriteSize * scaleY - shadowH * 0.3;
             this.pokemonFollowShadowEl.style.display = 'block';
+            this.pokemonFollowShadowEl.style.zIndex = followerZ;
             this.pokemonFollowShadowEl.style.left = shadowLeft + 'px';
             this.pokemonFollowShadowEl.style.top = shadowTop + 'px';
             this.pokemonFollowShadowEl.style.width = shadowW + 'px';
