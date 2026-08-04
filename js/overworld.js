@@ -138,7 +138,7 @@ export class Overworld2D {
 
         const scaleX = containerW / mapW;
         const scaleY = containerH / mapH;
-        const scale = Math.min(scaleX, scaleY);
+        const scale = Math.max(scaleX, scaleY);
 
         const canvasEl = this.canvas;
         canvasEl.style.width = Math.floor(mapW * scale) + 'px';
