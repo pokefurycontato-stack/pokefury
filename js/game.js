@@ -6588,9 +6588,21 @@ openEventsPanel() {
         if (!battle) return;
 
         this.state = 'battle';
-        stopBattleVideo();
-        showScreen('battle-screen');
-        this.positionBattleScreen();
+
+        document.getElementById('game-wrapper').style.display = 'none';
+        const pvpFullscreen = document.createElement('div');
+        pvpFullscreen.id = 'pvp-fullscreen';
+        pvpFullscreen.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#000;';
+        document.body.appendChild(pvpFullscreen);
+
+        const canvas = document.getElementById('game-canvas');
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100vw';
+        canvas.style.height = '100vh';
+        canvas.style.transform = 'none';
+        pvpFullscreen.appendChild(canvas);
 
         if (this.overworld2d) this.overworld2d.hide();
 
@@ -6766,9 +6778,23 @@ openEventsPanel() {
 
     endPVPBattle(result) {
         this.state = 'overworld';
+        this.pvpBattle = null;
+
+        const pvpFullscreen = document.getElementById('pvp-fullscreen');
+        if (pvpFullscreen) pvpFullscreen.remove();
+
+        const canvas = document.getElementById('game-canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.top = '50%';
+        canvas.style.left = '50%';
+        canvas.style.width = '';
+        canvas.style.height = '';
+        canvas.style.transform = 'translate(-50%, -50%)';
+        document.getElementById('game-wrapper').style.display = '';
+
         showScreen('hud');
         if (this.overworld2d) this.overworld2d.show();
-        this.pvpBattle = null;
+        this.overworld2d.resize();
 
         if (result === 'my_win') {
             this.showToast('🏆 Você venceu o duelo!', 'success');
