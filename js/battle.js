@@ -248,6 +248,21 @@ export async function executeTurn(attacker, defender, move, battleState) {
     if (result.missed) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
+    if (result.immune) {
+        const messages = [`${defender.name} é imune a ${move.name}!`];
+        const reaction = result.abilityReaction;
+        if (reaction?.heal) {
+            const heal = Math.max(1, Math.floor(defender.stats.hp * reaction.heal));
+            defender.currentHp = Math.min(defender.stats.hp, defender.currentHp + heal);
+            messages.push(`${defender.name} recuperou ${heal} HP com sua habilidade!`);
+        }
+        if (reaction?.boost) {
+            defender._statStages = defender._statStages || {};
+            defender._statStages[reaction.boost] = Math.min(6, (defender._statStages[reaction.boost] || 0) + 1);
+            messages.push(`${defender.name} teve ${reaction.boost} aumentado pela habilidade!`);
+        }
+        return { attacker, defender, move, damage: 0, effectiveness: 0, critical: false, missed: false, fainted: false, immune: true, messages };
+    }
 
     // Calculate damage with stat stages
     let damage = result.damage;

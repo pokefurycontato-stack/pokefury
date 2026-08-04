@@ -157,7 +157,14 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         'sap sipper': ['grass']
     };
     if (abilityImmuneTypes[defAbilityName]?.includes(moveType)) {
-        return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
+        const reactions = {
+            'water absorb': { heal: 0.25 },
+            'volt absorb': { heal: 0.25 },
+            'lightning rod': { boost: 'spAtk' },
+            'motor drive': { boost: 'speed' },
+            'sap sipper': { boost: 'attack' }
+        };
+        return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true, abilityReaction: reactions[defAbilityName] || null };
     }
 
     if (['fissure', 'horn drill', 'sheer cold', 'guillotine'].includes(moveName)) {
