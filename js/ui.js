@@ -560,113 +560,63 @@ export function preloadBattleBgImage(url) {
     });
 }
 
+export const VIRTUAL_W = 1920;
+export const VIRTUAL_H = 1080;
+
 export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgroundUrl = null, clipRect = null) {
     syncBattleContainerToCanvas();
-    const w = canvas.width;
-    const h = canvas.height;
-
-    if (clipRect) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(clipRect.x, clipRect.y, clipRect.w, clipRect.h);
-        ctx.clip();
-    }
+    ctx.save();
+    ctx.clearRect(0, 0, VIRTUAL_W, VIRTUAL_H);
 
     if (backgroundUrl) {
         const isVideo = /\.(mp4|webm|ogg)$/i.test(backgroundUrl);
-
         if (isVideo) {
             let video = videoCache.get(backgroundUrl);
             if (!video) {
                 video = document.createElement('video');
                 video.src = backgroundUrl;
-                video.loop = true;
-                video.muted = true;
-                video.playsInline = true;
-                video.crossOrigin = 'anonymous';
+                video.loop = true; video.muted = true; video.playsInline = true; video.crossOrigin = 'anonymous';
                 videoCache.set(backgroundUrl, video);
             }
-
-            if (currentBattleVideo && currentBattleVideo !== video) {
-                currentBattleVideo.pause();
-                currentBattleVideo.currentTime = 0;
-            }
+            if (currentBattleVideo && currentBattleVideo !== video) { currentBattleVideo.pause(); currentBattleVideo.currentTime = 0; }
             currentBattleVideo = video;
-
-            if (video.readyState >= 2) {
-                ctx.drawImage(video, 0, 0, w, h);
-            } else {
-                if (video.paused) video.play().catch(() => {});
-                const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
-                skyGrad.addColorStop(0, '#0f3460');
-                skyGrad.addColorStop(1, '#16213e');
-                ctx.fillStyle = skyGrad;
-                ctx.fillRect(0, 0, w, h);
-            }
+            if (video.readyState >= 2) { ctx.drawImage(video, 0, 0, VIRTUAL_W, VIRTUAL_H); }
+            else { if (video.paused) video.play().catch(() => {}); ctx.fillStyle = '#16213e'; ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H); }
         } else {
             let img = bgCache.get(backgroundUrl);
-            if (!img) {
-                img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.src = backgroundUrl;
-                bgCache.set(backgroundUrl, img);
-            }
-
+            if (!img) { img = new Image(); img.crossOrigin = 'anonymous'; img.src = backgroundUrl; bgCache.set(backgroundUrl, img); }
             if (img.complete && img.naturalWidth > 0) {
-                ctx.drawImage(img, 0, 0, w, h);
+                ctx.drawImage(img, 0, 0, VIRTUAL_W, VIRTUAL_H);
             } else {
-                const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
-                skyGrad.addColorStop(0, '#0f3460');
-                skyGrad.addColorStop(1, '#16213e');
-                ctx.fillStyle = skyGrad;
-                ctx.fillRect(0, 0, w, h * 0.5);
-
-                const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
-                groundGrad.addColorStop(0, '#1a3a1a');
-                groundGrad.addColorStop(1, '#0d1f0d');
-                ctx.fillStyle = groundGrad;
-                ctx.fillRect(0, h * 0.5, w, h * 0.5);
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.5);
+                skyGrad.addColorStop(0, '#0f3460'); skyGrad.addColorStop(1, '#16213e');
+                ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.5);
+                const groundGrad = ctx.createLinearGradient(0, VIRTUAL_H * 0.5, 0, VIRTUAL_H);
+                groundGrad.addColorStop(0, '#1a3a1a'); groundGrad.addColorStop(1, '#0d1f0d');
+                ctx.fillStyle = groundGrad; ctx.fillRect(0, VIRTUAL_H * 0.5, VIRTUAL_W, VIRTUAL_H * 0.5);
             }
         }
     } else {
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
-        skyGrad.addColorStop(0, '#0f3460');
-        skyGrad.addColorStop(1, '#16213e');
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, w, h * 0.5);
-
-        const groundGrad = ctx.createLinearGradient(0, h * 0.5, 0, h);
-        groundGrad.addColorStop(0, '#1a3a1a');
-        groundGrad.addColorStop(1, '#0d1f0d');
-        ctx.fillStyle = groundGrad;
-        ctx.fillRect(0, h * 0.5, w, h * 0.5);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-        for (let i = 0; i < 10; i++) {
-            const x = (i * 100 + 20) % w;
-            ctx.beginPath();
-            ctx.arc(x, h * 0.48, 20 + (i % 3) * 10, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.5);
+        skyGrad.addColorStop(0, '#0f3460'); skyGrad.addColorStop(1, '#16213e');
+        ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.5);
+        const groundGrad = ctx.createLinearGradient(0, VIRTUAL_H * 0.5, 0, VIRTUAL_H);
+        groundGrad.addColorStop(0, '#1a3a1a'); groundGrad.addColorStop(1, '#0d1f0d');
+        ctx.fillStyle = groundGrad; ctx.fillRect(0, VIRTUAL_H * 0.5, VIRTUAL_W, VIRTUAL_H * 0.5);
     }
 
-    const dw = clipRect ? clipRect.w : w;
-    const dh = clipRect ? clipRect.h : h;
-    const dx = clipRect ? clipRect.x : 0;
-    const dy = clipRect ? clipRect.y : 0;
     let playerX, playerY, enemyX, enemyY;
-
     if (battlePositions) {
-        playerX = dx + battlePositions.playerX * dw;
-        playerY = dy + battlePositions.playerY * dh;
-        enemyX = dx + battlePositions.enemyX * dw;
-        enemyY = dy + battlePositions.enemyY * dh;
+        playerX = battlePositions.playerX * VIRTUAL_W;
+        playerY = battlePositions.playerY * VIRTUAL_H;
+        enemyX = battlePositions.enemyX * VIRTUAL_W;
+        enemyY = battlePositions.enemyY * VIRTUAL_H;
     } else {
         const saved = JSON.parse(localStorage.getItem('pvpBattlePositions') || '{"playerX":0.25,"playerY":0.75,"enemyX":0.72,"enemyY":0.4}');
-        playerX = dx + saved.playerX * dw;
-        playerY = dy + saved.playerY * dh;
-        enemyX = dx + saved.enemyX * dw;
-        enemyY = dy + saved.enemyY * dh;
+        playerX = saved.playerX * VIRTUAL_W;
+        playerY = saved.playerY * VIRTUAL_H;
+        enemyX = saved.enemyX * VIRTUAL_W;
+        enemyY = saved.enemyY * VIRTUAL_H;
     }
 
     const playerScale = getPokemonScale(playerPokemon);
@@ -674,13 +624,12 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5 * playerScale);
     updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, 0.45 * enemyScale);
 
-    const now = performance.now();
-    const dt = 16;
-    drawBattleFx(ctx, 'player', battleEffects.player, playerX, playerY + 50, dt);
-    drawBattleFx(ctx, 'enemy', battleEffects.enemy, enemyX, enemyY + 50, dt);
+    drawBattleFx(ctx, 'player', battleEffects.player, playerX, playerY + 50, 16);
+    drawBattleFx(ctx, 'enemy', battleEffects.enemy, enemyX, enemyY + 50, 16);
 
-    if (clipRect) ctx.restore();
+    ctx.restore();
 }
+
 
 export function stopBattleVideo() {
     if (currentBattleVideo) {
@@ -759,15 +708,15 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     el.style.display = 'block';
 
     const mainArea = document.getElementById('main-area');
-    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { width: 1024, height: 768 };
-    const sx = 1;
-    const sy = 1;
+    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { width: 1920, height: 1080 };
+    const sx = mainRect.width / VIRTUAL_W;
+    const sy = mainRect.height / VIRTUAL_H;
 
-    const maxDim = Math.round(140 * sizeScale);
-    el.style.width = Math.round(maxDim * sx) + 'px';
-    el.style.height = Math.round(maxDim * sy) + 'px';
-    el.style.left = Math.round(x * sx - maxDim * sx / 2) + 'px';
-    el.style.top = Math.round(y * sy - maxDim * sy / 2) + 'px';
+    const maxDim = Math.round(140 * sizeScale * Math.min(sx, sy));
+    el.style.width = Math.round(maxDim) + 'px';
+    el.style.height = Math.round(maxDim) + 'px';
+    el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
+    el.style.top = Math.round(y * sy - maxDim / 2) + 'px';
 }
 
 function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {
