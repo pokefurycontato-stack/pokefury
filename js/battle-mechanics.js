@@ -387,6 +387,8 @@ const MOVE_EFFECTS_BY_NAME = {
     'clear smog': { effect: 'clear_defender_stages' },
     'psych up': { effect: 'copy_stages' },
     'topsy-turvy': { effect: 'invert_defender_stages' },
+    'curse': { effect: 'curse' },
+    'perish song': { effect: 'perish_song' },
     'thunder wave': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
     'will-o-wisp': { effect: 'status', status: STATUS.BURN, chance: 85 },
     'glare': { effect: 'status', status: STATUS.PARALYSIS, chance: 100 },
@@ -1003,6 +1005,22 @@ export function processEndOfTurn(pokemon, battleState) {
         }
     }
 
+    if (pokemon._cursed && !magicGuard) {
+        const damage = Math.max(1, Math.floor(pokemon.stats.hp / 4));
+        pokemon.currentHp = Math.max(0, pokemon.currentHp - damage);
+        if (pokemon.currentHp <= 0) pokemon.fainted = true;
+        messages.push(`${pokemon.name} sofreu dano da maldição! (-${damage} HP)`);
+    }
+    if (pokemon._perishTurns > 0) {
+        pokemon._perishTurns--;
+        messages.push(`${pokemon.name} tem ${pokemon._perishTurns} turnos restantes pela Perish Song!`);
+        if (pokemon._perishTurns <= 0) {
+            pokemon.currentHp = 0;
+            pokemon.fainted = true;
+            messages.push(`${pokemon.name} desmaiou pela Perish Song!`);
+        }
+    }
+
     // Weather damage
     if (battleState && battleState.weather) {
         const weather = battleState.weather;
@@ -1143,6 +1161,26 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
     if (effect.effect === 'invert_defender_stages') {
         defender._statStages = Object.fromEntries(Object.entries(defender._statStages || {}).map(([stat, value]) => [stat, -value]));
         messages.push(`Os estágios de ${defender.name} foram invertidos!`);
+        return messages;
+    }
+    if (effect.effect === 'curse') {
+        if (attacker.types?.includes('ghost')) {
+            attacker.currentHp = Math.max(1, attacker.currentHp - Math.floor(attacker.stats.hp / 2));
+            defender._cursed = true;
+            messages.push(`${defender.name} foi amaldiçoado!`);
+        } else {
+            attacker._statStages = attacker._statStages || {};
+            attacker._statStages.attack = Math.min(6, (attacker._statStages.attack || 0) + 1);
+            attacker._statStages.defense = Math.min(6, (attacker._statStages.defense || 0) + 1);
+            attacker._statStages.speed = Math.max(-6, (attacker._statStages.speed || 0) - 1);
+            messages.push(`${attacker.name} usou Curse e alterou seus atributos!`);
+        }
+        return messages;
+    }
+    if (effect.effect === 'perish_song') {
+        attacker._perishTurns = 3;
+        defender._perishTurns = 3;
+        messages.push('Todos os Pokémon ouviram a Canção do Fim!');
         return messages;
     }
 
