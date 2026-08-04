@@ -3069,6 +3069,43 @@ class PokeFuryGame {
 
     async useItemOnPokemon(inv, pokemon, slotIndex) {
         const item = inv.items;
+
+        if (item.effect === 'learn_move') {
+            const moveName = item.name.replace(/^(TM|TR)\d+\s*/i, '').trim();
+            const { data: move, error: moveError } = await window.db.from('moves')
+                .select('id, name, type, category, power, accuracy, pp')
+                .ilike('name', moveName)
+                .maybeSingle();
+            if (moveError || !move) {
+                this.showToast(`Movimento não encontrado: ${moveName}`, 'error');
+                return;
+            }
+            if (pokemon.moves.some(existing => String(existing.id) === String(move.id))) {
+                this.showToast(`${pokemon.name} já conhece ${move.name}.`, 'warning');
+                return;
+            }
+
+            const newMove = { ...move, currentPp: move.pp || 35 };
+            let teach = true;
+            let replaceIndex = -1;
+            if (pokemon.moves.length >= 4) {
+                const choice = await showMoveLearnPopup(pokemon, newMove, pokemon.moves);
+                teach = choice.teach;
+                replaceIndex = choice.replaceIndex;
+            }
+            if (!teach) return;
+
+            const removed = await window.GameData.removeItem(inv.item_id, 1);
+            if (!removed) { this.showToast('Não foi possível consumir o TM/TR.', 'error'); return; }
+            if (replaceIndex >= 0) pokemon.moves[replaceIndex] = newMove;
+            else pokemon.moves.push(newMove);
+            await this.saveTeam();
+            this.showToast(`${pokemon.name} aprendeu ${move.name}!`, 'success');
+            this.updatePartyPanel();
+            this.renderMochila();
+            return;
+        }
+
         const removed = await window.GameData.removeItem(inv.item_id, 1);
         if (!removed) { console.error('Erro ao usar item!'); return; }
 
