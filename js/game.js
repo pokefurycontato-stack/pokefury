@@ -6618,13 +6618,11 @@ openEventsPanel() {
             drawBattleScene(this.ctx, this.canvas, battle.myActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
 
-        const battleEl = document.getElementById('battle-screen');
-        if (!battleEl) return;
-
-        battleEl.innerHTML = `
-            <div id="pvp-battle-ui" style="width:100%;height:100%;display:flex;flex-direction:column;position:relative;">
-                <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);">Sua vez!</div>
-                <div id="pvp-enemy-info" style="position:absolute;top:10px;right:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
+        const pvpUI = document.createElement('div');
+        pvpUI.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;';
+        pvpUI.innerHTML = `
+                <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);pointer-events:auto;">Sua vez!</div>
+                <div id="pvp-enemy-info" style="position:absolute;top:10px;right:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;pointer-events:auto;">
                     <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-enemy-name"></div>
                     <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-enemy-pokemon"></div>
                     <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
@@ -6646,8 +6644,8 @@ openEventsPanel() {
                     <button id="pvp-forfeit-btn" style="padding:8px 20px;background:rgba(244,67,54,0.2);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🏳️ Desistir</button>
                 </div>
                 <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;"></div>
-            </div>
         `;
+        pvpFullscreen.appendChild(pvpUI);
 
         battle.onStateUpdate = () => this.updatePVPBattleUI();
         battle.onBattleEnd = (result) => this.endPVPBattle(result);
