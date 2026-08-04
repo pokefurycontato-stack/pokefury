@@ -3310,7 +3310,6 @@ class PokeFuryGame {
         const playerMarker = overlay.querySelector('#pos-player-marker');
         const enemyMarker = overlay.querySelector('#pos-enemy-marker');
         const instruction = overlay.querySelector('#pos-instruction');
-        const posCanvas = overlay.querySelector('#pos-canvas');
 
         const updateMarkers = () => {
             playerMarker.style.left = (playerPos.x * 100) + '%';
