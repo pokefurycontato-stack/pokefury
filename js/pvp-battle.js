@@ -1,6 +1,6 @@
 /* Real-time simultaneous-action PVP battle. */
 import { executeTurn, getEffectivenessText } from './battle.js';
-import { getMovePriority, activateTerastal } from './battle-mechanics.js';
+import { getMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -14,6 +14,12 @@ export class PVPBattle {
         this.teraUsed = false;
         this.enemyTeraUsed = false;
         this.teraSelected = false;
+        this.myFieldEffects = {};
+        this.enemyFieldEffects = {};
+        initFieldEffects(this.myFieldEffects);
+        initFieldEffects(this.enemyFieldEffects);
+        this.myTeam.forEach(p => { p._teamEffects = this.myFieldEffects; });
+        this.enemyTeam.forEach(p => { p._teamEffects = this.enemyFieldEffects; });
         this.pendingAction = null;
         this.pendingSwitchIndex = null;
         this.isFinished = false;
@@ -45,6 +51,9 @@ export class PVPBattle {
             fainted: p.currentHp <= 0,
             teraType: p.teraType || p.types?.[0] || 'normal',
             isTerastallized: !!p.isTerastallized,
+            currentAbility: p.currentAbility || null,
+            currentAbilityName: p.currentAbilityName || null,
+            heldItemId: p.heldItemId || null,
             moves: (p.moves || []).map(m => ({
                 id: m.id, name: m.name, type: m.type, power: m.power,
                 category: m.category, currentPp: m.currentPp, pp: m.pp
@@ -66,7 +75,7 @@ export class PVPBattle {
         const { error } = await window.db.from('pvp_battle_state').insert({
             challenge_id: this.challenge.id,
             player_id: this.game.currentCharacterId,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase, teraUsed: this.teraUsed },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase, teraUsed: this.teraUsed, battleState: this.battleState, fieldEffects: this.myFieldEffects },
             current_pokemon_index: this.myIndex,
             pending_action: null,
             round_number: 1,
@@ -99,6 +108,9 @@ export class PVPBattle {
             this.enemyIndex = state.current_pokemon_index || 0;
             this.phase = state.player_team.phase || this.phase;
             this.enemyTeraUsed = !!state.player_team.teraUsed;
+            if (state.player_team.battleState) this.battleState = { ...this.battleState, ...state.player_team.battleState };
+            if (state.player_team.fieldEffects) this.enemyFieldEffects = { ...this.enemyFieldEffects, ...state.player_team.fieldEffects };
+            this.enemyTeam.forEach(p => { p._teamEffects = this.enemyFieldEffects; });
         }
         await this.tryResolveRound();
         this.onStateUpdate?.();
@@ -116,6 +128,9 @@ export class PVPBattle {
             p.fainted = p.currentHp <= 0;
             p.teraType = s.teraType || p.teraType;
             p.isTerastallized = !!s.isTerastallized;
+            p.currentAbility = s.currentAbility || p.currentAbility;
+            p.currentAbilityName = s.currentAbilityName || p.currentAbilityName;
+            p.heldItemId = s.heldItemId || p.heldItemId;
             if (s.moves) p.moves = p.moves.map(m => {
                 const saved = s.moves.find(x => String(x.id) === String(m.id));
                 return saved ? { ...m, currentPp: saved.currentPp } : m;
@@ -192,6 +207,9 @@ export class PVPBattle {
             challengedTeam: this.serializeTeam(this.enemyTeam),
             challengerTeraUsed: this.teraUsed,
             challengedTeraUsed: this.enemyTeraUsed,
+            battleState: this.battleState,
+            challengerFieldEffects: this.myFieldEffects,
+            challengedFieldEffects: this.enemyFieldEffects,
             challengerIndex: this.myIndex,
             challengedIndex: this.enemyIndex,
             result
@@ -200,7 +218,7 @@ export class PVPBattle {
         const { error: resolutionError } = await window.db.from('pvp_battle_state').update({
             last_action: 'resolved', last_action_data: payload,
             pending_action: null, resolved_round: this.round,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: nextPhase, teraUsed: this.teraUsed },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: nextPhase, teraUsed: this.teraUsed, battleState: this.battleState, fieldEffects: this.myFieldEffects },
             current_pokemon_index: this.myIndex,
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
@@ -263,6 +281,12 @@ export class PVPBattle {
             }
             if (action.action !== 'attack' || defender.currentHp <= 0) continue;
 
+            const canAct = canPokemonAct(attacker);
+            if (!canAct.canAct) {
+                if (canAct.message) result.logs.push(canAct.message);
+                continue;
+            }
+
             const move = attacker.moves.find(m => String(m.id) === String(action.moveId));
             if (!move || move.currentPp <= 0) continue;
             result.logs.push(`${attacker.name} usou ${move.name}!`);
@@ -288,6 +312,21 @@ export class PVPBattle {
                 result.faintedSides.push(isChallenger ? 'challenged' : 'challenger');
                 result.logs.push(`${defender.name} desmaiou!`);
             }
+        }
+
+        for (const pokemon of [this.myActivePokemon, this.enemyActivePokemon]) {
+            result.logs.push(...processEndOfTurn(pokemon, this.battleState));
+        }
+        for (const field of ['weatherTurns', 'terrainTurns']) {
+            if (this.battleState[field] > 0) this.battleState[field]--;
+        }
+        if (this.battleState.weatherTurns === 0 && this.battleState.weather) {
+            result.logs.push('O clima terminou.');
+            this.battleState.weather = null;
+        }
+        if (this.battleState.terrainTurns === 0 && this.battleState.terrain) {
+            result.logs.push('O terreno terminou.');
+            this.battleState.terrain = null;
         }
 
         if (this.enemyTeam.every(p => p.currentHp <= 0)) result.winner = 'challenger';
@@ -348,6 +387,13 @@ export class PVPBattle {
         this.enemyIndex = isChallenger ? payload.challengedIndex : payload.challengerIndex;
         this.teraUsed = isChallenger ? !!payload.challengerTeraUsed : !!payload.challengedTeraUsed;
         this.enemyTeraUsed = isChallenger ? !!payload.challengedTeraUsed : !!payload.challengerTeraUsed;
+        this.battleState = { ...this.battleState, ...(payload.battleState || {}) };
+        const myFieldEffects = isChallenger ? payload.challengerFieldEffects : payload.challengedFieldEffects;
+        const enemyFieldEffects = isChallenger ? payload.challengedFieldEffects : payload.challengerFieldEffects;
+        if (myFieldEffects) this.myFieldEffects = { ...this.myFieldEffects, ...myFieldEffects };
+        if (enemyFieldEffects) this.enemyFieldEffects = { ...this.enemyFieldEffects, ...enemyFieldEffects };
+        this.myTeam.forEach(p => { p._teamEffects = this.myFieldEffects; });
+        this.enemyTeam.forEach(p => { p._teamEffects = this.enemyFieldEffects; });
         this.pendingAction = null;
         this.pendingSwitchIndex = null;
         this.phase = payload.phase === 'switch' ? 'switch' : 'action';
@@ -386,7 +432,7 @@ export class PVPBattle {
             last_action_data: null,
             round_number: this.round,
             resolved_round: this.round - 1,
-            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase, teraUsed: this.teraUsed },
+            player_team: { team: this.serializeTeam(this.myTeam), activeIndex: this.myIndex, phase: this.phase, teraUsed: this.teraUsed, battleState: this.battleState, fieldEffects: this.myFieldEffects },
             current_pokemon_index: this.myIndex,
             updated_at: new Date().toISOString()
         }).eq('challenge_id', this.challenge.id)
