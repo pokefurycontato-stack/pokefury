@@ -799,6 +799,14 @@ export function getMoveEffect(move) {
     return MOVE_EFFECTS_BY_NAME[name] || null;
 }
 
+export function activateTerastal(pokemon) {
+    if (!pokemon || pokemon.isTerastallized || !pokemon.teraType || pokemon.fainted) return false;
+    pokemon._preTeraTypes = [...(pokemon.types || [])];
+    pokemon.types = [pokemon.teraType];
+    pokemon.isTerastallized = true;
+    return true;
+}
+
 const _abilityIdToName = new Map();
 
 export function cacheAbilityName(id, name) {

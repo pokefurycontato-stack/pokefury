@@ -126,14 +126,19 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     if (!attacker?.stats || !defender?.stats) {
         return { damage: 0, effectiveness: 1, critical: false, missed: true };
     }
-    if (move.category === 'status' || !move.power) {
+    const isTeraBlast = String(move.name || '').toLowerCase() === 'tera blast';
+    const moveType = isTeraBlast && attacker.isTerastallized ? attacker.teraType : move.type;
+    const moveCategory = isTeraBlast && attacker.isTerastallized
+        ? ((attacker.stats.attack || 0) > (attacker.stats.spAtk || 0) ? 'physical' : 'special')
+        : move.category;
+    if (moveCategory === 'status' || !move.power) {
         const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
         return { damage: 0, effectiveness: 1, critical: false, missed: !accuracyCheck };
     }
     const chart = await loadTypeEffectiveness();
     const level = attacker.level || 50;
-    let attack = move.category === 'physical' ? attacker.stats.attack : attacker.stats.spAtk;
-    let defense = move.category === 'physical' ? defender.stats.defense : defender.stats.spDef;
+    let attack = moveCategory === 'physical' ? attacker.stats.attack : attacker.stats.spAtk;
+    let defense = moveCategory === 'physical' ? defender.stats.defense : defender.stats.spDef;
 
     const attackerItem = getHeldItemEffect(attacker.heldItemId);
     const defenderItem = getHeldItemEffect(defender.heldItemId);
@@ -175,12 +180,16 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
 
     let damage = ((2 * level / 5 + 2) * move.power * attack / defense) / 50 + 2;
 
-    const effectiveness = getEffectiveness(chart, move.type, defender.types);
+    const effectiveness = getEffectiveness(chart, moveType, defender.types);
     damage *= effectiveness;
 
-    const isSTAB = attacker.types && attacker.types.includes(move.type);
+    const isSTAB = attacker.types && attacker.types.includes(moveType);
     let stabMult = isSTAB ? 1.5 : 1;
     if (attackerAbilityName === 'adaptability' && isSTAB) stabMult = 2;
+    if (attacker.isTerastallized && moveType === attacker.teraType) {
+        stabMult = attacker._preTeraTypes?.includes(moveType) ? 2 : 1.5;
+        if (attackerAbilityName === 'adaptability') stabMult = 2.25;
+    }
     damage *= stabMult;
 
     if (attackerAbilityName === 'technician' && move.power && move.power <= 60) {

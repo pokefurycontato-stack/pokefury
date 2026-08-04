@@ -162,7 +162,10 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         basePokemonId: apiData.basePokemonId || null,
         _statStages: { attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 },
         currentAbility: null,
-        currentAbilityName: null
+        currentAbilityName: null,
+        teraType: apiData.teraType || apiData.types?.[0] || 'normal',
+        isTerastallized: false,
+        _preTeraTypes: null
     };
 }
 

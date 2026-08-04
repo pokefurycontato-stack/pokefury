@@ -1,7 +1,7 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
 import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTurnEnd, processHeldItemOnHit, checkQuickClaw, processLifeOrbRecoil, getChoiceLockedMove, setChoiceLock, clearChoiceLock, getPokemonItemEffect } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
-import { getMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd } from './battle-mechanics.js';
+import { getMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd, activateTerastal } from './battle-mechanics.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
@@ -1130,6 +1130,18 @@ class PokeFuryGame {
             await this.enemyTurn();
             this._turnLocked = false;
         }
+    }
+
+    async activateTerastal() {
+        if (this._turnLocked || this.pvpBattle) return;
+        const pokemon = getFirstAlive(this.playerTeam);
+        if (!pokemon || this._battleState?.teraUsedPlayer) return;
+        if (!activateTerastal(pokemon)) return;
+        this._battleState.teraUsedPlayer = true;
+        await showBattleMessage(`${pokemon.name} Terastalizou! Tipo Tera: ${pokemon.teraType}!`);
+        drawBattleScene(this.ctx, this.canvas, pokemon, getFirstAlive(this.enemyTeam), this.currentBattleBg, this.getBattleClipRect());
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        await this.enemyTurn();
     }
 
     async onBag() {

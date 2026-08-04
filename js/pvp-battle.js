@@ -40,6 +40,8 @@ export class PVPBattle {
             stats: p.stats, types: p.types, spriteUrl: p.spriteUrls?.front || '',
             statStages: p._statStages || {}, statusEffect: p.statusEffect || null,
             fainted: p.currentHp <= 0,
+            teraType: p.teraType || p.types?.[0] || 'normal',
+            isTerastallized: !!p.isTerastallized,
             moves: (p.moves || []).map(m => ({
                 id: m.id, name: m.name, type: m.type, power: m.power,
                 category: m.category, currentPp: m.currentPp, pp: m.pp
@@ -108,6 +110,8 @@ export class PVPBattle {
             p._statStages = s.statStages || p._statStages;
             p.statusEffect = s.statusEffect || null;
             p.fainted = p.currentHp <= 0;
+            p.teraType = s.teraType || p.teraType;
+            p.isTerastallized = !!s.isTerastallized;
             if (s.moves) p.moves = p.moves.map(m => {
                 const saved = s.moves.find(x => String(x.id) === String(m.id));
                 return saved ? { ...m, currentPp: saved.currentPp } : m;
