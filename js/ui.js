@@ -631,9 +631,6 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
 }
 
 export function stopBattleVideo() {
-
-
-export function stopBattleVideo() {
     if (currentBattleVideo) {
         currentBattleVideo.pause();
         currentBattleVideo.currentTime = 0;
