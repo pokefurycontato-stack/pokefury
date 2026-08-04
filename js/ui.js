@@ -743,8 +743,14 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     const maxDim = Math.round(fixedSize * Math.min(sx, sy));
     el.style.width = Math.round(maxDim) + 'px';
     el.style.height = Math.round(maxDim) + 'px';
-    el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
-    el.style.top = Math.round(y * sy - maxDim / 2) + 'px';
+    if (document.getElementById('pvp-fullscreen')) {
+        // PVP positions are floor anchors: the saved point is the feet/shadow.
+        el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
+        el.style.top = Math.round(y * sy - maxDim) + 'px';
+    } else {
+        el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
+        el.style.top = Math.round(y * sy - maxDim / 2) + 'px';
+    }
 }
 
 function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {

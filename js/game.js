@@ -3288,8 +3288,8 @@ class PokeFuryGame {
                 <button id="pos-close" style="padding:6px 14px;background:rgba(244,67,54,0.8);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Fechar</button>
             </div>
             <canvas id="pos-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;"></canvas>
-            <div id="pos-player-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#4caf50;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #4caf50;"></div>
-            <div id="pos-enemy-marker" style="position:absolute;width:30px;height:30px;border-radius:50%;background:#f44336;border:4px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #f44336;"></div>
+                <div id="pos-player-marker" style="position:absolute;width:42px;height:12px;border-radius:50%;background:#4caf50;border:3px solid #fff;transform:translate(-50%,-100%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #4caf50;"></div>
+                <div id="pos-enemy-marker" style="position:absolute;width:42px;height:12px;border-radius:50%;background:#f44336;border:3px solid #fff;transform:translate(-50%,-100%);pointer-events:none;display:none;z-index:10003;box-shadow:0 0 12px #f44336;"></div>
         `;
 
         document.body.appendChild(overlay);
