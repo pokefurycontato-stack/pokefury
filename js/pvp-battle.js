@@ -1,6 +1,7 @@
 /* Real-time simultaneous-action PVP battle. */
 import { executeTurn, getEffectivenessText } from './battle.js';
 import { getHeldItemEffect } from './utils.js';
+import { getChoiceLockedMove, clearChoiceLock } from './utils.js';
 import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed, processEntryAbilities } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
@@ -193,6 +194,10 @@ export class PVPBattle {
             if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return false;
         }
         if (action === 'attack' && data.tera && this.teraUsed) return false;
+        if (action === 'attack') {
+            const lockedMove = getChoiceLockedMove(this.myActivePokemon);
+            if (lockedMove && String(lockedMove.id) !== String(data.moveId)) return false;
+        }
         this.pendingAction = { action, ...data };
 
         const { error } = await window.db.from('pvp_battle_state').update({
@@ -388,6 +393,7 @@ export class PVPBattle {
             if (action.action === 'switch') {
                 const next = team[action.newIndex];
                 if (next && next.currentHp > 0 && action.newIndex !== currentIndex) {
+                    clearChoiceLock(team[currentIndex]);
                     if (isChallenger) this.myIndex = action.newIndex;
                     else this.enemyIndex = action.newIndex;
                     result.switchedSides.push(side);

@@ -1066,7 +1066,8 @@ class PokeFuryGame {
         if (!playerPokemon || !enemyPokemon) return;
 
         this._turnLocked = true;
-        showMoveSelection(playerPokemon.moves, async (move) => {
+        const choiceLockedMove = getChoiceLockedMove(playerPokemon);
+        showMoveSelection(choiceLockedMove ? [choiceLockedMove] : playerPokemon.moves, async (move) => {
             try {
                 await this.executeBattleTurn(playerPokemon, enemyPokemon, move);
             } catch (e) {
@@ -1095,6 +1096,7 @@ class PokeFuryGame {
                 const temp = this.playerTeam[activeIndex];
                 this.playerTeam[activeIndex] = this.playerTeam[newIndex];
                 this.playerTeam[newIndex] = temp;
+                clearChoiceLock(playerPokemon);
 
                 await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
 
