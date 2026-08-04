@@ -595,6 +595,18 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     ctx.save();
     ctx.clearRect(0, 0, VIRTUAL_W, VIRTUAL_H);
 
+    // Always paint a fallback first so a failed/late background request cannot leave a black canvas.
+    const fallbackSky = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.52);
+    fallbackSky.addColorStop(0, '#102a43');
+    fallbackSky.addColorStop(1, '#1d4f63');
+    ctx.fillStyle = fallbackSky;
+    ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.52);
+    const fallbackGround = ctx.createLinearGradient(0, VIRTUAL_H * 0.52, 0, VIRTUAL_H);
+    fallbackGround.addColorStop(0, '#245b32');
+    fallbackGround.addColorStop(1, '#0b2415');
+    ctx.fillStyle = fallbackGround;
+    ctx.fillRect(0, VIRTUAL_H * 0.52, VIRTUAL_W, VIRTUAL_H * 0.48);
+
     if (backgroundUrl) {
         const isVideo = /\.(mp4|webm|ogg)$/i.test(backgroundUrl);
         if (isVideo) {
@@ -615,21 +627,11 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
             if (img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, 0, 0, VIRTUAL_W, VIRTUAL_H);
             } else {
-                const skyGrad = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.5);
-                skyGrad.addColorStop(0, '#0f3460'); skyGrad.addColorStop(1, '#16213e');
-                ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.5);
-                const groundGrad = ctx.createLinearGradient(0, VIRTUAL_H * 0.5, 0, VIRTUAL_H);
-                groundGrad.addColorStop(0, '#1a3a1a'); groundGrad.addColorStop(1, '#0d1f0d');
-                ctx.fillStyle = groundGrad; ctx.fillRect(0, VIRTUAL_H * 0.5, VIRTUAL_W, VIRTUAL_H * 0.5);
+                // Fallback was painted before attempting the background.
             }
         }
     } else {
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.5);
-        skyGrad.addColorStop(0, '#0f3460'); skyGrad.addColorStop(1, '#16213e');
-        ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.5);
-        const groundGrad = ctx.createLinearGradient(0, VIRTUAL_H * 0.5, 0, VIRTUAL_H);
-        groundGrad.addColorStop(0, '#1a3a1a'); groundGrad.addColorStop(1, '#0d1f0d');
-        ctx.fillStyle = groundGrad; ctx.fillRect(0, VIRTUAL_H * 0.5, VIRTUAL_W, VIRTUAL_H * 0.5);
+        // Fallback was painted before attempting the background.
     }
 
     let playerX, playerY, enemyX, enemyY;

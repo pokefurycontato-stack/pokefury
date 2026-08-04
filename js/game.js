@@ -1079,6 +1079,38 @@ class PokeFuryGame {
         });
     }
 
+    async forceWildSwitch(faintedPokemon, enemyPokemon) {
+        const activeIndex = this.playerTeam.indexOf(faintedPokemon);
+        const available = this.playerTeam
+            .map((pokemon, index) => ({ pokemon, index }))
+            .filter(({ pokemon, index }) => index !== activeIndex && !pokemon.fainted && pokemon.currentHp > 0);
+        if (available.length === 0) return;
+
+        let newIndex = null;
+        if (this.afkManager?.running && this.afkManager.autoBattle) {
+            newIndex = available[0].index;
+        } else {
+            newIndex = await new Promise(resolve => {
+                showSwitchPokemonSelection(this.playerTeam, activeIndex, resolve, () => resolve(null));
+            });
+        }
+        if (newIndex == null) return;
+
+        const newPokemon = this.playerTeam[newIndex];
+        if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) return;
+        const temp = this.playerTeam[activeIndex];
+        this.playerTeam[activeIndex] = newPokemon;
+        this.playerTeam[newIndex] = temp;
+        clearChoiceLock(faintedPokemon);
+        await showBattleMessage(`Você enviou ${newPokemon.name}!`);
+        await preloadBattleSprites(newPokemon, enemyPokemon);
+        drawBattleScene(this.ctx, this.canvas, faintedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+        await this.playPVPExit('player', faintedPokemon);
+        drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        await this.playPVPEntrance('player', newPokemon);
+    }
+
     async onSwitchPokemon() {
         if (this._turnLocked) return;
         this._turnLocked = true;
@@ -1540,6 +1572,7 @@ class PokeFuryGame {
                         this.endBattle('lose');
                         return;
                     }
+                    if (playerPokemon.fainted) await this.forceWildSwitch(playerPokemon, enemyPokemon);
                 }
             }
 
@@ -1742,6 +1775,8 @@ class PokeFuryGame {
                 if (isTeamFainted(this.playerTeam)) {
                     await showBattleMessage('Todos seus Pokémon desmaiaram...');
                     this.endBattle('lose');
+                } else {
+                    await this.forceWildSwitch(playerPokemon, enemyPokemon);
                 }
             }
         }
