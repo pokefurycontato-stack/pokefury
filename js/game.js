@@ -3310,6 +3310,7 @@ class PokeFuryGame {
         const playerMarker = overlay.querySelector('#pos-player-marker');
         const enemyMarker = overlay.querySelector('#pos-enemy-marker');
         const instruction = overlay.querySelector('#pos-instruction');
+        const posCanvas = overlay.querySelector('#pos-canvas');
 
         const updateMarkers = () => {
             playerMarker.style.left = (playerPos.x * 100) + '%';
@@ -3321,8 +3322,8 @@ class PokeFuryGame {
         };
         updateMarkers();
 
-        imgContainer.addEventListener('click', (e) => {
-            const rect = imgContainer.getBoundingClientRect();
+        posCanvas.addEventListener('click', (e) => {
+            const rect = posCanvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) / rect.width;
             const y = (e.clientY - rect.top) / rect.height;
 
