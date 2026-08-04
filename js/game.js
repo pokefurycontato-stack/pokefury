@@ -6506,6 +6506,7 @@ class PokeFuryGame {
         if (!battle) return;
 
         this.state = 'battle';
+        stopBattleVideo();
         showScreen('battle-screen');
         this.positionBattleScreen();
 

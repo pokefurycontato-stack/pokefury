@@ -632,7 +632,7 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
                     sy = (img.naturalHeight - sh) / 2;
                 }
                 ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-            } else if (img.complete) {
+            } else {
                 const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
                 skyGrad.addColorStop(0, '#0f3460');
                 skyGrad.addColorStop(1, '#16213e');
