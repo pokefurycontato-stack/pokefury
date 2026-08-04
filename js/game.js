@@ -1099,11 +1099,12 @@ class PokeFuryGame {
                 await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
 
                 const switchedPokemon = this.playerTeam[activeIndex];
-                hideBattlePokemonSprites();
                 await preloadBattleSprites(switchedPokemon, enemyPokemon);
+                drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                await this.playPVPExit('player', playerPokemon);
                 drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                 updateBattleUI(this.playerTeam, this.enemyTeam);
-                await this.playPVPReplacementAnimation('player', playerPokemon, switchedPokemon);
+                await this.playPVPEntrance('player', switchedPokemon);
 
                 await this.enemyTurn();
             } catch (error) {
@@ -1476,10 +1477,12 @@ class PokeFuryGame {
 
                                 await showBattleMessage(`Você trocou para ${newPokemon.name}!`);
                                 const switchedPokemon = this.playerTeam[activeIndex];
-                                hideBattlePokemonSprites();
                                 await preloadBattleSprites(switchedPokemon, enemyPokemon);
+                                drawBattleScene(this.ctx, this.canvas, attacker, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+                                await this.playPVPExit('player', attacker);
                                 drawBattleScene(this.ctx, this.canvas, switchedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
                                 updateBattleUI(this.playerTeam, this.enemyTeam);
+                                await this.playPVPEntrance('player', switchedPokemon);
                                 resolve();
                             }, resolve);
                         });
