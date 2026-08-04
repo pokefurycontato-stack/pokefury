@@ -861,6 +861,7 @@ class PokeFuryGame {
         const activePlayer = getFirstAlive(this.playerTeam);
 
         this.state = 'battle';
+        this._turnLocked = true;
         this._lastBattlePlayer = activePlayer;
         this._lastBattleEnemy = pokemon;
         if (this.overworld2d) this.overworld2d.hide();
@@ -933,6 +934,7 @@ class PokeFuryGame {
         if (this.weatherAnim && this._battleState) {
             this.weatherAnim.setWeather(this._battleState.weather);
         }
+        this._turnLocked = false;
     }
 
     async startBattleWithPokemon(pokemonName, level, spriteUrl) {
@@ -990,6 +992,7 @@ class PokeFuryGame {
             }
             await this.loadWildBattleLayout();
             this.state = 'battle';
+            this._turnLocked = true;
             this._lastBattlePlayer = activePlayer;
             this._lastBattleEnemy = pokemon;
             if (this.overworld2d) this.overworld2d.hide();
@@ -1059,6 +1062,7 @@ class PokeFuryGame {
             if (this.weatherAnim && this._battleState) {
                 this.weatherAnim.setWeather(this._battleState.weather);
             }
+            this._turnLocked = false;
         } catch (e) {
             console.error('[PokeFury] Error starting battle:', e);
             this._battleStarting = false;
@@ -2261,6 +2265,7 @@ class PokeFuryGame {
         await this.loadWildBattleLayout();
 
         this.state = 'battle';
+        this._turnLocked = true;
         this._lastBattlePlayer = activePlayer;
         this._lastBattleEnemy = pokemon;
         if (this.overworld2d) this.overworld2d.hide();
@@ -2321,6 +2326,7 @@ class PokeFuryGame {
         if (this.weatherAnim && this._battleState) {
             this.weatherAnim.setWeather(this._battleState.weather);
         }
+        this._turnLocked = false;
 
         document.getElementById('location-name').textContent = `ALPHA ${a.pokemonName.toUpperCase()} APROXIMOU-SE!`;
     }
@@ -2374,6 +2380,7 @@ class PokeFuryGame {
         await this.loadWildBattleLayout();
 
         this.state = 'battle';
+        this._turnLocked = true;
         this._lastBattlePlayer = activePlayer;
         this._lastBattleEnemy = pokemon;
         if (this.overworld2d) this.overworld2d.hide();
@@ -2436,6 +2443,7 @@ class PokeFuryGame {
         if (this.weatherAnim && this._battleState) {
             this.weatherAnim.setWeather(this._battleState.weather);
         }
+        this._turnLocked = false;
 
         document.getElementById('location-name').textContent = `RAID BOSS ${raid.boss_name.toUpperCase()}!`;
     }
