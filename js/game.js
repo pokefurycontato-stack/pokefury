@@ -779,7 +779,7 @@ class PokeFuryGame {
     }
 
     async startWildBattle(minLevel = 2, maxLevel = 8) {
-        if (this._battleStarting || this.state === 'battle') return;
+        if (this._battleStarting || this._battleEnding || this.state === 'battle') return;
         if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
             console.warn('[PokeFury] No alive pokemon, skipping wild battle');
             hideBattlePokemonSprites();
@@ -938,7 +938,7 @@ class PokeFuryGame {
     }
 
     async startBattleWithPokemon(pokemonName, level, spriteUrl) {
-        if (this._battleStarting || this.state === 'battle') return;
+        if (this._battleStarting || this._battleEnding || this.state === 'battle') return;
         this._battleStarting = true;
         this._wildInitialEntrances = { player: false, enemy: false };
         hideBattlePokemonSprites();
@@ -2058,6 +2058,8 @@ class PokeFuryGame {
 
     async endBattle(result) {
         if (this.state !== 'battle') return;
+        if (this._battleEnding) return;
+        this._battleEnding = true;
         this._battleStarting = false;
         console.log('[Battle] Ending battle:', result);
         if (this.weatherAnim) this.weatherAnim.setWeather(null);
@@ -2220,6 +2222,7 @@ class PokeFuryGame {
         if (wasAlpha && result === 'win') {
             await this.endAlphaBattle('win');
         }
+        this._battleEnding = false;
     }
 
     async startAlphaBattle() {

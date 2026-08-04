@@ -49,7 +49,9 @@ export class AFKManager {
         if (!this.running) return;
         try {
             const game = this.game;
-            if (game.state === 'battle' && this.autoBattle) {
+            if (game._battleEnding) {
+                // Wait until rewards, persistence and battle cleanup finish.
+            } else if (game.state === 'battle' && this.autoBattle) {
                 await this._handleBattle();
                 this._wasInBattle = true;
             } else if (game.state === 'overworld') {
