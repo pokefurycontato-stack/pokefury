@@ -260,6 +260,18 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     }
     damage *= stabMult;
 
+    const biteMoves = ['bite', 'crunch', 'fire fang', 'ice fang', 'thunder fang', 'poison fang', 'hyper fang', 'jaw lock'];
+    const punchMoves = ['bullet punch', 'drain punch', 'dynamic punch', 'fire punch', 'focus punch', 'ice punch', 'mach punch', 'meteor mash', 'power-up punch', 'shadow punch', 'sky uppercut', 'thunder punch'];
+    const pulseMoves = ['aura sphere', 'dark pulse', 'dragon pulse', 'heal pulse', 'origin pulse', 'terrain pulse', 'water pulse'];
+    const slicingMoves = ['aerial ace', 'air slash', 'cut', 'fury cutter', 'leaf blade', 'night slash', 'psycho cut', 'razor leaf', 'sacred sword', 'slash', 'stone axe', 'x-scissor'];
+    if (attackerAbilityName === 'strong jaw' && biteMoves.includes(moveName)) damage *= 1.5;
+    if (attackerAbilityName === 'iron fist' && punchMoves.includes(moveName)) damage *= 1.2;
+    if (attackerAbilityName === 'mega launcher' && pulseMoves.includes(moveName)) damage *= 1.5;
+    if (attackerAbilityName === 'sharpness' && slicingMoves.includes(moveName)) damage *= 1.5;
+    if (attackerAbilityName === 'tough claws' && move.category === 'physical') damage *= 1.3;
+    const sheerForceMoves = ['flamethrower', 'fire blast', 'thunderbolt', 'thunder', 'ice beam', 'blizzard', 'scald', 'rock slide', 'iron head', 'air slash', 'dark pulse', 'shadow ball', 'energy ball', 'earth power', 'sludge bomb', 'poison jab', 'water pulse', 'dragon pulse'];
+    if (attackerAbilityName === 'sheer force' && sheerForceMoves.includes(moveName)) damage *= 1.3;
+
     if (attackerAbilityName === 'technician' && movePower && movePower <= 60) {
         damage *= 1.5;
     }

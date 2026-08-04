@@ -812,6 +812,16 @@ export const ABILITY_EFFECTS = {
     'mold breaker': { trigger: 'bypass_abilities' },
     'teravolt': { trigger: 'bypass_abilities' },
     'turboblaze': { trigger: 'bypass_abilities' },
+    'simple': { trigger: 'stage_multiplier', multiplier: 2 },
+    'contrary': { trigger: 'stage_invert' },
+    'defiant': { trigger: 'stat_drop_response', stat: 'attack', stages: 2 },
+    'competitive': { trigger: 'stat_drop_response', stat: 'spAtk', stages: 2 },
+    'strong jaw': { trigger: 'move_power_boost', category: 'bite', multiplier: 1.5 },
+    'iron fist': { trigger: 'move_power_boost', category: 'punch', multiplier: 1.2 },
+    'mega launcher': { trigger: 'move_power_boost', category: 'pulse', multiplier: 1.5 },
+    'sharpness': { trigger: 'move_power_boost', category: 'slicing', multiplier: 1.5 },
+    'tough claws': { trigger: 'move_power_boost', category: 'contact', multiplier: 1.3 },
+    'sheer force': { trigger: 'secondary_power_boost', multiplier: 1.3 },
     'unnerve': { trigger: 'entry', effect: 'prevent_berry' },
     'anticipation': { trigger: 'entry', effect: 'none' },
     'forewarn': { trigger: 'entry', effect: 'none' },
@@ -1268,8 +1278,12 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
 
         const chance = effect.chance || 100;
         if (Math.random() * 100 < chance) {
-            for (const { stat, stages } of statsToBoost) {
-                attacker._statStages[stat] = Math.min(6, (attacker._statStages[stat] || 0) + stages);
+            const abilityName = getAbilityName(attacker.currentAbility);
+            for (const { stat, stages: baseStages } of statsToBoost) {
+                let stages = baseStages;
+                if (abilityName === 'simple') stages *= 2;
+                if (abilityName === 'contrary') stages *= -1;
+                attacker._statStages[stat] = Math.max(-6, Math.min(6, (attacker._statStages[stat] || 0) + stages));
                 messages.push(`${getStatBoostMsg(attacker.name, stat, stages)}`);
             }
         }
@@ -1295,8 +1309,18 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
 
         const chance = effect.chance || 100;
         if (Math.random() * 100 < chance) {
-            defender._statStages[effect.stat] = Math.max(-6, (defender._statStages[effect.stat] || 0) - effect.stages);
-            messages.push(`${getStatDropMsg(defender.name, effect.stat, effect.stages)}`);
+            let stages = effect.stages;
+            const defenderAbility = getAbilityName(defender.currentAbility);
+            if (defenderAbility === 'simple') stages *= 2;
+            if (defenderAbility === 'contrary') stages *= -1;
+            defender._statStages[effect.stat] = Math.max(-6, Math.min(6, (defender._statStages[effect.stat] || 0) - stages));
+            messages.push(`${getStatDropMsg(defender.name, effect.stat, stages)}`);
+            const attackerAbility = getAbilityName(attacker.currentAbility);
+            if (attackerAbility === 'defiant' || attackerAbility === 'competitive') {
+                const stat = attackerAbility === 'defiant' ? 'attack' : 'spAtk';
+                attacker._statStages[stat] = Math.min(6, (attacker._statStages[stat] || 0) + 2);
+                messages.push(`${attacker.name} teve ${stat} aumentado por ${attackerAbility}!`);
+            }
         }
         return messages;
     }

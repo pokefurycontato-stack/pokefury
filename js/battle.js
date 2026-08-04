@@ -337,7 +337,10 @@ export async function executeTurn(attacker, defender, move, battleState) {
     }
 
     // Apply secondary effects (status, stat drops, flinch, weather, terrain, hazards, screens)
-    const secondaryMsgs = applySecondaryEffect(attacker, defender, move, result.effectiveness, battleState);
+    const abilityName = (attacker.currentAbilityName || '').toLowerCase();
+    const secondaryMsgs = abilityName === 'sheer force'
+        ? []
+        : applySecondaryEffect(attacker, defender, move, result.effectiveness, battleState);
     messages.push(...secondaryMsgs);
 
     if (effect?.effect === 'recharge' && !defender.fainted) {
