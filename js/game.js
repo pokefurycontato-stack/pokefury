@@ -5239,7 +5239,7 @@ openEventsPanel() {
         maskCtx.fillRect(0, 0, MASK_W, MASK_H);
 
         const brushCanvas = document.createElement('canvas');
-        brushCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:3;cursor:crosshair;display:none;';
+        brushCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:3;display:none;cursor:none;';
         const brushCtx = brushCanvas.getContext('2d');
         preview.appendChild(brushCanvas);
 
@@ -5361,7 +5361,13 @@ openEventsPanel() {
 
         function renderBrushPreview() {
             brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
+            brushCtx.save();
+            brushCtx.globalCompositeOperation = 'source-over';
+            brushCtx.fillStyle = 'rgba(233,69,96,0.25)';
+            brushCtx.fillRect(0, 0, brushCanvas.width, brushCanvas.height);
+            brushCtx.globalCompositeOperation = 'destination-out';
             brushCtx.drawImage(maskCanvas, 0, 0, brushCanvas.width, brushCanvas.height);
+            brushCtx.restore();
         }
 
         brushCanvas.addEventListener('mousedown', (e) => {
@@ -5407,7 +5413,9 @@ openEventsPanel() {
             brushPanel.style.display = brushActive ? 'flex' : 'none';
             brushCursor.style.display = brushActive ? 'block' : 'none';
             brushBtn.style.background = brushActive ? 'rgba(156,39,176,0.8)' : 'rgba(156,39,176,0.4)';
-            if (brushActive) resizeBrushCanvas();
+            img.style.opacity = brushActive ? '0.45' : '1';
+            if (brushActive) { resizeBrushCanvas(); renderBrushPreview(); }
+            else { brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height); }
         };
         btnRow.insertBefore(brushBtn, btnRow.firstChild);
 
