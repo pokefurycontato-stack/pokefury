@@ -760,10 +760,8 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
 
     const mainArea = document.getElementById('main-area');
     const mainRect = mainArea ? mainArea.getBoundingClientRect() : { width: 1024, height: 768 };
-    const canvasW = 1024;
-    const canvasH = 768;
-    const sx = mainRect.width / canvasW;
-    const sy = mainRect.height / canvasH;
+    const sx = 1;
+    const sy = 1;
 
     const maxDim = Math.round(140 * sizeScale);
     el.style.width = Math.round(maxDim * sx) + 'px';
