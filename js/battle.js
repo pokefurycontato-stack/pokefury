@@ -205,6 +205,20 @@ export async function executeTurn(attacker, defender, move, battleState) {
         if (attacker._lockedTurns <= 0) attacker._lockedMoveId = null;
     }
 
+    if (attacker._encoredMoveId && attacker._encored > 0) {
+        const encoreMove = attacker.moves.find(m => String(m.id) === String(attacker._encoredMoveId));
+        if (encoreMove) move = encoreMove;
+    }
+    if (move.category === 'status' && attacker._taunted > 0) {
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`${attacker.name} está sob Taunt e não pode usar golpes de status!`] };
+    }
+    if (attacker._disabledMove && String(attacker._disabledMove.id) === String(move.id)) {
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`${move.name} de ${attacker.name} está desabilitado!`] };
+    }
+    if (attacker._tormented && attacker._lastMove && String(attacker._lastMove.id) === String(move.id)) {
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`${attacker.name} não pode repetir ${move.name} por causa de Torment!`] };
+    }
+
     if (attacker._rechargeTurns > 0) {
         attacker._rechargeTurns--;
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, recharge: true, messages: [`${attacker.name} precisa recarregar!`] };

@@ -54,6 +54,12 @@ export class PVPBattle {
             currentAbility: p.currentAbility || null,
             currentAbilityName: p.currentAbilityName || null,
             heldItemId: p.heldItemId || null,
+            taunted: p._taunted || 0,
+            encored: p._encored || 0,
+            encoredMoveId: p._encoredMoveId || null,
+            disabled: p._disabled || 0,
+            disabledMove: p._disabledMove || null,
+            tormented: p._tormented || 0,
             moves: (p.moves || []).map(m => ({
                 id: m.id, name: m.name, type: m.type, power: m.power,
                 category: m.category, currentPp: m.currentPp, pp: m.pp
@@ -131,6 +137,12 @@ export class PVPBattle {
             p.currentAbility = s.currentAbility || p.currentAbility;
             p.currentAbilityName = s.currentAbilityName || p.currentAbilityName;
             p.heldItemId = s.heldItemId || p.heldItemId;
+            p._taunted = s.taunted || 0;
+            p._encored = s.encored || 0;
+            p._encoredMoveId = s.encoredMoveId || null;
+            p._disabled = s.disabled || 0;
+            p._disabledMove = s.disabledMove || null;
+            p._tormented = s.tormented || 0;
             if (s.moves) p.moves = p.moves.map(m => {
                 const saved = s.moves.find(x => String(x.id) === String(m.id));
                 return saved ? { ...m, currentPp: saved.currentPp } : m;

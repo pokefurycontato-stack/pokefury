@@ -1034,7 +1034,7 @@ export function processEndOfTurn(pokemon, battleState) {
         }
 
         // Ice Body
-        if (abilityName === 'ice body' && weather === 'hail') {
+        if (abilityName === 'ice body' && (weather === 'snow' || weather === 'hail')) {
             const healAmt = Math.max(1, Math.floor(pokemon.stats.hp / 16));
             pokemon.currentHp = Math.min(pokemon.stats.hp, pokemon.currentHp + healAmt);
             messages.push(`${pokemon.name} recuperou ${healAmt} HP com Corpo de Gelo!`);
@@ -1055,6 +1055,19 @@ export function processEndOfTurn(pokemon, battleState) {
         pokemon._statStages.speed = Math.min(6, (pokemon._statStages.speed || 0) + 1);
         messages.push(`${pokemon.name} teve sua Velocidade aumentada!`);
     }
+
+    for (const state of ['_taunted', '_encored', '_disabled']) {
+        if (pokemon[state] > 0) {
+            pokemon[state]--;
+            if (pokemon[state] <= 0) {
+                pokemon[state] = 0;
+                if (state === '_encored') pokemon._encoredMoveId = null;
+                if (state === '_disabled') pokemon._disabledMove = null;
+                messages.push(`${pokemon.name} não está mais sob ${state.slice(1)}!`);
+            }
+        }
+    }
+    pokemon._tormented = 0;
 
     return messages;
 }
@@ -1380,7 +1393,14 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
     // Encore
     if (effect.effect === 'encore') {
         defender._encored = 3;
+        defender._encoredMoveId = defender._lastMove?.id || null;
         messages.push(`${defender.name} está sob efeito de Encore!`);
+        return messages;
+    }
+
+    if (effect.effect === 'torment') {
+        defender._tormented = 1;
+        messages.push(`${defender.name} está sob efeito de Torment!`);
         return messages;
     }
 
