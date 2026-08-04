@@ -330,6 +330,10 @@ export class Overworld2D {
         this.player.direction = 'down';
 
         this.pokemonFollowPos = { x: this.player.x, y: this.player.y };
+        this.pokemonFollowing = null;
+        this.pokemonFollowSprite = null;
+        const follower = this.game.playerTeam?.find(pokemon => !pokemon.fainted);
+        if (follower) await this.loadPokemonFollowSprite(follower);
 
         this.camera.x = this.player.x * this.tileW - this.canvas.width / 2 + this.tileW / 2;
         this.camera.y = this.player.y * this.tileH - this.canvas.height / 2 + this.tileH / 2;
