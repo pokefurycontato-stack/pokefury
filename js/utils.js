@@ -164,7 +164,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         'volt absorb': ['electric'],
         'lightning rod': ['electric'],
         'motor drive': ['electric'],
-        'sap sipper': ['grass'], 'flash fire': ['fire'], 'storm drain': ['water'], 'earth eater': ['ground']
+        'sap sipper': ['grass'], 'flash fire': ['fire'], 'storm drain': ['water'], 'earth eater': ['ground'], 'dry skin': ['water']
     };
     if (!bypassAbilities && abilityImmuneTypes[defAbilityName]?.includes(moveType)) {
         const reactions = {
@@ -172,7 +172,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
             'volt absorb': { heal: 0.25 },
             'lightning rod': { boost: 'spAtk' },
             'motor drive': { boost: 'speed' },
-            'sap sipper': { boost: 'attack' }, 'storm drain': { boost: 'spAtk' }, 'flash fire': { flag: 'flashFire' }
+            'sap sipper': { boost: 'attack' }, 'storm drain': { boost: 'spAtk' }, 'flash fire': { flag: 'flashFire' }, 'dry skin': { heal: 0.25 }
         };
         return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true, abilityReaction: reactions[defAbilityName] || null };
     }
@@ -258,12 +258,14 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     let effectiveness = getEffectiveness(chart, moveType, defender.types);
     if (!bypassAbilities && defAbilityName === 'thick fat' && (moveType === 'fire' || moveType === 'ice')) effectiveness *= 0.5;
     if (!bypassAbilities && defAbilityName === 'water bubble' && moveType === 'fire') effectiveness *= 0.5;
+    if (!bypassAbilities && defAbilityName === 'heatproof' && moveType === 'fire') effectiveness *= 0.5;
     if (!bypassAbilities && defAbilityName === 'wonder guard' && effectiveness <= 1) {
         return { damage: 0, effectiveness, critical: false, missed: false, immune: true };
     }
     damage *= effectiveness;
     if (attackerAbilityName === 'flash fire' && moveType === 'fire' && attacker._flashFire) damage *= 1.5;
     if (attackerAbilityName === 'water bubble' && moveType === 'water') damage *= 2;
+    if (attackerAbilityName === 'dry skin' && moveType === 'fire') damage *= 1.25;
     if (attackerAbilityName === 'sand force' && battleState?.weather === 'sandstorm' && ['rock', 'ground', 'steel'].includes(moveType)) damage *= 1.3;
     if (attackerAbilityName === 'tinted lens' && effectiveness > 0 && effectiveness < 1) damage *= 2;
     if (!bypassAbilities && defAbilityName === 'multiscale' && defender.currentHp >= defender.stats.hp) damage *= 0.5;
