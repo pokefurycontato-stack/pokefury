@@ -64,6 +64,14 @@ export class PVPBattle {
             disabled: p._disabled || 0,
             disabledMove: p._disabledMove || null,
             tormented: p._tormented || 0,
+            sleepTurns: p._sleepTurns || 0,
+            toxicCounter: p._toxicCounter || 0,
+            boundTurns: p._boundTurns || 0,
+            boundDamage: p._boundDamage || 0,
+            rechargeTurns: p._rechargeTurns || 0,
+            lockedMoveId: p._lockedMoveId || null,
+            lockedTurns: p._lockedTurns || 0,
+            lastMoveId: p._lastMove?.id || null,
             moves: (p.moves || []).map(m => ({
                 id: m.id, name: m.name, type: m.type, power: m.power,
                 category: m.category, currentPp: m.currentPp, pp: m.pp
@@ -155,6 +163,14 @@ export class PVPBattle {
             p._disabled = s.disabled || 0;
             p._disabledMove = s.disabledMove || null;
             p._tormented = s.tormented || 0;
+            p._sleepTurns = s.sleepTurns || 0;
+            p._toxicCounter = s.toxicCounter || 0;
+            p._boundTurns = s.boundTurns || 0;
+            p._boundDamage = s.boundDamage || 0;
+            p._rechargeTurns = s.rechargeTurns || 0;
+            p._lockedMoveId = s.lockedMoveId || null;
+            p._lockedTurns = s.lockedTurns || 0;
+            p._lastMove = s.lastMoveId ? p.moves.find(m => String(m.id) === String(s.lastMoveId)) || null : null;
             if (s.moves) p.moves = p.moves.map(m => {
                 const saved = s.moves.find(x => String(x.id) === String(m.id));
                 return saved ? { ...m, currentPp: saved.currentPp } : m;
