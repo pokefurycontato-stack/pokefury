@@ -127,11 +127,13 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         return { damage: 0, effectiveness: 1, critical: false, missed: true };
     }
     const isTeraBlast = String(move.name || '').toLowerCase() === 'tera blast';
-    const moveType = isTeraBlast && attacker.isTerastallized ? attacker.teraType : move.type;
+    let moveType = isTeraBlast && attacker.isTerastallized ? attacker.teraType : move.type;
     const moveCategory = isTeraBlast && attacker.isTerastallized
         ? ((attacker.stats.attack || 0) > (attacker.stats.spAtk || 0) ? 'physical' : 'special')
         : move.category;
-    if (moveCategory === 'status' || !move.power) {
+    const moveName = String(move.name || '').toLowerCase().trim();
+    const dynamicMove = ['endeavor', 'dragon rage', 'sonic boom', 'seismic toss', 'night shade', 'super fang'];
+    if (moveCategory === 'status' || (!move.power && !dynamicMove.includes(moveName))) {
         const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
         return { damage: 0, effectiveness: 1, critical: false, missed: !accuracyCheck };
     }
@@ -158,6 +160,32 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
     }
 
+    let movePower = move.power;
+    if (moveName === 'weather ball' && battleState?.weather) {
+        const weatherTypes = { rain: 'water', sun: 'fire', sandstorm: 'rock', snow: 'ice', hail: 'ice' };
+        moveType = weatherTypes[battleState.weather] || moveType;
+        movePower = 100;
+    }
+    if (moveName === 'stored power' || moveName === 'power trip') {
+        const stages = attacker._statStages || {};
+        movePower = 20 + 20 * Object.values(stages).filter(v => v > 0).reduce((sum, v) => sum + v, 0);
+    }
+    if (moveName === 'hex' && defender.statusEffect) movePower = 130;
+    if (moveName === 'facade' && attacker.statusEffect) movePower = 140;
+    if (moveName === 'gyro ball') movePower = Math.min(150, Math.max(1, Math.floor(25 * (defender.stats.speed || 1) / Math.max(1, attacker.stats.speed || 1))));
+    if (moveName === 'low kick' || moveName === 'grass knot') {
+        const weight = defender.weight || 100;
+        movePower = weight >= 200 ? 120 : weight >= 100 ? 100 : weight >= 50 ? 80 : weight >= 25 ? 60 : weight >= 10 ? 40 : 20;
+    }
+    if (moveName === 'heavy slam' || moveName === 'heat crash') {
+        const ratio = (attacker.weight || 100) / Math.max(1, defender.weight || 100);
+        movePower = ratio >= 5 ? 120 : ratio >= 4 ? 100 : ratio >= 3 ? 80 : ratio >= 2 ? 60 : 40;
+    }
+    if (moveName === 'flail' || moveName === 'reversal') {
+        const hpRatio = attacker.currentHp / Math.max(1, attacker.stats.hp);
+        movePower = hpRatio <= 1 / 16 ? 200 : hpRatio <= 1 / 8 ? 150 : hpRatio <= 1 / 5 ? 100 : hpRatio <= 1 / 3 ? 80 : hpRatio <= 0.5 ? 40 : 20;
+    }
+
     if (attackerItem) {
         if (attackerItem.effect === 'choice_band' && move.category === 'physical') attack *= 1.5;
         if (attackerItem.effect === 'choice_specs' && move.category === 'special') attack *= 1.5;
@@ -173,7 +201,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     if (defAbilityName === 'fur coat' && moveCategory === 'physical') defense *= 2;
 
     // Gen 9 Snow grants Ice-types 1.5x Defense against physical moves.
-    if (battleState?.weather === 'snow' && move.category === 'physical' && defender.types?.includes('ice')) {
+    if (battleState?.weather === 'snow' && moveCategory === 'physical' && defender.types?.includes('ice')) {
         defense *= 1.5;
     }
 
@@ -186,14 +214,13 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     if (attackerAbilityName === 'hustle' && move.category === 'physical') {
         attack *= 1.5;
     }
-    if (defAbilityName === 'marvel scale' && defender.statusEffect && move.category === 'physical') {
-        defense *= 1.5;
-    }
-    if (defAbilityName === 'fur coat' && move.category === 'special') {
-        defense *= 2;
-    }
-
-    let damage = ((2 * level / 5 + 2) * move.power * attack / defense) / 50 + 2;
+    let damage;
+    if (moveName === 'dragon rage') damage = 40;
+    else if (moveName === 'sonic boom') damage = 20;
+    else if (moveName === 'seismic toss' || moveName === 'night shade') damage = level;
+    else if (moveName === 'super fang') damage = Math.floor(defender.currentHp / 2);
+    else if (moveName === 'endeavor') damage = Math.max(0, defender.currentHp - attacker.currentHp);
+    else damage = ((2 * level / 5 + 2) * movePower * attack / defense) / 50 + 2;
 
     const effectiveness = getEffectiveness(chart, moveType, defender.types);
     damage *= effectiveness;
@@ -207,7 +234,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     }
     damage *= stabMult;
 
-    if (attackerAbilityName === 'technician' && move.power && move.power <= 60) {
+    if (attackerAbilityName === 'technician' && movePower && movePower <= 60) {
         damage *= 1.5;
     }
 
