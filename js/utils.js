@@ -230,6 +230,8 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
 
     if (defAbilityName === 'marvel scale' && defender.statusEffect && moveCategory === 'physical') defense *= 1.5;
     if (defAbilityName === 'fur coat' && moveCategory === 'physical') defense *= 2;
+    if (defAbilityName === 'ice scales' && moveCategory === 'special') defense *= 2;
+    if (attackerAbilityName === 'solar power' && battleState?.weather === 'sun' && moveCategory === 'special') attack *= 1.5;
 
     // Gen 9 Snow grants Ice-types 1.5x Defense against physical moves.
     if (battleState?.weather === 'snow' && moveCategory === 'physical' && defender.types?.includes('ice')) {
@@ -262,6 +264,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     damage *= effectiveness;
     if (attackerAbilityName === 'flash fire' && moveType === 'fire' && attacker._flashFire) damage *= 1.5;
     if (attackerAbilityName === 'water bubble' && moveType === 'water') damage *= 2;
+    if (attackerAbilityName === 'sand force' && battleState?.weather === 'sandstorm' && ['rock', 'ground', 'steel'].includes(moveType)) damage *= 1.3;
     if (attackerAbilityName === 'tinted lens' && effectiveness > 0 && effectiveness < 1) damage *= 2;
     if (!bypassAbilities && defAbilityName === 'multiscale' && defender.currentHp >= defender.stats.hp) damage *= 0.5;
     if (!bypassAbilities && effectiveness > 1 && ['filter', 'solid rock', 'prism armor'].includes(defAbilityName)) damage *= 0.75;
@@ -304,6 +307,10 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
 
     const randomFactor = randomInt(85, 100) / 100;
     damage *= randomFactor;
+
+    if (defAbilityName === 'sturdy' && defender.currentHp >= defender.stats.hp && damage >= defender.currentHp) {
+        damage = Math.max(0, defender.currentHp - 1);
+    }
 
     let accuracy = move.accuracy || 100;
     if (attackerItem && attackerItem.effect === 'wide_lens') accuracy = Math.min(100, accuracy * 1.1);
