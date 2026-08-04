@@ -1044,6 +1044,11 @@ export function processEndOfTurn(pokemon, battleState) {
         if (pokemon.currentHp <= 0) pokemon.fainted = true;
         messages.push(`${pokemon.name} sofreu dano da maldição! (-${damage} HP)`);
     }
+    if (pokemon._regenPercent && !pokemon.fainted) {
+        const heal = Math.max(1, Math.floor(pokemon.stats.hp * pokemon._regenPercent));
+        pokemon.currentHp = Math.min(pokemon.stats.hp, pokemon.currentHp + heal);
+        messages.push(`${pokemon.name} recuperou HP! (+${heal})`);
+    }
     if (pokemon._leechSeeded && !magicGuard) {
         const damage = Math.max(1, Math.floor(pokemon.stats.hp / 8));
         pokemon.currentHp = Math.max(0, pokemon.currentHp - damage);

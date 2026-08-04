@@ -69,6 +69,8 @@ export class PVPBattle {
             cursed: !!p._cursed,
             perishTurns: p._perishTurns || 0,
             leechSeeded: !!p._leechSeeded,
+            regenPercent: p._regenPercent || 0,
+            rooted: !!p._rooted,
             sleepTurns: p._sleepTurns || 0,
             confusionTurns: p._confusionTurns || 0,
             toxicCounter: p._toxicCounter || 0,
@@ -175,6 +177,8 @@ export class PVPBattle {
             p._cursed = !!s.cursed;
             p._perishTurns = s.perishTurns || 0;
             p._leechSeeded = !!s.leechSeeded;
+            p._regenPercent = s.regenPercent || 0;
+            p._rooted = !!s.rooted;
             p._sleepTurns = s.sleepTurns || 0;
             p._confusionTurns = s.confusionTurns || 0;
             p._toxicCounter = s.toxicCounter || 0;
@@ -205,6 +209,7 @@ export class PVPBattle {
         } else if (action === 'attack' && (!this.myActivePokemon || this.myActivePokemon.currentHp <= 0)) return false;
         if (action === 'switch') {
             const next = this.myTeam[data.newIndex];
+            if (this.myActivePokemon?._rooted) return false;
             if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return false;
         }
         if (action === 'attack' && data.tera && this.teraUsed) return false;

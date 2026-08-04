@@ -1091,6 +1091,11 @@ class PokeFuryGame {
         showSwitchPokemonSelection(this.playerTeam, activeIndex, async (newIndex) => {
             const newPokemon = this.playerTeam[newIndex];
             if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) { this._turnLocked = false; return; }
+            if (playerPokemon._rooted) {
+                await showBattleMessage(`${playerPokemon.name} está enraizado e não pode ser trocado!`);
+                this._turnLocked = false;
+                return;
+            }
 
             try {
                 const temp = this.playerTeam[activeIndex];
