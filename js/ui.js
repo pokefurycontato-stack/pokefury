@@ -642,12 +642,21 @@ function syncBattleContainerToCanvas() {
     const gameCanvas = document.getElementById('game-canvas');
     if (!gameCanvas || !battlePokemonContainer) return;
     const canvasRect = gameCanvas.getBoundingClientRect();
-    const mainArea = document.getElementById('main-area');
-    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0 };
-    battlePokemonContainer.style.left = (canvasRect.left - mainRect.left) + 'px';
-    battlePokemonContainer.style.top = (canvasRect.top - mainRect.top) + 'px';
-    battlePokemonContainer.style.width = canvasRect.width + 'px';
-    battlePokemonContainer.style.height = canvasRect.height + 'px';
+
+    const fullscreen = document.getElementById('pvp-fullscreen');
+    if (fullscreen) {
+        battlePokemonContainer.style.left = '0';
+        battlePokemonContainer.style.top = '0';
+        battlePokemonContainer.style.width = '100vw';
+        battlePokemonContainer.style.height = '100vh';
+    } else {
+        const mainArea = document.getElementById('main-area');
+        const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0 };
+        battlePokemonContainer.style.left = (canvasRect.left - mainRect.left) + 'px';
+        battlePokemonContainer.style.top = (canvasRect.top - mainRect.top) + 'px';
+        battlePokemonContainer.style.width = canvasRect.width + 'px';
+        battlePokemonContainer.style.height = canvasRect.height + 'px';
+    }
 }
 
 function ensureBattlePokemonContainer() {
@@ -707,10 +716,17 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     }
     el.style.display = 'block';
 
-    const gameCanvas = document.getElementById('game-canvas');
-    const canvasRect = gameCanvas ? gameCanvas.getBoundingClientRect() : { width: 1920, height: 1080 };
-    const sx = canvasRect.width / VIRTUAL_W;
-    const sy = canvasRect.height / VIRTUAL_H;
+    const fullscreen = document.getElementById('pvp-fullscreen');
+    let sx, sy;
+    if (fullscreen) {
+        sx = window.innerWidth / VIRTUAL_W;
+        sy = window.innerHeight / VIRTUAL_H;
+    } else {
+        const gameCanvas = document.getElementById('game-canvas');
+        const canvasRect = gameCanvas ? gameCanvas.getBoundingClientRect() : { width: 1920, height: 1080 };
+        sx = canvasRect.width / VIRTUAL_W;
+        sy = canvasRect.height / VIRTUAL_H;
+    }
 
     const fixedSize = 120;
     const maxDim = Math.round(fixedSize * Math.min(sx, sy));
