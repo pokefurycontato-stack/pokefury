@@ -187,6 +187,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     }
     if (moveName === 'hex' && defender.statusEffect) movePower = 130;
     if (moveName === 'facade' && attacker.statusEffect) movePower = 140;
+    if (moveName === 'knock off' && defender.heldItemId) movePower = Math.floor(movePower * 1.5);
     if (moveName === 'gyro ball') movePower = Math.min(150, Math.max(1, Math.floor(25 * (defender.stats.speed || 1) / Math.max(1, attacker.stats.speed || 1))));
     if (moveName === 'low kick' || moveName === 'grass knot') {
         const weight = defender.weight || 100;

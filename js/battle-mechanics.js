@@ -466,7 +466,10 @@ const MOVE_EFFECTS_BY_NAME = {
     'stomp': { effect: 'flinch', chance: 30 },
     'rolling kick': { effect: 'flinch', chance: 30 },
     'wing attack': { effect: 'none' },
-    'knock off': { effect: 'none' },
+    'knock off': { effect: 'remove_item' },
+    'thief': { effect: 'steal_item' },
+    'trick': { effect: 'swap_items' },
+    'switcheroo': { effect: 'swap_items' },
     'psychic fangs': { effect: 'none', breaksScreens: true },
     'body press': { effect: 'none' },
     'infestation': { effect: 'none' },
@@ -1113,6 +1116,31 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
             attacker.currentHp -= cost;
             attacker._substituteHp = cost;
             messages.push(`${attacker.name} criou um Substitute! (-${cost} HP)`);
+        }
+        return messages;
+    }
+
+    if (effect.effect === 'remove_item') {
+        if (defender.heldItemId) {
+            defender.heldItemId = null;
+            messages.push(`${defender.name} perdeu o item segurado!`);
+        }
+        return messages;
+    }
+    if (effect.effect === 'steal_item') {
+        if (!attacker.heldItemId && defender.heldItemId) {
+            attacker.heldItemId = defender.heldItemId;
+            defender.heldItemId = null;
+            messages.push(`${attacker.name} roubou o item do oponente!`);
+        }
+        return messages;
+    }
+    if (effect.effect === 'swap_items') {
+        if (attacker.heldItemId || defender.heldItemId) {
+            const item = attacker.heldItemId;
+            attacker.heldItemId = defender.heldItemId || null;
+            defender.heldItemId = item || null;
+            messages.push(`${attacker.name} e ${defender.name} trocaram seus itens!`);
         }
         return messages;
     }
