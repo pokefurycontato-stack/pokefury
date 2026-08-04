@@ -222,7 +222,7 @@ export class PVPBattle {
             ['challenged', challengedAction], ['challenger', challengerAction]
         ];
         this.battleState.turn = this.round;
-        const result = { order: order.map(x => x[0]), winner: null, damage: [], logs: [], effects: [] };
+        const result = { order: order.map(x => x[0]), winner: null, damage: [], logs: [], effects: [], faintedSides: [] };
 
         for (const [side, action] of order) {
             const isChallenger = side === 'challenger';
@@ -263,6 +263,7 @@ export class PVPBattle {
             result.damage.push({ side, name: attacker.name, move: move.name, damage: turnResult.damage || 0 });
             if (turnResult.fainted || defender.currentHp <= 0) {
                 defender.fainted = true;
+                result.faintedSides.push(isChallenger ? 'challenged' : 'challenger');
                 result.logs.push(`${defender.name} desmaiou!`);
             }
         }
@@ -306,6 +307,11 @@ export class PVPBattle {
         const previousEnemyPokemon = this.enemyActivePokemon;
         const previousMyHp = previousMyPokemon?.currentHp ?? 0;
         const previousEnemyHp = previousEnemyPokemon?.currentHp ?? 0;
+        const mySide = isChallenger ? 'challenger' : 'challenged';
+        const enemySide = isChallenger ? 'challenged' : 'challenger';
+        const faintedSides = payload.result?.faintedSides || [];
+        const myWasDefeated = faintedSides.includes(mySide);
+        const enemyWasDefeated = faintedSides.includes(enemySide);
         const mySnapshot = isChallenger ? payload.challengerTeam : payload.challengedTeam;
         const enemySnapshot = isChallenger ? payload.challengedTeam : payload.challengerTeam;
         this.myTeam = this.applySnapshot(this.myTeam, mySnapshot);
@@ -319,18 +325,18 @@ export class PVPBattle {
         await this.persistReadyState();
         this.game.addPVPBattleLog?.(payload.result?.logs || []);
         this.onStateUpdate?.();
-        if (previousMyHp > 0 && this.myTeam[previousMyIndex]?.currentHp <= 0) {
+        if (myWasDefeated || (previousMyHp > 0 && this.myTeam[previousMyIndex]?.currentHp <= 0)) {
             this.game.playPVPExit?.('player', previousMyPokemon);
         }
-        if (previousEnemyHp > 0 && this.enemyTeam[previousEnemyIndex]?.currentHp <= 0) {
+        if (enemyWasDefeated || (previousEnemyHp > 0 && this.enemyTeam[previousEnemyIndex]?.currentHp <= 0)) {
             this.game.playPVPExit?.('enemy', previousEnemyPokemon);
         }
         if (previousMyIndex !== this.myIndex) {
-            if (previousMyHp <= 0) this.game.playPVPEntrance?.('player', this.visibleMyActivePokemon);
+            if (myWasDefeated || previousMyHp <= 0) this.game.playPVPEntrance?.('player', this.visibleMyActivePokemon);
             else this.game.playPVPReplacementAnimation?.('player', previousMyPokemon, this.visibleMyActivePokemon);
         }
         if (previousEnemyIndex !== this.enemyIndex) {
-            if (previousEnemyHp <= 0) this.game.playPVPEntrance?.('enemy', this.enemyActivePokemon);
+            if (enemyWasDefeated || previousEnemyHp <= 0) this.game.playPVPEntrance?.('enemy', this.enemyActivePokemon);
             else this.game.playPVPReplacementAnimation?.('enemy', previousEnemyPokemon, this.enemyActivePokemon);
         }
         this.game.playPVPActionEffects?.(payload.result?.effects || [], isChallenger);
