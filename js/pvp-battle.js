@@ -1,6 +1,6 @@
 /* Real-time simultaneous-action PVP battle. */
 import { executeTurn, getEffectivenessText } from './battle.js';
-import { getMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects } from './battle-mechanics.js';
+import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -246,9 +246,9 @@ export class PVPBattle {
         const challengedMove = this.enemyActivePokemon?.moves.find(m => String(m.id) === String(challengedAction.moveId));
         const challengerSpeed = this.getEffectiveSpeed(this.myActivePokemon);
         const challengedSpeed = this.getEffectiveSpeed(this.enemyActivePokemon);
-        const priority = (action, move) => action.action === 'switch' ? 6 : 1 + getMovePriority(move);
-        const challengerPriority = priority(challengerAction, challengerMove);
-        const challengedPriority = priority(challengedAction, challengedMove);
+        const priority = (action, move, pokemon) => action.action === 'switch' ? 6 : 1 + getEffectiveMovePriority(move, pokemon, this.battleState);
+        const challengerPriority = priority(challengerAction, challengerMove, this.myActivePokemon);
+        const challengedPriority = priority(challengedAction, challengedMove, this.enemyActivePokemon);
         const challengerFirst = challengerPriority !== challengedPriority
             ? challengerPriority > challengedPriority
             : challengerSpeed >= challengedSpeed;

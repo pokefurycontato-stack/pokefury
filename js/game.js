@@ -1,7 +1,7 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
 import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTurnEnd, processHeldItemOnHit, checkQuickClaw, processLifeOrbRecoil, getChoiceLockedMove, setChoiceLock, clearChoiceLock, getPokemonItemEffect } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
-import { getMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd, activateTerastal } from './battle-mechanics.js';
+import { getEffectiveMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd, activateTerastal } from './battle-mechanics.js';
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
@@ -1290,9 +1290,9 @@ class PokeFuryGame {
             resetTurnState(playerPokemon);
             resetTurnState(enemyPokemon);
 
-            const playerPriority = getMovePriority(playerMove);
+            const playerPriority = getEffectiveMovePriority(playerMove, playerPokemon, this._battleState);
             const enemyMove = getAIMove(enemyPokemon);
-            const enemyPriority = enemyMove ? getMovePriority(enemyMove) : 0;
+            const enemyPriority = enemyMove ? getEffectiveMovePriority(enemyMove, enemyPokemon, this._battleState) : 0;
 
             const playerQuickClaw = checkQuickClaw(playerPokemon);
             const enemyQuickClaw = checkQuickClaw(enemyPokemon);

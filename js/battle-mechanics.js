@@ -264,6 +264,17 @@ export function getMovePriority(move) {
     return MOVE_PRIORITY[name] || 0;
 }
 
+export function getEffectiveMovePriority(move, pokemon, battleState = null) {
+    let priority = getMovePriority(move);
+    const ability = (pokemon?.currentAbilityName || getAbilityName(pokemon?.currentAbility)).toLowerCase();
+    const effect = getMoveEffect(move);
+    if (ability === 'prankster' && move?.category === 'status') priority += 1;
+    if (ability === 'gale wings' && move?.type === 'flying' && pokemon.currentHp >= pokemon.stats.hp) priority += 1;
+    if (ability === 'triage' && (effect?.effect === 'heal' || effect?.effect === 'drain')) priority += 3;
+    if (effect?.effect === 'terrain_priority' && battleState?.terrain === effect.terrainType) priority += effect.priority || 1;
+    return priority;
+}
+
 // ============================================================
 // MOVE EFFECTS DATABASE (by ID - numeric)
 // ============================================================
