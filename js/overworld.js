@@ -828,8 +828,9 @@ export class Overworld2D {
             const drawX = p.x * this.tileW - this.camera.x + this.mapOffsetX;
             const drawY = p.y * this.tileH - this.camera.y + this.mapOffsetY;
 
-            const pScale = (window.PokeAPI && p.encounter?.pokemon_id)
+            const rawScale = (window.PokeAPI && p.encounter?.pokemon_id)
                 ? getPokemonScale(window.PokeAPI.pokemonCache[p.encounter.pokemon_id]) : 1;
+            const pScale = Math.min(1.25, rawScale);
             const spriteSize = this.tileW * 1.2 * pScale;
 
             const finalY = drawY - this.tileH * 0.3;
@@ -913,7 +914,7 @@ export class Overworld2D {
         if (this.pokemonFollowing && this.pokemonFollowSprite && this.pokemonFollowSprite.complete) {
             const px = this.pokemonFollowPos.x * this.tileW - this.camera.x + this.mapOffsetX;
             const py = this.pokemonFollowPos.y * this.tileH - this.camera.y + this.mapOffsetY;
-            const fScale = getPokemonScale(this.pokemonFollowing);
+            const fScale = Math.min(1.25, getPokemonScale(this.pokemonFollowing));
             const fSize = this.tileW * fScale;
             ctx.drawImage(this.pokemonFollowSprite, px + (this.tileW - fSize) / 2, py + (this.tileH - fSize) / 2, fSize, fSize);
         }
