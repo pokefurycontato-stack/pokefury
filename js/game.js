@@ -3285,8 +3285,8 @@ class PokeFuryGame {
         overlay.innerHTML = `
             <div style="color:#fff;font-size:14px;font-weight:700;text-align:center;">🎯 Editor de Posições PVP</div>
             <div id="pos-instruction" style="color:#4caf50;font-size:12px;text-align:center;">Clique onde quer posicionar o SEU pokémon</div>
-            <div id="pos-image-container" style="position:relative;max-width:800px;max-height:500px;border:2px solid #e94560;border-radius:8px;overflow:hidden;cursor:crosshair;">
-                <img id="pos-bg-image" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png" style="width:100%;height:auto;display:block;">
+            <div id="pos-image-container" style="position:relative;width:100%;max-width:960px;aspect-ratio:16/9;border:2px solid #e94560;border-radius:8px;overflow:hidden;cursor:crosshair;">
+                <img id="pos-bg-image" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png" style="width:100%;height:100%;object-fit:cover;display:block;">
                 <div id="pos-player-marker" style="position:absolute;width:24px;height:24px;border-radius:50%;background:#4caf50;border:3px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:5;box-shadow:0 0 8px #4caf50;"></div>
                 <div id="pos-enemy-marker" style="position:absolute;width:24px;height:24px;border-radius:50%;background:#f44336;border:3px solid #fff;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:5;box-shadow:0 0 8px #f44336;"></div>
             </div>
