@@ -1724,7 +1724,7 @@ class PokeFuryGame {
         return new Promise(async (resolve) => {
             const cleanup = () => {
                 this._capturePromptOpen = false;
-                const overlay = document.querySelector('[style*="z-index:1000"]');
+                const overlay = document.getElementById('capture-prompt-overlay');
                 if (overlay) overlay.remove();
             };
 
@@ -1781,7 +1781,8 @@ class PokeFuryGame {
             }
 
             const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
+            overlay.id = 'capture-prompt-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
 
             const popup = document.createElement('div');
             popup.style.cssText = 'background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.4);border-radius:16px;padding:24px 28px;max-width:360px;width:90%;text-align:center;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(233,69,96,0.2);';
@@ -1839,7 +1840,8 @@ class PokeFuryGame {
             }
 
             const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
+            overlay.id = 'capture-ball-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
 
             const popup = document.createElement('div');
             popup.style.cssText = 'background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.4);border-radius:16px;padding:24px 28px;max-width:380px;width:90%;text-align:center;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(233,69,96,0.2);';
@@ -2046,7 +2048,7 @@ class PokeFuryGame {
             this._winStreak++;
             const enemy = this.enemyTeam[0];
             const silverDrop = this.calculateSilverDrop(enemy);
-            await window.db.rpc('add_currency', {
+            const { error: rewardError } = await window.db.rpc('add_currency', {
                 p_character_id: this.currentCharacterId,
                 p_currency_type: 'silver',
                 p_amount: silverDrop,
@@ -2054,8 +2056,12 @@ class PokeFuryGame {
                 p_description: `Battle reward vs ${enemy.name || 'wild pokemon'}`,
                 p_created_by: this.userId || null
             });
+            if (rewardError) {
+                console.error('[Battle] Reward delivery failed:', rewardError);
+                this.showToast('A recompensa será sincronizada novamente.', 'warning');
+            }
             await this.refreshCurrencies();
-            await showBattleMessage(`+${silverDrop} Prata!`);
+            if (!rewardError) await showBattleMessage(`+${silverDrop} Prata!`);
         }
 
         if (result === 'lose' && this.playerTeam) {
@@ -2080,7 +2086,7 @@ class PokeFuryGame {
         if (this.battleAnimations) this.battleAnimations.cleanupEntrance();
         stopBattleVideo();
 
-        document.querySelectorAll('#battle-anim-overlay, #battle-pokemon-sprites, .battle-pokeball, .battle-light-beam, .capture-star, .battle-trail').forEach(el => el.remove());
+        document.querySelectorAll('#battle-anim-overlay, #battle-pokemon-sprites, #capture-prompt-overlay, #capture-ball-overlay, .battle-pokeball, .battle-light-beam, .capture-star, .battle-trail').forEach(el => el.remove());
 
         const raidBossHp = this._isRaidBattle && this.enemyTeam[0]
             ? { maxHp: this.enemyTeam[0].maxHp, currentHp: this.enemyTeam[0].currentHp }
