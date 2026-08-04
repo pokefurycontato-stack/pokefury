@@ -957,6 +957,15 @@ export function processEndOfTurn(pokemon, battleState) {
     const abilityNameAtStart = battleState?._neutralizingGas ? '' : getAbilityName(pokemon.currentAbility);
     const magicGuard = abilityNameAtStart === 'magic guard';
 
+    if (pokemon.statusEffect && abilityNameAtStart === 'shed skin' && Math.random() < 1 / 3) {
+        pokemon.statusEffect = null;
+        messages.push(`${pokemon.name} curou seu status com Shed Skin!`);
+    }
+    if (pokemon.statusEffect && abilityNameAtStart === 'hydration' && battleState?.weather === 'rain') {
+        pokemon.statusEffect = null;
+        messages.push(`${pokemon.name} curou seu status com Hydration!`);
+    }
+
     // Status damage
     const status = pokemon.statusEffect;
     if (status && !magicGuard) {
