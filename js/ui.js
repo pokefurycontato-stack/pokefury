@@ -706,10 +706,10 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     }
     el.style.display = 'block';
 
-    const mainArea = document.getElementById('main-area');
-    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { width: 1920, height: 1080 };
-    const sx = mainRect.width / VIRTUAL_W;
-    const sy = mainRect.height / VIRTUAL_H;
+    const gameCanvas = document.getElementById('game-canvas');
+    const canvasRect = gameCanvas ? gameCanvas.getBoundingClientRect() : { width: 1920, height: 1080 };
+    const sx = canvasRect.width / VIRTUAL_W;
+    const sy = canvasRect.height / VIRTUAL_H;
 
     const fixedSize = 120;
     const maxDim = Math.round(fixedSize * Math.min(sx, sy));
