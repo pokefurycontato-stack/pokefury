@@ -391,8 +391,8 @@ const MOVE_EFFECTS_BY_NAME = {
     'stun spore': { effect: 'status', status: STATUS.PARALYSIS, chance: 75 },
     'poison powder': { effect: 'status', status: STATUS.POISON, chance: 100 },
 
-    'swagger': { effect: 'stat_drop', stat: 'attack', stages: 2 },
-    'flatter': { effect: 'stat_drop', stat: 'spAtk', stages: 2 },
+    'swagger': { effect: 'confusion_boost', stat: 'attack', stages: 2 },
+    'flatter': { effect: 'confusion_boost', stat: 'spAtk', stages: 1 },
     'confuse ray': { effect: 'confusion', chance: 100 },
     'supersonic': { effect: 'confusion', chance: 55 },
     'sweet kiss': { effect: 'confusion', chance: 75 },
@@ -1201,6 +1201,20 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
             defender._confusionTurns = 1 + Math.floor(Math.random() * 4);
             messages.push(`${defender.name} ficou confuso!`);
         }
+        return messages;
+    }
+
+    if (effect.effect === 'confusion_boost') {
+        const abilityName = getAbilityName(defender.currentAbility);
+        if (abilityName === 'own tempo') {
+            messages.push(`${defender.name} é imune à confusão por Own Tempo!`);
+            return messages;
+        }
+        defender._statStages = defender._statStages || {};
+        defender._statStages[effect.stat] = Math.min(6, (defender._statStages[effect.stat] || 0) + effect.stages);
+        defender.statusEffect = STATUS.CONFUSION;
+        defender._confusionTurns = 1 + Math.floor(Math.random() * 4);
+        messages.push(`${defender.name} teve ${effect.stat} aumentado e ficou confuso!`);
         return messages;
     }
 
