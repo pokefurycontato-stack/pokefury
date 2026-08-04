@@ -209,6 +209,13 @@ export async function executeTurn(attacker, defender, move, battleState) {
         const encoreMove = attacker.moves.find(m => String(m.id) === String(attacker._encoredMoveId));
         if (encoreMove) move = encoreMove;
     }
+    const attackerAbility = (attacker.currentAbilityName || '').toLowerCase();
+    let abilityMessage = '';
+    if ((attackerAbility === 'protean' || attackerAbility === 'libero') && !attacker._proteanUsed && move.type && move.category !== 'status') {
+        attacker.types = [move.type];
+        attacker._proteanUsed = true;
+        abilityMessage = `${attacker.name mudou para o tipo ${move.type}!`;
+    }
     if (move.category === 'status' && attacker._taunted > 0) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, blocked: true, messages: [`${attacker.name} está sob Taunt e não pode usar golpes de status!`] };
     }
@@ -321,7 +328,8 @@ export async function executeTurn(attacker, defender, move, battleState) {
     attacker._lastDamageDealt = (attacker._lastDamageDealt || 0) + damage;
 
     // Handle recoil
-    const messages = [...onHitResult.messages];
+        const messages = [...onHitResult.messages];
+        if (abilityMessage) messages.push(abilityMessage);
     if (effect && effect.effect === 'recoil' && damage > 0) {
         const recoilDmg = Math.max(1, Math.floor(damage * effect.recoil));
         attacker.currentHp = Math.max(0, attacker.currentHp - recoilDmg);
@@ -342,6 +350,10 @@ export async function executeTurn(attacker, defender, move, battleState) {
         ? []
         : applySecondaryEffect(attacker, defender, move, result.effectiveness, battleState);
     messages.push(...secondaryMsgs);
+    if (defender.currentAbilityName?.toLowerCase() === 'color change' && move.type) {
+        defender.types = [move.type];
+        messages.push(`${defender.name} mudou para o tipo ${move.type} com Color Change!`);
+    }
 
     if (effect?.effect === 'recharge' && !defender.fainted) {
         attacker._rechargeTurns = 1;

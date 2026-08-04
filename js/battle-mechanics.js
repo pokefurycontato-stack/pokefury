@@ -827,6 +827,9 @@ export const ABILITY_EFFECTS = {
     'aerilate': { trigger: 'normal_convert', type: 'flying', multiplier: 1.2 },
     'galvanize': { trigger: 'normal_convert', type: 'electric', multiplier: 1.2 },
     'normalize': { trigger: 'normalize', type: 'normal', multiplier: 1.2 },
+    'protean': { trigger: 'move_type_change' },
+    'libero': { trigger: 'move_type_change' },
+    'color change': { trigger: 'damaged_type_change' },
     'unnerve': { trigger: 'entry', effect: 'prevent_berry' },
     'anticipation': { trigger: 'entry', effect: 'none' },
     'forewarn': { trigger: 'entry', effect: 'none' },
@@ -1731,6 +1734,7 @@ export function applyScreenReduction(defender, move, baseDamage) {
 export function processEntryAbilities(pokemon, opponent, battleState) {
     if (!pokemon) return [];
     const messages = [];
+    pokemon._proteanUsed = false;
     const abilityName = (pokemon.currentAbilityName || '').toLowerCase().trim() || getAbilityName(pokemon.currentAbility);
     if (battleState?._neutralizingGas && abilityName !== 'neutralizing gas') return [];
     const effect = ABILITY_EFFECTS[abilityName];
