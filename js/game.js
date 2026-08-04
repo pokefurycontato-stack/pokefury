@@ -3243,6 +3243,11 @@ class PokeFuryGame {
             premiumAdminBtn.onclick = () => window.premiumAdmin.open();
         }
 
+        const battlePosBtn = document.getElementById('admin-btn-battle-pos');
+        if (battlePosBtn) {
+            battlePosBtn.onclick = () => this.openBattlePositionEditor();
+        }
+
         // Sidebar Premium buttons
         const buyDiamondsBtn = document.getElementById('btn-buy-diamonds');
         if (buyDiamondsBtn) {
@@ -3265,7 +3270,89 @@ class PokeFuryGame {
         }
     }
 
-    openEventsPanel() {
+    openBattlePositionEditor() {
+        if (!window.isAdmin) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'battle-pos-editor';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+
+        const saved = JSON.parse(localStorage.getItem('pvpBattlePositions') || '{"playerX":0.25,"playerY":0.75,"enemyX":0.72,"enemyY":0.4}');
+
+        overlay.innerHTML = `
+            <div style="background:#0f1520;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;max-width:500px;width:95%;">
+                <h2 style="margin:0 0 16px;color:#e94560;font-size:18px;">⚙️ Editor de Posições PVP</h2>
+                <p style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:16px;">Arraste ou digite as posições (0-100% da tela)</p>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div>
+                        <label style="display:block;color:#4caf50;font-size:11px;font-weight:700;margin-bottom:4px;">Seu Pokémon (X%)</label>
+                        <input id="pos-playerX" type="range" min="0" max="100" value="${saved.playerX * 100}" style="width:100%;">
+                        <div style="text-align:center;color:#fff;font-size:11px;" id="pos-playerX-val">${Math.round(saved.playerX * 100)}%</div>
+                    </div>
+                    <div>
+                        <label style="display:block;color:#4caf50;font-size:11px;font-weight:700;margin-bottom:4px;">Seu Pokémon (Y%)</label>
+                        <input id="pos-playerY" type="range" min="0" max="100" value="${saved.playerY * 100}" style="width:100%;">
+                        <div style="text-align:center;color:#fff;font-size:11px;" id="pos-playerY-val">${Math.round(saved.playerY * 100)}%</div>
+                    </div>
+                    <div>
+                        <label style="display:block;color:#f44336;font-size:11px;font-weight:700;margin-bottom:4px;">Inimigo (X%)</label>
+                        <input id="pos-enemyX" type="range" min="0" max="100" value="${saved.enemyX * 100}" style="width:100%;">
+                        <div style="text-align:center;color:#fff;font-size:11px;" id="pos-enemyX-val">${Math.round(saved.enemyX * 100)}%</div>
+                    </div>
+                    <div>
+                        <label style="display:block;color:#f44336;font-size:11px;font-weight:700;margin-bottom:4px;">Inimigo (Y%)</label>
+                        <input id="pos-enemyY" type="range" min="0" max="100" value="${saved.enemyY * 100}" style="width:100%;">
+                        <div style="text-align:center;color:#fff;font-size:11px;" id="pos-enemyY-val">${Math.round(saved.enemyY * 100)}%</div>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;">
+                    <button id="pos-save" style="flex:1;padding:10px;background:linear-gradient(135deg,#4caf50,#388e3c);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Salvar</button>
+                    <button id="pos-reset" style="flex:1;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.6);font-size:13px;cursor:pointer;">Resetar</button>
+                    <button id="pos-close" style="flex:1;padding:10px;background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:13px;cursor:pointer;">Fechar</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const updateVals = () => {
+            document.getElementById('pos-playerX-val').textContent = Math.round(document.getElementById('pos-playerX').value) + '%';
+            document.getElementById('pos-playerY-val').textContent = Math.round(document.getElementById('pos-playerY').value) + '%';
+            document.getElementById('pos-enemyX-val').textContent = Math.round(document.getElementById('pos-enemyX').value) + '%';
+            document.getElementById('pos-enemyY-val').textContent = Math.round(document.getElementById('pos-enemyY').value) + '%';
+        };
+
+        ['pos-playerX', 'pos-playerY', 'pos-enemyX', 'pos-enemyY'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateVals);
+        });
+
+        document.getElementById('pos-save').addEventListener('click', () => {
+            const positions = {
+                playerX: parseInt(document.getElementById('pos-playerX').value) / 100,
+                playerY: parseInt(document.getElementById('pos-playerY').value) / 100,
+                enemyX: parseInt(document.getElementById('pos-enemyX').value) / 100,
+                enemyY: parseInt(document.getElementById('pos-enemyY').value) / 100
+            };
+            localStorage.setItem('pvpBattlePositions', JSON.stringify(positions));
+            this.showToast('Posições salvas!', 'success');
+        });
+
+        document.getElementById('pos-reset').addEventListener('click', () => {
+            const defaults = { playerX: 0.25, playerY: 0.75, enemyX: 0.72, enemyY: 0.4 };
+            localStorage.setItem('pvpBattlePositions', JSON.stringify(defaults));
+            document.getElementById('pos-playerX').value = defaults.playerX * 100;
+            document.getElementById('pos-playerY').value = defaults.playerY * 100;
+            document.getElementById('pos-enemyX').value = defaults.enemyX * 100;
+            document.getElementById('pos-enemyY').value = defaults.enemyY * 100;
+            updateVals();
+            this.showToast('Posições resetadas!', 'info');
+        });
+
+        document.getElementById('pos-close').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    }
         if (!window.isAdmin) return;
         const em = this.eventManager;
         if (!em) return;

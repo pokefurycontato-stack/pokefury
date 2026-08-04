@@ -680,10 +680,11 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
         enemyX = dx + battlePositions.enemyX * dw;
         enemyY = dy + battlePositions.enemyY * dh;
     } else {
-        playerX = dx + 0.25 * dw;
-        playerY = dy + 0.75 * dh;
-        enemyX = dx + 0.72 * dw;
-        enemyY = dy + 0.4 * dh;
+        const saved = JSON.parse(localStorage.getItem('pvpBattlePositions') || '{"playerX":0.25,"playerY":0.75,"enemyX":0.72,"enemyY":0.4}');
+        playerX = dx + saved.playerX * dw;
+        playerY = dy + saved.playerY * dh;
+        enemyX = dx + saved.enemyX * dw;
+        enemyY = dy + saved.enemyY * dh;
     }
 
     const playerScale = getPokemonScale(playerPokemon);
