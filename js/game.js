@@ -2901,6 +2901,7 @@ class PokeFuryGame {
         this.playerTeam.splice(newIndex, 0, pokemon);
         await this.saveTeam();
         this.updatePartyPanel();
+        if (this.overworld2d) this.overworld2d.updateFollower();
     }
 
     openPC() {
@@ -3349,6 +3350,7 @@ class PokeFuryGame {
             await this.saveTeam();
             this.updatePartyPanel();
             this.renderPCBox();
+            if (this.overworld2d) this.overworld2d.updateFollower();
         }
     }
 
@@ -3413,6 +3415,7 @@ class PokeFuryGame {
         await window.GameData.deleteBoxPokemon(boxData.id);
         this.updatePartyPanel();
         this.renderPCBox();
+        if (this.overworld2d) this.overworld2d.updateFollower();
     }
 
     switchCharacter() {

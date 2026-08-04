@@ -405,6 +405,24 @@ export class Overworld2D {
         }
     }
 
+    async updateFollower() {
+        const follower = this.game.playerTeam?.find(p => !p.fainted);
+        if (follower && this.pokemonFollowing && follower.id === this.pokemonFollowing.id && follower.shiny === this.pokemonFollowing.shiny) {
+            return;
+        }
+        this.pokemonFollowing = null;
+        this.pokemonFollowSprite = null;
+        this.pokemonFollowBackSprite = null;
+        this.pokemonFollowTrail = [];
+        if (follower) {
+            await this.loadPokemonFollowSprite(follower);
+            this.pokemonFollowRenderPos.x = this.player.x;
+            this.pokemonFollowRenderPos.y = this.player.y > 0 ? this.player.y - 1 : this.player.y + 1;
+            this.pokemonFollowPos.x = Math.round(this.pokemonFollowRenderPos.x);
+            this.pokemonFollowPos.y = Math.round(this.pokemonFollowRenderPos.y);
+        }
+    }
+
     loop() {
         this.frameCount++;
         if (this.encounterCooldown > 0) this.encounterCooldown--;
