@@ -2,7 +2,7 @@
 import { executeTurn, getEffectivenessText } from './battle.js';
 import { getHeldItemEffect, processHeldItemTurnEnd } from './utils.js';
 import { getChoiceLockedMove, clearChoiceLock } from './utils.js';
-import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed, processEntryAbilities } from './battle-mechanics.js';
+import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed, processEntryAbilities, processEntryHazards, isGrounded } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -405,6 +405,13 @@ export class PVPBattle {
                     else this.enemyIndex = action.newIndex;
                     result.switchedSides.push(side);
                     result.logs.push(`${name} enviou ${next.name}!`);
+                    const fieldEffects = isChallenger ? this.myFieldEffects : this.enemyFieldEffects;
+                    result.logs.push(...processEntryHazards(next, fieldEffects, isGrounded(next)));
+                    result.logs.push(...processEntryAbilities(
+                        next,
+                        isChallenger ? this.enemyActivePokemon : this.myActivePokemon,
+                        this.battleState
+                    ));
                 }
             } else {
                 result.logs.push(`${name} está pronto para o próximo turno.`);
