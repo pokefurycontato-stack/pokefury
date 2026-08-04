@@ -661,6 +661,17 @@ function syncBattleContainerToCanvas() {
 
 function ensureBattlePokemonContainer() {
     if (battlePokemonContainer) return battlePokemonContainer;
+
+    const fullscreen = document.getElementById('pvp-fullscreen');
+    if (fullscreen) {
+        battlePokemonContainer = document.createElement('div');
+        battlePokemonContainer.id = 'battle-pokemon-sprites';
+        battlePokemonContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:25;';
+        fullscreen.appendChild(battlePokemonContainer);
+        syncBattleContainerToCanvas();
+        return battlePokemonContainer;
+    }
+
     const mainArea = document.getElementById('main-area');
     if (!mainArea) return null;
     battlePokemonContainer = document.createElement('div');
