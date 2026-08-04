@@ -71,6 +71,7 @@ export class PVPBattle {
             leechSeeded: !!p._leechSeeded,
             regenPercent: p._regenPercent || 0,
             rooted: !!p._rooted,
+            flashFire: !!p._flashFire,
             sleepTurns: p._sleepTurns || 0,
             confusionTurns: p._confusionTurns || 0,
             toxicCounter: p._toxicCounter || 0,
@@ -179,6 +180,7 @@ export class PVPBattle {
             p._leechSeeded = !!s.leechSeeded;
             p._regenPercent = s.regenPercent || 0;
             p._rooted = !!s.rooted;
+            p._flashFire = !!s.flashFire;
             p._sleepTurns = s.sleepTurns || 0;
             p._confusionTurns = s.confusionTurns || 0;
             p._toxicCounter = s.toxicCounter || 0;

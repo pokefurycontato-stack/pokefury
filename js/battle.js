@@ -274,6 +274,10 @@ export async function executeTurn(attacker, defender, move, battleState) {
             defender._statStages[reaction.boost] = Math.min(6, (defender._statStages[reaction.boost] || 0) + 1);
             messages.push(`${defender.name} teve ${reaction.boost} aumentado pela habilidade!`);
         }
+        if (reaction?.flag === 'flashFire') {
+            defender._flashFire = true;
+            messages.push(`${defender.name} ativou Flash Fire!`);
+        }
         return { attacker, defender, move, damage: 0, effectiveness: 0, critical: false, missed: false, fainted: false, immune: true, messages };
     }
 
