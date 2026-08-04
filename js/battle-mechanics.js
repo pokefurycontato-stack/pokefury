@@ -940,6 +940,18 @@ export function processEndOfTurn(pokemon, battleState) {
         }
     }
 
+    if (pokemon._boundTurns > 0) {
+        const bindDamage = Math.max(1, Math.floor(pokemon.stats.hp * (pokemon._boundDamage || 1 / 8)));
+        pokemon.currentHp = Math.max(0, pokemon.currentHp - bindDamage);
+        if (pokemon.currentHp <= 0) pokemon.fainted = true;
+        pokemon._boundTurns--;
+        messages.push(`${pokemon.name} sofreu dano do aprisionamento! (-${bindDamage} HP)`);
+        if (pokemon._boundTurns <= 0) {
+            pokemon._boundDamage = 0;
+            messages.push(`${pokemon.name} se libertou do aprisionamento!`);
+        }
+    }
+
     // Weather damage
     if (battleState && battleState.weather) {
         const weather = battleState.weather;
@@ -1264,6 +1276,13 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
             const fieldNames = { _safeguard: 'Safeguard', _mist: 'Névoa', _tailwind: 'Vento Calado' };
             messages.push(`${fieldNames[effect.field] || effect.field} foi ativado!`);
         }
+        return messages;
+    }
+
+    if (effect.effect === 'bind') {
+        defender._boundTurns = 4 + Math.floor(Math.random() * 2);
+        defender._boundDamage = effect.bindDamage || 1 / 8;
+        messages.push(`${defender.name} ficou preso por ${defender._boundTurns} turnos!`);
         return messages;
     }
 

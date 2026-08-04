@@ -198,6 +198,13 @@ export async function executeTurn(attacker, defender, move, battleState) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
 
+    if (attacker._lockedMoveId && attacker._lockedTurns > 0) {
+        const lockedMove = attacker.moves.find(m => String(m.id) === String(attacker._lockedMoveId));
+        if (lockedMove) move = lockedMove;
+        attacker._lockedTurns--;
+        if (attacker._lockedTurns <= 0) attacker._lockedMoveId = null;
+    }
+
     if (attacker._rechargeTurns > 0) {
         attacker._rechargeTurns--;
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, recharge: true, messages: [`${attacker.name} precisa recarregar!`] };
@@ -287,9 +294,10 @@ export async function executeTurn(attacker, defender, move, battleState) {
         attacker._rechargeTurns = 1;
         messages.push(`${attacker.name} precisa recarregar no próximo turno!`);
     }
-    if (effect?.effect === 'multi_turn') {
+    if (effect?.effect === 'multi_turn' && !attacker._lockedMoveId) {
         attacker._lockedMoveId = move.id;
-        attacker._lockedTurns = attacker._lockedTurns || 1;
+        attacker._lockedTurns = randomInt(1, 3);
+        messages.push(`${attacker.name} ficou preso usando ${move.name}!`);
     }
 
     // Process contact abilities (flame body, static, etc.)
