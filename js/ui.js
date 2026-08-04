@@ -639,7 +639,7 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
 
     const playerScale = getPokemonScale(playerPokemon);
     const enemyScale = getPokemonScale(enemyPokemon);
-    const wildEnemyScale = document.getElementById('wild-fullscreen') ? 0.4 : 0.45;
+    const wildEnemyScale = document.getElementById('wild-fullscreen') ? 0.35 : 0.45;
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5 * playerScale);
     updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, wildEnemyScale * enemyScale);
 
