@@ -786,6 +786,7 @@ class PokeFuryGame {
             return;
         }
         this._battleStarting = true;
+        this._wildInitialEntrances = { player: false, enemy: false };
         this.isWildBattle = true;
         this._playerSpriteReady = false;
 
@@ -913,8 +914,8 @@ class PokeFuryGame {
         setSkipPlayerRender(false);
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
         await Promise.all([
-            this.playPVPEntrance('player', activePlayer),
-            this.playPVPEntrance('enemy', pokemon)
+            this.playPVPEntrance('player', activePlayer, true),
+            this.playPVPEntrance('enemy', pokemon, true)
         ]);
         setSkipPlayerRender(false);
         this._playerSpriteReady = true;
@@ -937,6 +938,7 @@ class PokeFuryGame {
     async startBattleWithPokemon(pokemonName, level, spriteUrl) {
         if (this._battleStarting || this.state === 'battle') return;
         this._battleStarting = true;
+        this._wildInitialEntrances = { player: false, enemy: false };
         hideBattlePokemonSprites();
         if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) {
             console.warn('[PokeFury] No alive pokemon, skipping battle');
@@ -1038,8 +1040,8 @@ class PokeFuryGame {
             setSkipPlayerRender(false);
             drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect2);
             await Promise.all([
-                this.playPVPEntrance('player', activePlayer),
-                this.playPVPEntrance('enemy', pokemon)
+                this.playPVPEntrance('player', activePlayer, true),
+                this.playPVPEntrance('enemy', pokemon, true)
             ]);
             setSkipPlayerRender(false);
             this._playerSpriteReady = true;
@@ -2301,8 +2303,8 @@ class PokeFuryGame {
         setSkipPlayerRender(false);
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
         await Promise.all([
-            this.playPVPEntrance('player', activePlayer),
-            this.playPVPEntrance('enemy', pokemon)
+            this.playPVPEntrance('player', activePlayer, true),
+            this.playPVPEntrance('enemy', pokemon, true)
         ]);
         setSkipPlayerRender(false);
         this._playerSpriteReady = true;
@@ -2416,8 +2418,8 @@ class PokeFuryGame {
         setSkipPlayerRender(false);
         drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect);
         await Promise.all([
-            this.playPVPEntrance('player', activePlayer),
-            this.playPVPEntrance('enemy', pokemon)
+            this.playPVPEntrance('player', activePlayer, true),
+            this.playPVPEntrance('enemy', pokemon, true)
         ]);
         setSkipPlayerRender(false);
         this._playerSpriteReady = true;
@@ -7000,10 +7002,18 @@ openEventsPanel() {
         overlay.remove();
     }
 
-    async playPVPEntrance(side, pokemon) {
+    async playPVPEntrance(side, pokemon, initial = false) {
         const fullscreen = document.getElementById('pvp-fullscreen');
         const activeFullscreen = fullscreen || document.getElementById('wild-fullscreen');
         if (!activeFullscreen || !pokemon) return;
+        if (initial && activeFullscreen.id === 'wild-fullscreen') {
+            if (!this._wildInitialEntrances) this._wildInitialEntrances = { player: false, enemy: false };
+            if (this._wildInitialEntrances[side]) {
+                console.warn('[Battle] Initial entrance ignored:', side);
+                return;
+            }
+            this._wildInitialEntrances[side] = true;
+        }
         if (!this._entryAnimations) this._entryAnimations = { player: new Set(), enemy: new Set() };
         const activeEntries = this._entryAnimations[side] || (this._entryAnimations[side] = new Set());
         if (activeEntries.has(pokemon)) {
