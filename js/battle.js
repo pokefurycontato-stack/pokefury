@@ -1,5 +1,5 @@
 import { calculateAllStats, calculateDamage, randomInt, generateIVs, generateEVs, processHeldItemOnHit, processLifeOrbRecoil, setChoiceLock, getChoiceLockedMove } from './utils.js';
-import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, processEntryHazards, processEntryAbilities, getWeatherSpeed, cacheAbilityName } from './battle-mechanics.js';
+import { getMoveEffect, getMovePriority, canPokemonAct, processEndOfTurn, applySecondaryEffect, isProtected, clearProtect, applyStatStages, processContactAbilities, resetTurnState, STATUS, STATUS_INFO, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, processEntryHazards, processEntryAbilities, getWeatherSpeed, cacheAbilityName, isGrounded } from './battle-mechanics.js';
 
 const NATURE_NAMES = [
     'hardy','lonely','brave','adamant','naughty',
@@ -213,6 +213,10 @@ export async function executeTurn(attacker, defender, move, battleState) {
     // Check if defender is protected
     if (isProtected(defender)) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, protected: true };
+    }
+
+    if (battleState?.terrain === 'psychic' && getMovePriority(move) > 0 && isGrounded(defender)) {
+        return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: false, fainted: false, terrainBlocked: true, messages: [`O Terreno Psíquico bloqueou ${move.name}!`] };
     }
 
     // Status moves

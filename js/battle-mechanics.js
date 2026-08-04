@@ -10,7 +10,8 @@ export const STATUS = {
     TOXIC: 'toxic',
     PARALYSIS: 'paralysis',
     SLEEP: 'sleep',
-    FREEZE: 'freeze'
+    FREEZE: 'freeze',
+    CONFUSION: 'confusion'
 };
 
 export const STATUS_INFO = {
@@ -19,7 +20,8 @@ export const STATUS_INFO = {
     toxic: { name: 'Toxic', color: '#cc44cc', emoji: '💀', canAct: true, damagePercent: 1/16, toxicCounter: true, attackMult: 1.0 },
     paralysis: { name: 'Paralisia', color: '#ffcc00', emoji: '⚡', canAct: true, skipChance: 0.25, speedMult: 0.5, attackMult: 1.0 },
     sleep: { name: 'Sono', color: '#8888cc', emoji: '💤', canAct: false, minTurns: 1, maxTurns: 3, attackMult: 1.0 },
-    freeze: { name: 'Congelado', color: '#88ccff', emoji: '🧊', canAct: false, thawChance: 0.2, attackMult: 1.0 }
+    freeze: { name: 'Congelado', color: '#88ccff', emoji: '🧊', canAct: false, thawChance: 0.2, attackMult: 1.0 },
+    confusion: { name: 'Confuso', color: '#c084fc', emoji: '🌀', canAct: false, skipChance: 1 / 3, attackMult: 1.0 }
 };
 
 // --- STAT STAGE MULTIPLIERS ---
@@ -380,6 +382,9 @@ const MOVE_EFFECTS_BY_NAME = {
 
     'swagger': { effect: 'stat_drop', stat: 'attack', stages: 2 },
     'flatter': { effect: 'stat_drop', stat: 'spAtk', stages: 2 },
+    'confuse ray': { effect: 'confusion', chance: 100 },
+    'supersonic': { effect: 'confusion', chance: 55 },
+    'sweet kiss': { effect: 'confusion', chance: 75 },
     'cosmic power': { effect: 'stat_boost', stat: 'defense', stages: 1, stat2: 'spDef', stages2: 1 },
     'dragon dance': { effect: 'stat_boost', stat: 'attack', stages: 1, stat2: 'speed', stages2: 1 },
     'quiver dance': { effect: 'stat_boost', stat: 'spAtk', stages: 1, stat2: 'spDef', stages2: 1, stat3: 'speed', stages3: 1 },
@@ -840,7 +845,7 @@ function getStatDropMsg(name, stat, stages) {
     return '';
 }
 
-function isGrounded(pokemon) {
+export function isGrounded(pokemon) {
     if (!pokemon) return true;
     const name = (pokemon.currentAbilityName || getAbilityName(pokemon.currentAbility)).toLowerCase();
     if (name === 'levitate') return false;
@@ -890,6 +895,23 @@ export function canPokemonAct(pokemon) {
     if (status === STATUS.PARALYSIS) {
         if (Math.random() < info.skipChance) {
             return { canAct: false, message: `${pokemon.name} está paralisado e não pode se mover!` };
+        }
+    }
+
+    if (status === STATUS.CONFUSION) {
+        const turns = pokemon._confusionTurns || 1;
+        if (Math.random() < (info.skipChance || 1 / 3)) {
+            const damage = Math.max(1, Math.floor(pokemon.stats.hp / 8));
+            pokemon.currentHp = Math.max(0, pokemon.currentHp - damage);
+            if (pokemon.currentHp <= 0) pokemon.fainted = true;
+            pokemon._confusionTurns = turns + 1;
+            return { canAct: false, message: `${pokemon.name} está confuso e se machucou! (-${damage} HP)` };
+        }
+        pokemon._confusionTurns = turns - 1;
+        if (pokemon._confusionTurns <= 0) {
+            pokemon.statusEffect = null;
+            pokemon._confusionTurns = 0;
+            return { canAct: true, message: `${pokemon.name} deixou de estar confuso!` };
         }
     }
 
@@ -1142,6 +1164,18 @@ export function applySecondaryEffect(attacker, defender, move, effectiveness, ba
                 const statusInfo = STATUS_INFO[effect.status];
                 messages.push(`${defender.name} foi ${statusInfo ? statusInfo.name.toLowerCase() : effect.status}!`);
             }
+        }
+        return messages;
+    }
+
+    // Flinch
+    if (effect.effect === 'confusion') {
+        const chance = effect.chance || 100;
+        const abilityName = getAbilityName(defender.currentAbility);
+        if (Math.random() * 100 < chance && abilityName !== 'own tempo' && !defender.statusEffect) {
+            defender.statusEffect = STATUS.CONFUSION;
+            defender._confusionTurns = 1 + Math.floor(Math.random() * 4);
+            messages.push(`${defender.name} ficou confuso!`);
         }
         return messages;
     }
