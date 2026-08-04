@@ -641,12 +641,11 @@ export function stopBattleVideo() {
 function syncBattleContainerToCanvas() {
     const gameCanvas = document.getElementById('game-canvas');
     if (!gameCanvas || !battlePokemonContainer) return;
-    const mainArea = document.getElementById('main-area');
-    const mainRect = mainArea ? mainArea.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-    battlePokemonContainer.style.left = '0';
-    battlePokemonContainer.style.top = '0';
-    battlePokemonContainer.style.width = mainRect.width + 'px';
-    battlePokemonContainer.style.height = mainRect.height + 'px';
+    const canvasRect = gameCanvas.getBoundingClientRect();
+    battlePokemonContainer.style.left = canvasRect.left + 'px';
+    battlePokemonContainer.style.top = canvasRect.top + 'px';
+    battlePokemonContainer.style.width = canvasRect.width + 'px';
+    battlePokemonContainer.style.height = canvasRect.height + 'px';
 }
 
 function ensureBattlePokemonContainer() {
