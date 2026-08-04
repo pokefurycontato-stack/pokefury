@@ -64,6 +64,7 @@ export class Overworld2D {
         this.pokemonFollowPos = { x: 16, y: 12 };
         this.pokemonFollowRenderPos = { x: 16, y: 12 };
         this.pokemonFollowDirection = 'down';
+        this.pokemonFollowTrail = [];
 
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = [];
@@ -337,6 +338,7 @@ export class Overworld2D {
         };
         this.pokemonFollowRenderPos = { ...this.pokemonFollowPos };
         this.pokemonFollowDirection = 'down';
+        this.pokemonFollowTrail = [];
         this.pokemonFollowing = null;
         this.pokemonFollowSprite = null;
         const follower = this.game.playerTeam?.find(pokemon => !pokemon.fainted);
@@ -378,13 +380,21 @@ export class Overworld2D {
 
     async loadPokemonFollowSprite(pokemon) {
         if (!pokemon) return;
-        const spriteUrl = (window.PokeAPI && PokeAPI.getAnimatedFrontUrl(pokemon.id))
-            || pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official;
-        if (spriteUrl) {
-            this.pokemonFollowSprite = await PokeAPI.preloadSprite(spriteUrl);
+        const staticUrl = pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official;
+        if (staticUrl) {
+            this.pokemonFollowSprite = await PokeAPI.preloadSprite(staticUrl);
         }
         this.pokemonFollowing = pokemon;
         this.pokemonFollowDirection = 'down';
+
+        const animUrl = window.PokeAPI && PokeAPI.getAnimatedFrontUrl(pokemon.id);
+        if (animUrl) {
+            PokeAPI.preloadSprite(animUrl).then(img => {
+                if (img && this.pokemonFollowing && this.pokemonFollowing.id === pokemon.id) {
+                    this.pokemonFollowSprite = img;
+                }
+            });
+        }
     }
 
     loop() {
@@ -445,6 +455,9 @@ export class Overworld2D {
 
             if (this.isCollisionAt(nx, ny)) return;
 
+            this.pokemonFollowTrail.push({ x: this.player.x, y: this.player.y });
+            if (this.pokemonFollowTrail.length > 12) this.pokemonFollowTrail.shift();
+
             this.player.fromX = this.player.x;
             this.player.fromY = this.player.y;
             this.player.x = nx;
@@ -504,12 +517,17 @@ export class Overworld2D {
     updatePokemonFollow() {
         if (!this.pokemonFollowing) return;
 
-        let targetX = this.player.x;
-        let targetY = this.player.y;
-        if (this.player.moving) {
-            const t = this.player.moveProgress;
-            targetX = this.player.fromX + (this.player.x - this.player.fromX) * t;
-            targetY = this.player.fromY + (this.player.y - this.player.fromY) * t;
+        let targetX, targetY;
+
+        if (this.pokemonFollowTrail.length > 0) {
+            const head = this.pokemonFollowTrail[0];
+            targetX = head.x;
+            targetY = head.y;
+        } else {
+            const behindX = this.player.x - (this.player.direction === 'right' ? 1 : this.player.direction === 'left' ? -1 : 0);
+            const behindY = this.player.y - (this.player.direction === 'down' ? 1 : this.player.direction === 'up' ? -1 : 0);
+            targetX = behindX;
+            targetY = behindY;
         }
 
         const dx = targetX - this.pokemonFollowRenderPos.x;
@@ -517,7 +535,7 @@ export class Overworld2D {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist > 0.05) {
-            const speed = 0.12;
+            const speed = 0.15;
             if (dist < speed) {
                 this.pokemonFollowRenderPos.x = targetX;
                 this.pokemonFollowRenderPos.y = targetY;
@@ -531,6 +549,8 @@ export class Overworld2D {
             } else {
                 this.pokemonFollowDirection = dy > 0 ? 'down' : 'up';
             }
+        } else if (this.pokemonFollowTrail.length > 0) {
+            this.pokemonFollowTrail.shift();
         }
 
         this.pokemonFollowPos.x = Math.round(this.pokemonFollowRenderPos.x);
@@ -951,7 +971,7 @@ export class Overworld2D {
             const rpy = this.pokemonFollowRenderPos.y * this.tileH - this.camera.y + this.mapOffsetY;
             const fScale = Math.min(1.25, getPokemonScale(this.pokemonFollowing));
             const fSize = this.tileW * fScale;
-            const flipX = this.pokemonFollowDirection === 'left';
+            const flipX = this.pokemonFollowDirection === 'right';
             ctx.save();
             if (flipX) {
                 ctx.translate(rpx + this.tileW / 2, 0);
