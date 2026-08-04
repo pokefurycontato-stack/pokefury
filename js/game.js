@@ -1961,6 +1961,12 @@ class PokeFuryGame {
         if (this.state !== 'battle') return;
         if (this.weatherAnim) this.weatherAnim.setWeather(null);
 
+        // Restore the overworld immediately; rewards and persistence can take time.
+        this.exitWildBattleFullscreen();
+        this.state = 'overworld';
+        showScreen('hud');
+        this.overworld2d?.show();
+
         this._battleSpeed = 1;
         setBattleSpeed(1);
         if (this.battleAnimations) this.battleAnimations.setSpeed(1);
@@ -2055,7 +2061,6 @@ class PokeFuryGame {
 
         await this.saveTeam();
 
-        this.exitWildBattleFullscreen();
         this.state = 'overworld';
         this._lastBattlePlayer = null;
         this._lastBattleEnemy = null;
