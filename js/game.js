@@ -763,6 +763,7 @@ class PokeFuryGame {
 
     renderBattle() {
         if (this.state !== 'battle') return;
+        if (this.pvpBattle) return;
         const clip = this.getBattleClipRect();
         if (clip) {
             this.ctx.clearRect(clip.x, clip.y, clip.w, clip.h);
