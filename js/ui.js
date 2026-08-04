@@ -630,6 +630,8 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     ctx.restore();
 }
 
+export function stopBattleVideo() {
+
 
 export function stopBattleVideo() {
     if (currentBattleVideo) {
@@ -712,7 +714,8 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     const sx = mainRect.width / VIRTUAL_W;
     const sy = mainRect.height / VIRTUAL_H;
 
-    const maxDim = Math.round(140 * sizeScale * Math.min(sx, sy));
+    const fixedSize = 120;
+    const maxDim = Math.round(fixedSize * Math.min(sx, sy));
     el.style.width = Math.round(maxDim) + 'px';
     el.style.height = Math.round(maxDim) + 'px';
     el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
