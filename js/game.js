@@ -6661,7 +6661,7 @@ openEventsPanel() {
 
         const clip = this.getBattleClipRect();
         if (this.currentBattleBg && this.ctx && this.canvas) {
-            drawBattleScene(this.ctx, this.canvas, battle.myActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
+            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
 
         const pvpUI = document.createElement('div');
@@ -6717,7 +6717,7 @@ openEventsPanel() {
         const battle = this.pvpBattle;
         if (!battle) return;
 
-        const myPokemon = battle.myActivePokemon;
+        const myPokemon = battle.visibleMyActivePokemon;
         const enemyPokemon = battle.enemyActivePokemon;
 
         if (myPokemon) {
@@ -6745,7 +6745,7 @@ openEventsPanel() {
         const actions = document.getElementById('pvp-actions');
         const fightBtn = document.getElementById('pvp-fight-btn');
         const switchBtn = document.getElementById('pvp-switch-btn');
-        if (battle.needsForcedSwitch && !battle.isFinished) {
+        if (battle.needsForcedSwitch && !battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Escolha o próximo Pokémon';
             turnIndicator.style.borderColor = '#ff9800';
             actions.style.opacity = '0';
@@ -6753,6 +6753,13 @@ openEventsPanel() {
             if (fightBtn) fightBtn.disabled = true;
             if (switchBtn) switchBtn.disabled = true;
             this.openPVPSwitchSelector(true);
+        } else if (battle.pendingAction && !battle.isFinished) {
+            turnIndicator.textContent = 'Ação enviada. Aguardando o oponente...';
+            turnIndicator.style.borderColor = '#ff9800';
+            actions.style.opacity = '0.5';
+            actions.style.pointerEvents = 'none';
+            if (fightBtn) fightBtn.disabled = true;
+            if (switchBtn) switchBtn.disabled = true;
         } else if (battle.isMyTurn && !battle.isFinished) {
             turnIndicator.textContent = 'Escolha sua ação';
             turnIndicator.style.borderColor = '#4caf50';
@@ -6771,7 +6778,7 @@ openEventsPanel() {
 
         if (this.currentBattleBg && this.ctx && this.canvas) {
             const clip = this.getBattleClipRect();
-            drawBattleScene(this.ctx, this.canvas, battle.myActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
+            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
     }
 

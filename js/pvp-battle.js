@@ -11,6 +11,7 @@ export class PVPBattle {
         this.enemyIndex = 0;
         this.round = 1;
         this.pendingAction = null;
+        this.pendingSwitchIndex = null;
         this.isFinished = false;
         this.battleState = { weather: null, terrain: null, weatherTurns: 0, terrainTurns: 0, turn: 0 };
         this.subscription = null;
@@ -20,6 +21,9 @@ export class PVPBattle {
 
     get myActivePokemon() { return this.myTeam[this.myIndex] || null; }
     get enemyActivePokemon() { return this.enemyTeam[this.enemyIndex] || null; }
+    get visibleMyActivePokemon() {
+        return this.myTeam[this.pendingSwitchIndex ?? this.myIndex] || this.myActivePokemon;
+    }
     get isMyTurn() { return !this.pendingAction && !this.isFinished; }
     get needsForcedSwitch() { return this.myActivePokemon?.currentHp <= 0; }
 
@@ -137,6 +141,7 @@ export class PVPBattle {
             console.error('[PVP] Failed to submit action:', error);
             throw error;
         }
+        if (action === 'switch') this.pendingSwitchIndex = data.newIndex;
         this.onStateUpdate?.();
         await this.tryResolveRound();
         return true;
@@ -260,6 +265,7 @@ export class PVPBattle {
         this.myIndex = isChallenger ? payload.challengerIndex : payload.challengedIndex;
         this.enemyIndex = isChallenger ? payload.challengedIndex : payload.challengerIndex;
         this.pendingAction = null;
+        this.pendingSwitchIndex = null;
         this.round++;
         await this.persistReadyState();
         this.game.addPVPBattleLog?.(payload.result?.logs || []);
