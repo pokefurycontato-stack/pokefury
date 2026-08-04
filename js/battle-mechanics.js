@@ -834,7 +834,7 @@ function getStatDropMsg(name, stat, stages) {
 
 function isGrounded(pokemon) {
     if (!pokemon) return true;
-    const name = (pokemon.currentAbility || '').toLowerCase();
+    const name = (pokemon.currentAbilityName || getAbilityName(pokemon.currentAbility)).toLowerCase();
     if (name === 'levitate') return false;
     if (pokemon.types && pokemon.types.includes('flying')) return false;
     return true;
