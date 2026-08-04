@@ -306,6 +306,7 @@ export class PVPBattle {
         const previousEnemyIndex = this.enemyIndex;
         const previousMyPokemon = this.myActivePokemon;
         const previousEnemyPokemon = this.enemyActivePokemon;
+        const previousPhase = this.phase;
         const previousMyHp = previousMyPokemon?.currentHp ?? 0;
         const previousEnemyHp = previousEnemyPokemon?.currentHp ?? 0;
         const mySide = isChallenger ? 'challenger' : 'challenged';
@@ -334,11 +335,11 @@ export class PVPBattle {
         }
         const switchedSides = payload.result?.switchedSides || [];
         if (previousMyIndex !== this.myIndex || switchedSides.includes(mySide)) {
-            if (myWasDefeated || previousMyHp <= 0) setTimeout(() => this.game.playPVPEntrance?.('player', this.visibleMyActivePokemon), 850);
+            if (previousPhase === 'switch' || myWasDefeated || previousMyHp <= 0) setTimeout(() => this.game.playPVPEntrance?.('player', this.visibleMyActivePokemon), 850);
             else this.game.playPVPReplacementAnimation?.('player', previousMyPokemon, this.visibleMyActivePokemon);
         }
         if (previousEnemyIndex !== this.enemyIndex || switchedSides.includes(enemySide)) {
-            if (enemyWasDefeated || previousEnemyHp <= 0) setTimeout(() => this.game.playPVPEntrance?.('enemy', this.enemyActivePokemon), 850);
+            if (previousPhase === 'switch' || enemyWasDefeated || previousEnemyHp <= 0) setTimeout(() => this.game.playPVPEntrance?.('enemy', this.enemyActivePokemon), 850);
             else this.game.playPVPReplacementAnimation?.('enemy', previousEnemyPokemon, this.enemyActivePokemon);
         }
         this.game.playPVPActionEffects?.(payload.result?.effects || [], isChallenger);
