@@ -133,15 +133,19 @@ export class Overworld2D {
         const mapW = this.worldCols * this.tileW;
         const mapH = this.worldRows * this.tileH;
 
-        this.canvas.width = containerW;
-        this.canvas.height = containerH;
+        this.canvas.width = mapW;
+        this.canvas.height = mapH;
+
+        const scaleX = containerW / mapW;
+        const scaleY = containerH / mapH;
+        const scale = Math.min(scaleX, scaleY);
 
         const canvasEl = this.canvas;
-        canvasEl.style.width = '100%';
-        canvasEl.style.height = '100%';
-        canvasEl.style.left = '0';
-        canvasEl.style.top = '0';
-        canvasEl.style.transform = 'none';
+        canvasEl.style.width = Math.floor(mapW * scale) + 'px';
+        canvasEl.style.height = Math.floor(mapH * scale) + 'px';
+        canvasEl.style.left = '50%';
+        canvasEl.style.top = '50%';
+        canvasEl.style.transform = 'translate(-50%, -50%)';
 
         if (!this.neonEl) {
             this.neonEl = document.createElement('div');
