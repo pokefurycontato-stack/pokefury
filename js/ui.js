@@ -1071,45 +1071,43 @@ function spawnMaskParticle(type, maskPoints) {
     const x = base.x + (Math.random() - 0.5) * spread;
     const y = base.y + (Math.random() - 0.5) * spread;
     const p = { x, y, type, age: 0, maxAge: 60 + Math.random() * 40 };
-        switch (type) {
-            case 'glow':
-                p.radius = 15 + Math.random() * 30;
-                p.maxRadius = p.radius + 10 + Math.random() * 15;
-                p.color = `rgba(255,255,${150 + Math.random() * 105},`;
-                break;
-            case 'grass':
-                p.h = 6 + Math.random() * 12;
-                p.w = 2 + Math.random() * 2;
-                p.sway = Math.random() * Math.PI * 2;
-                p.color = `hsl(${100 + Math.random() * 30},${60 + Math.random() * 20}%,${30 + Math.random() * 15}%)`;
-                break;
-            case 'water':
-                p.radius = 2 + Math.random() * 4;
-                p.maxRadius = p.radius + 6 + Math.random() * 5;
-                p.color = 'rgba(80,160,255,';
-                break;
-            case 'fire':
-                p.vx = (Math.random() - 0.5) * 1.2;
-                p.vy = -1 - Math.random() * 1.5;
-                p.size = 2 + Math.random() * 4;
-                p.maxAge = 25 + Math.random() * 20;
-                break;
-            case 'fog':
-                p.vx = (Math.random() - 0.5) * 0.4;
-                p.vy = -0.1 - Math.random() * 0.2;
-                p.radius = 20 + Math.random() * 40;
-                p.color = 'rgba(200,200,220,';
-                break;
-            case 'sparkles':
-                p.size = 1 + Math.random() * 2.5;
-                p.maxAge = 20 + Math.random() * 15;
-                p.boltAngle = Math.random() * Math.PI * 2;
-                p.boltLen = 5 + Math.random() * 10;
-                break;
-        }
-        return p;
+    switch (type) {
+        case 'glow':
+            p.radius = 15 + Math.random() * 30;
+            p.maxRadius = p.radius + 10 + Math.random() * 15;
+            p.color = `rgba(255,255,${150 + Math.random() * 105},`;
+            break;
+        case 'grass':
+            p.h = 6 + Math.random() * 12;
+            p.w = 2 + Math.random() * 2;
+            p.sway = Math.random() * Math.PI * 2;
+            p.color = `hsl(${100 + Math.random() * 30},${60 + Math.random() * 20}%,${30 + Math.random() * 15}%)`;
+            break;
+        case 'water':
+            p.radius = 2 + Math.random() * 4;
+            p.maxRadius = p.radius + 6 + Math.random() * 5;
+            p.color = 'rgba(80,160,255,';
+            break;
+        case 'fire':
+            p.vx = (Math.random() - 0.5) * 1.2;
+            p.vy = -1 - Math.random() * 1.5;
+            p.size = 2 + Math.random() * 4;
+            p.maxAge = 25 + Math.random() * 20;
+            break;
+        case 'fog':
+            p.vx = (Math.random() - 0.5) * 0.4;
+            p.vy = -0.1 - Math.random() * 0.2;
+            p.radius = 20 + Math.random() * 40;
+            p.color = 'rgba(200,200,220,';
+            break;
+        case 'sparkles':
+            p.size = 1 + Math.random() * 2.5;
+            p.maxAge = 20 + Math.random() * 15;
+            p.boltAngle = Math.random() * Math.PI * 2;
+            p.boltLen = 5 + Math.random() * 10;
+            break;
     }
-    return null;
+    return p;
 }
 
 export function drawMaskFx(ctx, backgroundUrl) {
