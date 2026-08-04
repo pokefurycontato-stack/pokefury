@@ -1,7 +1,7 @@
 /* Real-time simultaneous-action PVP battle. */
 import { executeTurn, getEffectivenessText } from './battle.js';
 import { getHeldItemEffect } from './utils.js';
-import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed } from './battle-mechanics.js';
+import { getEffectiveMovePriority, activateTerastal, canPokemonAct, processEndOfTurn, initFieldEffects, getWeatherSpeed, processEntryAbilities } from './battle-mechanics.js';
 export class PVPBattle {
     constructor(game, challenge, myTeam, enemyTeam) {
         this.game = game;
@@ -73,6 +73,14 @@ export class PVPBattle {
 
     async start() {
         await this.syncInitialState();
+        if (this.challenge.challenger_id === this.game.currentCharacterId) {
+            const entryLogs = [
+                ...processEntryAbilities(this.myActivePokemon, this.enemyActivePokemon, this.battleState),
+                ...processEntryAbilities(this.enemyActivePokemon, this.myActivePokemon, this.battleState)
+            ];
+            await this.persistReadyState();
+            this.game.addPVPBattleLog?.(entryLogs);
+        }
         this.subscribeToEnemyActions();
         this.onStateUpdate?.();
     }
