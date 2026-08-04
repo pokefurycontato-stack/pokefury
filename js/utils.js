@@ -132,10 +132,6 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         ? ((attacker.stats.attack || 0) > (attacker.stats.spAtk || 0) ? 'physical' : 'special')
         : move.category;
     const moveName = String(move.name || '').toLowerCase().trim();
-    const soundMoves = ['boomburst', 'bug buzz', 'clangorous soul', 'disarming voice', 'echoed voice', 'growl', 'hyper voice', 'metal sound', 'perish song', 'roar', 'round', 'screech', 'sing', 'snarl', 'snore', 'supersonic', 'uproar'];
-    const bulletMoves = ['aura sphere', 'bullet seed', 'electro ball', 'focus blast', 'gyro ball', 'ice ball', 'mist ball', 'mud bomb', 'octazooka', 'rock blast', 'seed bomb', 'shadow ball', 'sludge bomb', 'weather ball', 'zap cannon'];
-    if (defAbilityName === 'soundproof' && soundMoves.includes(moveName)) return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
-    if (defAbilityName === 'bulletproof' && bulletMoves.includes(moveName)) return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
     const dynamicMove = ['endeavor', 'dragon rage', 'sonic boom', 'seismic toss', 'night shade', 'super fang', 'fissure', 'horn drill', 'sheer cold', 'guillotine'];
     if (moveCategory === 'status' || (!move.power && !dynamicMove.includes(moveName))) {
         const accuracyCheck = Math.random() * 100 < (move.accuracy || 100);
@@ -153,6 +149,14 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     const attackerAbilityName = abilitiesSuppressed ? '' : ((typeof attacker.currentAbilityName === 'string' && attacker.currentAbilityName) || '');
     const defAbilityName = abilitiesSuppressed ? '' : ((typeof defender.currentAbilityName === 'string' && defender.currentAbilityName) || '');
     const bypassAbilities = ['mold breaker', 'teravolt', 'turboblaze'].includes(attackerAbilityName);
+    const typeAbilities = {
+        pixilate: { type: 'fairy', multiplier: 1.2 }, refrigerate: { type: 'ice', multiplier: 1.2 },
+        aerilate: { type: 'flying', multiplier: 1.2 }, galvanize: { type: 'electric', multiplier: 1.2 }
+    };
+    const soundMoves = ['boomburst', 'bug buzz', 'clangorous soul', 'disarming voice', 'echoed voice', 'growl', 'hyper voice', 'metal sound', 'perish song', 'roar', 'round', 'screech', 'sing', 'snarl', 'snore', 'supersonic', 'uproar'];
+    const bulletMoves = ['aura sphere', 'bullet seed', 'electro ball', 'focus blast', 'gyro ball', 'ice ball', 'mist ball', 'mud bomb', 'octazooka', 'rock blast', 'seed bomb', 'shadow ball', 'sludge bomb', 'weather ball', 'zap cannon'];
+    if (defAbilityName === 'soundproof' && soundMoves.includes(moveName)) return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
+    if (defAbilityName === 'bulletproof' && bulletMoves.includes(moveName)) return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
 
     const abilityImmuneTypes = {
         levitate: ['ground'],
@@ -180,6 +184,13 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     }
 
     let movePower = move.power;
+    if (moveType === 'normal' && typeAbilities[attackerAbilityName]) {
+        moveType = typeAbilities[attackerAbilityName].type;
+        movePower *= typeAbilities[attackerAbilityName].multiplier;
+    } else if (attackerAbilityName === 'normalize') {
+        moveType = 'normal';
+        movePower *= 1.2;
+    }
     if (moveName === 'weather ball' && battleState?.weather) {
         const weatherTypes = { rain: 'water', sun: 'fire', sandstorm: 'rock', snow: 'ice', hail: 'ice' };
         moveType = weatherTypes[battleState.weather] || moveType;
