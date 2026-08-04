@@ -6939,20 +6939,27 @@ openEventsPanel() {
         this.pvpBattle = null;
 
         const pvpFullscreen = document.getElementById('pvp-fullscreen');
+        const canvas = document.getElementById('game-canvas') || this.canvas;
+        const mainArea = document.getElementById('main-area');
+        if (canvas && mainArea && canvas.parentElement !== mainArea) {
+            mainArea.insertBefore(canvas, mainArea.firstChild);
+        }
         if (pvpFullscreen) pvpFullscreen.remove();
 
-        const canvas = document.getElementById('game-canvas');
-        canvas.style.position = 'absolute';
-        canvas.style.top = '50%';
-        canvas.style.left = '50%';
-        canvas.style.width = '';
-        canvas.style.height = '';
-        canvas.style.transform = 'translate(-50%, -50%)';
-        document.getElementById('game-wrapper').style.display = '';
+        if (canvas) {
+            canvas.style.position = 'absolute';
+            canvas.style.top = '50%';
+            canvas.style.left = '50%';
+            canvas.style.width = '';
+            canvas.style.height = '';
+            canvas.style.transform = 'translate(-50%, -50%)';
+        }
+        const gameWrapper = document.getElementById('game-wrapper');
+        if (gameWrapper) gameWrapper.style.display = '';
 
         showScreen('hud');
         if (this.overworld2d) this.overworld2d.show();
-        this.overworld2d.resize();
+        this.overworld2d?.resize();
 
         if (result === 'my_win') {
             this.showToast('🏆 Você venceu o duelo!', 'success');
