@@ -813,7 +813,7 @@ export function cacheAbilityName(id, name) {
     if (id && name) _abilityIdToName.set(Number(id), name.toLowerCase().trim());
 }
 
-function getAbilityName(abilityId) {
+export function getAbilityName(abilityId) {
     if (!abilityId) return '';
     if (typeof abilityId === 'string') return abilityId.toLowerCase();
     const cached = _abilityIdToName.get(Number(abilityId));
@@ -848,7 +848,7 @@ function isGrounded(pokemon) {
     return true;
 }
 
-function hasTypeImmunity(abilityName, moveType) {
+export function hasTypeImmunity(abilityName, moveType) {
     const effect = ABILITY_EFFECTS[abilityName];
     if (!effect || effect.trigger !== 'type_immune') return false;
     return (effect.types || []).includes(moveType);
@@ -1359,15 +1359,6 @@ export function applyStatStages(attacker, defender, move, baseDamage) {
         atkMult = getStatMult(aStages.spAtk || 0);
         defMult = getStatMult(dStages.spDef || 0);
     }
-
-    const abilityName = getAbilityName(attacker.currentAbility);
-    if (abilityName === 'hustle' && move.category === 'physical') atkMult *= 1.5;
-    if ((abilityName === 'huge power' || abilityName === 'pure power') && move.category === 'physical') atkMult *= 2;
-    if (abilityName === 'guts' && attacker.statusEffect && move.category === 'physical') atkMult *= 1.5;
-
-    const defAbility = getAbilityName(defender.currentAbility);
-    if (defAbility === 'marvel scale' && defender.statusEffect && move.category === 'physical') defMult *= 1.5;
-    if (defAbility === 'fur coat' && move.category === 'special') defMult *= 2;
 
     return Math.max(1, Math.floor(baseDamage * atkMult / defMult));
 }

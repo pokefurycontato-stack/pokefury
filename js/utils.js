@@ -146,6 +146,18 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     const attackerAbilityName = (typeof attacker.currentAbilityName === 'string' && attacker.currentAbilityName) || '';
     const defAbilityName = (typeof defender.currentAbilityName === 'string' && defender.currentAbilityName) || '';
 
+    const abilityImmuneTypes = {
+        levitate: ['ground'],
+        'water absorb': ['water'],
+        'volt absorb': ['electric'],
+        'lightning rod': ['electric'],
+        'motor drive': ['electric'],
+        'sap sipper': ['grass']
+    };
+    if (abilityImmuneTypes[defAbilityName]?.includes(moveType)) {
+        return { damage: 0, effectiveness: 0, critical: false, missed: false, immune: true };
+    }
+
     if (attackerItem) {
         if (attackerItem.effect === 'choice_band' && move.category === 'physical') attack *= 1.5;
         if (attackerItem.effect === 'choice_specs' && move.category === 'special') attack *= 1.5;
@@ -156,6 +168,9 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
             defense *= 1.5;
         }
     }
+
+    if (defAbilityName === 'marvel scale' && defender.statusEffect && moveCategory === 'physical') defense *= 1.5;
+    if (defAbilityName === 'fur coat' && moveCategory === 'physical') defense *= 2;
 
     // Gen 9 Snow grants Ice-types 1.5x Defense against physical moves.
     if (battleState?.weather === 'snow' && move.category === 'physical' && defender.types?.includes('ice')) {
