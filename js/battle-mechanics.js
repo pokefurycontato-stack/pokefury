@@ -798,6 +798,9 @@ export const ABILITY_EFFECTS = {
 
     // === OTHER ===
     'neutralizing gas': { trigger: 'entry', effect: 'suppress_abilities' },
+    'mold breaker': { trigger: 'bypass_abilities' },
+    'teravolt': { trigger: 'bypass_abilities' },
+    'turboblaze': { trigger: 'bypass_abilities' },
     'unnerve': { trigger: 'entry', effect: 'prevent_berry' },
     'anticipation': { trigger: 'entry', effect: 'none' },
     'forewarn': { trigger: 'entry', effect: 'none' },
@@ -940,7 +943,7 @@ export function canPokemonAct(pokemon) {
 export function processEndOfTurn(pokemon, battleState) {
     if (!pokemon || pokemon.fainted) return [];
     const messages = [];
-    const abilityNameAtStart = getAbilityName(pokemon.currentAbility);
+    const abilityNameAtStart = battleState?._neutralizingGas ? '' : getAbilityName(pokemon.currentAbility);
     const magicGuard = abilityNameAtStart === 'magic guard';
 
     // Status damage
@@ -1531,6 +1534,7 @@ export function processEntryAbilities(pokemon, opponent, battleState) {
     if (!pokemon) return [];
     const messages = [];
     const abilityName = (pokemon.currentAbilityName || '').toLowerCase().trim() || getAbilityName(pokemon.currentAbility);
+    if (battleState?._neutralizingGas && abilityName !== 'neutralizing gas') return [];
     const effect = ABILITY_EFFECTS[abilityName];
     if (!effect) return messages;
 
@@ -1572,7 +1576,7 @@ export function processEntryAbilities(pokemon, opponent, battleState) {
 // ============================================================
 export function getWeatherSpeed(pokemon, battleState) {
     if (!pokemon || !battleState || !battleState.weather) return pokemon ? (pokemon.stats?.speed || 0) : 0;
-    const abilityName = getAbilityName(pokemon.currentAbility);
+    const abilityName = battleState?._neutralizingGas ? '' : getAbilityName(pokemon.currentAbility);
     let speed = pokemon.stats?.speed || 0;
     speed *= getWeatherSpeedMult(battleState.weather, abilityName);
     return speed;
@@ -1583,6 +1587,7 @@ export function getWeatherSpeed(pokemon, battleState) {
 // ============================================================
 export function processContactAbilities(defender, attacker) {
     if (!defender || (!defender.currentAbility && !defender.currentAbilityName)) return [];
+    if (getAbilityName(defender.currentAbility) === 'neutralizing gas' || getAbilityName(attacker?.currentAbility) === 'neutralizing gas') return [];
     const abilityName = (defender.currentAbilityName || getAbilityName(defender.currentAbility)).toLowerCase();
     const abilityEffect = ABILITY_EFFECTS[abilityName];
     if (!abilityEffect) return [];

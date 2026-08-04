@@ -145,8 +145,10 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     const attackerItem = getHeldItemEffect(attacker.heldItemId);
     const defenderItem = getHeldItemEffect(defender.heldItemId);
 
-    const attackerAbilityName = (typeof attacker.currentAbilityName === 'string' && attacker.currentAbilityName) || '';
-    const defAbilityName = (typeof defender.currentAbilityName === 'string' && defender.currentAbilityName) || '';
+    const abilitiesSuppressed = !!battleState?._neutralizingGas;
+    const attackerAbilityName = abilitiesSuppressed ? '' : ((typeof attacker.currentAbilityName === 'string' && attacker.currentAbilityName) || '');
+    const defAbilityName = abilitiesSuppressed ? '' : ((typeof defender.currentAbilityName === 'string' && defender.currentAbilityName) || '');
+    const bypassAbilities = ['mold breaker', 'teravolt', 'turboblaze'].includes(attackerAbilityName);
 
     const abilityImmuneTypes = {
         levitate: ['ground'],
@@ -156,7 +158,7 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
         'motor drive': ['electric'],
         'sap sipper': ['grass']
     };
-    if (abilityImmuneTypes[defAbilityName]?.includes(moveType)) {
+    if (!bypassAbilities && abilityImmuneTypes[defAbilityName]?.includes(moveType)) {
         const reactions = {
             'water absorb': { heal: 0.25 },
             'volt absorb': { heal: 0.25 },
@@ -236,13 +238,13 @@ export async function calculateDamage(attacker, defender, move, battleState = nu
     else damage = ((2 * level / 5 + 2) * movePower * attack / defense) / 50 + 2;
 
     let effectiveness = getEffectiveness(chart, moveType, defender.types);
-    if (defAbilityName === 'thick fat' && (moveType === 'fire' || moveType === 'ice')) effectiveness *= 0.5;
-    if (defAbilityName === 'wonder guard' && effectiveness <= 1) {
+    if (!bypassAbilities && defAbilityName === 'thick fat' && (moveType === 'fire' || moveType === 'ice')) effectiveness *= 0.5;
+    if (!bypassAbilities && defAbilityName === 'wonder guard' && effectiveness <= 1) {
         return { damage: 0, effectiveness, critical: false, missed: false, immune: true };
     }
     damage *= effectiveness;
-    if (defAbilityName === 'multiscale' && defender.currentHp >= defender.stats.hp) damage *= 0.5;
-    if (effectiveness > 1 && ['filter', 'solid rock', 'prism armor'].includes(defAbilityName)) damage *= 0.75;
+    if (!bypassAbilities && defAbilityName === 'multiscale' && defender.currentHp >= defender.stats.hp) damage *= 0.5;
+    if (!bypassAbilities && effectiveness > 1 && ['filter', 'solid rock', 'prism armor'].includes(defAbilityName)) damage *= 0.75;
 
     const isSTAB = attacker.types && attacker.types.includes(moveType);
     let stabMult = isSTAB ? 1.5 : 1;
