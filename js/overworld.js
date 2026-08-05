@@ -196,8 +196,27 @@ export class Overworld2D {
     }
 
     async loadSprites() {
-        const gender = this.game.playerGender === 'female' ? 'feminino' : 'masculino';
-        const spriteSheetUrl = `assets/perso_${gender}.webp`;
+        let spriteSheetUrl = null;
+
+        if (this.game.currentCharacterId && window.db) {
+            try {
+                const { data } = await window.db.rpc('get_equipped_skin', {
+                    p_character_id: this.game.currentCharacterId,
+                    p_skin_type: 'player_skin'
+                });
+                if (data && data.length > 0 && data[0].sprite_url) {
+                    spriteSheetUrl = data[0].sprite_url;
+                    console.log('[PokeFury] Using player skin:', data[0].name);
+                }
+            } catch (e) {
+                console.warn('[PokeFury] Failed to load player skin:', e.message);
+            }
+        }
+
+        if (!spriteSheetUrl) {
+            const gender = this.game.playerGender === 'female' ? 'feminino' : 'masculino';
+            spriteSheetUrl = `assets/perso_${gender}.webp`;
+        }
 
         try {
             const spriteSheet = await new Promise((resolve, reject) => {

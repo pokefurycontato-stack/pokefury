@@ -2566,3 +2566,117 @@ body {
     from { opacity: 1; }
     to { opacity: 0; }
 }
+
+/* ===== SKIN SHOP ===== */
+.skin-shop-banner {
+    background: linear-gradient(135deg, rgba(156,39,176,0.3), rgba(233,69,96,0.3));
+    border-bottom: 1px solid rgba(156,39,176,0.3);
+}
+.skin-shop-tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skin-shop-tab:hover {
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.03);
+}
+.skin-shop-tab.active {
+    color: #e94560;
+    border-bottom-color: #e94560;
+}
+.skin-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.25s;
+    cursor: pointer;
+}
+.skin-card:hover {
+    border-color: #e94560;
+    box-shadow: 0 0 20px rgba(233,69,96,0.2);
+    transform: translateY(-3px);
+}
+.skin-card-img {
+    width: 100%;
+    height: 160px;
+    object-fit: contain;
+    background: #0d1117;
+    padding: 10px;
+}
+.skin-card-body {
+    padding: 10px 12px;
+}
+.skin-card-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.skin-card-desc {
+    color: rgba(255,255,255,0.45);
+    font-size: 11px;
+    line-height: 1.3;
+    margin-bottom: 8px;
+    min-height: 28px;
+}
+.skin-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.skin-card-price {
+    color: #4fc3f7;
+    font-size: 14px;
+    font-weight: 700;
+}
+.skin-card-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.skin-card-badge.pokemon {
+    background: rgba(255,193,7,0.2);
+    color: #ffc107;
+}
+.skin-card-badge.player {
+    background: rgba(33,150,243,0.2);
+    color: #2196f3;
+}
+.skin-card-buy {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skin-card-buy:hover {
+    filter: brightness(1.15);
+    transform: scale(1.04);
+}
+.skin-card-buy:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: none;
+    transform: none;
+}
+.skin-card-buy.owned {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+.skin-card-buy.equipped {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}

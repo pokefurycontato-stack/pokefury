@@ -6,7 +6,9 @@ class PremiumAdmin {
     constructor() {
         this.currentTab = 'buy_diamonds';
         this.allProducts = [];
+        this.allSkins = [];
         this._selectedFile = null;
+        this._selectedSpriteFile = null;
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this._bindEvents());
         } else {
@@ -20,7 +22,6 @@ class PremiumAdmin {
         document.getElementById('premium-form-close')?.addEventListener('click', () => this.hideForm());
         document.getElementById('premium-form')?.addEventListener('submit', (e) => this.handleSubmit(e));
 
-        // Tabs
         document.querySelectorAll('.premium-admin-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.premium-admin-tab').forEach(t => t.classList.remove('active'));
@@ -30,7 +31,6 @@ class PremiumAdmin {
             });
         });
 
-        // Image preview + click to open file dialog
         const imageLabel = document.getElementById('pf-image-label');
         const imageInput = document.getElementById('pf-image');
         if (imageLabel && imageInput) {
@@ -52,6 +52,36 @@ class PremiumAdmin {
                 }
             });
         }
+
+        const spriteLabel = document.querySelector('#pf-sprite')?.parentElement;
+        const spriteInput = document.getElementById('pf-sprite');
+        if (spriteLabel && spriteInput) {
+            spriteLabel.addEventListener('click', (e) => {
+                e.preventDefault();
+                spriteInput.click();
+            });
+            spriteInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this._selectedSpriteFile = file;
+                    const preview = document.getElementById('pf-sprite-preview');
+                    if (preview) {
+                        preview.src = URL.createObjectURL(file);
+                        preview.style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        const destRadios = document.querySelectorAll('input[name="pf-dest"]');
+        destRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                const skinFields = document.getElementById('pf-skin-fields');
+                if (skinFields) {
+                    skinFields.style.display = radio.value === 'skin_shop' ? 'block' : 'none';
+                }
+            });
+        });
     }
 
     async open() {
@@ -59,6 +89,7 @@ class PremiumAdmin {
         if (!screen) return;
         screen.classList.remove('hidden');
         await this.loadAllProducts();
+        await this.loadAllSkins();
         this.renderProductsList();
     }
 
@@ -75,10 +106,8 @@ class PremiumAdmin {
             if (error) throw error;
             this.allProducts = data || [];
 
-            // Clean up any blob URLs that got saved by mistake
             const blobProducts = this.allProducts.filter(p => p.image_url && p.image_url.startsWith('blob:'));
             if (blobProducts.length) {
-                console.log('[PremiumAdmin] cleaning up', blobProducts.length, 'blob URLs');
                 for (const p of blobProducts) {
                     await window.db.from('premium_products').update({ image_url: '' }).eq('id', p.id);
                     p.image_url = '';
@@ -90,9 +119,28 @@ class PremiumAdmin {
         }
     }
 
+    async loadAllSkins() {
+        try {
+            const { data, error } = await window.db
+                .from('skin_products')
+                .select('*')
+                .order('sort_order', { ascending: true });
+            if (error) throw error;
+            this.allSkins = data || [];
+        } catch (e) {
+            console.error('[PremiumAdmin] load skins error:', e);
+            this.allSkins = [];
+        }
+    }
+
     renderProductsList() {
         const container = document.getElementById('premium-admin-list');
         if (!container) return;
+
+        if (this.currentTab === 'skin_shop') {
+            this._renderSkinList(container);
+            return;
+        }
 
         const filtered = this.allProducts.filter(p => p.destination === this.currentTab);
 
@@ -131,6 +179,39 @@ class PremiumAdmin {
         }).join('');
 
         this._setupDragAndDrop();
+    }
+
+    _renderSkinList(container) {
+        if (!this.allSkins.length) {
+            container.innerHTML = '<div class="premium-empty">Nenhuma skin nesta categoria</div>';
+            return;
+        }
+
+        container.innerHTML = this.allSkins.map(p => {
+            const hasImage = p.image_url && p.image_url.trim();
+            const imgHtml = hasImage
+                ? `<img class="premium-admin-row-img" src="${this._esc(p.image_url)}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22><rect fill=%22%230d1117%22 width=%2250%22 height=%2250%22/><text x=%2225%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%2330363d%22 font-size=%2220%22>🎨</text></svg>'">`
+                : `<div class="premium-admin-row-img" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#0d1117">🎨</div>`;
+
+            const typeLabel = p.skin_type === 'pokemon_skin' ? 'Pokémon' : 'Treinador';
+            const badgeClass = p.skin_type === 'pokemon_skin' ? 'pokemon_skin' : 'player_skin';
+
+            return `
+                <div class="premium-admin-row" data-id="${p.id}" draggable="true">
+                    <span class="premium-admin-drag-handle" title="Arrastar para reordenar">⠿</span>
+                    ${imgHtml}
+                    <div class="premium-admin-row-info">
+                        <div class="premium-admin-row-name">${this._esc(p.name)}</div>
+                        <div class="premium-admin-row-meta">💎 ${p.price_diamonds} diamantes · ${typeLabel}</div>
+                    </div>
+                    <span class="premium-admin-row-badge ${badgeClass}">${typeLabel}</span>
+                    <div class="premium-admin-row-actions">
+                        <button onclick="window.premiumAdmin.editSkin('${p.id}')">Editar</button>
+                        <button class="del" onclick="window.premiumAdmin.deleteSkin('${p.id}')">Excluir</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     _setupDragAndDrop() {
@@ -227,11 +308,16 @@ class PremiumAdmin {
         setTimeout(() => toast.remove(), 3000);
     }
 
+    hideForm() {
+        document.getElementById('premium-form-modal')?.classList.add('hidden');
+    }
+
     // ========================
     //  CREATE / EDIT FORM
     // ========================
     showCreateForm(destination) {
         this._selectedFile = null;
+        this._selectedSpriteFile = null;
         const el = (id) => document.getElementById(id);
         if (el('premium-form-title')) el('premium-form-title').textContent = 'Novo Produto';
         if (el('pf-id')) el('pf-id').value = '';
@@ -242,6 +328,10 @@ class PremiumAdmin {
         if (el('pf-image-preview')) { el('pf-image-preview').style.display = 'none'; el('pf-image-preview').src = ''; }
         if (el('pf-image-label')) el('pf-image-label').textContent = 'Clique para fazer upload';
         if (el('pf-image')) el('pf-image').value = '';
+        if (el('pf-skin-type')) el('pf-skin-type').value = 'pokemon_skin';
+        if (el('pf-target-id')) el('pf-target-id').value = '';
+        if (el('pf-sprite')) el('pf-sprite').value = '';
+        if (el('pf-sprite-preview')) { el('pf-sprite-preview').style.display = 'none'; el('pf-sprite-preview').src = ''; }
 
         if (destination) {
             const radio = document.querySelector(`input[name="pf-dest"][value="${destination}"]`);
@@ -251,15 +341,16 @@ class PremiumAdmin {
             if (radio) radio.checked = true;
         }
 
+        const skinFields = document.getElementById('pf-skin-fields');
+        const activeDest = document.querySelector('input[name="pf-dest"]:checked')?.value;
+        if (skinFields) skinFields.style.display = activeDest === 'skin_shop' ? 'block' : 'none';
+
         document.getElementById('premium-form-modal').classList.remove('hidden');
     }
 
-    hideForm() {
-        document.getElementById('premium-form-modal').classList.add('hidden');
-    }
-
-    async editProduct(id) {
+    editProduct(id) {
         this._selectedFile = null;
+        this._selectedSpriteFile = null;
         const product = this.allProducts.find(p => p.id === id);
         if (!product) return;
 
@@ -283,6 +374,51 @@ class PremiumAdmin {
         }
         if (el('pf-image')) el('pf-image').value = '';
 
+        const skinFields = document.getElementById('pf-skin-fields');
+        if (skinFields) skinFields.style.display = 'none';
+
+        document.getElementById('premium-form-modal').classList.remove('hidden');
+    }
+
+    editSkin(id) {
+        this._selectedFile = null;
+        this._selectedSpriteFile = null;
+        const skin = this.allSkins.find(p => p.id === id);
+        if (!skin) return;
+
+        const el = (id) => document.getElementById(id);
+        if (el('premium-form-title')) el('premium-form-title').textContent = 'Editar Skin';
+        if (el('pf-id')) el('pf-id').value = 'skin:' + skin.id;
+        if (el('pf-name')) el('pf-name').value = skin.name;
+        if (el('pf-desc')) el('pf-desc').value = skin.description || '';
+        if (el('pf-price-brl')) el('pf-price-brl').value = 0;
+        if (el('pf-price-diamonds')) el('pf-price-diamonds').value = skin.price_diamonds || 0;
+
+        const radio = document.querySelector('input[name="pf-dest"][value="skin_shop"]');
+        if (radio) radio.checked = true;
+
+        if (skin.image_url) {
+            if (el('pf-image-preview')) { el('pf-image-preview').src = skin.image_url; el('pf-image-preview').style.display = 'block'; }
+            if (el('pf-image-label')) el('pf-image-label').textContent = 'Imagem atual';
+        } else {
+            if (el('pf-image-preview')) el('pf-image-preview').style.display = 'none';
+            if (el('pf-image-label')) el('pf-image-label').textContent = 'Clique para fazer upload';
+        }
+        if (el('pf-image')) el('pf-image').value = '';
+
+        if (el('pf-skin-type')) el('pf-skin-type').value = skin.skin_type || 'pokemon_skin';
+        if (el('pf-target-id')) el('pf-target-id').value = skin.target_id || '';
+
+        if (skin.sprite_url) {
+            if (el('pf-sprite-preview')) { el('pf-sprite-preview').src = skin.sprite_url; el('pf-sprite-preview').style.display = 'block'; }
+        } else {
+            if (el('pf-sprite-preview')) el('pf-sprite-preview').style.display = 'none';
+        }
+        if (el('pf-sprite')) el('pf-sprite').value = '';
+
+        const skinFields = document.getElementById('pf-skin-fields');
+        if (skinFields) skinFields.style.display = 'block';
+
         document.getElementById('premium-form-modal').classList.remove('hidden');
     }
 
@@ -302,29 +438,28 @@ class PremiumAdmin {
             return;
         }
 
+        if (destination === 'skin_shop') {
+            await this._handleSkinSubmit(id, name, description, priceDiamonds, file);
+            return;
+        }
+
         let imageUrl = '';
 
-        // Keep existing image if editing and no new file selected
         if (id && !file) {
             const existing = this.allProducts.find(p => p.id === id);
             imageUrl = existing?.image_url || '';
         }
 
-        // Upload image if new file selected
         if (file) {
             try {
                 const ext = file.name.split('.').pop() || 'png';
                 const filename = `store-products/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-                console.log('[PremiumAdmin] uploading image:', filename);
                 const { data: uploadData, error: uploadError } = await window.db.storage
                     .from('sprites')
                     .upload(filename, file, { contentType: file.type, upsert: true });
                 if (uploadError) throw uploadError;
-                console.log('[PremiumAdmin] upload success:', uploadData);
-
                 const { data: urlData } = window.db.storage.from('sprites').getPublicUrl(filename);
                 imageUrl = urlData.publicUrl;
-                console.log('[PremiumAdmin] image URL:', imageUrl);
             } catch (e) {
                 console.error('[PremiumAdmin] image upload failed:', e);
                 this._toast('Erro no upload da imagem: ' + e.message, 'error');
@@ -342,27 +477,21 @@ class PremiumAdmin {
             active: true
         };
 
-        console.log('[PremiumAdmin] saving product:', productData);
-
         try {
             if (id) {
-                // Update existing
                 const { data, error } = await window.db
                     .from('premium_products')
                     .update(productData)
                     .eq('id', id)
                     .select();
                 if (error) throw error;
-                console.log('[PremiumAdmin] updated product:', data);
                 this._toast('Produto atualizado!');
             } else {
-                // Create new
                 const { data, error } = await window.db
                     .from('premium_products')
                     .insert([productData])
                     .select();
                 if (error) throw error;
-                console.log('[PremiumAdmin] created product:', data);
                 this._toast('Produto criado!');
             }
 
@@ -373,6 +502,95 @@ class PremiumAdmin {
         } catch (e) {
             console.error('[PremiumAdmin] save failed:', e);
             this._toast('Erro ao salvar produto!', 'error');
+        }
+    }
+
+    async _handleSkinSubmit(id, name, description, priceDiamonds, file) {
+        const skinType = document.getElementById('pf-skin-type')?.value || 'pokemon_skin';
+        const targetId = document.getElementById('pf-target-id')?.value || '';
+        const spriteFile = this._selectedSpriteFile;
+
+        let imageUrl = '';
+        let spriteUrl = '';
+
+        const cleanId = id?.startsWith('skin:') ? id.slice(5) : id;
+
+        if (cleanId && !file) {
+            const existing = this.allSkins.find(p => p.id === cleanId);
+            imageUrl = existing?.image_url || '';
+        }
+        if (cleanId && !spriteFile) {
+            const existing = this.allSkins.find(p => p.id === cleanId);
+            spriteUrl = existing?.sprite_url || '';
+        }
+
+        if (file) {
+            try {
+                const ext = file.name.split('.').pop() || 'png';
+                const filename = `store-products/skin-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+                const { error: uploadError } = await window.db.storage
+                    .from('sprites')
+                    .upload(filename, file, { contentType: file.type, upsert: true });
+                if (uploadError) throw uploadError;
+                const { data: urlData } = window.db.storage.from('sprites').getPublicUrl(filename);
+                imageUrl = urlData.publicUrl;
+            } catch (e) {
+                this._toast('Erro no upload da imagem: ' + e.message, 'error');
+                return;
+            }
+        }
+
+        if (spriteFile) {
+            try {
+                const ext = spriteFile.name.split('.').pop() || 'png';
+                const filename = `store-products/sprite-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+                const { error: uploadError } = await window.db.storage
+                    .from('sprites')
+                    .upload(filename, spriteFile, { contentType: spriteFile.type, upsert: true });
+                if (uploadError) throw uploadError;
+                const { data: urlData } = window.db.storage.from('sprites').getPublicUrl(filename);
+                spriteUrl = urlData.publicUrl;
+            } catch (e) {
+                this._toast('Erro no upload do sprite: ' + e.message, 'error');
+                return;
+            }
+        }
+
+        const skinData = {
+            name,
+            description,
+            skin_type: skinType,
+            target_id: targetId,
+            price_diamonds: priceDiamonds,
+            image_url: imageUrl,
+            sprite_url: spriteUrl,
+            active: true
+        };
+
+        try {
+            if (cleanId) {
+                const { error } = await window.db
+                    .from('skin_products')
+                    .update(skinData)
+                    .eq('id', cleanId);
+                if (error) throw error;
+                this._toast('Skin atualizada!');
+            } else {
+                const { error } = await window.db
+                    .from('skin_products')
+                    .insert([skinData]);
+                if (error) throw error;
+                this._toast('Skin criada!');
+            }
+
+            this.hideForm();
+            this._selectedFile = null;
+            this._selectedSpriteFile = null;
+            await this.loadAllSkins();
+            this.renderProductsList();
+        } catch (e) {
+            console.error('[PremiumAdmin] skin save failed:', e);
+            this._toast('Erro ao salvar skin!', 'error');
         }
     }
 
@@ -387,13 +605,32 @@ class PremiumAdmin {
                 .delete()
                 .eq('id', id);
             if (error) throw error;
-
             this._toast('Produto excluído!');
             await this.loadAllProducts();
             this.renderProductsList();
         } catch (e) {
             console.error('[PremiumAdmin] delete failed:', e);
             this._toast('Erro ao excluir produto!', 'error');
+        }
+    }
+
+    async deleteSkin(id) {
+        const skin = this.allSkins.find(p => p.id === id);
+        if (!skin) return;
+        if (!confirm(`Excluir "${skin.name}"?`)) return;
+
+        try {
+            const { error } = await window.db
+                .from('skin_products')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            this._toast('Skin excluída!');
+            await this.loadAllSkins();
+            this.renderProductsList();
+        } catch (e) {
+            console.error('[PremiumAdmin] skin delete failed:', e);
+            this._toast('Erro ao excluir skin!', 'error');
         }
     }
 }
