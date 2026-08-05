@@ -232,13 +232,12 @@ export class Overworld2D {
             if (isSquare) {
                 this.playerSpriteFrames = {};
                 const directions = ['down', 'left', 'right', 'up'];
-                const frameCount = 4;
-                const frameW = spriteSheet.width / frameCount;
-                const frameH = spriteSheet.height / frameCount;
+                const frameW = spriteSheet.width / 4;
+                const frameH = spriteSheet.height / 4;
 
                 for (let row = 0; row < directions.length; row++) {
                     const frames = [];
-                    for (let col = 0; col < frameCount; col++) {
+                    for (let col = 0; col < 4; col++) {
                         const canvas = document.createElement('canvas');
                         canvas.width = frameW;
                         canvas.height = frameH;
@@ -261,7 +260,7 @@ export class Overworld2D {
                 for (const dir of directions) {
                     this.playerSprites[dir] = this.playerSpriteFrames[dir][0];
                 }
-                console.log(`[PokeFury] Sprite sheet loaded: 4x4 grid`);
+                console.log(`[PokeFury] Sprite sheet loaded: ${spriteSheet.width}x${spriteSheet.height} (4x4 grid)`);
             } else {
                 this.playerSpriteFrames = null;
                 this.playerSprites = {};
