@@ -584,7 +584,7 @@ export class Overworld2D {
 
     update() {
         if (this.player.moving) {
-            this.player.moveProgress += 0.105;
+            this.player.moveProgress += 0.1;
             if (this.player.moveProgress >= 1) {
                 this.player.moveProgress = 1;
                 this.player.moving = false;
