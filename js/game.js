@@ -7,7 +7,7 @@ import {
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
-    VIRTUAL_W, VIRTUAL_H, clearMaskFx
+    VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js';
@@ -5275,6 +5275,7 @@ openEventsPanel() {
             btn.onclick = () => {
                 brushEffect = fx.id;
                 localStorage.setItem('battleMaskLastFx', fx.id);
+                setMaskEffectOverride(fx.id);
                 console.log('[BattleMask] Effect set to:', fx.id);
                 effectRow.querySelectorAll('button').forEach(b => {
                     b.style.borderColor = 'rgba(255,255,255,0.15)';
@@ -5436,8 +5437,8 @@ openEventsPanel() {
             brushCursor.style.display = brushActive ? 'block' : 'none';
             brushBtn.style.background = brushActive ? 'rgba(156,39,176,0.8)' : 'rgba(156,39,176,0.4)';
             img.style.opacity = brushActive ? '0.45' : '1';
-            if (brushActive) { resizeBrushCanvas(); renderBrushPreview(); }
-            else { brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height); }
+            if (brushActive) { resizeBrushCanvas(); renderBrushPreview(); setMaskEffectOverride(brushEffect); }
+            else { brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height); clearMaskEffectOverride(); }
         };
         btnRow.insertBefore(brushBtn, btnRow.firstChild);
 
@@ -5461,6 +5462,7 @@ openEventsPanel() {
         if (savedMask?.effect_type) {
             brushEffect = savedMask.effect_type;
             localStorage.setItem('battleMaskLastFx', brushEffect);
+            setMaskEffectOverride(brushEffect);
             effectRow.querySelectorAll('button').forEach((b, i) => {
                 const fxId = MASK_EFFECTS[i]?.id;
                 b.style.borderColor = fxId === brushEffect ? '#e94560' : 'rgba(255,255,255,0.15)';

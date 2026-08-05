@@ -1001,6 +1001,16 @@ export function showMoveLearnPopup(pokemon, newMove, currentMoves) {
 const maskCache = new Map();
 const maskParticles = [];
 let maskAnimFrame = 0;
+let maskEffectOverride = null;
+
+export function setMaskEffectOverride(effect) {
+    maskEffectOverride = effect || null;
+    console.log('[BattleMask] Effect override set to:', maskEffectOverride);
+}
+
+export function clearMaskEffectOverride() {
+    maskEffectOverride = null;
+}
 
 export async function loadBattleMask(backgroundUrl) {
     if (!backgroundUrl || !window.db) { console.log('[BattleMask] Skip load: no url or db'); return null; }
@@ -1115,17 +1125,19 @@ export function drawMaskFx(ctx, backgroundUrl) {
     if (!mask) return;
 
     if (maskAnimFrame === 0) {
-        console.log('[BattleMask] drawMaskFx START, type:', mask.type, 'particles:', maskParticles.length);
+        console.log('[BattleMask] drawMaskFx START, type:', maskEffectOverride || mask.type, 'particles:', maskParticles.length);
     }
 
+    const activeType = maskEffectOverride || mask.type;
+
     if (maskParticles.length < 80 && maskAnimFrame % 3 === 0) {
-        const p = spawnMaskParticle(mask.type, mask.points);
+        const p = spawnMaskParticle(activeType, mask.points);
         if (p) maskParticles.push(p);
     }
     maskAnimFrame++;
 
     if (maskAnimFrame % 60 === 0) {
-        console.log('[BattleMask] Particles:', maskParticles.length, 'type:', mask.type);
+        console.log('[BattleMask] Particles:', maskParticles.length, 'type:', activeType);
     }
 
     for (let i = maskParticles.length - 1; i >= 0; i--) {
