@@ -227,47 +227,91 @@ export class Overworld2D {
                 img.src = spriteSheetUrl;
             });
 
-            this.playerSpriteFrames = {};
-            const directions = ['down', 'left', 'right', 'up'];
-            const frameCount = 4;
-            const frameW = spriteSheet.width / frameCount;
-            const frameH = spriteSheet.height / frameCount;
+            const isSpriteSheet = spriteSheetUrl.includes('perso_') && spriteSheetUrl.endsWith('.webp');
+            const isSquare = Math.abs(spriteSheet.width - spriteSheet.height) < 10;
 
-            for (let row = 0; row < directions.length; row++) {
-                const frames = [];
-                for (let col = 0; col < frameCount; col++) {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = frameW;
-                    canvas.height = frameH;
-                    const ctx = canvas.getContext('2d');
-                    ctx.imageSmoothingEnabled = false;
-                    ctx.drawImage(
-                        spriteSheet,
-                        col * frameW, row * frameH, frameW, frameH,
-                        0, 0, frameW, frameH
-                    );
-                    const img = new Image();
-                    img.src = canvas.toDataURL();
-                    frames.push(new Promise(resolve => { img.onload = () => resolve(img); }));
+            if (isSpriteSheet && isSquare) {
+                this.playerSpriteFrames = {};
+                const directions = ['down', 'left', 'right', 'up'];
+                const frameCount = 4;
+                const frameW = spriteSheet.width / frameCount;
+                const frameH = spriteSheet.height / frameCount;
+
+                for (let row = 0; row < directions.length; row++) {
+                    const frames = [];
+                    for (let col = 0; col < frameCount; col++) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = frameW;
+                        canvas.height = frameH;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.drawImage(
+                            spriteSheet,
+                            col * frameW, row * frameH, frameW, frameH,
+                            0, 0, frameW, frameH
+                        );
+                        const img = new Image();
+                        img.src = canvas.toDataURL();
+                        frames.push(new Promise(resolve => { img.onload = () => resolve(img); }));
+                    }
+                    this.playerSpriteFrames[directions[row]] = await Promise.all(frames);
                 }
-                this.playerSpriteFrames[directions[row]] = await Promise.all(frames);
-            }
 
-            this.playerSprites = {};
-            for (const dir of directions) {
-                this.playerSprites[dir] = this.playerSpriteFrames[dir][0];
+                this.playerSprites = {};
+                for (const dir of directions) {
+                    this.playerSprites[dir] = this.playerSpriteFrames[dir][0];
+                }
+                console.log(`[PokeFury] Sprite sheet loaded: 4x4 grid`);
+            } else {
+                this.playerSpriteFrames = null;
+                this.playerSprites = {};
+                const directions = ['down', 'left', 'right', 'up'];
+                for (const dir of directions) {
+                    this.playerSprites[dir] = spriteSheet;
+                }
+                console.log(`[PokeFury] Skin image loaded as single frame`);
             }
-
-            console.log(`[PokeFury] Sprite sheet loaded: ${gender} (${frameW}x${frameH} per frame)`);
         } catch (e) {
-            console.warn('[PokeFury] Sprite sheet not found, using procedural sprites:', e.message);
-            this.playerSprites = {
-                down: await this.createPlayerSprite('down'),
-                up: await this.createPlayerSprite('up'),
-                left: await this.createPlayerSprite('left'),
-                right: await this.createPlayerSprite('right')
-            };
-            this.playerSpriteFrames = null;
+            console.warn('[PokeFury] Sprite sheet not found, using default:', e.message);
+            const gender = this.game.playerGender === 'female' ? 'feminino' : 'masculino';
+            try {
+                const fallbackSheet = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('Fallback failed'));
+                    img.src = `assets/perso_${gender}.webp`;
+                });
+                this.playerSpriteFrames = {};
+                const dirs = ['down', 'left', 'right', 'up'];
+                const fc = 4;
+                const fw = fallbackSheet.width / fc;
+                const fh = fallbackSheet.height / fc;
+                for (let row = 0; row < dirs.length; row++) {
+                    const frames = [];
+                    for (let col = 0; col < fc; col++) {
+                        const c = document.createElement('canvas');
+                        c.width = fw; c.height = fh;
+                        const cx = c.getContext('2d');
+                        cx.imageSmoothingEnabled = false;
+                        cx.drawImage(fallbackSheet, col * fw, row * fh, fw, fh, 0, 0, fw, fh);
+                        const img = new Image();
+                        img.src = c.toDataURL();
+                        frames.push(new Promise(r => { img.onload = () => r(img); }));
+                    }
+                    this.playerSpriteFrames[dirs[row]] = await Promise.all(frames);
+                }
+                this.playerSprites = {};
+                for (const dir of dirs) this.playerSprites[dir] = this.playerSpriteFrames[dir][0];
+            } catch (e2) {
+                this.playerSprites = {
+                    down: await this.createPlayerSprite('down'),
+                    up: await this.createPlayerSprite('up'),
+                    left: await this.createPlayerSprite('left'),
+                    right: await this.createPlayerSprite('right')
+                };
+                this.playerSpriteFrames = null;
+            }
         }
     }
 
