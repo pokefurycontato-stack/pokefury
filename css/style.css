@@ -2680,3 +2680,83 @@ body {
 .skin-card-buy.equipped {
     background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
+
+/* ===== SKIN INVENTORY ===== */
+.skin-inv-tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skin-inv-tab:hover {
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.03);
+}
+.skin-inv-tab.active {
+    color: #e94560;
+    border-bottom-color: #e94560;
+}
+.skin-inv-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.25s;
+}
+.skin-inv-card:hover {
+    border-color: #e94560;
+    box-shadow: 0 0 20px rgba(233,69,96,0.15);
+}
+.skin-inv-card-img {
+    width: 100%;
+    height: 140px;
+    object-fit: contain;
+    background: #0d1117;
+    padding: 10px;
+}
+.skin-inv-card-body {
+    padding: 10px 12px;
+}
+.skin-inv-card-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.skin-inv-card-actions {
+    display: flex;
+    gap: 6px;
+}
+.skin-inv-btn {
+    flex: 1;
+    padding: 6px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skin-inv-btn.equip {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #fff;
+}
+.skin-inv-btn.equip:hover {
+    filter: brightness(1.15);
+}
+.skin-inv-btn.unequip {
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: #fff;
+}
+.skin-inv-btn.unequip:hover {
+    filter: brightness(1.15);
+}
+.skin-inv-btn.active {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: #fff;
+}

@@ -18,6 +18,7 @@ class PremiumStore {
         document.getElementById('buy-diamonds-close')?.addEventListener('click', () => this.closeBuyDiamonds());
         document.getElementById('diamond-shop-close')?.addEventListener('click', () => this.closeDiamondShop());
         document.getElementById('skin-shop-close')?.addEventListener('click', () => this.closeSkinShop());
+        document.getElementById('skin-inventory-close')?.addEventListener('click', () => this.closeSkinInventory());
         document.getElementById('btn-recharge-pix')?.addEventListener('click', () => this.buyWithRecharge('pix'));
         document.getElementById('btn-recharge-credit')?.addEventListener('click', () => this.buyWithRecharge('credit'));
 
@@ -26,6 +27,14 @@ class PremiumStore {
                 document.querySelectorAll('.skin-shop-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 this._filterSkinCards(tab.dataset.tab);
+            });
+        });
+
+        document.querySelectorAll('.skin-inv-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.skin-inv-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this._filterSkinInventory(tab.dataset.tab);
             });
         });
     }
@@ -448,7 +457,12 @@ class PremiumStore {
             if (error) throw error;
             if (data && data.error) throw new Error(data.error);
             this._showToast('Skin equipada!', 'success');
-            await this.openSkinShop();
+
+            if (this._inventoryOpen) {
+                await this.openSkinInventory();
+            } else {
+                await this.openSkinShop();
+            }
 
             if (data.skin_type === 'player_skin' && window.game && window.game.overworld) {
                 await window.game.overworld.loadSprites();
@@ -457,6 +471,107 @@ class PremiumStore {
             console.error('[PremiumStore] equip skin failed:', e);
             this._showToast('Erro ao equipar skin!', 'error');
         }
+    }
+
+    async unequipSkin(skinId) {
+        if (!this.currentCharId) return;
+
+        try {
+            const { error } = await window.db
+                .from('character_skins')
+                .update({ equipped: false })
+                .eq('character_id', this.currentCharId)
+                .eq('skin_id', skinId);
+            if (error) throw error;
+            this._showToast('Skin desequipada!', 'success');
+
+            if (this._inventoryOpen) {
+                await this.openSkinInventory();
+            }
+
+            if (window.game && window.game.overworld) {
+                await window.game.overworld.loadSprites();
+            }
+        } catch (e) {
+            console.error('[PremiumStore] unequip skin failed:', e);
+            this._showToast('Erro ao desequipar skin!', 'error');
+        }
+    }
+
+    // ========================
+    //  SKIN INVENTORY
+    // ========================
+    async openSkinInventory() {
+        const screen = document.getElementById('skin-inventory-screen');
+        if (!screen) return;
+        screen.classList.remove('hidden');
+        this._inventoryOpen = true;
+
+        const owned = await this._loadOwnedSkins();
+        this._renderSkinInventory(owned);
+
+        document.querySelectorAll('.skin-inv-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.skin-inv-tab[data-tab="player_skin"]')?.classList.add('active');
+    }
+
+    closeSkinInventory() {
+        document.getElementById('skin-inventory-screen')?.classList.add('hidden');
+        this._inventoryOpen = false;
+    }
+
+    _renderSkinInventory(owned) {
+        const container = document.getElementById('skin-inventory-list');
+        const emptyEl = document.getElementById('skin-inventory-empty');
+        if (!container) return;
+
+        if (!owned.length) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            container.innerHTML = '';
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        container.innerHTML = owned.map(s => {
+            const hasImage = s.image_url && s.image_url.trim();
+            const imgHtml = hasImage
+                ? `<img class="skin-inv-card-img" src="${this._escHtml(s.image_url)}" alt="${this._escHtml(s.name)}" onerror="this.style.display='none'">`
+                : `<div class="skin-inv-card-img" style="display:flex;align-items:center;justify-content:center;font-size:40px">🎨</div>`;
+
+            const badgeClass = s.skin_type === 'pokemon_skin' ? 'pokemon' : 'player';
+            const badgeText = s.skin_type === 'pokemon_skin' ? 'Pokémon' : 'Treinador';
+
+            let actionsHtml;
+            if (s.equipped) {
+                actionsHtml = `
+                    <button class="skin-inv-btn active" disabled>Equipado</button>
+                    <button class="skin-inv-btn unequip" onclick="window.premiumStore.unequipSkin('${s.skin_id}')">Desequipar</button>
+                `;
+            } else {
+                actionsHtml = `
+                    <button class="skin-inv-btn equip" onclick="window.premiumStore.equipSkin('${s.skin_id}')">Equipar</button>
+                `;
+            }
+
+            return `
+                <div class="skin-inv-card" data-skin-type="${s.skin_type}">
+                    ${imgHtml}
+                    <div class="skin-inv-card-body">
+                        <div class="skin-inv-card-name">${this._escHtml(s.name)}</div>
+                        <span class="skin-card-badge ${badgeClass}">${badgeText}</span>
+                        <div class="skin-inv-card-actions" style="margin-top:8px">
+                            ${actionsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    _filterSkinInventory(tab) {
+        const cards = document.querySelectorAll('.skin-inv-card');
+        cards.forEach(card => {
+            card.style.display = card.dataset.skinType === tab ? '' : 'none';
+        });
     }
 }
 

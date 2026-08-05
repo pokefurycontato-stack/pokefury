@@ -3496,6 +3496,16 @@ class PokeFuryGame {
                 }
             };
         }
+
+        const skinInvBtn = document.getElementById('btn-skin-inventory');
+        if (skinInvBtn) {
+            skinInvBtn.onclick = () => {
+                if (window.premiumStore) {
+                    window.premiumStore.setCurrentChar(this.currentCharacterId);
+                    window.premiumStore.openSkinInventory();
+                }
+            };
+        }
     }
 
     openPvpPositionEditor() {
