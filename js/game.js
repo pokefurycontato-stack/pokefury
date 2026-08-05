@@ -5,7 +5,7 @@ import { getEffectiveMovePriority, canPokemonAct, processEndOfTurn, clearProtect
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
-    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, BATTLE_FX_LIST, getBattlePokemonSprites,
+    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
     VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride
 } from './ui.js';
@@ -5059,8 +5059,6 @@ openEventsPanel() {
         const py = globalLayout?.player_y ?? map.battle_player_y ?? 0.75;
         const ex = globalLayout?.enemy_x ?? map.battle_enemy_x ?? 0.72;
         const ey = globalLayout?.enemy_y ?? map.battle_enemy_y ?? 0.4;
-        const initPlayerFx = globalLayout?.player_fx || map.battle_player_fx || 'none';
-        const initEnemyFx = globalLayout?.enemy_fx || map.battle_enemy_fx || 'none';
 
         const gridParent = grid.parentElement;
         const restoreGrid = () => {
@@ -5125,52 +5123,6 @@ openEventsPanel() {
 
         grid.appendChild(preview);
 
-        const fxSection = document.createElement('div');
-        fxSection.style.cssText = 'position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:4;width:min(760px,94vw);display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);';
-
-        function createFxSelector(title, initVal, onChange) {
-            const col = document.createElement('div');
-            col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;min-width:120px;';
-            const titleEl = document.createElement('div');
-            titleEl.style.cssText = 'color:rgba(255,255,255,0.5);font-size:10px;font-weight:700;text-transform:uppercase;';
-            titleEl.textContent = title;
-            col.appendChild(titleEl);
-
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
-            let current = initVal;
-
-            BATTLE_FX_LIST.forEach(fx => {
-                const btn = document.createElement('button');
-                btn.style.cssText = `width:36px;height:36px;border-radius:8px;border:2px solid ${fx.id === current ? '#e94560' : 'rgba(255,255,255,0.15)'};background:${fx.id === current ? 'rgba(233,69,96,0.3)' : 'rgba(0,0,0,0.4)'};cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;`;
-                btn.textContent = fx.icon;
-                btn.title = fx.name;
-                btn.onmouseenter = () => { btn.style.transform = 'scale(1.1)'; };
-                btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; };
-                btn.onclick = () => {
-                    current = fx.id;
-                    row.querySelectorAll('button').forEach(b => {
-                        b.style.borderColor = 'rgba(255,255,255,0.15)';
-                        b.style.background = 'rgba(0,0,0,0.4)';
-                    });
-                    btn.style.borderColor = '#e94560';
-                    btn.style.background = 'rgba(233,69,96,0.3)';
-                    onChange(fx.id);
-                };
-                row.appendChild(btn);
-            });
-            col.appendChild(row);
-            return { col, getCurrent: () => current };
-        }
-
-        let finalPlayerFx = initPlayerFx;
-        let finalEnemyFx = initEnemyFx;
-        const playerFxSel = createFxSelector('Efeito Treinador', initPlayerFx, (v) => { finalPlayerFx = v; });
-        const enemyFxSel = createFxSelector('Efeito Inimigo', initEnemyFx, (v) => { finalEnemyFx = v; });
-        fxSection.appendChild(playerFxSel.col);
-        fxSection.appendChild(enemyFxSel.col);
-        grid.appendChild(fxSection);
-
         const btnRow = document.createElement('div');
         btnRow.style.cssText = 'position:absolute;top:12px;right:12px;z-index:5;display:flex;gap:8px;';
 
@@ -5194,15 +5146,12 @@ openEventsPanel() {
                     battle_player_x: finalPx,
                     battle_player_y: finalPy,
                     battle_enemy_x: finalEx,
-                    battle_enemy_y: finalEy,
-                    battle_player_fx: finalPlayerFx,
-                    battle_enemy_fx: finalEnemyFx
+                    battle_enemy_y: finalEy
                 });
                 await window.db.from('battle_position_settings').upsert({
                     background_url: bgUrl,
                     player_x: finalPx, player_y: finalPy,
                     enemy_x: finalEx, enemy_y: finalEy,
-                    player_fx: finalPlayerFx, enemy_fx: finalEnemyFx,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'background_url' });
                 if (this.currentMap && this.currentMap.id === map.id) {
@@ -5211,9 +5160,7 @@ openEventsPanel() {
                         battle_player_x: finalPx,
                         battle_player_y: finalPy,
                         battle_enemy_x: finalEx,
-                        battle_enemy_y: finalEy,
-                        battle_player_fx: finalPlayerFx,
-                        battle_enemy_fx: finalEnemyFx
+                        battle_enemy_y: finalEy
                     });
                 }
                 restoreGrid();
