@@ -5280,6 +5280,7 @@ openEventsPanel() {
         const initFx = MASK_EFFECTS.find(f => f.id === brushEffect) || MASK_EFFECTS[0];
         brushCursor.style.cssText = `position:absolute;border:2px solid rgba(${initFx.rgb},0.8);border-radius:50%;pointer-events:none;z-index:4;display:none;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(${initFx.rgb},0.4);`;
         preview.appendChild(brushCursor);
+        preview.appendChild(brushPanel);
 
         function resizeBrushCanvas() {
             brushCanvas.width = preview.clientWidth;
