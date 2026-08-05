@@ -539,7 +539,7 @@ export class Overworld2D {
 
     handleInput() {
         if (this.game.state !== 'overworld') return;
-        if (this.player.moving && this.player.moveProgress < 0.7) return;
+        if (this.player.moving) return;
         if (this.moveCooldown > 0) return;
         if (this.transitionCooldown > 0) return;
 
