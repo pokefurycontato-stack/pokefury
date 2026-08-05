@@ -1028,6 +1028,11 @@ export async function loadBattleMask(backgroundUrl) {
             maskCache.set(backgroundUrl, null);
             return null;
         }
+        const hasColorPixels = data.effect_type === 'multi' || data.effect_type === 'glow' || data.effect_type === 'grass' || data.effect_type === 'water' || data.effect_type === 'fire' || data.effect_type === 'ice' || data.effect_type === 'electric' || data.effect_type === 'earth' || data.effect_type === 'psychic';
+        if (!hasColorPixels) {
+            maskCache.set(backgroundUrl, null);
+            return null;
+        }
         const img = new Image();
         await new Promise((resolve) => {
             img.onload = resolve;
@@ -1053,12 +1058,38 @@ export async function loadBattleMask(backgroundUrl) {
     }
 }
 
+const EFFECT_RGB_MAP = {
+    '34,180,34':   'grass',
+    '20,60,220':   'water',
+    '220,40,20':   'fire',
+    '100,200,255': 'ice',
+    '255,165,0':   'electric',
+    '150,100,50':  'earth',
+    '180,50,220':  'psychic',
+};
+
 function isMasked(maskData, x, y) {
     const ix = Math.floor(x);
     const iy = Math.floor(y);
     if (ix < 0 || ix >= VIRTUAL_W || iy < 0 || iy >= VIRTUAL_H) return false;
     const idx = (iy * VIRTUAL_W + ix) * 4;
-    return maskData.data[idx] > 128;
+    const r = maskData.data[idx];
+    const g = maskData.data[idx + 1];
+    const b = maskData.data[idx + 2];
+    return (r > 0 || g > 0 || b > 0);
+}
+
+function getMaskEffectAt(maskData, x, y) {
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    if (ix < 0 || ix >= VIRTUAL_W || iy < 0 || iy >= VIRTUAL_H) return null;
+    const idx = (iy * VIRTUAL_W + ix) * 4;
+    const r = maskData.data[idx];
+    const g = maskData.data[idx + 1];
+    const b = maskData.data[idx + 2];
+    if (r === 0 && g === 0 && b === 0) return null;
+    const key = r + ',' + g + ',' + b;
+    return EFFECT_RGB_MAP[key] || 'glow';
 }
 
 function indexMaskPixels(maskData) {
@@ -1067,7 +1098,8 @@ function indexMaskPixels(maskData) {
     for (let y = 0; y < VIRTUAL_H; y += step) {
         for (let x = 0; x < VIRTUAL_W; x += step) {
             if (isMasked(maskData, x, y)) {
-                points.push({ x, y });
+                const fx = getMaskEffectAt(maskData, x, y);
+                points.push({ x, y, fx });
             }
         }
     }
@@ -1124,21 +1156,17 @@ export function drawMaskFx(ctx, backgroundUrl) {
     const mask = maskCache.get(backgroundUrl);
     if (!mask) return;
 
-    if (maskAnimFrame === 0) {
-        console.log('[BattleMask] drawMaskFx START, type:', maskEffectOverride || mask.type, 'particles:', maskParticles.length);
-    }
+    const overrideType = maskEffectOverride;
 
-    const activeType = maskEffectOverride || mask.type;
-
-    if (maskParticles.length < 80 && maskAnimFrame % 3 === 0) {
-        const p = spawnMaskParticle(activeType, mask.points);
-        if (p) maskParticles.push(p);
+    if (maskParticles.length < 120 && maskAnimFrame % 2 === 0) {
+        const pt = mask.points[Math.floor(Math.random() * mask.points.length)];
+        if (pt) {
+            const fxType = overrideType || pt.fx || 'grass';
+            const p = spawnMaskParticle(fxType, [pt]);
+            if (p) maskParticles.push(p);
+        }
     }
     maskAnimFrame++;
-
-    if (maskAnimFrame % 60 === 0) {
-        console.log('[BattleMask] Particles:', maskParticles.length, 'type:', activeType);
-    }
 
     for (let i = maskParticles.length - 1; i >= 0; i--) {
         const p = maskParticles[i];

@@ -5249,13 +5249,19 @@ openEventsPanel() {
         let isPainting = false;
 
         const MASK_EFFECTS = [
-            { id: 'glow', name: 'Brilho', icon: '✨' },
-            { id: 'grass', name: 'Grama', icon: '🌿' },
-            { id: 'water', name: 'Água', icon: '💧' },
-            { id: 'fire', name: 'Fogo', icon: '🔥' },
-            { id: 'fog', name: 'Névoa', icon: '🌫️' },
-            { id: 'sparkles', name: 'Faíscas', icon: '⚡' },
+            { id: 'grass',    name: 'Grama',     icon: '🌿', rgb: [34,180,34]   },
+            { id: 'water',    name: 'Água',      icon: '💧', rgb: [20,60,220]   },
+            { id: 'fire',     name: 'Fogo',      icon: '🔥', rgb: [220,40,20]   },
+            { id: 'ice',      name: 'Gelo',      icon: '❄️', rgb: [100,200,255] },
+            { id: 'electric', name: 'Raio',      icon: '⚡', rgb: [255,165,0]   },
+            { id: 'earth',    name: 'Terra',     icon: '🪨', rgb: [150,100,50]  },
+            { id: 'psychic',  name: 'Psíquico',  icon: '🔮', rgb: [180,50,220]  },
         ];
+
+        const EFFECT_BY_RGB = {};
+        MASK_EFFECTS.forEach(fx => {
+            EFFECT_BY_RGB[fx.rgb[0] + ',' + fx.rgb[1] + ',' + fx.rgb[2]] = fx.id;
+        });
 
         const brushPanel = document.createElement('div');
         brushPanel.style.cssText = 'position:absolute;top:12px;left:12px;z-index:5;display:none;flex-direction:column;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);min-width:180px;';
@@ -5269,7 +5275,8 @@ openEventsPanel() {
         effectRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
         MASK_EFFECTS.forEach(fx => {
             const btn = document.createElement('button');
-            btn.style.cssText = `width:32px;height:32px;border-radius:6px;border:2px solid ${fx.id === brushEffect ? '#e94560' : 'rgba(255,255,255,0.15)'};background:${fx.id === brushEffect ? 'rgba(233,69,96,0.3)' : 'rgba(0,0,0,0.4)'};cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;`;
+            const isActive = fx.id === brushEffect;
+            btn.style.cssText = `width:32px;height:32px;border-radius:6px;border:2px solid ${isActive ? `rgb(${fx.rgb})` : 'rgba(255,255,255,0.15)'};background:${isActive ? `rgba(${fx.rgb},0.4)` : 'rgba(0,0,0,0.4)'};cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;`;
             btn.textContent = fx.icon;
             btn.title = fx.name;
             btn.onclick = () => {
@@ -5281,8 +5288,10 @@ openEventsPanel() {
                     b.style.borderColor = 'rgba(255,255,255,0.15)';
                     b.style.background = 'rgba(0,0,0,0.4)';
                 });
-                btn.style.borderColor = '#e94560';
-                btn.style.background = 'rgba(233,69,96,0.3)';
+                btn.style.borderColor = `rgb(${fx.rgb})`;
+                btn.style.background = `rgba(${fx.rgb},0.4)`;
+                brushCursor.style.borderColor = `rgba(${fx.rgb},0.8)`;
+                brushCursor.style.boxShadow = `0 0 8px rgba(${fx.rgb},0.4)`;
             };
             effectRow.appendChild(btn);
         });
@@ -5321,7 +5330,8 @@ openEventsPanel() {
         brushPanel.appendChild(clearBrushBtn);
 
         const brushCursor = document.createElement('div');
-        brushCursor.style.cssText = 'position:absolute;border:2px solid rgba(233,69,96,0.8);border-radius:50%;pointer-events:none;z-index:4;display:none;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(233,69,96,0.4);';
+        const initFx = MASK_EFFECTS.find(f => f.id === brushEffect) || MASK_EFFECTS[0];
+        brushCursor.style.cssText = `position:absolute;border:2px solid rgba(${initFx.rgb},0.8);border-radius:50%;pointer-events:none;z-index:4;display:none;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(${initFx.rgb},0.4);`;
         preview.appendChild(brushCursor);
 
         function resizeBrushCanvas() {
@@ -5334,15 +5344,18 @@ openEventsPanel() {
             brushCtx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
             if (!brushActive) return;
             brushCtx.save();
-            brushCtx.fillStyle = 'rgba(233,69,96,0.35)';
             const sw = brushCanvas.width / MASK_W;
             const sh = brushCanvas.height / MASK_H;
             const imgData = maskCtx.getImageData(0, 0, MASK_W, MASK_H);
-            for (let y = 0; y < MASK_H; y += 4) {
-                for (let x = 0; x < MASK_W; x += 4) {
+            for (let y = 0; y < MASK_H; y += 3) {
+                for (let x = 0; x < MASK_W; x += 3) {
                     const idx = (y * MASK_W + x) * 4;
-                    if (imgData.data[idx] > 128) {
-                        brushCtx.fillRect(x * sw, y * sh, 4 * sw + 1, 4 * sh + 1);
+                    const r = imgData.data[idx];
+                    const g = imgData.data[idx + 1];
+                    const b = imgData.data[idx + 2];
+                    if (r > 0 || g > 0 || b > 0) {
+                        brushCtx.fillStyle = `rgba(${r},${g},${b},0.6)`;
+                        brushCtx.fillRect(x * sw, y * sh, 3 * sw + 1, 3 * sh + 1);
                     }
                 }
             }
@@ -5365,9 +5378,10 @@ openEventsPanel() {
                 const mx = nx * MASK_W;
                 const my = ny * MASK_H;
                 const bs = brushSize * (MASK_W / preview.clientWidth);
+                const fx = MASK_EFFECTS.find(f => f.id === brushEffect) || MASK_EFFECTS[0];
                 maskCtx.beginPath();
                 maskCtx.arc(mx, my, bs / 2, 0, Math.PI * 2);
-                maskCtx.fillStyle = '#fff';
+                maskCtx.fillStyle = `rgb(${fx.rgb})`;
                 maskCtx.fill();
                 renderBrushPreview();
             }
@@ -5479,7 +5493,7 @@ openEventsPanel() {
                 const { error } = await window.db.from('battle_effect_masks').upsert({
                     background_url: bgUrl,
                     mask_data: maskBase64,
-                    effect_type: brushEffect,
+                    effect_type: 'multi',
                     brush_size: brushSize,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'background_url' });
