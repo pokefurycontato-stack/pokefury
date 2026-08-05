@@ -1076,7 +1076,7 @@ export class Overworld2D {
             sprite = this.playerSprites[this.player.direction];
         }
 
-        const baseScale = this._skinHighRes ? 2.2 : 1.3;
+        const baseScale = this._skinHighRes ? 1.5 : 1.3;
         const playerSize = this.tileW * baseScale;
         const playerOffset = (this.tileW - playerSize) / 2;
 
