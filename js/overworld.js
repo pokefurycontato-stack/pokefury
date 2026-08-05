@@ -539,7 +539,7 @@ export class Overworld2D {
 
     handleInput() {
         if (this.game.state !== 'overworld') return;
-        if (this.player.moving) return;
+        if (this.player.moving && this.player.moveProgress < 0.7) return;
         if (this.moveCooldown > 0) return;
         if (this.transitionCooldown > 0) return;
 
@@ -584,13 +584,13 @@ export class Overworld2D {
 
     update() {
         if (this.player.moving) {
-            this.player.moveProgress += 0.1;
+            this.player.moveProgress += 0.14;
             if (this.player.moveProgress >= 1) {
                 this.player.moveProgress = 1;
                 this.player.moving = false;
                 this.player.fromX = this.player.x;
                 this.player.fromY = this.player.y;
-                this.moveCooldown = 6;
+                this.moveCooldown = 2;
 
                 if (this.game._isInGym) {
                     this.game.checkGymLeaderProximity();
