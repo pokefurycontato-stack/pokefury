@@ -242,7 +242,7 @@ export class Overworld2D {
                         canvas.width = frameW;
                         canvas.height = frameH;
                         const ctx = canvas.getContext('2d');
-                        ctx.imageSmoothingEnabled = spriteSheet.width <= 512;
+                        ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(
                             spriteSheet,
@@ -261,8 +261,10 @@ export class Overworld2D {
                     this.playerSprites[dir] = this.playerSpriteFrames[dir][0];
                 }
                 console.log(`[PokeFury] Sprite sheet loaded: ${spriteSheet.width}x${spriteSheet.height} (4x4 grid)`);
+                this._skinHighRes = spriteSheet.width > 512;
             } else {
                 this.playerSpriteFrames = null;
+                this._skinHighRes = false;
                 this.playerSprites = {};
                 const directions = ['down', 'left', 'right', 'up'];
                 for (const dir of directions) {
@@ -272,6 +274,7 @@ export class Overworld2D {
             }
         } catch (e) {
             console.warn('[PokeFury] Sprite sheet not found, using default:', e.message);
+            this._skinHighRes = false;
             const gender = this.game.playerGender === 'female' ? 'feminino' : 'masculino';
             try {
                 const fallbackSheet = await new Promise((resolve, reject) => {
@@ -1073,7 +1076,8 @@ export class Overworld2D {
             sprite = this.playerSprites[this.player.direction];
         }
 
-        const playerSize = this.tileW * 1.3;
+        const baseScale = this._skinHighRes ? 2.2 : 1.3;
+        const playerSize = this.tileW * baseScale;
         const playerOffset = (this.tileW - playerSize) / 2;
 
         if (sprite && sprite.complete) {
