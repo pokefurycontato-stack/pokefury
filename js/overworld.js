@@ -584,13 +584,13 @@ export class Overworld2D {
 
     update() {
         if (this.player.moving) {
-            this.player.moveProgress += 0.14;
+            this.player.moveProgress += 0.12;
             if (this.player.moveProgress >= 1) {
                 this.player.moveProgress = 1;
                 this.player.moving = false;
                 this.player.fromX = this.player.x;
                 this.player.fromY = this.player.y;
-                this.moveCooldown = 2;
+                this.moveCooldown = 3;
 
                 if (this.game._isInGym) {
                     this.game.checkGymLeaderProximity();
