@@ -5245,7 +5245,7 @@ openEventsPanel() {
 
         let brushActive = false;
         let brushSize = 40;
-        let brushEffect = 'glow';
+        let brushEffect = localStorage.getItem('battleMaskLastFx') || 'glow';
         let isPainting = false;
 
         const MASK_EFFECTS = [
@@ -5274,6 +5274,8 @@ openEventsPanel() {
             btn.title = fx.name;
             btn.onclick = () => {
                 brushEffect = fx.id;
+                localStorage.setItem('battleMaskLastFx', fx.id);
+                console.log('[BattleMask] Effect set to:', fx.id);
                 effectRow.querySelectorAll('button').forEach(b => {
                     b.style.borderColor = 'rgba(255,255,255,0.15)';
                     b.style.background = 'rgba(0,0,0,0.4)';
@@ -5456,7 +5458,15 @@ openEventsPanel() {
             };
             tmpImg.src = savedMask.mask_data;
         }
-        if (savedMask?.effect_type) brushEffect = savedMask.effect_type;
+        if (savedMask?.effect_type) {
+            brushEffect = savedMask.effect_type;
+            localStorage.setItem('battleMaskLastFx', brushEffect);
+            effectRow.querySelectorAll('button').forEach((b, i) => {
+                const fxId = MASK_EFFECTS[i]?.id;
+                b.style.borderColor = fxId === brushEffect ? '#e94560' : 'rgba(255,255,255,0.15)';
+                b.style.background = fxId === brushEffect ? 'rgba(233,69,96,0.3)' : 'rgba(0,0,0,0.4)';
+            });
+        }
         if (savedMask?.brush_size) { brushSize = savedMask.brush_size; sizeSlider.value = brushSize; sizeVal.textContent = brushSize; }
 
         const origSave = saveBtn.onclick;
