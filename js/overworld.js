@@ -227,10 +227,9 @@ export class Overworld2D {
                 img.src = spriteSheetUrl;
             });
 
-            const isSpriteSheet = spriteSheetUrl.includes('perso_') && spriteSheetUrl.endsWith('.webp');
             const isSquare = Math.abs(spriteSheet.width - spriteSheet.height) < 10;
 
-            if (isSpriteSheet && isSquare) {
+            if (isSquare) {
                 this.playerSpriteFrames = {};
                 const directions = ['down', 'left', 'right', 'up'];
                 const frameCount = 4;
@@ -244,7 +243,8 @@ export class Overworld2D {
                         canvas.width = frameW;
                         canvas.height = frameH;
                         const ctx = canvas.getContext('2d');
-                        ctx.imageSmoothingEnabled = false;
+                        ctx.imageSmoothingEnabled = spriteSheet.width <= 512;
+                        ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(
                             spriteSheet,
                             col * frameW, row * frameH, frameW, frameH,
