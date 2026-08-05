@@ -1,5 +1,6 @@
 -- ============================================================
--- SKIN SHOP - Tabelas, RLS e RPCs
+-- SKIN SHOP - Tabelas, RLS e RPCs (SAFE - dropa politicas existentes)
+-- Execute no Supabase SQL Editor
 -- ============================================================
 
 -- 1. Tabela de produtos de skin
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS skin_products (
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Tabelas de skins compradas por personagem
+-- 2. Tabela de skins compradas por personagem
 CREATE TABLE IF NOT EXISTS character_skins (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   character_id   UUID NOT NULL REFERENCES game_saves(id) ON DELETE CASCADE,
@@ -27,8 +28,11 @@ CREATE TABLE IF NOT EXISTS character_skins (
   UNIQUE(character_id, skin_id)
 );
 
--- 3. RLS - skin_products
+-- 3. RLS - skin_products (dropa e recria)
 ALTER TABLE skin_products ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "skin_products_select_active" ON skin_products;
+DROP POLICY IF EXISTS "skin_products_admin_all" ON skin_products;
 
 CREATE POLICY "skin_products_select_active" ON skin_products
   FOR SELECT USING (active = true);
@@ -38,8 +42,13 @@ CREATE POLICY "skin_products_admin_all" ON skin_products
     EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true)
   );
 
--- 4. RLS - character_skins
+-- 4. RLS - character_skins (dropa e recria)
 ALTER TABLE character_skins ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "character_skins_select_own" ON character_skins;
+DROP POLICY IF EXISTS "character_skins_insert_own" ON character_skins;
+DROP POLICY IF EXISTS "character_skins_update_own" ON character_skins;
+DROP POLICY IF EXISTS "character_skins_delete_own" ON character_skins;
 
 CREATE POLICY "character_skins_select_own" ON character_skins
   FOR SELECT USING (
@@ -61,7 +70,7 @@ CREATE POLICY "character_skins_delete_own" ON character_skins
     EXISTS (SELECT 1 FROM game_saves WHERE game_saves.id = character_skins.character_id AND game_saves.user_id = auth.uid())
   );
 
--- 5. RPC: Comprar skin (cobra diamantes e registra)
+-- 5. RPC: Comprar skin
 CREATE OR REPLACE FUNCTION buy_skin(p_character_id UUID, p_skin_id UUID)
 RETURNS JSON AS $$
 DECLARE
@@ -69,35 +78,27 @@ DECLARE
   v_user_id UUID;
   v_has_skin BOOLEAN;
 BEGIN
-  -- Verificar ownership
   SELECT user_id INTO v_user_id FROM game_saves WHERE id = p_character_id;
   IF v_user_id != auth.uid() THEN
     RETURN json_build_object('error', 'Unauthorized');
   END IF;
 
-  -- Verificar se já comprou
   SELECT EXISTS(SELECT 1 FROM character_skins WHERE character_id = p_character_id AND skin_id = p_skin_id) INTO v_has_skin;
   IF v_has_skin THEN
     RETURN json_build_object('error', 'Already owned');
   END IF;
 
-  -- Pegar preço
   SELECT price_diamonds INTO v_price FROM skin_products WHERE id = p_skin_id AND active = true;
   IF v_price IS NULL THEN
     RETURN json_build_object('error', 'Product not found');
   END IF;
 
-  -- Verificar saldo (via RPC existente)
-  -- O frontend chama spend_currency separadamente
-
-  -- Registrar compra
   INSERT INTO character_skins (character_id, skin_id) VALUES (p_character_id, p_skin_id);
-
   RETURN json_build_object('ok', true, 'price', v_price);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. RPC: Equipar/dessequipar skin
+-- 6. RPC: Equipar skin
 CREATE OR REPLACE FUNCTION equip_skin(p_character_id UUID, p_skin_id UUID)
 RETURNS JSON AS $$
 DECLARE
@@ -118,7 +119,6 @@ BEGIN
     RETURN json_build_object('error', 'Skin not owned');
   END IF;
 
-  -- Desativar outras skins do mesmo tipo
   UPDATE character_skins SET equipped = false
   WHERE character_id = p_character_id
     AND skin_id IN (
@@ -127,7 +127,6 @@ BEGIN
       WHERE cs2.character_id = p_character_id AND sp2.skin_type = v_skin_type
     );
 
-  -- Ativar a skin escolhida
   UPDATE character_skins SET equipped = true
   WHERE character_id = p_character_id AND skin_id = p_skin_id;
 
@@ -157,7 +156,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 8. RPC: Buscar skin equipada (para overworld/batalha)
+-- 8. RPC: Buscar skin equipada
 CREATE OR REPLACE FUNCTION get_equipped_skin(p_character_id UUID, p_skin_type TEXT)
 RETURNS TABLE (
   skin_id UUID,
