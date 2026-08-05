@@ -590,7 +590,7 @@ export class Overworld2D {
                 this.player.moving = false;
                 this.player.fromX = this.player.x;
                 this.player.fromY = this.player.y;
-                this.moveCooldown = 4;
+                this.moveCooldown = 6;
 
                 if (this.game._isInGym) {
                     this.game.checkGymLeaderProximity();
