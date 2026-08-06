@@ -124,7 +124,8 @@
         <!-- TOP BAR -->
         <nav id="top-bar">
             <div class="top-bar-nav">
-                <button class="nav-btn active" data-screen="map"><span class="nav-icon">🗺️</span><span>Mapa</span></button>
+                <button class="nav-btn" data-screen="city"><span class="nav-icon">🏙️</span><span>Cidade</span></button>
+                <button class="nav-btn active" data-screen="map"><span class="nav-icon">🗺️</span><span>Exploração</span></button>
                 <button class="nav-btn" data-screen="pokedex"><span class="nav-icon">📖</span><span>Pokédex</span></button>
                 <button class="nav-btn" data-screen="team"><span class="nav-icon">⚔️</span><span>Equipe</span></button>
                 <button class="nav-btn" data-screen="bag"><span class="nav-icon">🎒</span><span>Mochila</span></button>
@@ -245,6 +246,7 @@
         <button class="item-btn admin-btn" id="admin-btn-premium">💎 Loja Premium</button>
         <button class="item-btn admin-btn" id="admin-btn-battle-pos">🎯 Posições PVP</button>
         <button class="item-btn admin-btn" id="admin-btn-new-pokemon" style="background:linear-gradient(135deg,#7b2ff7,#c471f5);">⚡ Novo Pokemon</button>
+        <button class="item-btn admin-btn" id="admin-btn-city-builder" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">🏙️ Criar Cidade</button>
     </div>
 </div>
 
@@ -1220,10 +1222,64 @@
         </div>
     </div>
 
+    <!-- City Screen -->
+    <div id="city-screen" class="hidden" style="position:fixed;inset:0;z-index:800;background:#0a0e1a;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-bottom:1px solid #30363d;">
+            <h2 style="margin:0;color:#f59e0b;font-size:16px;">🏙️ Cidade Pokémon</h2>
+            <span id="city-player-count" style="color:rgba(255,255,255,0.5);font-size:12px;">0 jogadores online</span>
+            <button id="city-close-btn" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div id="city-canvas-wrap" style="flex:1;position:relative;overflow:hidden;">
+            <canvas id="city-canvas"></canvas>
+        </div>
+        <div style="padding:8px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:12px;">
+            <span id="city-pos" style="color:rgba(255,255,255,0.4);font-size:12px;">X: 0 Y: 0</span>
+            <div style="flex:1;"></div>
+            <span style="color:rgba(255,255,255,0.3);font-size:11px;">WASD ou Setas para mover</span>
+        </div>
+    </div>
+
+    <!-- City Builder Admin -->
+    <div id="city-builder-screen" class="hidden" style="position:fixed;inset:0;z-index:960;background:#0a0e1a;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#f59e0b,#ef4444);border-bottom:1px solid #30363d;">
+            <h2 style="margin:0;color:#fff;font-size:16px;">🏙️ Criar Cidade - Editor</h2>
+            <div style="display:flex;gap:8px;">
+                <button id="cb-save-btn" style="padding:6px 14px;border:none;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
+                <button id="cb-close-btn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
+            </div>
+        </div>
+        <div style="display:flex;flex:1;overflow:hidden;">
+            <!-- Sidebar de assets -->
+            <div id="cb-assets-panel" style="width:180px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
+                <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Assets</div>
+                <div id="cb-assets-list"></div>
+            </div>
+            <!-- Canvas do editor -->
+            <div id="cb-canvas-wrap" style="flex:1;position:relative;overflow:hidden;background:#1a1a2e;">
+                <canvas id="cb-canvas"></canvas>
+            </div>
+            <!-- Propriedades -->
+            <div id="cb-props-panel" style="width:200px;background:#161b22;border-left:1px solid #30363d;padding:12px;overflow-y:auto;">
+                <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Propriedades</div>
+                <div id="cb-props-content" style="color:rgba(255,255,255,0.4);font-size:12px;">Selecione um asset</div>
+            </div>
+        </div>
+        <div style="padding:6px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:16px;font-size:11px;color:rgba(255,255,255,0.4);">
+            <span>Grid: 64px</span>
+            <span>Click: selecionar</span>
+            <span>Drag: mover</span>
+            <span>Del: remover</span>
+            <span>R: girar</span>
+            <span>Scroll: zoom</span>
+        </div>
+    </div>
+
     <script src="js/premium-store.js"></script>
     <script src="js/premium-admin.js"></script>
     <script src="js/gym-leaders-admin.js"></script>
     <script src="js/boosts.js"></script>
     <script src="js/event-pokemon-admin.js"></script>
+    <script src="js/city.js"></script>
+    <script src="js/city-builder.js"></script>
 </body>
 </html>
