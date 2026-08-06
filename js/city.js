@@ -38,14 +38,15 @@ class CityScreen {
         document.getElementById('city-screen').classList.remove('hidden');
         this.canvas = document.getElementById('city-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
-
-        this.running = true;
         await this.loadLayout();
         await this.registerPlayer();
-        this.subscribeRealtime();
-        this.loop();
+        requestAnimationFrame(() => {
+            this.resizeCanvas();
+            this.subscribeRealtime();
+            this.running = true;
+            this.loop();
+        });
+        window.addEventListener('resize', () => this.resizeCanvas());
     }
 
     close() {
@@ -237,14 +238,23 @@ class CityScreen {
             const py = p.grid_y * ts - camY;
 
             if (p._skinImg && p._skinImg.complete && p._skinImg.naturalWidth) {
-                const frameW = p._skinImg.naturalWidth / 4;
-                const frameH = p._skinImg.naturalHeight / 4;
-                const dirs = ['down', 'left', 'right', 'up'];
-                const dirIdx = dirs.indexOf(p.direction || 'down');
-                ctx.drawImage(p._skinImg,
-                    0, dirIdx * frameH, frameW, frameH,
-                    px + 2, py + 2, ts - 4, ts - 4
-                );
+                const imgW = p._skinImg.naturalWidth;
+                const imgH = p._skinImg.naturalHeight;
+                const isGrid = Math.abs(imgW - imgH) < 10 && imgW > 100;
+                if (isGrid) {
+                    const cols = 4;
+                    const rows = 4;
+                    const frameW = imgW / cols;
+                    const frameH = imgH / rows;
+                    const dirs = ['down', 'left', 'right', 'up'];
+                    const dirIdx = dirs.indexOf(p.direction || 'down');
+                    ctx.drawImage(p._skinImg,
+                        0, dirIdx * frameH, frameW, frameH,
+                        px + 2, py + 2, ts - 4, ts - 4
+                    );
+                } else {
+                    ctx.drawImage(p._skinImg, px + 2, py + 2, ts - 4, ts - 4);
+                }
             } else {
                 ctx.fillStyle = p.user_id === this.myPlayer?.user_id ? '#3498db' : '#e94560';
                 ctx.fillRect(px + 4, py + 4, ts - 8, ts - 8);
