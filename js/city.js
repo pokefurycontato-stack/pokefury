@@ -17,8 +17,10 @@ class CityScreen {
         this.playerDir = 'down';
         this.playerMoving = false;
         this.moveProgress = 0;
-        this.playerSpeed = 6;
+        this.playerSpeed = 10;
         this.playerSize = 48;
+        this.cameraX = 400;
+        this.cameraY = 400;
 
         this.bindEvents();
     }
@@ -52,6 +54,8 @@ class CityScreen {
         await this.loadPlayerSkin(game);
         await this.loadLayout();
         await this.registerPlayer();
+        this.cameraX = this.playerX;
+        this.cameraY = this.playerY;
         this.subscribeRealtime();
 
         this.resizeCanvas();
@@ -321,7 +325,7 @@ class CityScreen {
 
     update() {
         if (this.playerMoving) {
-            this.moveProgress += this.playerSpeed / this.playerSize;
+            this.moveProgress += 0.04;
             if (this.moveProgress >= 1) {
                 this.moveProgress = 1;
                 this.playerMoving = false;
@@ -334,6 +338,11 @@ class CityScreen {
         }
 
         if (!this.playerMoving) this.handleInput();
+
+        const targetX = this.playerX;
+        const targetY = this.playerY;
+        this.cameraX += (targetX - this.cameraX) * 0.15;
+        this.cameraY += (targetY - this.cameraY) * 0.15;
 
         if (!this._lastSync) this._lastSync = 0;
         this._lastSync++;
@@ -375,8 +384,8 @@ class CityScreen {
 
         ctx.clearRect(0, 0, cw, ch);
 
-        const camX = this.playerX - cw / 2;
-        const camY = this.playerY - ch / 2;
+        const camX = this.cameraX - cw / 2;
+        const camY = this.cameraY - ch / 2;
 
         ctx.fillStyle = '#2d5a27';
         ctx.fillRect(0, 0, cw, ch);
