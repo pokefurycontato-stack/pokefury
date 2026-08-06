@@ -21,6 +21,8 @@ class CityBuilder {
         this.playerSpeed = 4;
         this.playerSize = 48;
         this.previewMode = false;
+        this.layers = [0];
+        this.activeLayer = 0;
 
         this.bindEvents();
     }
@@ -34,6 +36,8 @@ class CityBuilder {
         if (saveBtn) saveBtn.addEventListener('click', () => this.save());
         const previewBtn = document.getElementById('cb-preview-btn');
         if (previewBtn) previewBtn.addEventListener('click', () => this.togglePreview());
+        const addLayerBtn = document.getElementById('cb-add-layer-btn');
+        if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
@@ -68,6 +72,7 @@ class CityBuilder {
         await this.loadPlayerSkin(game);
         await this.loadAssets();
         await this.loadSavedLayout();
+        this.renderLayerTabs();
 
         this.resizeCanvas();
         this.running = true;
@@ -92,12 +97,14 @@ class CityBuilder {
         const btn = document.getElementById('cb-preview-btn');
         const sidebar = document.getElementById('cb-assets-panel');
         const props = document.getElementById('cb-props-panel');
+        const layersBar = document.getElementById('cb-layers-bar');
 
         if (this.previewMode) {
             btn.style.background = '#f59e0b';
             btn.style.color = '#000';
             sidebar.style.display = 'none';
             props.style.display = 'none';
+            if (layersBar) layersBar.style.display = 'none';
             this.resizeCanvas();
             this.selected = null;
         } else {
@@ -105,8 +112,34 @@ class CityBuilder {
             btn.style.color = '#fff';
             sidebar.style.display = '';
             props.style.display = '';
+            if (layersBar) layersBar.style.display = '';
             this.resizeCanvas();
         }
+        this.updateProps();
+    }
+
+    renderLayerTabs() {
+        const container = document.getElementById('cb-layer-tabs');
+        if (!container) return;
+        container.innerHTML = this.layers.map(l =>
+            `<button data-layer="${l}" style="padding:4px 12px;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;${l === this.activeLayer ? 'background:#f59e0b;color:#000;' : 'background:#30363d;color:#c9d1d9;'}">Layer ${l}${l === 0 ? ' (solo)' : ''}</button>`
+        ).join('');
+        container.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => this.selectLayer(parseInt(btn.dataset.layer)));
+        });
+    }
+
+    addLayer() {
+        const next = this.layers.length > 0 ? Math.max(...this.layers) + 1 : 0;
+        this.layers.push(next);
+        this.activeLayer = next;
+        this.renderLayerTabs();
+    }
+
+    selectLayer(id) {
+        this.activeLayer = id;
+        this.selected = null;
+        this.renderLayerTabs();
         this.updateProps();
     }
 
@@ -189,6 +222,7 @@ class CityBuilder {
             scale: 1.0,
             rotation: 0,
             z_index: this.assets.length,
+            layer: this.activeLayer,
             _img: img,
             _mask: null,
             _overlay: null
@@ -214,6 +248,7 @@ class CityBuilder {
     getAssetHit(mx, my) {
         for (let i = this.assets.length - 1; i >= 0; i--) {
             const a = this.assets[i];
+            if ((a.layer || 0) !== this.activeLayer) continue;
             const img = a._img;
             if (!img || !img.complete || !img.naturalWidth) continue;
             const aw = img.naturalWidth * (a.scale || 1);
@@ -263,6 +298,7 @@ class CityBuilder {
                 scale: src.scale || 1,
                 rotation: src.rotation || 0,
                 z_index: this.assets.length,
+                layer: this.activeLayer,
                 _img: img
             };
             img.onload = () => this.render();
@@ -365,6 +401,7 @@ class CityBuilder {
                     pos_y: a.pos_y ?? (a.grid_y * 64),
                     scale: a.scale ?? a.width ?? 1.0,
                     has_collision: a.has_collision || false,
+                    layer: a.layer || 0,
                     _img: img,
                     _mask: null,
                     _overlay: null
@@ -380,6 +417,9 @@ class CityBuilder {
                         if (a._img.complete && a._img.naturalWidth) build();
                     }
                 });
+                const layerSet = new Set(this.assets.map(a => a.layer || 0));
+                this.layers = [...layerSet].sort((a, b) => a - b);
+                if (this.layers.length === 0) this.layers = [0];
             }
         } catch (e) {
             console.warn('[CityBuilder] No saved layout');
@@ -400,6 +440,7 @@ class CityBuilder {
                 scale: a.scale || 1,
                 rotation: a.rotation || 0,
                 z_index: a.z_index || 0,
+                layer: a.layer || 0,
                 has_collision: a.has_collision || false
             }));
             if (toSave.length > 0) {
@@ -542,7 +583,7 @@ class CityBuilder {
             }
         }
 
-        const sorted = [...this.assets].sort((a, b) => (a.z_index || 0) - (b.z_index || 0));
+        const sorted = [...this.assets].sort((a, b) => (a.layer || 0) - (b.layer || 0) || (a.z_index || 0) - (b.z_index || 0));
         sorted.forEach(a => {
             const img = a._img;
             if (!img || !img.complete || !img.naturalWidth) return;
@@ -553,7 +594,9 @@ class CityBuilder {
             if (a.pos_x + aw < camX - 50 || a.pos_x > camX + cw / zoom + 50) return;
             if (a.pos_y + ah < camY - 50 || a.pos_y > camY + ch / zoom + 50) return;
 
+            const isActive = (a.layer || 0) === this.activeLayer;
             ctx.save();
+            if (!isActive && !this.previewMode) ctx.globalAlpha = 0.4;
             if (a.rotation) {
                 ctx.translate(a.pos_x + aw / 2, a.pos_y + ah / 2);
                 ctx.rotate((a.rotation || 0) * Math.PI / 180);
@@ -562,7 +605,7 @@ class CityBuilder {
                 ctx.drawImage(img, a.pos_x, a.pos_y, aw, ah);
             }
 
-            if (!this.previewMode && this.selected && this.selected._id === a._id) {
+            if (!this.previewMode && isActive && this.selected && this.selected._id === a._id) {
                 ctx.strokeStyle = '#f59e0b';
                 ctx.lineWidth = 2 / zoom;
                 ctx.setLineDash([6 / zoom, 4 / zoom]);
