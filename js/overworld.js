@@ -68,6 +68,8 @@ export class Overworld2D {
         this.pokemonFollowRenderPos = { x: 16, y: 12 };
         this.pokemonFollowDirection = 'down';
         this.pokemonFollowTrail = [];
+        this.pokemonFollowIdleTimer = 0;
+        this.pokemonFollowIdleFlip = false;
 
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = [];
@@ -606,6 +608,17 @@ export class Overworld2D {
         this.updatePokemonFollow();
         this.updateMapPokemon();
 
+        if (this.pokemonFollowing && !this.player.moving) {
+            this.pokemonFollowIdleTimer++;
+            if (this.pokemonFollowIdleTimer >= 180) {
+                this.pokemonFollowIdleTimer = 0;
+                this.pokemonFollowIdleFlip = !this.pokemonFollowIdleFlip;
+            }
+        } else {
+            this.pokemonFollowIdleTimer = 0;
+            this.pokemonFollowIdleFlip = false;
+        }
+
         const halfW = this.canvas.width / 2;
         const halfH = this.canvas.height / 2;
 
@@ -1124,7 +1137,9 @@ export class Overworld2D {
         }
 
         const flipX = !useBack && this.player.direction === 'right';
-        const flipCss = flipX ? 'scaleX(-1)' : 'none';
+        const idleFlip = !this.player.moving && this.pokemonFollowIdleFlip;
+        const finalFlip = idleFlip ? !flipX : flipX;
+        const flipCss = finalFlip ? 'scaleX(-1)' : 'none';
         const downOffsetX = this.player.direction === 'down' ? -(spriteSize * scaleX * 0.6) : 0;
         const drawLeft = offsetX + (rpx + (this.tileW - spriteSize) / 2) * scaleX + downOffsetX;
         const drawTop = offsetY + rpy * scaleY;
