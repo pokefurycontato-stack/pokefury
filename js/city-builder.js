@@ -23,6 +23,10 @@ class CityBuilder {
         this.previewMode = false;
         this.layers = [0];
         this.activeLayer = 0;
+        this.collisionEditMode = false;
+        this.colDrawStart = null;
+        this.colDrawBox = null;
+        this.colSelectedIdx = -1;
 
         this.bindEvents();
     }
@@ -41,6 +45,16 @@ class CityBuilder {
 
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
+            if (this.collisionEditMode) {
+                if (e.key === 'Escape') { this.exitCollisionDraw(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this.colSelectedIdx >= 0) {
+                    e.preventDefault();
+                    this.selected.collision_boxes.splice(this.colSelectedIdx, 1);
+                    this.colSelectedIdx = -1;
+                    return;
+                }
+                return;
+            }
             const gameKeys = ['w','W','a','A','s','S','d','D','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
             if (gameKeys.includes(e.key)) e.preventDefault();
             this.playerKeys[e.key] = true;
@@ -163,10 +177,11 @@ class CityBuilder {
 
     renderCollisionBoxesUI(s) {
         const boxes = s.collision_boxes || [];
+        const drawBtn = `<button onclick="window.cityBuilder.startCollisionDraw()" style="width:100%;padding:6px;border:none;border-radius:4px;background:#f59e0b;color:#000;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:6px;">Desenhar Colisão</button>`;
         if (boxes.length === 0) {
             return `<div style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;margin-top:4px;">
                 <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:6px;">Sem caixas = colisão no PNG inteiro</div>
-                <button onclick="window.cityBuilder.addCollisionBox()" style="width:100%;padding:5px;border:none;border-radius:4px;background:#30363d;color:#22c55e;font-size:11px;cursor:pointer;">+ Adicionar caixa</button>
+                ${drawBtn}
             </div>`;
         }
         const boxRows = boxes.map((b, i) =>
@@ -182,7 +197,7 @@ class CityBuilder {
         return `<div style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;margin-top:4px;">
             <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:6px;">Caixas (X,Y,W,H % da imagem)</div>
             ${boxRows}
-            <button onclick="window.cityBuilder.addCollisionBox()" style="width:100%;padding:5px;border:none;border-radius:4px;background:#30363d;color:#22c55e;font-size:11px;cursor:pointer;">+ Adicionar caixa</button>
+            ${drawBtn}
         </div>`;
     }
 
@@ -205,6 +220,115 @@ class CityBuilder {
         this.selected.collision_boxes.splice(index, 1);
         this.updateProps();
         this.render();
+    }
+
+    startCollisionDraw() {
+        if (!this.selected || !this.selected._img || !this.selected._img.naturalWidth) return;
+        this.collisionEditMode = true;
+        this.colSelectedIdx = -1;
+        this.colDrawBox = null;
+        this.colDrawStart = null;
+        const sidebar = document.getElementById('cb-assets-panel');
+        const props = document.getElementById('cb-props-panel');
+        const layersBar = document.getElementById('cb-layers-bar');
+        if (sidebar) sidebar.style.display = 'none';
+        if (props) props.style.display = 'none';
+        if (layersBar) layersBar.style.display = 'none';
+        this.resizeCanvas();
+    }
+
+    exitCollisionDraw() {
+        this.collisionEditMode = false;
+        this.colDrawBox = null;
+        this.colDrawStart = null;
+        this.colSelectedIdx = -1;
+        const sidebar = document.getElementById('cb-assets-panel');
+        const props = document.getElementById('cb-props-panel');
+        const layersBar = document.getElementById('cb-layers-bar');
+        if (sidebar) sidebar.style.display = '';
+        if (props) props.style.display = '';
+        if (layersBar) layersBar.style.display = '';
+        this.resizeCanvas();
+        this.updateProps();
+    }
+
+    colScreenToWorld(clientX, clientY) {
+        const a = this.selected;
+        if (!a || !a._img) return { x: 0, y: 0 };
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = clientX - rect.left;
+        const sy = clientY - rect.top;
+        const img = a._img;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        const imgW = img.naturalWidth;
+        const imgH = img.naturalHeight;
+        const scale = Math.min((cw - 80) / imgW, (ch - 100) / imgH);
+        const drawW = imgW * scale;
+        const drawH = imgH * scale;
+        const ox = (cw - drawW) / 2;
+        const oy = (ch - drawH) / 2;
+        return {
+            x: Math.max(0, Math.min(1, (sx - ox) / drawW)),
+            y: Math.max(0, Math.min(1, (sy - oy) / drawH))
+        };
+    }
+
+    onCollisionMouseDown(e) {
+        if (e.button === 2) { e.preventDefault(); this.exitCollisionDraw(); return; }
+        const w = this.colScreenToWorld(e.clientX, e.clientY);
+        const a = this.selected;
+        const boxes = a?.collision_boxes || [];
+        let hitIdx = -1;
+        for (let i = boxes.length - 1; i >= 0; i--) {
+            const b = boxes[i];
+            if (w.x >= b.x && w.x <= b.x + b.w && w.y >= b.y && w.y <= b.y + b.h) {
+                hitIdx = i;
+                break;
+            }
+        }
+        if (hitIdx >= 0) {
+            this.colSelectedIdx = hitIdx;
+            this.colDrawStart = { x: w.x, y: w.y, mode: 'move' };
+        } else {
+            this.colSelectedIdx = -1;
+            this.colDrawStart = { x: w.x, y: w.y, mode: 'draw' };
+            this.colDrawBox = { x: w.x, y: w.y, w: 0, h: 0 };
+        }
+    }
+
+    onCollisionMouseMove(e) {
+        if (!this.colDrawStart || !this.selected) return;
+        const w = this.colScreenToWorld(e.clientX, e.clientY);
+        if (this.colDrawStart.mode === 'draw' && this.colDrawBox) {
+            this.colDrawBox.w = w.x - this.colDrawStart.x;
+            this.colDrawBox.h = w.y - this.colDrawStart.y;
+        } else if (this.colDrawStart.mode === 'move' && this.colSelectedIdx >= 0) {
+            const b = this.selected.collision_boxes[this.colSelectedIdx];
+            const dx = w.x - this.colDrawStart.x;
+            const dy = w.y - this.colDrawStart.y;
+            b.x = Math.max(0, Math.min(1 - b.w, b.x + dx));
+            b.y = Math.max(0, Math.min(1 - b.h, b.y + dy));
+            this.colDrawStart = { x: w.x, y: w.y, mode: 'move' };
+        }
+    }
+
+    onCollisionMouseUp(e) {
+        if (this.colDrawStart?.mode === 'draw' && this.colDrawBox) {
+            let b = this.colDrawBox;
+            if (b.w < 0) { b.x += b.w; b.w = -b.w; }
+            if (b.h < 0) { b.y += b.h; b.h = -b.h; }
+            if (b.w > 0.01 && b.h > 0.01) {
+                b.x = Math.round(b.x * 100) / 100;
+                b.y = Math.round(b.y * 100) / 100;
+                b.w = Math.round(b.w * 100) / 100;
+                b.h = Math.round(b.h * 100) / 100;
+                if (!this.selected.collision_boxes) this.selected.collision_boxes = [];
+                this.selected.collision_boxes.push(b);
+            }
+            this.colDrawBox = null;
+        }
+        this.colDrawStart = null;
     }
 
     async loadPlayerSkin(game) {
@@ -329,8 +453,12 @@ class CityBuilder {
     setupInput() {
         this.canvas.onmousedown = (e) => this.onMouseDown(e);
         this.canvas.onmousemove = (e) => this.onMouseMove(e);
-        this.canvas.onmouseup = () => { this.dragging = false; };
+        this.canvas.onmouseup = (e) => {
+            if (this.collisionEditMode) { this.onCollisionMouseUp(e); return; }
+            this.dragging = false;
+        };
         this.canvas.onwheel = (e) => this.onWheel(e);
+        this.canvas.oncontextmenu = (e) => e.preventDefault();
     }
 
     screenToWorld(clientX, clientY) {
@@ -344,6 +472,7 @@ class CityBuilder {
     }
     onMouseDown(e) {
         if (this.previewMode) return;
+        if (this.collisionEditMode) { this.onCollisionMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
 
@@ -381,6 +510,7 @@ class CityBuilder {
 
     onMouseMove(e) {
         if (this.previewMode) return;
+        if (this.collisionEditMode) { this.onCollisionMouseMove(e); return; }
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
@@ -510,7 +640,7 @@ class CityBuilder {
                 z_index: a.z_index || 0,
                 layer: a.layer || 0,
                 has_collision: a.has_collision || false,
-                collision_boxes: (a.collision_boxes && a.collision_boxes.length > 0) ? a.collision_boxes : null
+                collision_boxes: (a.collision_boxes && a.collision_boxes.length > 0) ? JSON.parse(JSON.stringify(a.collision_boxes)) : null
             }));
             if (toSave.length > 0) {
                 const { error } = await window.db.from('city_layout').insert(toSave);
@@ -638,6 +768,11 @@ class CityBuilder {
 
         ctx.clearRect(0, 0, cw, ch);
 
+        if (this.collisionEditMode && this.selected) {
+            this.renderCollisionEdit(ctx, cw, ch);
+            return;
+        }
+
         const zoom = this.previewMode ? 1 : this.zoom;
         const camX = this.playerX - cw / 2;
         const camY = this.playerY - ch / 2;
@@ -761,6 +896,64 @@ class CityBuilder {
         ctx.shadowBlur = 4;
         ctx.fillText(game?.playerName || 'Admin', this.playerX, py - 8);
         ctx.shadowBlur = 0;
+    }
+
+    renderCollisionEdit(ctx, cw, ch) {
+        const a = this.selected;
+        const img = a._img;
+        if (!img || !img.complete || !img.naturalWidth) return;
+
+        ctx.fillStyle = '#0a0e1a';
+        ctx.fillRect(0, 0, cw, ch);
+
+        const imgW = img.naturalWidth;
+        const imgH = img.naturalHeight;
+        const scale = Math.min((cw - 80) / imgW, (ch - 100) / imgH);
+        const drawW = imgW * scale;
+        const drawH = imgH * scale;
+        const ox = (cw - drawW) / 2;
+        const oy = (ch - drawH) / 2;
+
+        ctx.drawImage(img, ox, oy, drawW, drawH);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ox, oy, drawW, drawH);
+
+        const boxes = a.collision_boxes || [];
+        for (let i = 0; i < boxes.length; i++) {
+            const b = boxes[i];
+            const bx = ox + b.x * drawW;
+            const by = oy + b.y * drawH;
+            const bw = b.w * drawW;
+            const bh = b.h * drawH;
+            ctx.fillStyle = i === this.colSelectedIdx ? 'rgba(231, 76, 60, 0.5)' : 'rgba(231, 76, 60, 0.3)';
+            ctx.fillRect(bx, by, bw, bh);
+            ctx.strokeStyle = i === this.colSelectedIdx ? '#fff' : 'rgba(231, 76, 60, 0.9)';
+            ctx.lineWidth = i === this.colSelectedIdx ? 2 : 1;
+            ctx.strokeRect(bx, by, bw, bh);
+        }
+
+        if (this.colDrawBox && this.colDrawBox.w !== 0 && this.colDrawBox.h !== 0) {
+            let db = this.colDrawBox;
+            let dx = db.w < 0 ? db.x + db.w : db.x;
+            let dy = db.h < 0 ? db.y + db.h : db.y;
+            let dw = Math.abs(db.w);
+            let dh = Math.abs(db.h);
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+            ctx.fillRect(ox + dx * drawW, oy + dy * drawH, dw * drawW, dh * drawH);
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(ox + dx * drawW, oy + dy * drawH, dw * drawW, dh * drawH);
+        }
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 13px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(a.asset_id, cw / 2, oy - 16);
+        ctx.font = '11px Inter, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillText('Click+Arrastar: desenhar caixa | Click na caixa: selecionar/mover | Delete: remover | Esc: concluir', cw / 2, oy + drawH + 24);
     }
 }
 
