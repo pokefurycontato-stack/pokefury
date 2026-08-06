@@ -9,9 +9,14 @@ class CityScreen {
         this.running = false;
         this.channel = null;
         this.playerSkinImg = null;
+        this.playerSpriteFrames = null;
         this.playerX = 400;
         this.playerY = 400;
+        this.playerFromX = 400;
+        this.playerFromY = 400;
         this.playerDir = 'down';
+        this.playerMoving = false;
+        this.moveProgress = 0;
         this.playerSpeed = 4;
         this.playerSize = 48;
 
@@ -90,21 +95,47 @@ class CityScreen {
                 }
             }
         } catch (e) {
-            console.warn('[City] Skin load error:', e);
             url = 'assets/perso_masculino.webp';
         }
-        this.playerSkinImg = new Image();
-        this.playerSkinImg.src = url;
+
+        const img = new Image();
+        img.src = url;
         await new Promise(r => {
-            this.playerSkinImg.onload = r;
-            this.playerSkinImg.onerror = () => {
-                console.warn('[City] Skin image failed, using fallback');
-                this.playerSkinImg.src = 'assets/perso_masculino.webp';
-                this.playerSkinImg.onload = r;
-                this.playerSkinImg.onerror = r;
+            img.onload = r;
+            img.onerror = () => {
+                img.src = 'assets/perso_masculino.webp';
+                img.onload = r;
+                img.onerror = r;
             };
         });
-        console.log('[City] Player skin loaded:', url);
+
+        this.playerSkinImg = img;
+        this.playerSpriteFrames = null;
+
+        const isSquare = img.naturalWidth > 50 && Math.abs(img.naturalWidth - img.naturalHeight) < 20;
+        if (isSquare) {
+            const dirs = ['down', 'left', 'right', 'up'];
+            const frameW = img.naturalWidth / 4;
+            const frameH = img.naturalHeight / 4;
+            this.playerSpriteFrames = {};
+            for (let row = 0; row < dirs.length; row++) {
+                const frames = [];
+                for (let col = 0; col < 4; col++) {
+                    const c = document.createElement('canvas');
+                    c.width = frameW; c.height = frameH;
+                    const cx = c.getContext('2d');
+                    cx.drawImage(img, col * frameW, row * frameH, frameW, frameH, 0, 0, frameW, frameH);
+                    const fi = new Image();
+                    fi.src = c.toDataURL();
+                    frames.push(fi);
+                }
+                this.playerSpriteFrames[dirs[row]] = frames;
+            }
+            this.playerSize = img.naturalWidth > 512 ? 64 : 48;
+            console.log('[City] Sprite sheet split into frames');
+        } else {
+            this.playerSize = 48;
+        }
     }
 
     resizeCanvas() {
@@ -268,6 +299,7 @@ class CityScreen {
     }
 
     handleInput() {
+        if (this.playerMoving) return;
         let dx = 0, dy = 0;
         if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) { dy = -1; this.playerDir = 'up'; }
         else if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) { dy = 1; this.playerDir = 'down'; }
@@ -275,21 +307,29 @@ class CityScreen {
         else if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) { dx = 1; this.playerDir = 'right'; }
 
         if (dx || dy) {
-            const len = Math.sqrt(dx * dx + dy * dy);
-            const nx = this.playerX + (dx / len) * this.playerSpeed;
-            const ny = this.playerY + (dy / len) * this.playerSpeed;
+            const nx = this.playerX + dx * this.playerSpeed;
+            const ny = this.playerY + dy * this.playerSpeed;
             if (!this.checkCollision(nx, ny)) {
+                this.playerFromX = this.playerX;
+                this.playerFromY = this.playerY;
                 this.playerX = nx;
                 this.playerY = ny;
-            } else {
-                // Tenta mover só no eixo X
-                if (!this.checkCollision(nx, this.playerY)) {
-                    this.playerX = nx;
-                // Tenta mover só no eixo Y
-                } else if (!this.checkCollision(this.playerX, ny)) {
-                    this.playerY = ny;
-                }
+                this.playerMoving = true;
+                this.moveProgress = 0;
+            } else if (!this.checkCollision(nx, this.playerY)) {
+                this.playerFromX = this.playerX;
+                this.playerFromY = this.playerY;
+                this.playerX = nx;
+                this.playerMoving = true;
+                this.moveProgress = 0;
+            } else if (!this.checkCollision(this.playerX, ny)) {
+                this.playerFromX = this.playerX;
+                this.playerFromY = this.playerY;
+                this.playerY = ny;
+                this.playerMoving = true;
+                this.moveProgress = 0;
             }
+        }
 
             if (this.myPlayer) {
                 this.myPlayer.pos_x = this.playerX;
@@ -300,7 +340,20 @@ class CityScreen {
     }
 
     update() {
-        this.handleInput();
+        if (this.playerMoving) {
+            this.moveProgress += 0.2;
+            if (this.moveProgress >= 1) {
+                this.moveProgress = 1;
+                this.playerMoving = false;
+                if (this.myPlayer) {
+                    this.myPlayer.pos_x = this.playerX;
+                    this.myPlayer.pos_y = this.playerY;
+                    this.myPlayer.direction = this.playerDir;
+                }
+            }
+        }
+
+        if (!this.playerMoving) this.handleInput();
 
         if (!this._lastSync) this._lastSync = 0;
         this._lastSync++;
@@ -407,33 +460,49 @@ class CityScreen {
 
         allPlayers.forEach(p => {
             const ps = this.playerSize;
-            const sx = p.pos_x - camX - ps / 2;
-            const sy = p.pos_y - camY - ps / 2;
+            let drawX, drawY;
+            if (p.isMe && this.playerMoving) {
+                const t = this.moveProgress;
+                drawX = (this.playerFromX + (this.playerX - this.playerFromX) * t) - camX - ps / 2;
+                drawY = (this.playerFromY + (this.playerY - this.playerFromY) * t) - camY - ps / 2;
+            } else {
+                drawX = p.pos_x - camX - ps / 2;
+                drawY = p.pos_y - camY - ps / 2;
+            }
 
-            if (sx + ps < -50 || sx > cw + 50 || sy + ps < -50 || sy > ch + 50) return;
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(drawX + ps / 2, drawY + ps - 2, ps / 3, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
 
             const skinImg = p._skinImg;
             if (skinImg && skinImg.complete && skinImg.naturalWidth) {
-                const imgW = skinImg.naturalWidth;
-                const imgH = skinImg.naturalHeight;
-                const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
-
-                if (isGrid) {
-                    const cols = 4, rows = 4;
-                    const frameW = imgW / cols;
-                    const frameH = imgH / rows;
-                    const dirs = ['down', 'left', 'right', 'up'];
-                    const row = dirs.indexOf(p.direction || 'down');
-                    ctx.drawImage(skinImg,
-                        0, row * frameH, frameW, frameH,
-                        sx, sy, ps, ps
-                    );
+                const frames = (p.isMe && this.playerSpriteFrames) ? this.playerSpriteFrames[p.direction || 'down'] : null;
+                if (frames && frames.length > 0) {
+                    const walkIdx = p.isMe ? Math.min(Math.floor(this.moveProgress * frames.length), frames.length - 1) : 0;
+                    const frame = frames[walkIdx];
+                    if (frame && frame.complete && frame.naturalWidth) {
+                        ctx.drawImage(frame, drawX, drawY, ps, ps);
+                    } else {
+                        ctx.drawImage(skinImg, drawX, drawY, ps, ps);
+                    }
                 } else {
-                    ctx.drawImage(skinImg, sx, sy, ps, ps);
+                    const imgW = skinImg.naturalWidth;
+                    const imgH = skinImg.naturalHeight;
+                    const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
+                    if (isGrid) {
+                        const frameW = imgW / 4;
+                        const frameH = imgH / 4;
+                        const dirs = ['down', 'left', 'right', 'up'];
+                        const row = dirs.indexOf(p.direction || 'down');
+                        ctx.drawImage(skinImg, 0, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
+                    } else {
+                        ctx.drawImage(skinImg, drawX, drawY, ps, ps);
+                    }
                 }
             } else {
                 ctx.fillStyle = p.isMe ? '#3498db' : '#e94560';
-                ctx.fillRect(sx + 4, sy + 4, ps - 8, ps - 8);
+                ctx.fillRect(drawX + 4, drawY + 4, ps - 8, ps - 8);
             }
 
             ctx.fillStyle = '#fff';
@@ -441,7 +510,7 @@ class CityScreen {
             ctx.textAlign = 'center';
             ctx.shadowColor = 'rgba(0,0,0,0.9)';
             ctx.shadowBlur = 4;
-            ctx.fillText(p.character_name || '?', p.pos_x - camX, sy - 8);
+            ctx.fillText(p.character_name || '?', drawX + ps / 2, drawY - 8);
             ctx.shadowBlur = 0;
         });
 
