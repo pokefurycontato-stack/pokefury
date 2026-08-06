@@ -179,8 +179,11 @@ class CityScreen {
         const charName = game?.playerName || 'Treinador';
         const skinUrl = this.playerSkinImg?.src || '';
 
+        this.sessionId = userId ? userId + '-' + Date.now() : 'local-' + Date.now();
+        this.authUserId = userId;
+
         this.myPlayer = {
-            user_id: userId || 'local',
+            user_id: this.sessionId,
             character_name: charName,
             skin_url: skinUrl,
             pos_x: this.playerX,
@@ -205,10 +208,8 @@ class CityScreen {
     }
 
     unregisterPlayer() {
-        const user = window.db.auth?.getUser?.();
-        const userId = user?.data?.user?.id;
-        if (userId) {
-            window.db.from('city_players').delete().eq('user_id', userId).catch(() => {});
+        if (this.sessionId) {
+            window.db.from('city_players').delete().eq('user_id', this.sessionId).catch(() => {});
         }
     }
 
@@ -223,6 +224,7 @@ class CityScreen {
                     this.players[p.user_id] = { ...p, _skinImg: null };
                     if (p.skin_url) {
                         const img = new Image();
+                        img.crossOrigin = 'anonymous';
                         img.src = p.skin_url;
                         this.players[p.user_id]._skinImg = img;
                     }
@@ -352,13 +354,10 @@ class CityScreen {
     }
 
     async syncPosition() {
-        if (!this.myPlayer) return;
+        if (!this.myPlayer || !this.authUserId) return;
         try {
-            const user = window.db.auth?.getUser?.();
-            const userId = user?.data?.user?.id;
-            if (!userId) return;
             await window.db.from('city_players').upsert({
-                user_id: userId,
+                user_id: this.sessionId,
                 character_name: this.myPlayer.character_name,
                 skin_url: this.myPlayer.skin_url,
                 pos_x: this.playerX,
