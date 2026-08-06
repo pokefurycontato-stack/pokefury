@@ -464,14 +464,15 @@ export class Overworld2D {
         this.pokemonFollowing = pokemon;
         this.pokemonFollowDirection = 'down';
 
-        const animUrl = window.PokeAPI && PokeAPI.getAnimatedFrontUrl(pokemon.id);
         const staticFront = pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official;
+        const animUrl = (window.PokeAPI && pokemon.id <= 1025) ? PokeAPI.getAnimatedFrontUrl(pokemon.id) : null;
         this.pokemonFollowSpriteUrl = animUrl || staticFront;
         this.pokemonFollowBackSpriteUrl = pokemon.spriteUrls?.back || null;
 
         if (!this.pokemonFollowImg) {
             this.pokemonFollowImg = new Image();
             this.pokemonFollowImg.onload = () => { this._pokemonFollowReady = true; };
+            this.pokemonFollowImg.onerror = () => { this._pokemonFollowReady = false; this.pokemonFollowing = null; };
         }
         if (!this.pokemonFollowShadowImg) {
             this.pokemonFollowShadowImg = new Image();
@@ -1061,7 +1062,7 @@ export class Overworld2D {
             drawY = this.player.y * this.tileH - this.camera.y + this.mapOffsetY;
         }
 
-        this.drawPokemonFollow(ctx);
+        try { this.drawPokemonFollow(ctx); } catch(e) { console.warn('[Overworld] Follower draw error:', e); }
 
         let sprite;
         if (this.playerSpriteFrames) {
@@ -1096,7 +1097,7 @@ export class Overworld2D {
     }
 
     drawPokemonFollow(ctx) {
-        if (!this.pokemonFollowing || !this.pokemonFollowImg || !this.pokemonFollowImg.complete) return;
+        if (!this.pokemonFollowing || !this.pokemonFollowImg || !this.pokemonFollowImg.complete || !this.pokemonFollowImg.naturalWidth) return;
 
         const rpx = this.pokemonFollowRenderPos.x * this.tileW - this.camera.x + this.mapOffsetX;
         const rpy = this.pokemonFollowRenderPos.y * this.tileH - this.camera.y + this.mapOffsetY;
