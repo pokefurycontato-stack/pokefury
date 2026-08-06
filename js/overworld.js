@@ -62,8 +62,8 @@ export class Overworld2D {
         this.pokemonFollowing = null;
         this.pokemonFollowSpriteUrl = null;
         this.pokemonFollowBackSpriteUrl = null;
-        this.pokemonFollowImg = null;
-        this.pokemonFollowShadowImg = null;
+        this.pokemonFollowEl = null;
+        this.pokemonFollowShadowEl = null;
         this.pokemonFollowPos = { x: 16, y: 12 };
         this.pokemonFollowRenderPos = { x: 16, y: 12 };
         this.pokemonFollowDirection = 'down';
@@ -410,8 +410,8 @@ export class Overworld2D {
         this.pokemonFollowing = null;
         this.pokemonFollowSpriteUrl = null;
         this.pokemonFollowBackSpriteUrl = null;
-        this.pokemonFollowImg = null;
-        this.pokemonFollowShadowImg = null;
+        this.pokemonFollowEl = null;
+        this.pokemonFollowShadowEl = null;
         const follower = this.game.playerTeam?.find(pokemon => !pokemon.fainted);
         if (follower) await this.loadPokemonFollowSprite(follower);
 
@@ -469,19 +469,20 @@ export class Overworld2D {
         this.pokemonFollowSpriteUrl = animUrl || staticFront;
         this.pokemonFollowBackSpriteUrl = pokemon.spriteUrls?.back || null;
 
-        if (!this.pokemonFollowImg) {
-            this.pokemonFollowImg = new Image();
-            this.pokemonFollowImg.onload = () => { this._pokemonFollowReady = true; };
-            this.pokemonFollowImg.onerror = () => { this._pokemonFollowReady = false; this.pokemonFollowing = null; };
-        }
-        if (!this.pokemonFollowShadowImg) {
-            this.pokemonFollowShadowImg = new Image();
-        }
+        if (!this.pokemonFollowEl) {
+            const wrap = this.canvas.parentElement;
+            this.pokemonFollowShadowEl = document.createElement('img');
+            this.pokemonFollowShadowEl.style.cssText = 'position:absolute;pointer-events:none;z-index:2;filter:brightness(0) blur(3px) opacity(0.35);';
+            wrap.appendChild(this.pokemonFollowShadowEl);
 
-        const useBack = this.player.direction === 'up' && this.pokemonFollowBackSpriteUrl;
-        this.pokemonFollowImg.src = useBack ? this.pokemonFollowBackSpriteUrl : this.pokemonFollowSpriteUrl;
-        this.pokemonFollowShadowImg.src = this.pokemonFollowSpriteUrl;
-        this._pokemonFollowReady = false;
+            this.pokemonFollowEl = document.createElement('img');
+            this.pokemonFollowEl.style.cssText = 'position:absolute;pointer-events:none;z-index:3;';
+            wrap.appendChild(this.pokemonFollowEl);
+        }
+        this.pokemonFollowEl.src = this.pokemonFollowSpriteUrl;
+        this.pokemonFollowShadowEl.src = this.pokemonFollowSpriteUrl;
+        this.pokemonFollowEl.style.display = 'block';
+        this.pokemonFollowShadowEl.style.display = 'block';
     }
 
     async updateFollower() {
@@ -501,6 +502,8 @@ export class Overworld2D {
             this.pokemonFollowPos.y = Math.round(this.pokemonFollowRenderPos.y);
         } else {
             this.pokemonFollowing = null;
+            if (this.pokemonFollowEl) this.pokemonFollowEl.style.display = 'none';
+            if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.display = 'none';
         }
     }
 
@@ -1062,8 +1065,6 @@ export class Overworld2D {
             drawY = this.player.y * this.tileH - this.camera.y + this.mapOffsetY;
         }
 
-        try { this.drawPokemonFollow(ctx); } catch(e) { console.warn('[Overworld] Follower draw error:', e); }
-
         let sprite;
         if (this.playerSpriteFrames) {
             const frames = this.playerSpriteFrames[this.player.direction];
@@ -1093,11 +1094,22 @@ export class Overworld2D {
         ctx.ellipse(drawX + this.tileW / 2, drawY + this.tileH - 2, this.tileW / 3, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
+        this.drawPokemonFollow();
+
         this.drawGymLeader(ctx);
     }
 
-    drawPokemonFollow(ctx) {
-        if (!this.pokemonFollowing || !this.pokemonFollowImg || !this.pokemonFollowImg.complete || !this.pokemonFollowImg.naturalWidth) return;
+    drawPokemonFollow() {
+        if (!this.pokemonFollowing || !this.pokemonFollowEl) return;
+
+        const wrap = this.canvas.parentElement;
+        if (!wrap) return;
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const scaleX = canvasRect.width / this.canvas.width;
+        const scaleY = canvasRect.height / this.canvas.height;
+        const offsetX = canvasRect.left - wrap.getBoundingClientRect().left;
+        const offsetY = canvasRect.top - wrap.getBoundingClientRect().top;
 
         const rpx = this.pokemonFollowRenderPos.x * this.tileW - this.camera.x + this.mapOffsetX;
         const rpy = this.pokemonFollowRenderPos.y * this.tileH - this.camera.y + this.mapOffsetY;
@@ -1106,39 +1118,35 @@ export class Overworld2D {
 
         const useBack = this.player.direction === 'up' && this.pokemonFollowBackSpriteUrl;
         const targetSrc = useBack ? this.pokemonFollowBackSpriteUrl : this.pokemonFollowSpriteUrl;
-        if (this.pokemonFollowImg.src !== targetSrc) {
-            this.pokemonFollowImg.src = targetSrc;
+        if (this.pokemonFollowEl.src !== targetSrc) {
+            this.pokemonFollowEl.src = targetSrc;
+            if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.src = targetSrc;
         }
 
         const flipX = !useBack && this.player.direction === 'right';
-        const drawX = rpx + (this.tileW - spriteSize) / 2;
-        const drawY = rpy;
+        const flipCss = flipX ? 'scaleX(-1)' : 'none';
+        const drawLeft = offsetX + (rpx + (this.tileW - spriteSize) / 2) * scaleX;
+        const drawTop = offsetY + rpy * scaleY;
 
-        const shadowW = spriteSize * 0.8;
-        const shadowH = spriteSize * 0.25;
-        const shadowX = drawX + (spriteSize - shadowW) / 2;
-        const shadowY = drawY + spriteSize - shadowH * 0.3;
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        ctx.filter = 'brightness(0) blur(3px)';
-        if (flipX) {
-            ctx.translate(shadowX + shadowW, shadowY);
-            ctx.scale(-1, 1);
-            ctx.drawImage(this.pokemonFollowShadowImg, 0, 0, shadowW, shadowH);
-        } else {
-            ctx.drawImage(this.pokemonFollowShadowImg, shadowX, shadowY, shadowW, shadowH);
-        }
-        ctx.restore();
+        this.pokemonFollowEl.style.display = 'block';
+        this.pokemonFollowEl.style.left = drawLeft + 'px';
+        this.pokemonFollowEl.style.top = drawTop + 'px';
+        this.pokemonFollowEl.style.width = (spriteSize * scaleX) + 'px';
+        this.pokemonFollowEl.style.height = (spriteSize * scaleY) + 'px';
+        this.pokemonFollowEl.style.transform = flipCss;
 
-        ctx.save();
-        if (flipX) {
-            ctx.translate(drawX + spriteSize, drawY);
-            ctx.scale(-1, 1);
-            ctx.drawImage(this.pokemonFollowImg, 0, 0, spriteSize, spriteSize);
-        } else {
-            ctx.drawImage(this.pokemonFollowImg, drawX, drawY, spriteSize, spriteSize);
+        if (this.pokemonFollowShadowEl) {
+            const shadowW = spriteSize * scaleX * 0.8;
+            const shadowH = spriteSize * scaleY * 0.25;
+            const shadowLeft = drawLeft + (spriteSize * scaleX - shadowW) / 2;
+            const shadowTop = drawTop + spriteSize * scaleY - shadowH * 0.3;
+            this.pokemonFollowShadowEl.style.display = 'block';
+            this.pokemonFollowShadowEl.style.left = shadowLeft + 'px';
+            this.pokemonFollowShadowEl.style.top = shadowTop + 'px';
+            this.pokemonFollowShadowEl.style.width = shadowW + 'px';
+            this.pokemonFollowShadowEl.style.height = shadowH + 'px';
+            this.pokemonFollowShadowEl.style.transform = flipCss;
         }
-        ctx.restore();
     }
 
     drawGymLeader(ctx) {
