@@ -143,6 +143,70 @@ class CityBuilder {
         this.updateProps();
     }
 
+    toggleCollision(checked) {
+        if (!this.selected) return;
+        this.selected.has_collision = checked;
+        if (checked) {
+            if (!this.selected.collision_boxes) this.selected.collision_boxes = [];
+            if (this.selected._img) {
+                this.selected._mask = this.createMask(this.selected._img);
+                this.selected._overlay = this.createOverlay(this.selected._img);
+            }
+        } else {
+            this.selected.collision_boxes = [];
+            this.selected._mask = null;
+            this.selected._overlay = null;
+        }
+        this.updateProps();
+        this.render();
+    }
+
+    renderCollisionBoxesUI(s) {
+        const boxes = s.collision_boxes || [];
+        if (boxes.length === 0) {
+            return `<div style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;margin-top:4px;">
+                <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:6px;">Sem caixas = colisão no PNG inteiro</div>
+                <button onclick="window.cityBuilder.addCollisionBox()" style="width:100%;padding:5px;border:none;border-radius:4px;background:#30363d;color:#22c55e;font-size:11px;cursor:pointer;">+ Adicionar caixa</button>
+            </div>`;
+        }
+        const boxRows = boxes.map((b, i) =>
+            `<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;">
+                <span style="color:rgba(255,255,255,0.3);font-size:10px;width:14px;">${i+1}</span>
+                <input type="number" step="1" min="0" max="100" value="${Math.round(b.x*100)}" onchange="window.cityBuilder.updateBox(${i},'x',this.value)" placeholder="X%" style="width:42px;padding:3px;border-radius:3px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:10px;text-align:center;">
+                <input type="number" step="1" min="0" max="100" value="${Math.round(b.y*100)}" onchange="window.cityBuilder.updateBox(${i},'y',this.value)" placeholder="Y%" style="width:42px;padding:3px;border-radius:3px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:10px;text-align:center;">
+                <input type="number" step="1" min="1" max="100" value="${Math.round(b.w*100)}" onchange="window.cityBuilder.updateBox(${i},'w',this.value)" placeholder="W%" style="width:42px;padding:3px;border-radius:3px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:10px;text-align:center;">
+                <input type="number" step="1" min="1" max="100" value="${Math.round(b.h*100)}" onchange="window.cityBuilder.updateBox(${i},'h',this.value)" placeholder="H%" style="width:42px;padding:3px;border-radius:3px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:10px;text-align:center;">
+                <button onclick="window.cityBuilder.removeCollisionBox(${i})" style="border:none;background:none;color:#e94560;font-size:13px;cursor:pointer;padding:0 2px;">x</button>
+            </div>`
+        ).join('');
+        return `<div style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;margin-top:4px;">
+            <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:6px;">Caixas (X,Y,W,H % da imagem)</div>
+            ${boxRows}
+            <button onclick="window.cityBuilder.addCollisionBox()" style="width:100%;padding:5px;border:none;border-radius:4px;background:#30363d;color:#22c55e;font-size:11px;cursor:pointer;">+ Adicionar caixa</button>
+        </div>`;
+    }
+
+    addCollisionBox() {
+        if (!this.selected) return;
+        if (!this.selected.collision_boxes) this.selected.collision_boxes = [];
+        this.selected.collision_boxes.push({ x: 0, y: 0, w: 1, h: 1 });
+        this.updateProps();
+        this.render();
+    }
+
+    updateBox(index, prop, val) {
+        if (!this.selected || !this.selected.collision_boxes) return;
+        this.selected.collision_boxes[index][prop] = Math.max(0, Math.min(1, parseFloat(val) / 100));
+        this.render();
+    }
+
+    removeCollisionBox(index) {
+        if (!this.selected || !this.selected.collision_boxes) return;
+        this.selected.collision_boxes.splice(index, 1);
+        this.updateProps();
+        this.render();
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -378,9 +442,10 @@ class CityBuilder {
                     <input type="number" value="${s.z_index}" onchange="window.cityBuilder.selected.z_index=parseInt(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                 </label>
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-                    <input type="checkbox" ${s.has_collision ? 'checked' : ''} onchange="window.cityBuilder.selected.has_collision=this.checked;if(this.checked&&window.cityBuilder.selected._img){window.cityBuilder.selected._mask=window.cityBuilder.createMask(window.cityBuilder.selected._img);window.cityBuilder.selected._overlay=window.cityBuilder.createOverlay(window.cityBuilder.selected._img);}else{window.cityBuilder.selected._mask=null;window.cityBuilder.selected._overlay=null;}window.cityBuilder.updateProps();window.cityBuilder.render();" style="cursor:pointer;">
+                    <input type="checkbox" ${s.has_collision ? 'checked' : ''} onchange="window.cityBuilder.toggleCollision(this.checked)" style="cursor:pointer;">
                     <span>Colisão (bloqueia passagem)</span>
                 </label>
+                ${s.has_collision ? this.renderCollisionBoxesUI(s) : ''}
                 <button onclick="window.cityBuilder.assets=window.cityBuilder.assets.filter(a=>a._id!==window.cityBuilder.selected._id);window.cityBuilder.selected=null;window.cityBuilder.updateProps();window.cityBuilder.render();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover</button>
             </div>
         `;
@@ -401,6 +466,7 @@ class CityBuilder {
                     pos_y: a.pos_y ?? (a.grid_y * 64),
                     scale: a.scale ?? a.width ?? 1.0,
                     has_collision: a.has_collision || false,
+                    collision_boxes: a.collision_boxes || [],
                     layer: a.layer || 0,
                     _img: img,
                     _mask: null,
@@ -441,7 +507,8 @@ class CityBuilder {
                 rotation: a.rotation || 0,
                 z_index: a.z_index || 0,
                 layer: a.layer || 0,
-                has_collision: a.has_collision || false
+                has_collision: a.has_collision || false,
+                collision_boxes: (a.collision_boxes && a.collision_boxes.length > 0) ? a.collision_boxes : null
             }));
             if (toSave.length > 0) {
                 const { error } = await window.db.from('city_layout').insert(toSave);
@@ -492,21 +559,36 @@ class CityBuilder {
         const px = nx - ps / 2;
         const py = ny - ps / 2;
         for (const a of this.assets) {
-            if (!a.has_collision || !a._mask) continue;
-            const m = a._mask;
+            if (!a.has_collision) continue;
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
             const sc = a.scale || 1;
-            const aw = m.w * sc;
-            const ah = m.h * sc;
-            if (px + ps <= a.pos_x || px >= a.pos_x + aw) continue;
-            if (py + ps <= a.pos_y || py >= a.pos_y + ah) continue;
-            const step = Math.max(4, Math.floor(ps / 6));
-            for (let sx = px + 2; sx < px + ps; sx += step) {
-                for (let sy = py + 2; sy < py + ps; sy += step) {
-                    if (sx < a.pos_x || sx >= a.pos_x + aw || sy < a.pos_y || sy >= a.pos_y + ah) continue;
-                    const ix = Math.floor((sx - a.pos_x) / sc);
-                    const iy = Math.floor((sy - a.pos_y) / sc);
-                    if (ix >= 0 && ix < m.w && iy >= 0 && iy < m.h && m.mask[iy * m.w + ix] > 128) return true;
+            const aw = img.naturalWidth * sc;
+            const ah = img.naturalHeight * sc;
+            const boxes = a.collision_boxes;
+            if (boxes && boxes.length > 0) {
+                for (const b of boxes) {
+                    const bx = a.pos_x + b.x * aw;
+                    const by = a.pos_y + b.y * ah;
+                    const bw = b.w * aw;
+                    const bh = b.h * ah;
+                    if (px < bx + bw && px + ps > bx && py < by + bh && py + ps > by) return true;
                 }
+            } else if (a._mask) {
+                const m = a._mask;
+                if (px + ps <= a.pos_x || px >= a.pos_x + aw) continue;
+                if (py + ps <= a.pos_y || py >= a.pos_y + ah) continue;
+                const step = Math.max(4, Math.floor(ps / 6));
+                for (let sx = px + 2; sx < px + ps; sx += step) {
+                    for (let sy = py + 2; sy < py + ps; sy += step) {
+                        if (sx < a.pos_x || sx >= a.pos_x + aw || sy < a.pos_y || sy >= a.pos_y + ah) continue;
+                        const ix = Math.floor((sx - a.pos_x) / sc);
+                        const iy = Math.floor((sy - a.pos_y) / sc);
+                        if (ix >= 0 && ix < m.w && iy >= 0 && iy < m.h && m.mask[iy * m.w + ix] > 128) return true;
+                    }
+                }
+            } else {
+                if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) return true;
             }
         }
         return false;
@@ -613,7 +695,20 @@ class CityBuilder {
                 ctx.setLineDash([]);
             }
             if (a.has_collision) {
-                if (a._overlay) {
+                const boxes = a.collision_boxes;
+                if (boxes && boxes.length > 0) {
+                    ctx.fillStyle = 'rgba(231, 76, 60, 0.35)';
+                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.8)';
+                    ctx.lineWidth = 2 / zoom;
+                    for (const b of boxes) {
+                        const bx = a.pos_x + b.x * aw;
+                        const by = a.pos_y + b.y * ah;
+                        const bw = b.w * aw;
+                        const bh = b.h * ah;
+                        ctx.fillRect(bx, by, bw, bh);
+                        ctx.strokeRect(bx, by, bw, bh);
+                    }
+                } else if (a._overlay) {
                     ctx.drawImage(a._overlay, a.pos_x, a.pos_y, aw, ah);
                 } else {
                     ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';

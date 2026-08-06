@@ -119,6 +119,7 @@ class CityScreen {
                     pos_y: a.pos_y ?? (a.grid_y * 64),
                     scale: a.scale ?? a.width ?? 1.0,
                     has_collision: a.has_collision || false,
+                    collision_boxes: a.collision_boxes || [],
                     _img: img,
                     _mask: null
                 };
@@ -219,21 +220,36 @@ class CityScreen {
         const px = nx - ps / 2;
         const py = ny - ps / 2;
         for (const a of this.assets) {
-            if (!a.has_collision || !a._mask) continue;
-            const m = a._mask;
+            if (!a.has_collision) continue;
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
             const sc = a.scale || 1;
-            const aw = m.w * sc;
-            const ah = m.h * sc;
-            if (px + ps <= a.pos_x || px >= a.pos_x + aw) continue;
-            if (py + ps <= a.pos_y || py >= a.pos_y + ah) continue;
-            const step = Math.max(4, Math.floor(ps / 6));
-            for (let sx = px + 2; sx < px + ps; sx += step) {
-                for (let sy = py + 2; sy < py + ps; sy += step) {
-                    if (sx < a.pos_x || sx >= a.pos_x + aw || sy < a.pos_y || sy >= a.pos_y + ah) continue;
-                    const ix = Math.floor((sx - a.pos_x) / sc);
-                    const iy = Math.floor((sy - a.pos_y) / sc);
-                    if (ix >= 0 && ix < m.w && iy >= 0 && iy < m.h && m.mask[iy * m.w + ix] > 128) return true;
+            const aw = img.naturalWidth * sc;
+            const ah = img.naturalHeight * sc;
+            const boxes = a.collision_boxes;
+            if (boxes && boxes.length > 0) {
+                for (const b of boxes) {
+                    const bx = a.pos_x + b.x * aw;
+                    const by = a.pos_y + b.y * ah;
+                    const bw = b.w * aw;
+                    const bh = b.h * ah;
+                    if (px < bx + bw && px + ps > bx && py < by + bh && py + ps > by) return true;
                 }
+            } else if (a._mask) {
+                const m = a._mask;
+                if (px + ps <= a.pos_x || px >= a.pos_x + aw) continue;
+                if (py + ps <= a.pos_y || py >= a.pos_y + ah) continue;
+                const step = Math.max(4, Math.floor(ps / 6));
+                for (let sx = px + 2; sx < px + ps; sx += step) {
+                    for (let sy = py + 2; sy < py + ps; sy += step) {
+                        if (sx < a.pos_x || sx >= a.pos_x + aw || sy < a.pos_y || sy >= a.pos_y + ah) continue;
+                        const ix = Math.floor((sx - a.pos_x) / sc);
+                        const iy = Math.floor((sy - a.pos_y) / sc);
+                        if (ix >= 0 && ix < m.w && iy >= 0 && iy < m.h && m.mask[iy * m.w + ix] > 128) return true;
+                    }
+                }
+            } else {
+                if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) return true;
             }
         }
         return false;
