@@ -397,13 +397,9 @@ class CityBuilder {
                 asset_url: a.asset_url,
                 pos_x: a.pos_x,
                 pos_y: a.pos_y,
-                grid_x: a.pos_x / 64,
-                grid_y: a.pos_y / 64,
-                width: a.scale || 1,
-                height: a.scale || 1,
                 scale: a.scale || 1,
                 rotation: a.rotation || 0,
-                z_index: a.z_index,
+                z_index: a.z_index || 0,
                 has_collision: a.has_collision || false
             }));
             if (toSave.length > 0) {
