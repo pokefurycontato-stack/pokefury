@@ -119,10 +119,18 @@ class CityScreen {
                     pos_y: a.pos_y ?? (a.grid_y * 64),
                     scale: a.scale ?? a.width ?? 1.0,
                     has_collision: a.has_collision || false,
-                    _img: img
+                    _img: img,
+                    _mask: null
                 };
             });
             console.log(`[City] Loaded ${this.assets.length} assets`);
+            this.assets.forEach(a => {
+                if (a.has_collision && a._img) {
+                    const buildMask = () => { a._mask = this.createMask(a._img); };
+                    a._img.onload = buildMask;
+                    if (a._img.complete && a._img.naturalWidth) buildMask();
+                }
+            });
         } catch (e) {
             console.warn('[City] Layout load error:', e.message);
             this.assets = [];
@@ -194,18 +202,38 @@ class CityScreen {
         }).subscribe();
     }
 
+    createMask(img) {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0);
+        const data = cx.getImageData(0, 0, c.width, c.height).data;
+        const mask = new Uint8Array(c.width * c.height);
+        for (let i = 0; i < mask.length; i++) mask[i] = data[i * 4 + 3];
+        return { mask, w: c.width, h: c.height };
+    }
+
     checkCollision(nx, ny) {
         const ps = this.playerSize;
         const px = nx - ps / 2;
         const py = ny - ps / 2;
         for (const a of this.assets) {
-            if (!a.has_collision) continue;
-            const img = a._img;
-            if (!img || !img.complete || !img.naturalWidth) continue;
-            const aw = img.naturalWidth * (a.scale || 1);
-            const ah = img.naturalHeight * (a.scale || 1);
-            if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) {
-                return true;
+            if (!a.has_collision || !a._mask) continue;
+            const m = a._mask;
+            const sc = a.scale || 1;
+            const aw = m.w * sc;
+            const ah = m.h * sc;
+            if (px + ps <= a.pos_x || px >= a.pos_x + aw) continue;
+            if (py + ps <= a.pos_y || py >= a.pos_y + ah) continue;
+            const step = Math.max(4, Math.floor(ps / 6));
+            for (let sx = px + 2; sx < px + ps; sx += step) {
+                for (let sy = py + 2; sy < py + ps; sy += step) {
+                    if (sx < a.pos_x || sx >= a.pos_x + aw || sy < a.pos_y || sy >= a.pos_y + ah) continue;
+                    const ix = Math.floor((sx - a.pos_x) / sc);
+                    const iy = Math.floor((sy - a.pos_y) / sc);
+                    if (ix >= 0 && ix < m.w && iy >= 0 && iy < m.h && m.mask[iy * m.w + ix] > 128) return true;
+                }
             }
         }
         return false;

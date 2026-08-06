@@ -189,9 +189,13 @@ class CityBuilder {
             scale: 1.0,
             rotation: 0,
             z_index: this.assets.length,
-            _img: img
+            _img: img,
+            _mask: null
         };
-        img.onload = () => this.render();
+        img.onload = () => {
+            this.render();
+            if (item.has_collision) item._mask = this.createMask(img);
+        };
         this.assets.push(item);
         this.selected = item;
         this.updateProps();
@@ -334,7 +338,7 @@ class CityBuilder {
                     <input type="number" value="${s.z_index}" onchange="window.cityBuilder.selected.z_index=parseInt(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                 </label>
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-                    <input type="checkbox" ${s.has_collision ? 'checked' : ''} onchange="window.cityBuilder.selected.has_collision=this.checked;window.cityBuilder.updateProps();window.cityBuilder.render();" style="cursor:pointer;">
+                    <input type="checkbox" ${s.has_collision ? 'checked' : ''} onchange="window.cityBuilder.selected.has_collision=this.checked;if(this.checked&&window.cityBuilder.selected._img){window.cityBuilder.selected._mask=window.cityBuilder.createMask(window.cityBuilder.selected._img);}else{window.cityBuilder.selected._mask=null;}window.cityBuilder.updateProps();window.cityBuilder.render();" style="cursor:pointer;">
                     <span>Colisão (bloqueia passagem)</span>
                 </label>
                 <button onclick="window.cityBuilder.assets=window.cityBuilder.assets.filter(a=>a._id!==window.cityBuilder.selected._id);window.cityBuilder.selected=null;window.cityBuilder.updateProps();window.cityBuilder.render();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover</button>
@@ -357,8 +361,16 @@ class CityBuilder {
                     pos_y: a.pos_y ?? (a.grid_y * 64),
                     scale: a.scale ?? a.width ?? 1.0,
                     has_collision: a.has_collision || false,
-                    _img: img
+                    _img: img,
+                    _mask: null
                     };
+                });
+                this.assets.forEach(a => {
+                    if (a.has_collision && a._img) {
+                        const buildMask = () => { a._mask = this.createMask(a._img); };
+                        a._img.onload = buildMask;
+                        if (a._img.complete && a._img.naturalWidth) buildMask();
+                    }
                 });
             }
         } catch (e) {
@@ -399,18 +411,38 @@ class CityBuilder {
         }
     }
 
+    createMask(img) {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0);
+        const data = cx.getImageData(0, 0, c.width, c.height).data;
+        const mask = new Uint8Array(c.width * c.height);
+        for (let i = 0; i < mask.length; i++) mask[i] = data[i * 4 + 3];
+        return { mask, w: c.width, h: c.height };
+    }
+
     checkCollision(nx, ny) {
         const ps = this.playerSize;
         const px = nx - ps / 2;
         const py = ny - ps / 2;
         for (const a of this.assets) {
-            if (!a.has_collision) continue;
-            const img = a._img;
-            if (!img || !img.complete || !img.naturalWidth) continue;
-            const aw = img.naturalWidth * (a.scale || 1);
-            const ah = img.naturalHeight * (a.scale || 1);
-            if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) {
-                return true;
+            if (!a.has_collision || !a._mask) continue;
+            const m = a._mask;
+            const sc = a.scale || 1;
+            const aw = m.w * sc;
+            const ah = m.h * sc;
+            if (px + ps <= a.pos_x || px >= a.pos_x + aw) continue;
+            if (py + ps <= a.pos_y || py >= a.pos_y + ah) continue;
+            const step = Math.max(4, Math.floor(ps / 6));
+            for (let sx = px + 2; sx < px + ps; sx += step) {
+                for (let sy = py + 2; sy < py + ps; sy += step) {
+                    if (sx < a.pos_x || sx >= a.pos_x + aw || sy < a.pos_y || sy >= a.pos_y + ah) continue;
+                    const ix = Math.floor((sx - a.pos_x) / sc);
+                    const iy = Math.floor((sy - a.pos_y) / sc);
+                    if (ix >= 0 && ix < m.w && iy >= 0 && iy < m.h && m.mask[iy * m.w + ix] > 128) return true;
+                }
             }
         }
         return false;
