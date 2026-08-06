@@ -62,7 +62,11 @@ class CityScreen {
 
         this.resizeCanvas();
         this.running = true;
-        this.loop();
+
+        requestAnimationFrame(() => {
+            this.resizeCanvas();
+            this.loop();
+        });
 
         window._cityResizeHandler = () => this.resizeCanvas();
         window.addEventListener('resize', window._cityResizeHandler);
