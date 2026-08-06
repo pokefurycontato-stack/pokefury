@@ -154,7 +154,9 @@ class CityScreen {
             console.log(`[City] Loaded ${this.assets.length} assets`);
             this.assets.forEach(a => {
                 if (a.has_collision && a._img) {
-                    const buildMask = () => { a._mask = this.createMask(a._img); };
+                    const buildMask = () => {
+                        try { a._mask = this.createMask(a._img); } catch(e) { console.warn('[City] Mask error:', e.message); }
+                    };
                     a._img.onload = buildMask;
                     if (a._img.complete && a._img.naturalWidth) buildMask();
                 }
@@ -166,22 +168,23 @@ class CityScreen {
     }
 
     async registerPlayer() {
-        const user = window.db.auth?.getUser?.();
+        const user = await window.db.auth?.getUser?.();
         const userId = user?.data?.user?.id;
-        if (!userId) return;
 
         const game = window.pokefury;
         const charName = game?.playerName || 'Treinador';
         const skinUrl = this.playerSkinImg?.src || '';
 
         this.myPlayer = {
-            user_id: userId,
+            user_id: userId || 'local',
             character_name: charName,
             skin_url: skinUrl,
             pos_x: this.playerX,
             pos_y: this.playerY,
             direction: this.playerDir
         };
+
+        if (!userId) { console.warn('[City] No userId, local only'); return; }
 
         try {
             await window.db.from('city_players').upsert({
