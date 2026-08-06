@@ -114,25 +114,9 @@ class CityScreen {
 
         const isSquare = img.naturalWidth > 50 && Math.abs(img.naturalWidth - img.naturalHeight) < 20;
         if (isSquare) {
-            const dirs = ['down', 'left', 'right', 'up'];
-            const frameW = img.naturalWidth / 4;
-            const frameH = img.naturalHeight / 4;
-            this.playerSpriteFrames = {};
-            for (let row = 0; row < dirs.length; row++) {
-                const frames = [];
-                for (let col = 0; col < 4; col++) {
-                    const c = document.createElement('canvas');
-                    c.width = frameW; c.height = frameH;
-                    const cx = c.getContext('2d');
-                    cx.drawImage(img, col * frameW, row * frameH, frameW, frameH, 0, 0, frameW, frameH);
-                    const fi = new Image();
-                    fi.src = c.toDataURL();
-                    frames.push(fi);
-                }
-                this.playerSpriteFrames[dirs[row]] = frames;
-            }
+            this.playerSpriteFrames = { frameW: img.naturalWidth / 4, frameH: img.naturalHeight / 4 };
             this.playerSize = img.naturalWidth > 512 ? 64 : 48;
-            console.log('[City] Sprite sheet split into frames');
+            console.log('[City] Sprite sheet ready, frames:', this.playerSpriteFrames);
         } else {
             this.playerSize = 48;
         }
@@ -470,15 +454,12 @@ class CityScreen {
 
             const skinImg = p._skinImg;
             if (skinImg && skinImg.complete && skinImg.naturalWidth) {
-                const frames = (p.isMe && this.playerSpriteFrames) ? this.playerSpriteFrames[p.direction || 'down'] : null;
-                if (frames && frames.length > 0) {
-                    const walkIdx = p.isMe ? Math.min(Math.floor(this.moveProgress * frames.length), frames.length - 1) : 0;
-                    const frame = frames[walkIdx];
-                    if (frame && frame.complete && frame.naturalWidth) {
-                        ctx.drawImage(frame, drawX, drawY, ps, ps);
-                    } else {
-                        ctx.drawImage(skinImg, drawX, drawY, ps, ps);
-                    }
+                const sf = p.isMe ? this.playerSpriteFrames : null;
+                if (sf && sf.frameW) {
+                    const dirs = ['down', 'left', 'right', 'up'];
+                    const row = dirs.indexOf(p.direction || 'down');
+                    const walkIdx = p.isMe ? Math.min(Math.floor(this.moveProgress * 4), 3) : 0;
+                    ctx.drawImage(skinImg, walkIdx * sf.frameW, row * sf.frameH, sf.frameW, sf.frameH, drawX, drawY, ps, ps);
                 } else {
                     const imgW = skinImg.naturalWidth;
                     const imgH = skinImg.naturalHeight;
