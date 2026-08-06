@@ -412,8 +412,8 @@ export class Overworld2D {
         this.pokemonFollowing = null;
         this.pokemonFollowSpriteUrl = null;
         this.pokemonFollowBackSpriteUrl = null;
-        this.pokemonFollowEl = null;
-        this.pokemonFollowShadowEl = null;
+        if (this.pokemonFollowEl) { this.pokemonFollowEl.remove(); this.pokemonFollowEl = null; }
+        if (this.pokemonFollowShadowEl) { this.pokemonFollowShadowEl.remove(); this.pokemonFollowShadowEl = null; }
         const follower = this.game.playerTeam?.find(pokemon => !pokemon.fainted);
         if (follower) await this.loadPokemonFollowSprite(follower);
 
