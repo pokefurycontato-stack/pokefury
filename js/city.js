@@ -17,7 +17,7 @@ class CityScreen {
         this.playerDir = 'down';
         this.playerMoving = false;
         this.moveProgress = 0;
-        this.playerSpeed = 4;
+        this.playerSpeed = 6;
         this.playerSize = 48;
 
         this.bindEvents();
@@ -321,7 +321,7 @@ class CityScreen {
 
     update() {
         if (this.playerMoving) {
-            this.moveProgress += 0.2;
+            this.moveProgress += this.playerSpeed / this.playerSize;
             if (this.moveProgress >= 1) {
                 this.moveProgress = 1;
                 this.playerMoving = false;
