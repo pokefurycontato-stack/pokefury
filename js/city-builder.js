@@ -204,14 +204,34 @@ class CityBuilder {
             y: sy / this.zoom + this.camY
         };
     }
-
     onMouseDown(e) {
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
+
         if (hit) {
             this.selected = hit;
             this.dragging = true;
             this.dragOffset = { x: w.x - hit.pos_x, y: w.y - hit.pos_y };
+        } else if (this.selected) {
+            const src = this.selected;
+            const img = new Image();
+            img.src = src.asset_url;
+            const clone = {
+                _id: this.nextId++,
+                asset_id: src.asset_id,
+                asset_url: src.asset_url,
+                pos_x: w.x,
+                pos_y: w.y,
+                scale: src.scale || 1,
+                rotation: src.rotation || 0,
+                z_index: this.assets.length,
+                _img: img
+            };
+            img.onload = () => this.render();
+            this.assets.push(clone);
+            this.selected = clone;
+            this.dragging = true;
+            this.dragOffset = { x: 0, y: 0 };
         } else {
             this.selected = null;
         }
