@@ -367,7 +367,8 @@ class CityBuilder {
             'lago3.png', 'lago2.png', 'lago1.png', 'grama.png',
             'escada.png', 'barro.png', 'barranco.png', 'arvore.png',
             'casa1.png', 'casa2.png', 'pokemart.png', 'laboratorio.png',
-            'centropokemon.png', 'basquete.png', 'arena.png'
+            'centropokemon.png', 'basquete.png', 'arena.png',
+            'cerca1.png', 'cerca2.png'
         ];
         this.availableAssets = files.map(f => ({
             id: f.replace('.png', ''),
