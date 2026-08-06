@@ -40,6 +40,7 @@ class CityScreen {
         if (!game) return;
 
         document.getElementById('city-screen').classList.remove('hidden');
+        window.cityModeActive = true;
         this.canvas = document.getElementById('city-canvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -62,6 +63,7 @@ class CityScreen {
 
     close() {
         this.running = false;
+        window.cityModeActive = false;
         document.getElementById('city-screen').classList.add('hidden');
         this.unregisterPlayer();
         if (this.channel) {

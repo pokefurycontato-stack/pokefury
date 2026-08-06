@@ -181,6 +181,7 @@ export class Overworld2D {
 
     setupInput() {
         document.addEventListener('keydown', (e) => {
+            if (window.cityModeActive) return;
             const tag = e.target.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
@@ -190,6 +191,7 @@ export class Overworld2D {
             }
         });
         document.addEventListener('keyup', (e) => {
+            if (window.cityModeActive) return;
             const tag = e.target.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             this.keys[e.key] = false;
@@ -545,6 +547,7 @@ export class Overworld2D {
 
     handleInput() {
         if (this.game.state !== 'overworld') return;
+        if (window.cityModeActive) return;
         if (this.player.moving) return;
         if (this.moveCooldown > 0) return;
         if (this.transitionCooldown > 0) return;

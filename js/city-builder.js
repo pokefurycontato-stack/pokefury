@@ -58,6 +58,7 @@ class CityBuilder {
     async open() {
         const game = window.pokefury;
         document.getElementById('city-builder-screen').classList.remove('hidden');
+        window.cityModeActive = true;
         this.canvas = document.getElementById('cb-canvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -75,6 +76,7 @@ class CityBuilder {
 
     close() {
         this.running = false;
+        window.cityModeActive = false;
         document.getElementById('city-builder-screen').classList.add('hidden');
         if (window._cbResizeHandler) {
             window.removeEventListener('resize', window._cbResizeHandler);
