@@ -56,6 +56,7 @@ class CityScreen {
         await this.registerPlayer();
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
+        await this.loadExistingPlayers();
         this.subscribeRealtime();
 
         this.resizeCanvas();
@@ -103,6 +104,7 @@ class CityScreen {
         }
 
         const img = new Image();
+        img.crossOrigin = 'anonymous';
         img.src = url;
         await new Promise(r => {
             img.onload = r;
@@ -142,6 +144,7 @@ class CityScreen {
             if (error) throw error;
             this.assets = (data || []).map(a => {
                 const img = new Image();
+                img.crossOrigin = 'anonymous';
                 img.src = a.asset_url;
                 img.onload = () => {};
                 return {
@@ -210,6 +213,26 @@ class CityScreen {
     unregisterPlayer() {
         if (this.sessionId) {
             window.db.from('city_players').delete().eq('user_id', this.sessionId).catch(() => {});
+        }
+    }
+
+    async loadExistingPlayers() {
+        try {
+            const { data, error } = await window.db.from('city_players').select('*');
+            if (error) throw error;
+            (data || []).forEach(p => {
+                if (p.user_id === this.sessionId) return;
+                this.players[p.user_id] = { ...p, _skinImg: null };
+                if (p.skin_url) {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.src = p.skin_url;
+                    this.players[p.user_id]._skinImg = img;
+                }
+            });
+            console.log(`[City] Loaded ${Object.keys(this.players).length} existing players`);
+        } catch (e) {
+            console.warn('[City] loadExistingPlayers error:', e.message);
         }
     }
 
