@@ -190,11 +190,15 @@ class CityBuilder {
             rotation: 0,
             z_index: this.assets.length,
             _img: img,
-            _mask: null
+            _mask: null,
+            _overlay: null
         };
         img.onload = () => {
             this.render();
-            if (item.has_collision) item._mask = this.createMask(img);
+            if (item.has_collision) {
+                item._mask = this.createMask(img);
+                item._overlay = this.createOverlay(img);
+            }
         };
         this.assets.push(item);
         this.selected = item;
@@ -338,7 +342,7 @@ class CityBuilder {
                     <input type="number" value="${s.z_index}" onchange="window.cityBuilder.selected.z_index=parseInt(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                 </label>
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-                    <input type="checkbox" ${s.has_collision ? 'checked' : ''} onchange="window.cityBuilder.selected.has_collision=this.checked;if(this.checked&&window.cityBuilder.selected._img){window.cityBuilder.selected._mask=window.cityBuilder.createMask(window.cityBuilder.selected._img);}else{window.cityBuilder.selected._mask=null;}window.cityBuilder.updateProps();window.cityBuilder.render();" style="cursor:pointer;">
+                    <input type="checkbox" ${s.has_collision ? 'checked' : ''} onchange="window.cityBuilder.selected.has_collision=this.checked;if(this.checked&&window.cityBuilder.selected._img){window.cityBuilder.selected._mask=window.cityBuilder.createMask(window.cityBuilder.selected._img);window.cityBuilder.selected._overlay=window.cityBuilder.createOverlay(window.cityBuilder.selected._img);}else{window.cityBuilder.selected._mask=null;window.cityBuilder.selected._overlay=null;}window.cityBuilder.updateProps();window.cityBuilder.render();" style="cursor:pointer;">
                     <span>Colisão (bloqueia passagem)</span>
                 </label>
                 <button onclick="window.cityBuilder.assets=window.cityBuilder.assets.filter(a=>a._id!==window.cityBuilder.selected._id);window.cityBuilder.selected=null;window.cityBuilder.updateProps();window.cityBuilder.render();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover</button>
@@ -362,14 +366,18 @@ class CityBuilder {
                     scale: a.scale ?? a.width ?? 1.0,
                     has_collision: a.has_collision || false,
                     _img: img,
-                    _mask: null
+                    _mask: null,
+                    _overlay: null
                     };
                 });
                 this.assets.forEach(a => {
                     if (a.has_collision && a._img) {
-                        const buildMask = () => { a._mask = this.createMask(a._img); };
-                        a._img.onload = buildMask;
-                        if (a._img.complete && a._img.naturalWidth) buildMask();
+                        const build = () => {
+                            a._mask = this.createMask(a._img);
+                            a._overlay = this.createOverlay(a._img);
+                        };
+                        a._img.onload = build;
+                        if (a._img.complete && a._img.naturalWidth) build();
                     }
                 });
             }
@@ -421,6 +429,25 @@ class CityBuilder {
         const mask = new Uint8Array(c.width * c.height);
         for (let i = 0; i < mask.length; i++) mask[i] = data[i * 4 + 3];
         return { mask, w: c.width, h: c.height };
+    }
+
+    createOverlay(img) {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0);
+        const data = cx.getImageData(0, 0, c.width, c.height);
+        const d = data.data;
+        for (let i = 0; i < d.length; i += 4) {
+            if (d[i + 3] > 128) {
+                d[i] = 231; d[i + 1] = 76; d[i + 2] = 60; d[i + 3] = 90;
+            } else {
+                d[i + 3] = 0;
+            }
+        }
+        cx.putImageData(data, 0, 0);
+        return c;
     }
 
     checkCollision(nx, ny) {
@@ -547,11 +574,12 @@ class CityBuilder {
                 ctx.setLineDash([]);
             }
             if (a.has_collision) {
-                ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
-                ctx.fillRect(a.pos_x, a.pos_y, aw, ah);
-                ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)';
-                ctx.lineWidth = 2 / zoom;
-                ctx.strokeRect(a.pos_x, a.pos_y, aw, ah);
+                if (a._overlay) {
+                    ctx.drawImage(a._overlay, a.pos_x, a.pos_y, aw, ah);
+                } else {
+                    ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+                    ctx.fillRect(a.pos_x, a.pos_y, aw, ah);
+                }
             }
             ctx.restore();
         });
