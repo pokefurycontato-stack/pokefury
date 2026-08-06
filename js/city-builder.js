@@ -20,6 +20,7 @@ class CityBuilder {
         this.playerKeys = {};
         this.playerSpeed = 4;
         this.playerSize = 48;
+        this.previewMode = false;
 
         this.bindEvents();
     }
@@ -31,6 +32,8 @@ class CityBuilder {
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
         const saveBtn = document.getElementById('cb-save-btn');
         if (saveBtn) saveBtn.addEventListener('click', () => this.save());
+        const previewBtn = document.getElementById('cb-preview-btn');
+        if (previewBtn) previewBtn.addEventListener('click', () => this.togglePreview());
 
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
@@ -76,11 +79,35 @@ class CityBuilder {
 
     close() {
         this.running = false;
+        this.previewMode = false;
         window.cityModeActive = false;
         document.getElementById('city-builder-screen').classList.add('hidden');
         if (window._cbResizeHandler) {
             window.removeEventListener('resize', window._cbResizeHandler);
         }
+    }
+
+    togglePreview() {
+        this.previewMode = !this.previewMode;
+        const btn = document.getElementById('cb-preview-btn');
+        const sidebar = document.getElementById('cb-assets-panel');
+        const props = document.getElementById('cb-props-panel');
+
+        if (this.previewMode) {
+            btn.style.background = '#f59e0b';
+            btn.style.color = '#000';
+            sidebar.style.display = 'none';
+            props.style.display = 'none';
+            this.resizeCanvas();
+            this.selected = null;
+        } else {
+            btn.style.background = 'rgba(255,255,255,0.15)';
+            btn.style.color = '#fff';
+            sidebar.style.display = '';
+            props.style.display = '';
+            this.resizeCanvas();
+        }
+        this.updateProps();
     }
 
     async loadPlayerSkin(game) {
@@ -207,6 +234,7 @@ class CityBuilder {
         };
     }
     onMouseDown(e) {
+        if (this.previewMode) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
 
@@ -242,6 +270,7 @@ class CityBuilder {
     }
 
     onMouseMove(e) {
+        if (this.previewMode) return;
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
@@ -258,20 +287,14 @@ class CityBuilder {
 
     onWheel(e) {
         e.preventDefault();
-        const rect = this.canvas.getBoundingClientRect();
-        const sx = e.clientX - rect.left;
-        const sy = e.clientY - rect.top;
+        if (this.previewMode) return;
 
         if (e.ctrlKey && this.selected) {
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
             this.selected.scale = Math.max(0.1, Math.min(5, (this.selected.scale || 1) + delta));
         } else {
-            const oldZoom = this.zoom;
-            this.zoom = Math.max(0.15, Math.min(4, this.zoom + (e.deltaY > 0 ? -0.1 : 0.1)));
-            const worldX = sx / oldZoom + this.camX;
-            const worldY = sy / oldZoom + this.camY;
-            this.camX = worldX - sx / this.zoom;
-            this.camY = worldY - sy / this.zoom;
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            this.zoom = Math.max(0.15, Math.min(4, this.zoom + delta));
         }
         this.updateProps();
         this.render();
@@ -404,30 +427,33 @@ class CityBuilder {
 
         ctx.clearRect(0, 0, cw, ch);
 
+        const zoom = this.previewMode ? 1 : this.zoom;
         const camX = this.playerX - cw / 2;
         const camY = this.playerY - ch / 2;
         this.camX = camX;
         this.camY = camY;
 
         ctx.save();
-        ctx.translate(-camX * this.zoom, -camY * this.zoom);
-        ctx.scale(this.zoom, this.zoom);
+        ctx.translate(-camX * zoom, -camY * zoom);
+        ctx.scale(zoom, zoom);
 
         ctx.fillStyle = '#2d5a27';
-        ctx.fillRect(camX - 100, camY - 100, cw / this.zoom + 200, ch / this.zoom + 200);
+        ctx.fillRect(camX - 100, camY - 100, cw / zoom + 200, ch / zoom + 200);
 
-        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-        ctx.lineWidth = 1 / this.zoom;
-        const gridSize = 64;
-        const gxStart = Math.floor(camX / gridSize) * gridSize;
-        const gyStart = Math.floor(camY / gridSize) * gridSize;
-        const gxEnd = camX + cw / this.zoom + gridSize;
-        const gyEnd = camY + ch / this.zoom + gridSize;
-        for (let gx = gxStart; gx <= gxEnd; gx += gridSize) {
-            ctx.beginPath(); ctx.moveTo(gx, camY - 100); ctx.lineTo(gx, gyEnd + 100); ctx.stroke();
-        }
-        for (let gy = gyStart; gy <= gyEnd; gy += gridSize) {
-            ctx.beginPath(); ctx.moveTo(camX - 100, gy); ctx.lineTo(gxEnd + 100, gy); ctx.stroke();
+        if (!this.previewMode) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1 / zoom;
+            const gridSize = 64;
+            const gxStart = Math.floor(camX / gridSize) * gridSize;
+            const gyStart = Math.floor(camY / gridSize) * gridSize;
+            const gxEnd = camX + cw / zoom + gridSize;
+            const gyEnd = camY + ch / zoom + gridSize;
+            for (let gx = gxStart; gx <= gxEnd; gx += gridSize) {
+                ctx.beginPath(); ctx.moveTo(gx, camY - 100); ctx.lineTo(gx, gyEnd + 100); ctx.stroke();
+            }
+            for (let gy = gyStart; gy <= gyEnd; gy += gridSize) {
+                ctx.beginPath(); ctx.moveTo(camX - 100, gy); ctx.lineTo(gxEnd + 100, gy); ctx.stroke();
+            }
         }
 
         const sorted = [...this.assets].sort((a, b) => (a.z_index || 0) - (b.z_index || 0));
@@ -438,8 +464,8 @@ class CityBuilder {
             const aw = img.naturalWidth * (a.scale || 1);
             const ah = img.naturalHeight * (a.scale || 1);
 
-            if (a.pos_x + aw < camX - 50 || a.pos_x > camX + cw / this.zoom + 50) return;
-            if (a.pos_y + ah < camY - 50 || a.pos_y > camY + ch / this.zoom + 50) return;
+            if (a.pos_x + aw < camX - 50 || a.pos_x > camX + cw / zoom + 50) return;
+            if (a.pos_y + ah < camY - 50 || a.pos_y > camY + ch / zoom + 50) return;
 
             ctx.save();
             if (a.rotation) {
@@ -450,11 +476,11 @@ class CityBuilder {
                 ctx.drawImage(img, a.pos_x, a.pos_y, aw, ah);
             }
 
-            if (this.selected && this.selected._id === a._id) {
+            if (!this.previewMode && this.selected && this.selected._id === a._id) {
                 ctx.strokeStyle = '#f59e0b';
-                ctx.lineWidth = 2 / this.zoom;
-                ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
-                ctx.strokeRect(-2 / this.zoom, -2 / this.zoom, aw + 4 / this.zoom, ah + 4 / this.zoom);
+                ctx.lineWidth = 2 / zoom;
+                ctx.setLineDash([6 / zoom, 4 / zoom]);
+                ctx.strokeRect(-2 / zoom, -2 / zoom, aw + 4 / zoom, ah + 4 / zoom);
                 ctx.setLineDash([]);
             }
             ctx.restore();
