@@ -4376,6 +4376,7 @@ openEventsPanel() {
             <button class="pokedex-tab" data-filter="hisui">Hisui</button>
             <button class="pokedex-tab" data-filter="paldea">Paldea</button>
             <button class="pokedex-tab" data-filter="form">Formas</button>
+            <button class="pokedex-tab" data-filter="event" style="background:linear-gradient(135deg,#7b2ff7,#c471f5);color:#fff;">⚡ Eventos</button>
         `;
         tabs.querySelectorAll('.pokedex-tab').forEach(tab => {
             tab.onclick = () => {
@@ -4403,13 +4404,13 @@ openEventsPanel() {
     renderPokedexList(pokemonList) {
         const list = document.getElementById('pokedex-list');
         list.innerHTML = '';
-        const variantColors = { mega: '#9c27b0', gmax: '#f44336', alola: '#2196f3', galar: '#ff9800', hisui: '#4caf50', paldea: '#00bcd4', form: '#e91e63' };
-        const variantLabels = { mega: 'MEGA', gmax: 'G-MAX', alola: 'ALOLA', galar: 'GALAR', hisui: 'HISUI', paldea: 'PALDEA', form: 'FORMA' };
+        const variantColors = { mega: '#9c27b0', gmax: '#f44336', alola: '#2196f3', galar: '#ff9800', hisui: '#4caf50', paldea: '#00bcd4', form: '#e91e63', event: '#7b2ff7' };
+        const variantLabels = { mega: 'MEGA', gmax: 'G-MAX', alola: 'ALOLA', galar: 'GALAR', hisui: 'HISUI', paldea: 'PALDEA', form: 'FORMA', event: 'EVENTO' };
         pokemonList.forEach(p => {
             const item = document.createElement('div');
             item.className = 'pokedex-item' + (this._pokedexSelected === p.id ? ' active' : '');
             const num = String(p.id).padStart(3, '0');
-            const sprite = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${p.id}.png`;
+            const sprite = p.sprite_official || p.sprite_home || `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${p.id}.png`;
             const badge = p.variant && p.variant !== 'normal' ? `<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:${variantColors[p.variant] || '#666'};color:#fff;font-weight:700;margin-left:4px">${variantLabels[p.variant] || p.variant}</span>` : '';
             item.innerHTML = `
                 <span class="pokedex-item-num">#${num}</span>
@@ -4430,8 +4431,9 @@ openEventsPanel() {
         if (!pokemon) return;
 
         const num = String(pokemon.id).padStart(3, '0');
-        const spriteNormal = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front/${pokemon.id}.gif`;
-        const spriteShiny = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front-shiny/${pokemon.id}.gif`;
+        const isEvent = pokemon.variant === 'event';
+        const spriteNormal = isEvent ? (pokemon.sprite_official || pokemon.sprite_home || '') : `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front/${pokemon.id}.gif`;
+        const spriteShiny = isEvent ? (pokemon.sprite_official || pokemon.sprite_home || '') : `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front-shiny/${pokemon.id}.gif`;
 
         const typeColors = {
             normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
@@ -4467,12 +4469,12 @@ openEventsPanel() {
             <div class="pokedex-detail-header">
                 <div class="pokedex-sprites">
                     <div>
-                        <div class="pokedex-sprite-box"><img src="${spriteNormal}" onerror="this.src='https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${pokemon.id}.png'"></div>
-                        <div class="pokedex-sprite-label">Normal</div>
+                        <div class="pokedex-sprite-box"><img src="${spriteNormal}" onerror="this.onerror=null;this.src='${isEvent ? (pokemon.sprite_back || spriteNormal) : `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${pokemon.id}.png`}'"></div>
+                        <div class="pokedex-sprite-label">${isEvent ? 'Frente' : 'Normal'}</div>
                     </div>
                     <div>
-                        <div class="pokedex-sprite-box" style="border-color:#ff9800"><img src="${spriteShiny}" onerror="this.src='https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front-shiny/${pokemon.id}.png'"></div>
-                        <div class="pokedex-sprite-label">Shiny</div>
+                        <div class="pokedex-sprite-box" style="border-color:#ff9800"><img src="${isEvent ? (pokemon.sprite_back || spriteNormal) : spriteShiny}" onerror="this.onerror=null;this.src='${isEvent ? spriteNormal : `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front-shiny/${pokemon.id}.png`}'"></div>
+                        <div class="pokedex-sprite-label">${isEvent ? 'Costas' : 'Shiny'}</div>
                     </div>
                 </div>
                 <div style="flex:1">

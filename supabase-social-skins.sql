@@ -1,0 +1,17 @@
+INSERT INTO skin_products (name, description, skin_type, target_id, price_diamonds, image_url, sprite_url, active, sort_order) VALUES
+('Social Masculino Moreno', 'Skin de personagem', 'player_skin', 'male', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialmascmoreno.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialmascmoreno.png',
+ true, 10),
+('Social Masculino Loiro', 'Skin de personagem', 'player_skin', 'male', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialmascloiro.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialmascloiro.png',
+ true, 11),
+('Social Feminino Morena', 'Skin de personagem', 'player_skin', 'female', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialfemmorena.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialfemmorena.png',
+ true, 12),
+('Social Feminino Loira', 'Skin de personagem', 'player_skin', 'female', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialfemloira.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/socialfemloira.png',
+ true, 13);

@@ -1405,6 +1405,7 @@ body {
 }
 .pokedex-tab:hover { background: #1c2333; color: #c9d1d9; }
 .pokedex-tab.active { background: #1f3a5f; color: #58a6ff; border-color: #58a6ff; }
+.ep-dropdown-item:hover { background: #1f3a5f !important; color: #fff !important; }
 .pokedex-item {
     display: flex; align-items: center; gap: 8px;
     padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #21262d;

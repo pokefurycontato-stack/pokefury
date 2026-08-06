@@ -244,6 +244,7 @@
         <button class="item-btn admin-btn" id="admin-btn-events" style="background:linear-gradient(135deg,#e94560,#c23152);">Eventos</button>
         <button class="item-btn admin-btn" id="admin-btn-premium">💎 Loja Premium</button>
         <button class="item-btn admin-btn" id="admin-btn-battle-pos">🎯 Posições PVP</button>
+        <button class="item-btn admin-btn" id="admin-btn-new-pokemon" style="background:linear-gradient(135deg,#7b2ff7,#c471f5);">⚡ Novo Pokemon</button>
     </div>
 </div>
 
@@ -1119,9 +1120,110 @@
         </div>
     </div>
 
+    <!-- Event Pokemon Admin Screen -->
+    <div id="event-pokemon-screen" class="hidden" style="position:fixed;inset:0;z-index:950;background:#0a0e1a;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-bottom:1px solid #30363d;">
+            <h2 style="margin:0;color:#e94560;font-size:18px;">⚡ Criar Pokemon de Evento</h2>
+            <button id="ep-close-btn" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;">✕</button>
+        </div>
+        <div id="ep-form-container" style="flex:1;overflow-y:auto;padding:20px;display:flex;justify-content:center;">
+            <form id="ep-form" style="width:100%;max-width:700px;display:flex;flex-direction:column;gap:16px;">
+                <!-- Nome -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Nome do Pokemon</label>
+                    <input id="ep-name" type="text" required placeholder="Ex: Mewtwo Omega" style="width:100%;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;box-sizing:border-box;">
+                </div>
+
+                <!-- Sprites -->
+                <div style="display:flex;gap:16px;">
+                    <div style="flex:1;">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Sprite Frente (batalha)</label>
+                        <label style="display:block;padding:16px;border:2px dashed #30363d;border-radius:8px;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;transition:border-color 0.2s;">
+                            <input id="ep-sprite-front" type="file" accept="image/*" style="display:none;">
+                            Clique para upload
+                        </label>
+                        <img id="ep-sprite-front-preview" style="width:80px;height:80px;border-radius:8px;object-fit:contain;display:none;margin-top:8px;background:#161b22;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Sprite Costas (batalha)</label>
+                        <label style="display:block;padding:16px;border:2px dashed #30363d;border-radius:8px;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;transition:border-color 0.2s;">
+                            <input id="ep-sprite-back" type="file" accept="image/*" style="display:none;">
+                            Clique para upload
+                        </label>
+                        <img id="ep-sprite-back-preview" style="width:80px;height:80px;border-radius:8px;object-fit:contain;display:none;margin-top:8px;background:#161b22;">
+                    </div>
+                </div>
+
+                <!-- Tipos -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Tipos</label>
+                    <div style="display:flex;gap:8px;">
+                        <select id="ep-type1" required style="flex:1;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;">
+                            <option value="normal">Normal</option><option value="fire">Fire</option><option value="water">Water</option>
+                            <option value="electric">Electric</option><option value="grass">Grass</option><option value="ice">Ice</option>
+                            <option value="fighting">Fighting</option><option value="poison">Poison</option><option value="ground">Ground</option>
+                            <option value="flying">Flying</option><option value="psychic">Psychic</option><option value="bug">Bug</option>
+                            <option value="rock">Rock</option><option value="ghost">Ghost</option><option value="dragon">Dragon</option>
+                            <option value="dark">Dark</option><option value="steel">Steel</option><option value="fairy">Fairy</option>
+                        </select>
+                        <select id="ep-type2" style="flex:1;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;">
+                            <option value="">Nenhum</option><option value="normal">Normal</option><option value="fire">Fire</option>
+                            <option value="water">Water</option><option value="electric">Electric</option><option value="grass">Grass</option>
+                            <option value="ice">Ice</option><option value="fighting">Fighting</option><option value="poison">Poison</option>
+                            <option value="ground">Ground</option><option value="flying">Flying</option><option value="psychic">Psychic</option>
+                            <option value="bug">Bug</option><option value="rock">Rock</option><option value="ghost">Ghost</option>
+                            <option value="dragon">Dragon</option><option value="dark">Dark</option><option value="steel">Steel</option>
+                            <option value="fairy">Fairy</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stats Base -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Stats Base</label>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                        <div><label style="color:#ff6b6b;font-size:11px;">HP</label><input id="ep-hp" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#ffa94d;font-size:11px;">Attack</label><input id="ep-attack" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#ffd43b;font-size:11px;">Defense</label><input id="ep-defense" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#69db7c;font-size:11px;">Sp.Atk</label><input id="ep-sp-atk" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#4dabf7;font-size:11px;">Sp.Def</label><input id="ep-sp-def" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#da77f2;font-size:11px;">Speed</label><input id="ep-speed" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                    </div>
+                </div>
+
+                <!-- Habilidades -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Habilidades (clique para adicionar)</label>
+                    <div id="ep-ability-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+                    <div style="position:relative;">
+                        <input id="ep-ability-search" type="text" placeholder="Buscar habilidade..." autocomplete="off" style="width:100%;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;box-sizing:border-box;">
+                        <div id="ep-ability-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#161b22;border:1px solid #30363d;border-radius:0 0 8px 8px;z-index:10;"></div>
+                    </div>
+                </div>
+
+                <!-- Pokemon Base (cópia de movimentos) -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Pokemon Base (copiar aprendizado de movimentos)</label>
+                    <div style="position:relative;">
+                        <input id="ep-base-search" type="text" placeholder="Buscar pokemon base..." autocomplete="off" style="width:100%;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;box-sizing:border-box;">
+                        <div id="ep-base-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#161b22;border:1px solid #30363d;border-radius:0 0 8px 8px;z-index:10;"></div>
+                    </div>
+                    <div id="ep-base-selected" style="margin-top:6px;color:#c471f5;font-size:13px;"></div>
+                </div>
+
+                <!-- Salvar -->
+                <button type="submit" id="ep-save-btn" style="padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#7b2ff7,#c471f5);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity 0.2s;">
+                    ⚡ Criar Pokemon
+                </button>
+                <div id="ep-status" style="text-align:center;font-size:13px;min-height:20px;"></div>
+            </form>
+        </div>
+    </div>
+
     <script src="js/premium-store.js"></script>
     <script src="js/premium-admin.js"></script>
     <script src="js/gym-leaders-admin.js"></script>
     <script src="js/boosts.js"></script>
+    <script src="js/event-pokemon-admin.js"></script>
 </body>
 </html>
