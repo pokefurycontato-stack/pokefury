@@ -7,11 +7,12 @@ class CityBuilder {
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
         this.zoom = 1;
-        this.pan = { x: 0, y: 0 };
         this.availableAssets = [];
         this.nextId = 1;
         this.running = false;
 
+        this.camX = 0;
+        this.camY = 0;
         this.playerX = 400;
         this.playerY = 400;
         this.playerDir = 'down';
@@ -169,10 +170,8 @@ class CityBuilder {
     }
 
     startDragNew(e, assetId) {
-        const rect = this.canvas.getBoundingClientRect();
-        const worldX = (e.clientX - rect.left - this.pan.x) / this.zoom;
-        const worldY = (e.clientY - rect.top - this.pan.y) / this.zoom;
-        this.addAssetAt(assetId, worldX, worldY);
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        this.addAssetAt(assetId, w.x, w.y);
     }
 
     getAssetHit(mx, my) {
@@ -196,16 +195,23 @@ class CityBuilder {
         this.canvas.onwheel = (e) => this.onWheel(e);
     }
 
-    onMouseDown(e) {
+    screenToWorld(clientX, clientY) {
         const rect = this.canvas.getBoundingClientRect();
-        const mx = (e.clientX - rect.left - this.pan.x) / this.zoom;
-        const my = (e.clientY - rect.top - this.pan.y) / this.zoom;
+        const sx = clientX - rect.left;
+        const sy = clientY - rect.top;
+        return {
+            x: sx / this.zoom + this.camX,
+            y: sy / this.zoom + this.camY
+        };
+    }
 
-        const hit = this.getAssetHit(mx, my);
+    onMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        const hit = this.getAssetHit(w.x, w.y);
         if (hit) {
             this.selected = hit;
             this.dragging = true;
-            this.dragOffset = { x: mx - hit.pos_x, y: my - hit.pos_y };
+            this.dragOffset = { x: w.x - hit.pos_x, y: w.y - hit.pos_y };
         } else {
             this.selected = null;
         }
@@ -215,11 +221,9 @@ class CityBuilder {
 
     onMouseMove(e) {
         if (!this.dragging || !this.selected) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const mx = (e.clientX - rect.left - this.pan.x) / this.zoom;
-        const my = (e.clientY - rect.top - this.pan.y) / this.zoom;
-        let newX = mx - this.dragOffset.x;
-        let newY = my - this.dragOffset.y;
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        let newX = w.x - this.dragOffset.x;
+        let newY = w.y - this.dragOffset.y;
         if (e.shiftKey) {
             newX = Math.round(newX / 32) * 32;
             newY = Math.round(newY / 32) * 32;
@@ -233,8 +237,8 @@ class CityBuilder {
     onWheel(e) {
         e.preventDefault();
         const rect = this.canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
 
         if (e.ctrlKey && this.selected) {
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -242,8 +246,10 @@ class CityBuilder {
         } else {
             const oldZoom = this.zoom;
             this.zoom = Math.max(0.15, Math.min(4, this.zoom + (e.deltaY > 0 ? -0.1 : 0.1)));
-            this.pan.x = mx - (mx - this.pan.x) * (this.zoom / oldZoom);
-            this.pan.y = my - (my - this.pan.y) * (this.zoom / oldZoom);
+            const worldX = sx / oldZoom + this.camX;
+            const worldY = sy / oldZoom + this.camY;
+            this.camX = worldX - sx / this.zoom;
+            this.camY = worldY - sy / this.zoom;
         }
         this.updateProps();
         this.render();
@@ -378,9 +384,11 @@ class CityBuilder {
 
         const camX = this.playerX - cw / 2;
         const camY = this.playerY - ch / 2;
+        this.camX = camX;
+        this.camY = camY;
 
         ctx.save();
-        ctx.translate(-camX * this.zoom + 0, -camY * this.zoom + 0);
+        ctx.translate(-camX * this.zoom, -camY * this.zoom);
         ctx.scale(this.zoom, this.zoom);
 
         ctx.fillStyle = '#2d5a27';
