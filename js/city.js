@@ -330,13 +330,6 @@ class CityScreen {
                 this.moveProgress = 0;
             }
         }
-
-            if (this.myPlayer) {
-                this.myPlayer.pos_x = this.playerX;
-                this.myPlayer.pos_y = this.playerY;
-                this.myPlayer.direction = this.playerDir;
-            }
-        }
     }
 
     update() {
