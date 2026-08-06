@@ -182,11 +182,10 @@ class CityScreen {
         const charName = game?.playerName || 'Treinador';
         const skinUrl = this.playerSkinImg?.src || '';
 
-        this.sessionId = userId ? userId + '-' + Date.now() : 'local-' + Date.now();
-        this.authUserId = userId;
+        this.authUserId = userId || 'local';
 
         this.myPlayer = {
-            user_id: this.sessionId,
+            user_id: this.authUserId,
             character_name: charName,
             skin_url: skinUrl,
             pos_x: this.playerX,
@@ -196,23 +195,25 @@ class CityScreen {
 
         if (!userId) { console.warn('[City] No userId, local only'); return; }
 
+        // Limpa entradas antigas deste usuario e registra当前位置
         try {
-            await window.db.from('city_players').upsert({
+            await window.db.from('city_players').delete().eq('user_id', userId);
+            await window.db.from('city_players').insert({
                 user_id: userId,
                 character_name: charName,
                 skin_url: skinUrl,
                 pos_x: this.playerX,
                 pos_y: this.playerY,
                 direction: this.playerDir
-            }, { onConflict: 'user_id' });
+            });
         } catch (e) {
             console.warn('[City] Register error:', e);
         }
     }
 
     unregisterPlayer() {
-        if (this.sessionId) {
-            window.db.from('city_players').delete().eq('user_id', this.sessionId).catch(() => {});
+        if (this.authUserId && this.authUserId !== 'local') {
+            window.db.from('city_players').delete().eq('user_id', this.authUserId).catch(() => {});
         }
     }
 
@@ -221,7 +222,7 @@ class CityScreen {
             const { data, error } = await window.db.from('city_players').select('*');
             if (error) throw error;
             (data || []).forEach(p => {
-                if (p.user_id === this.sessionId) return;
+                if (p.user_id === this.authUserId) return;
                 this.players[p.user_id] = { ...p, _skinImg: null };
                 if (p.skin_url) {
                     const img = new Image();
@@ -242,7 +243,7 @@ class CityScreen {
         this.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'city_players' }, (payload) => {
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                 const p = payload.new;
-                if (p.user_id === this.myPlayer?.user_id) return;
+                if (p.user_id === this.authUserId) return;
                 if (!this.players[p.user_id]) {
                     this.players[p.user_id] = { ...p, _skinImg: null };
                     if (p.skin_url) {
@@ -377,16 +378,13 @@ class CityScreen {
     }
 
     async syncPosition() {
-        if (!this.myPlayer || !this.authUserId) return;
+        if (!this.myPlayer || this.authUserId === 'local') return;
         try {
-            await window.db.from('city_players').upsert({
-                user_id: this.sessionId,
-                character_name: this.myPlayer.character_name,
-                skin_url: this.myPlayer.skin_url,
+            await window.db.from('city_players').update({
                 pos_x: this.playerX,
                 pos_y: this.playerY,
                 direction: this.playerDir
-            }, { onConflict: 'user_id' });
+            }).eq('user_id', this.authUserId);
         } catch (e) {}
     }
 
