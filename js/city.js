@@ -68,7 +68,11 @@ class CityScreen {
     async loadLayout() {
         try {
             const { data } = await window.db.from('city_layout').select('*').order('z_index');
-            this.assets = data || [];
+            this.assets = (data || []).map(a => {
+                const img = new Image();
+                img.src = a.asset_url;
+                return { ...a, _img: img };
+            });
         } catch (e) {
             console.warn('[City] No layout found:', e.message);
             this.assets = [];
@@ -81,7 +85,8 @@ class CityScreen {
         if (!userId) return;
 
         const charName = this.game?.currentCharacterName || 'Treinador';
-        const skinUrl = this.game?.overworld2d?.playerSkinUrl || '';
+        const overworld = this.game?.overworld2d;
+        const skinUrl = overworld?.playerSprites?.down?.src || overworld?.playerSpriteFrames?.down?.[0]?.src || '';
 
         this.myPlayer = {
             user_id: userId,
@@ -89,11 +94,25 @@ class CityScreen {
             skin_url: skinUrl,
             grid_x: 10,
             grid_y: 10,
-            direction: 'down'
+            direction: 'down',
+            _skinImg: null
         };
 
+        if (skinUrl) {
+            const img = new Image();
+            img.src = skinUrl;
+            this.myPlayer._skinImg = img;
+        }
+
         try {
-            await window.db.from('city_players').upsert(this.myPlayer, { onConflict: 'user_id' });
+            await window.db.from('city_players').upsert({
+                user_id: userId,
+                character_name: charName,
+                skin_url: skinUrl,
+                grid_x: 10,
+                grid_y: 10,
+                direction: 'down'
+            }, { onConflict: 'user_id' });
         } catch (e) {
             console.warn('[City] Register error:', e);
         }
@@ -118,7 +137,18 @@ class CityScreen {
                     this.myPlayer.grid_y = p.grid_y;
                     this.myPlayer.direction = p.direction;
                 } else {
-                    this.players[p.user_id] = p;
+                    if (!this.players[p.user_id]) {
+                        this.players[p.user_id] = { ...p, _skinImg: null };
+                        if (p.skin_url) {
+                            const img = new Image();
+                            img.src = p.skin_url;
+                            this.players[p.user_id]._skinImg = img;
+                        }
+                    } else {
+                        this.players[p.user_id].grid_x = p.grid_x;
+                        this.players[p.user_id].grid_y = p.grid_y;
+                        this.players[p.user_id].direction = p.direction;
+                    }
                 }
             } else if (payload.eventType === 'DELETE') {
                 delete this.players[payload.old.user_id];
@@ -205,12 +235,28 @@ class CityScreen {
         allPlayers.forEach(p => {
             const px = p.grid_x * ts - camX;
             const py = p.grid_y * ts - camY;
-            ctx.fillStyle = p.user_id === this.myPlayer?.user_id ? '#3498db' : '#e94560';
-            ctx.fillRect(px + 4, py + 4, ts - 8, ts - 8);
+
+            if (p._skinImg && p._skinImg.complete && p._skinImg.naturalWidth) {
+                const frameW = p._skinImg.naturalWidth / 4;
+                const frameH = p._skinImg.naturalHeight / 4;
+                const dirs = ['down', 'left', 'right', 'up'];
+                const dirIdx = dirs.indexOf(p.direction || 'down');
+                ctx.drawImage(p._skinImg,
+                    0, dirIdx * frameH, frameW, frameH,
+                    px + 2, py + 2, ts - 4, ts - 4
+                );
+            } else {
+                ctx.fillStyle = p.user_id === this.myPlayer?.user_id ? '#3498db' : '#e94560';
+                ctx.fillRect(px + 4, py + 4, ts - 8, ts - 8);
+            }
+
             ctx.fillStyle = '#fff';
             ctx.font = '10px Inter, sans-serif';
             ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 3;
             ctx.fillText(p.character_name || '?', px + ts / 2, py - 4);
+            ctx.shadowBlur = 0;
         });
     }
 }
