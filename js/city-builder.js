@@ -333,6 +333,10 @@ class CityBuilder {
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;">Z-Index
                     <input type="number" value="${s.z_index}" onchange="window.cityBuilder.selected.z_index=parseInt(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                 </label>
+                <label style="color:rgba(255,255,255,0.5);font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+                    <input type="checkbox" ${s.has_collision ? 'checked' : ''} onchange="window.cityBuilder.selected.has_collision=this.checked;window.cityBuilder.updateProps();window.cityBuilder.render();" style="cursor:pointer;">
+                    <span>Colisão (bloqueia passagem)</span>
+                </label>
                 <button onclick="window.cityBuilder.assets=window.cityBuilder.assets.filter(a=>a._id!==window.cityBuilder.selected._id);window.cityBuilder.selected=null;window.cityBuilder.updateProps();window.cityBuilder.render();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover</button>
             </div>
         `;
@@ -349,10 +353,11 @@ class CityBuilder {
                     return {
                         ...a,
                         _id: this.nextId++,
-                        pos_x: a.pos_x ?? (a.grid_x * 64),
-                        pos_y: a.pos_y ?? (a.grid_y * 64),
-                        scale: a.scale ?? a.width ?? 1.0,
-                        _img: img
+                    pos_x: a.pos_x ?? (a.grid_x * 64),
+                    pos_y: a.pos_y ?? (a.grid_y * 64),
+                    scale: a.scale ?? a.width ?? 1.0,
+                    has_collision: a.has_collision || false,
+                    _img: img
                     };
                 });
             }
@@ -378,7 +383,8 @@ class CityBuilder {
                 height: a.scale || 1,
                 scale: a.scale || 1,
                 rotation: a.rotation || 0,
-                z_index: a.z_index
+                z_index: a.z_index,
+                has_collision: a.has_collision || false
             }));
             if (toSave.length > 0) {
                 const { error } = await window.db.from('city_layout').insert(toSave);
@@ -393,6 +399,23 @@ class CityBuilder {
         }
     }
 
+    checkCollision(nx, ny) {
+        const ps = this.playerSize;
+        const px = nx - ps / 2;
+        const py = ny - ps / 2;
+        for (const a of this.assets) {
+            if (!a.has_collision) continue;
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     handlePlayerInput() {
         let dx = 0, dy = 0;
         if (this.playerKeys['w'] || this.playerKeys['W'] || this.playerKeys['ArrowUp']) { dy = -1; this.playerDir = 'up'; }
@@ -402,8 +425,16 @@ class CityBuilder {
 
         if (dx || dy) {
             const len = Math.sqrt(dx * dx + dy * dy);
-            this.playerX += (dx / len) * this.playerSpeed;
-            this.playerY += (dy / len) * this.playerSpeed;
+            const nx = this.playerX + (dx / len) * this.playerSpeed;
+            const ny = this.playerY + (dy / len) * this.playerSpeed;
+            if (!this.checkCollision(nx, ny)) {
+                this.playerX = nx;
+                this.playerY = ny;
+            } else if (!this.checkCollision(nx, this.playerY)) {
+                this.playerX = nx;
+            } else if (!this.checkCollision(this.playerX, ny)) {
+                this.playerY = ny;
+            }
         }
     }
 
@@ -482,6 +513,13 @@ class CityBuilder {
                 ctx.setLineDash([6 / zoom, 4 / zoom]);
                 ctx.strokeRect(-2 / zoom, -2 / zoom, aw + 4 / zoom, ah + 4 / zoom);
                 ctx.setLineDash([]);
+            }
+            if (a.has_collision) {
+                ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+                ctx.fillRect(a.pos_x, a.pos_y, aw, ah);
+                ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(a.pos_x, a.pos_y, aw, ah);
             }
             ctx.restore();
         });

@@ -118,6 +118,7 @@ class CityScreen {
                     pos_x: a.pos_x ?? (a.grid_x * 64),
                     pos_y: a.pos_y ?? (a.grid_y * 64),
                     scale: a.scale ?? a.width ?? 1.0,
+                    has_collision: a.has_collision || false,
                     _img: img
                 };
             });
@@ -193,6 +194,23 @@ class CityScreen {
         }).subscribe();
     }
 
+    checkCollision(nx, ny) {
+        const ps = this.playerSize;
+        const px = nx - ps / 2;
+        const py = ny - ps / 2;
+        for (const a of this.assets) {
+            if (!a.has_collision) continue;
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     handleInput() {
         let dx = 0, dy = 0;
         if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) { dy = -1; this.playerDir = 'up'; }
@@ -202,8 +220,20 @@ class CityScreen {
 
         if (dx || dy) {
             const len = Math.sqrt(dx * dx + dy * dy);
-            this.playerX += (dx / len) * this.playerSpeed;
-            this.playerY += (dy / len) * this.playerSpeed;
+            const nx = this.playerX + (dx / len) * this.playerSpeed;
+            const ny = this.playerY + (dy / len) * this.playerSpeed;
+            if (!this.checkCollision(nx, ny)) {
+                this.playerX = nx;
+                this.playerY = ny;
+            } else {
+                // Tenta mover só no eixo X
+                if (!this.checkCollision(nx, this.playerY)) {
+                    this.playerX = nx;
+                // Tenta mover só no eixo Y
+                } else if (!this.checkCollision(this.playerX, ny)) {
+                    this.playerY = ny;
+                }
+            }
 
             if (this.myPlayer) {
                 this.myPlayer.pos_x = this.playerX;
