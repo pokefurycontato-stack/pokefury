@@ -69,6 +69,9 @@ class CityScreen {
 
         window._cityResizeHandler = () => this.resizeCanvas();
         window.addEventListener('resize', window._cityResizeHandler);
+
+        window._cityBeforeUnload = () => this.unregisterPlayer();
+        window.addEventListener('beforeunload', window._cityBeforeUnload);
     }
 
     close() {
@@ -76,12 +79,16 @@ class CityScreen {
         window.cityModeActive = false;
         document.getElementById('city-screen').classList.add('hidden');
         this.unregisterPlayer();
+        this.players = {};
         if (this.channel) {
             this.channel.unsubscribe();
             this.channel = null;
         }
         if (window._cityResizeHandler) {
             window.removeEventListener('resize', window._cityResizeHandler);
+        }
+        if (window._cityBeforeUnload) {
+            window.removeEventListener('beforeunload', window._cityBeforeUnload);
         }
     }
 
@@ -239,8 +246,9 @@ class CityScreen {
 
     subscribeRealtime() {
         if (this.channel) this.channel.unsubscribe();
-        this.channel = window.db.channel('city-players-' + Date.now());
+        this.channel = window.db.channel('city-players');
         this.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'city_players' }, (payload) => {
+            console.log('[City] Realtime event:', payload.eventType, payload.new?.user_id || payload.old?.user_id);
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                 const p = payload.new;
                 if (p.user_id === this.authUserId) return;
@@ -253,14 +261,16 @@ class CityScreen {
                         this.players[p.user_id]._skinImg = img;
                     }
                 } else {
-                    this.players[p.user_id].pos_x = p.pos_x ?? p.grid_x * 64;
-                    this.players[p.user_id].pos_y = p.pos_y ?? p.grid_y * 64;
+                    this.players[p.user_id].pos_x = p.pos_x;
+                    this.players[p.user_id].pos_y = p.pos_y;
                     this.players[p.user_id].direction = p.direction;
                 }
             } else if (payload.eventType === 'DELETE') {
                 delete this.players[payload.old?.user_id];
             }
-        }).subscribe();
+        }).subscribe((status) => {
+            console.log('[City] Realtime status:', status);
+        });
     }
 
     createMask(img) {
