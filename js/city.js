@@ -81,18 +81,30 @@ class CityScreen {
             const gender = game?.playerGender === 'female' ? 'feminino' : 'masculino';
             url = `assets/perso_${gender}.webp`;
             if (game?.currentCharacterId && window.db) {
-                const { data } = await window.db.rpc('get_equipped_skin', {
+                const { data, error } = await window.db.rpc('get_equipped_skin', {
                     p_character_id: game.currentCharacterId,
                     p_skin_type: 'player_skin'
                 });
-                if (data && data.length > 0 && data[0].sprite_url) url = data[0].sprite_url;
+                if (!error && data && data.length > 0 && data[0].sprite_url) {
+                    url = data[0].sprite_url;
+                }
             }
         } catch (e) {
+            console.warn('[City] Skin load error:', e);
             url = 'assets/perso_masculino.webp';
         }
         this.playerSkinImg = new Image();
         this.playerSkinImg.src = url;
-        await new Promise(r => { this.playerSkinImg.onload = r; this.playerSkinImg.onerror = r; });
+        await new Promise(r => {
+            this.playerSkinImg.onload = r;
+            this.playerSkinImg.onerror = () => {
+                console.warn('[City] Skin image failed, using fallback');
+                this.playerSkinImg.src = 'assets/perso_masculino.webp';
+                this.playerSkinImg.onload = r;
+                this.playerSkinImg.onerror = r;
+            };
+        });
+        console.log('[City] Player skin loaded:', url);
     }
 
     resizeCanvas() {
@@ -352,7 +364,7 @@ class CityScreen {
             ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(cw, sy); ctx.stroke();
         }
 
-        const sorted = [...this.assets].sort((a, b) => (a.z_index || 0) - (b.z_index || 0));
+        const sorted = [...this.assets].sort((a, b) => (a.layer || 0) - (b.layer || 0) || (a.z_index || 0) - (b.z_index || 0));
         sorted.forEach(a => {
             const img = a._img;
             if (!img || !img.complete || !img.naturalWidth) return;
