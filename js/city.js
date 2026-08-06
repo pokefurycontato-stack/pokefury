@@ -6,17 +6,14 @@ class CityScreen {
         this.players = {};
         this.myPlayer = null;
         this.keys = {};
-        this.tileSize = 64;
         this.running = false;
         this.channel = null;
-        this.playerSkinUrl = '';
         this.playerSkinImg = null;
-        this.moveProgress = 0;
-        this.moveFrom = { x: 10, y: 10 };
-        this.moveTo = { x: 10, y: 10 };
-        this.moving = false;
-        this.direction = 'down';
-        this.moveCooldown = 0;
+        this.playerX = 400;
+        this.playerY = 400;
+        this.playerDir = 'down';
+        this.playerSpeed = 4;
+        this.playerSize = 48;
 
         this.bindEvents();
     }
@@ -27,10 +24,8 @@ class CityScreen {
                 btn.addEventListener('click', () => this.open());
             }
         });
-
         const closeBtn = document.getElementById('city-close-btn');
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
-
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
             this.keys[e.key] = true;
@@ -42,23 +37,16 @@ class CityScreen {
 
     async open() {
         const game = window.pokefury;
-        if (!game) {
-            console.error('[City] No game instance found');
-            return;
-        }
+        if (!game) return;
 
         document.getElementById('city-screen').classList.remove('hidden');
         this.canvas = document.getElementById('city-canvas');
         this.ctx = this.canvas.getContext('2d');
 
-        this.playerSkinUrl = await this.getPlayerSkinUrl(game);
-        if (this.playerSkinUrl) {
-            this.playerSkinImg = new Image();
-            this.playerSkinImg.src = this.playerSkinUrl;
-        }
-
+        await this.loadPlayerSkin(game);
         await this.loadLayout();
         await this.registerPlayer();
+        this.subscribeRealtime();
 
         this.resizeCanvas();
         this.running = true;
@@ -85,24 +73,24 @@ class CityScreen {
         }
     }
 
-    async getPlayerSkinUrl(game) {
+    async loadPlayerSkin(game) {
+        let url = null;
         try {
-            const gender = game.playerGender === 'female' ? 'feminino' : 'masculino';
-            const defaultUrl = `assets/perso_${gender}.webp`;
-
-            if (game.currentCharacterId && window.db) {
+            const gender = game?.playerGender === 'female' ? 'feminino' : 'masculino';
+            url = `assets/perso_${gender}.webp`;
+            if (game?.currentCharacterId && window.db) {
                 const { data } = await window.db.rpc('get_equipped_skin', {
                     p_character_id: game.currentCharacterId,
                     p_skin_type: 'player_skin'
                 });
-                if (data && data.length > 0 && data[0].sprite_url) {
-                    return data[0].sprite_url;
-                }
+                if (data && data.length > 0 && data[0].sprite_url) url = data[0].sprite_url;
             }
-            return defaultUrl;
         } catch (e) {
-            return `assets/perso_masculino.webp`;
+            url = 'assets/perso_masculino.webp';
         }
+        this.playerSkinImg = new Image();
+        this.playerSkinImg.src = url;
+        await new Promise(r => { this.playerSkinImg.onload = r; this.playerSkinImg.onerror = r; });
     }
 
     resizeCanvas() {
@@ -122,7 +110,14 @@ class CityScreen {
             this.assets = (data || []).map(a => {
                 const img = new Image();
                 img.src = a.asset_url;
-                return { ...a, _img: img };
+                img.onload = () => {};
+                return {
+                    ...a,
+                    pos_x: a.pos_x ?? (a.grid_x * 64),
+                    pos_y: a.pos_y ?? (a.grid_y * 64),
+                    scale: a.scale ?? a.width ?? 1.0,
+                    _img: img
+                };
             });
             console.log(`[City] Loaded ${this.assets.length} assets`);
         } catch (e) {
@@ -138,26 +133,25 @@ class CityScreen {
 
         const game = window.pokefury;
         const charName = game?.playerName || 'Treinador';
+        const skinUrl = this.playerSkinImg?.src || '';
 
         this.myPlayer = {
             user_id: userId,
             character_name: charName,
-            skin_url: this.playerSkinUrl,
-            grid_x: 10,
-            grid_y: 10,
-            direction: 'down'
+            skin_url: skinUrl,
+            pos_x: this.playerX,
+            pos_y: this.playerY,
+            direction: this.playerDir
         };
-        this.moveFrom = { x: 10, y: 10 };
-        this.moveTo = { x: 10, y: 10 };
 
         try {
             await window.db.from('city_players').upsert({
                 user_id: userId,
                 character_name: charName,
-                skin_url: this.playerSkinUrl,
-                grid_x: 10,
-                grid_y: 10,
-                direction: 'down'
+                skin_url: skinUrl,
+                pos_x: this.playerX,
+                pos_y: this.playerY,
+                direction: this.playerDir
             }, { onConflict: 'user_id' });
         } catch (e) {
             console.warn('[City] Register error:', e);
@@ -187,8 +181,8 @@ class CityScreen {
                         this.players[p.user_id]._skinImg = img;
                     }
                 } else {
-                    this.players[p.user_id].grid_x = p.grid_x;
-                    this.players[p.user_id].grid_y = p.grid_y;
+                    this.players[p.user_id].pos_x = p.pos_x ?? p.grid_x * 64;
+                    this.players[p.user_id].pos_y = p.pos_y ?? p.grid_y * 64;
                     this.players[p.user_id].direction = p.direction;
                 }
             } else if (payload.eventType === 'DELETE') {
@@ -198,60 +192,48 @@ class CityScreen {
     }
 
     handleInput() {
-        if (!this.myPlayer || this.moving || this.moveCooldown > 0) return;
+        let dx = 0, dy = 0;
+        if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) { dy = -1; this.playerDir = 'up'; }
+        else if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) { dy = 1; this.playerDir = 'down'; }
+        else if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) { dx = -1; this.playerDir = 'left'; }
+        else if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) { dx = 1; this.playerDir = 'right'; }
 
-        let dx = 0, dy = 0, dir = null;
-        if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) { dy = -1; dir = 'up'; }
-        else if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) { dy = 1; dir = 'down'; }
-        else if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) { dx = -1; dir = 'left'; }
-        else if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) { dx = 1; dir = 'right'; }
+        if (dx || dy) {
+            const len = Math.sqrt(dx * dx + dy * dy);
+            this.playerX += (dx / len) * this.playerSpeed;
+            this.playerY += (dy / len) * this.playerSpeed;
 
-        if (dir) {
-            this.direction = dir;
-            this.myPlayer.direction = dir;
-            const nx = this.myPlayer.grid_x + dx;
-            const ny = this.myPlayer.grid_y + dy;
-            if (nx < 0 || nx > 50 || ny < 0 || ny > 50) return;
-
-            this.moveFrom = { x: this.myPlayer.grid_x, y: this.myPlayer.grid_y };
-            this.moveTo = { x: nx, y: ny };
-            this.moving = true;
-            this.moveProgress = 0;
+            if (this.myPlayer) {
+                this.myPlayer.pos_x = this.playerX;
+                this.myPlayer.pos_y = this.playerY;
+                this.myPlayer.direction = this.playerDir;
+            }
         }
     }
 
     update() {
-        if (this.moving) {
-            this.moveProgress += 0.14;
-            if (this.moveProgress >= 1) {
-                this.moveProgress = 1;
-                this.myPlayer.grid_x = this.moveTo.x;
-                this.myPlayer.grid_y = this.moveTo.y;
-                this.moving = false;
-                this.moveCooldown = 3;
-
-                document.getElementById('city-pos').textContent = `X: ${Math.round(this.myPlayer.grid_x)} Y: ${Math.round(this.myPlayer.grid_y)}`;
-                this.syncPosition();
-            } else {
-                this.myPlayer.grid_x = this.moveFrom.x + (this.moveTo.x - this.moveFrom.x) * this.moveProgress;
-                this.myPlayer.grid_y = this.moveFrom.y + (this.moveTo.y - this.moveFrom.y) * this.moveProgress;
-            }
-        }
-
-        if (this.moveCooldown > 0) this.moveCooldown--;
         this.handleInput();
+
+        if (!this._lastSync) this._lastSync = 0;
+        this._lastSync++;
+        if (this._lastSync % 15 === 0) {
+            this.syncPosition();
+        }
     }
 
     async syncPosition() {
         if (!this.myPlayer) return;
         try {
+            const user = window.db.auth?.getUser?.();
+            const userId = user?.data?.user?.id;
+            if (!userId) return;
             await window.db.from('city_players').upsert({
-                user_id: this.myPlayer.user_id,
+                user_id: userId,
                 character_name: this.myPlayer.character_name,
                 skin_url: this.myPlayer.skin_url,
-                grid_x: this.myPlayer.grid_x,
-                grid_y: this.myPlayer.grid_y,
-                direction: this.myPlayer.direction
+                pos_x: this.playerX,
+                pos_y: this.playerY,
+                direction: this.playerDir
             }, { onConflict: 'user_id' });
         } catch (e) {}
     }
@@ -266,95 +248,119 @@ class CityScreen {
     render() {
         if (!this.ctx || !this.canvas) return;
         const ctx = this.ctx;
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-        if (w === 0 || h === 0) return;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        if (cw === 0 || ch === 0) return;
 
-        ctx.clearRect(0, 0, w, h);
+        ctx.clearRect(0, 0, cw, ch);
 
-        const ts = this.tileSize;
-        const px = this.myPlayer ? this.myPlayer.grid_x : 10;
-        const py = this.myPlayer ? this.myPlayer.grid_y : 10;
-        const camX = px * ts - w / 2 + ts / 2;
-        const camY = py * ts - h / 2 + ts / 2;
+        const camX = this.playerX - cw / 2;
+        const camY = this.playerY - ch / 2;
 
         ctx.fillStyle = '#2d5a27';
-        ctx.fillRect(0, 0, w, h);
+        ctx.fillRect(0, 0, cw, ch);
 
-        const startGx = Math.max(0, Math.floor(camX / ts) - 1);
-        const startGy = Math.max(0, Math.floor(camY / ts) - 1);
-        const endGx = Math.min(50, Math.ceil((camX + w) / ts) + 1);
-        const endGy = Math.min(50, Math.ceil((camY + h) / ts) + 1);
+        ctx.save();
 
-        for (let gx = startGx; gx <= endGx; gx++) {
-            for (let gy = startGy; gy <= endGy; gy++) {
-                const sx = gx * ts - camX;
-                const sy = gy * ts - camY;
-                ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-                ctx.strokeRect(sx, sy, ts, ts);
-            }
+        const gridSize = 64;
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        const gxStart = Math.floor(camX / gridSize) * gridSize;
+        const gyStart = Math.floor(camY / gridSize) * gridSize;
+        for (let gx = gxStart; gx < camX + cw + gridSize; gx += gridSize) {
+            const sx = gx - camX;
+            ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, ch); ctx.stroke();
+        }
+        for (let gy = gyStart; gy < camY + ch + gridSize; gy += gridSize) {
+            const sy = gy - camY;
+            ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(cw, sy); ctx.stroke();
         }
 
-        this.assets.forEach(a => {
-            const ax = a.grid_x * ts - camX;
-            const ay = a.grid_y * ts - camY;
-            const aw = (a.width || 1) * ts;
-            const ah = (a.height || 1) * ts;
-            if (ax + aw < 0 || ax > w || ay + ah < 0 || ay > h) return;
-            if (a._img && a._img.complete && a._img.naturalWidth) {
-                ctx.save();
-                if (a.rotation) {
-                    ctx.translate(ax + aw / 2, ay + ah / 2);
-                    ctx.rotate((a.rotation || 0) * Math.PI / 180);
-                    ctx.drawImage(a._img, -aw / 2, -ah / 2, aw, ah);
-                } else {
-                    ctx.drawImage(a._img, ax, ay, aw, ah);
-                }
-                ctx.restore();
+        const sorted = [...this.assets].sort((a, b) => (a.z_index || 0) - (b.z_index || 0));
+        sorted.forEach(a => {
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) return;
+
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            const sx = a.pos_x - camX;
+            const sy = a.pos_y - camY;
+
+            if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) return;
+
+            ctx.save();
+            if (a.rotation) {
+                ctx.translate(sx + aw / 2, sy + ah / 2);
+                ctx.rotate((a.rotation || 0) * Math.PI / 180);
+                ctx.drawImage(img, -aw / 2, -ah / 2, aw, ah);
+            } else {
+                ctx.drawImage(img, sx, sy, aw, ah);
             }
+            ctx.restore();
         });
 
         const allPlayers = [];
-        if (this.myPlayer) allPlayers.push({ ...this.myPlayer, _skinImg: this.playerSkinImg, isMe: true });
-        Object.values(this.players).forEach(p => allPlayers.push({ ...p, isMe: false }));
+        if (this.myPlayer) allPlayers.push({
+            pos_x: this.playerX, pos_y: this.playerY, direction: this.playerDir,
+            character_name: this.myPlayer.character_name,
+            _skinImg: this.playerSkinImg, isMe: true
+        });
+        Object.values(this.players).forEach(p => {
+            allPlayers.push({
+                ...p,
+                _skinImg: p._skinImg || null,
+                isMe: false
+            });
+        });
 
-        document.getElementById('city-player-count').textContent = `${allPlayers.length} jogador${allPlayers.length !== 1 ? 'es' : ''} online`;
+        const count = allPlayers.length;
+        const countEl = document.getElementById('city-player-count');
+        if (countEl) countEl.textContent = `${count} jogador${count !== 1 ? 'es' : ''} online`;
 
         allPlayers.forEach(p => {
-            const ppx = p.grid_x * ts - camX;
-            const ppy = p.grid_y * ts - camY;
+            const ps = this.playerSize;
+            const sx = p.pos_x - camX - ps / 2;
+            const sy = p.pos_y - camY - ps / 2;
 
-            if (ppx + ts < -50 || ppx > w + 50 || ppy + ts < -50 || ppy > h + 50) return;
+            if (sx + ps < -50 || sx > cw + 50 || sy + ps < -50 || sy > ch + 50) return;
 
-            if (p._skinImg && p._skinImg.complete && p._skinImg.naturalWidth) {
-                const imgW = p._skinImg.naturalWidth;
-                const imgH = p._skinImg.naturalHeight;
-                const isGrid = Math.abs(imgW - imgH) < 10 && imgW > 100;
+            const skinImg = p._skinImg;
+            if (skinImg && skinImg.complete && skinImg.naturalWidth) {
+                const imgW = skinImg.naturalWidth;
+                const imgH = skinImg.naturalHeight;
+                const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
+
                 if (isGrid) {
-                    const frameW = imgW / 4;
-                    const frameH = imgH / 4;
+                    const cols = 4, rows = 4;
+                    const frameW = imgW / cols;
+                    const frameH = imgH / rows;
                     const dirs = ['down', 'left', 'right', 'up'];
-                    const dirIdx = dirs.indexOf(p.direction || 'down');
-                    ctx.drawImage(p._skinImg,
-                        0, dirIdx * frameH, frameW, frameH,
-                        ppx, ppy, ts, ts
+                    const row = dirs.indexOf(p.direction || 'down');
+                    ctx.drawImage(skinImg,
+                        0, row * frameH, frameW, frameH,
+                        sx, sy, ps, ps
                     );
                 } else {
-                    ctx.drawImage(p._skinImg, ppx, ppy, ts, ts);
+                    ctx.drawImage(skinImg, sx, sy, ps, ps);
                 }
             } else {
                 ctx.fillStyle = p.isMe ? '#3498db' : '#e94560';
-                ctx.fillRect(ppx + 8, ppy + 8, ts - 16, ts - 16);
+                ctx.fillRect(sx + 4, sy + 4, ps - 8, ps - 8);
             }
 
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.font = 'bold 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.shadowColor = 'rgba(0,0,0,0.9)';
             ctx.shadowBlur = 4;
-            ctx.fillText(p.character_name || '?', ppx + ts / 2, ppy - 6);
+            ctx.fillText(p.character_name || '?', p.pos_x - camX, sy - 8);
             ctx.shadowBlur = 0;
         });
+
+        ctx.restore();
+
+        const posEl = document.getElementById('city-pos');
+        if (posEl) posEl.textContent = `X: ${Math.round(this.playerX)} Y: ${Math.round(this.playerY)}`;
     }
 }
 

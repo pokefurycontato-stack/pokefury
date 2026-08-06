@@ -3,15 +3,22 @@ class CityBuilder {
         this.canvas = null;
         this.ctx = null;
         this.assets = [];
-        this.gridAssets = [];
         this.selected = null;
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.tileSize = 64;
         this.zoom = 1;
         this.pan = { x: 0, y: 0 };
         this.availableAssets = [];
         this.nextId = 1;
+        this.running = false;
+
+        this.playerX = 400;
+        this.playerY = 400;
+        this.playerDir = 'down';
+        this.playerSkinImg = null;
+        this.playerKeys = {};
+        this.playerSpeed = 4;
+        this.playerSize = 48;
 
         this.bindEvents();
     }
@@ -19,52 +26,101 @@ class CityBuilder {
     bindEvents() {
         const btn = document.getElementById('admin-btn-city-builder');
         if (btn) btn.addEventListener('click', () => this.open());
-
         const closeBtn = document.getElementById('cb-close-btn');
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
-
         const saveBtn = document.getElementById('cb-save-btn');
         if (saveBtn) saveBtn.addEventListener('click', () => this.save());
+
+        document.addEventListener('keydown', (e) => {
+            if (!this.running) return;
+            const gameKeys = ['w','W','a','A','s','S','d','D','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+            if (gameKeys.includes(e.key)) e.preventDefault();
+            this.playerKeys[e.key] = true;
+            if ((e.key === 'Delete' || e.key === 'Backspace') && this.selected) {
+                e.preventDefault();
+                this.assets = this.assets.filter(a => a._id !== this.selected._id);
+                this.selected = null;
+                this.updateProps();
+                this.render();
+            }
+            if ((e.key === 'r' || e.key === 'R') && this.selected) {
+                this.selected.rotation = ((this.selected.rotation || 0) + 90) % 360;
+                this.updateProps();
+                this.render();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            this.playerKeys[e.key] = false;
+        });
     }
 
     async open() {
+        const game = window.pokefury;
         document.getElementById('city-builder-screen').classList.remove('hidden');
         this.canvas = document.getElementById('cb-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
 
-        this.setupInput();
+        await this.loadPlayerSkin(game);
         await this.loadAssets();
         await this.loadSavedLayout();
-        this.render();
+
+        this.resizeCanvas();
+        this.running = true;
+        this.loop();
+
+        window._cbResizeHandler = () => this.resizeCanvas();
+        window.addEventListener('resize', window._cbResizeHandler);
     }
 
     close() {
+        this.running = false;
         document.getElementById('city-builder-screen').classList.add('hidden');
+        if (window._cbResizeHandler) {
+            window.removeEventListener('resize', window._cbResizeHandler);
+        }
+    }
+
+    async loadPlayerSkin(game) {
+        let url = null;
+        try {
+            const gender = game?.playerGender === 'female' ? 'feminino' : 'masculino';
+            url = `assets/perso_${gender}.webp`;
+            if (game?.currentCharacterId && window.db) {
+                const { data } = await window.db.rpc('get_equipped_skin', {
+                    p_character_id: game.currentCharacterId,
+                    p_skin_type: 'player_skin'
+                });
+                if (data && data.length > 0 && data[0].sprite_url) url = data[0].sprite_url;
+            }
+        } catch (e) {
+            url = 'assets/perso_masculino.webp';
+        }
+        this.playerSkinImg = new Image();
+        this.playerSkinImg.src = url;
+        await new Promise(r => { this.playerSkinImg.onload = r; this.playerSkinImg.onerror = r; });
     }
 
     resizeCanvas() {
         const wrap = document.getElementById('cb-canvas-wrap');
         if (!wrap || !this.canvas) return;
-        this.canvas.width = wrap.clientWidth;
-        this.canvas.height = wrap.clientHeight;
-        this.render();
+        const rect = wrap.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            this.canvas.width = rect.width;
+            this.canvas.height = rect.height;
+        }
     }
 
     async loadAssets() {
-        const assetFiles = [
+        const files = [
             'textgrama.png', 'pedraterreno.png', 'pedraretang.png', 'pedrapeq.png',
             'lago3.png', 'lago2.png', 'lago1.png', 'grama.png',
             'escada.png', 'barro.png', 'barranco.png', 'arvore.png'
         ];
-
-        this.availableAssets = assetFiles.map(f => ({
+        this.availableAssets = files.map(f => ({
             id: f.replace('.png', ''),
             name: f.replace('.png', ''),
             url: `assets/assetmap/${f}`
         }));
-
         this.renderAssetList();
     }
 
@@ -78,70 +134,81 @@ class CityBuilder {
         ).join('');
 
         list.querySelectorAll('.cb-asset-item').forEach(el => {
-            el.addEventListener('mousedown', (e) => this.startDragNew(e, el.dataset.id));
+            el.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                this.addAssetAt(el.dataset.id, this.playerX, this.playerY + 60);
+            });
+            el.addEventListener('mousedown', (e) => {
+                if (e.detail >= 2) return;
+                this.startDragNew(e, el.dataset.id);
+            });
         });
     }
 
-    startDragNew(e, assetId) {
+    addAssetAt(assetId, worldX, worldY) {
         const asset = this.availableAssets.find(a => a.id === assetId);
         if (!asset) return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / this.zoom - this.pan.x;
-        const y = (e.clientY - rect.top) / this.zoom - this.pan.y;
-
-        const newItem = {
+        const img = new Image();
+        img.src = asset.url;
+        const item = {
             _id: this.nextId++,
             asset_id: asset.id,
             asset_url: asset.url,
-            grid_x: x / this.tileSize,
-            grid_y: y / this.tileSize,
-            width: 1,
-            height: 1,
+            pos_x: worldX,
+            pos_y: worldY,
+            scale: 1.0,
             rotation: 0,
-            z_index: this.gridAssets.length,
-            _img: null
+            z_index: this.assets.length,
+            _img: img
         };
-
-        this.loadImage(newItem);
-        this.gridAssets.push(newItem);
-        this.selected = newItem;
-        this.dragging = true;
-        this.dragOffset = { x: 0, y: 0 };
-
-        this.setupCanvasDrag();
+        img.onload = () => this.render();
+        this.assets.push(item);
+        this.selected = item;
         this.updateProps();
         this.render();
     }
 
+    startDragNew(e, assetId) {
+        const rect = this.canvas.getBoundingClientRect();
+        const worldX = (e.clientX - rect.left - this.pan.x) / this.zoom;
+        const worldY = (e.clientY - rect.top - this.pan.y) / this.zoom;
+        this.addAssetAt(assetId, worldX, worldY);
+    }
+
+    getAssetHit(mx, my) {
+        for (let i = this.assets.length - 1; i >= 0; i--) {
+            const a = this.assets[i];
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            if (mx >= a.pos_x && mx <= a.pos_x + aw && my >= a.pos_y && my <= a.pos_y + ah) {
+                return a;
+            }
+        }
+        return null;
+    }
+
     setupInput() {
-        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        this.canvas.addEventListener('mouseup', () => this.onMouseUp());
-        this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
-        document.addEventListener('keydown', (e) => this.onKeyDown(e));
+        this.canvas.onmousedown = (e) => this.onMouseDown(e);
+        this.canvas.onmousemove = (e) => this.onMouseMove(e);
+        this.canvas.onmouseup = () => { this.dragging = false; };
+        this.canvas.onwheel = (e) => this.onWheel(e);
     }
 
     onMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const mx = (e.clientX - rect.left) / this.zoom - this.pan.x;
-        const my = (e.clientY - rect.top) / this.zoom - this.pan.y;
+        const mx = (e.clientX - rect.left - this.pan.x) / this.zoom;
+        const my = (e.clientY - rect.top - this.pan.y) / this.zoom;
 
-        this.selected = null;
-        for (let i = this.gridAssets.length - 1; i >= 0; i--) {
-            const a = this.gridAssets[i];
-            const ax = a.grid_x * this.tileSize;
-            const ay = a.grid_y * this.tileSize;
-            const aw = a.width * this.tileSize;
-            const ah = a.height * this.tileSize;
-            if (mx >= ax && mx <= ax + aw && my >= ay && my <= ay + ah) {
-                this.selected = a;
-                this.dragging = true;
-                this.dragOffset = { x: mx - ax, y: my - ay };
-                break;
-            }
+        const hit = this.getAssetHit(mx, my);
+        if (hit) {
+            this.selected = hit;
+            this.dragging = true;
+            this.dragOffset = { x: mx - hit.pos_x, y: my - hit.pos_y };
+        } else {
+            this.selected = null;
         }
-
         this.updateProps();
         this.render();
     }
@@ -149,85 +216,37 @@ class CityBuilder {
     onMouseMove(e) {
         if (!this.dragging || !this.selected) return;
         const rect = this.canvas.getBoundingClientRect();
-        const mx = (e.clientX - rect.left) / this.zoom - this.pan.x;
-        const my = (e.clientY - rect.top) / this.zoom - this.pan.y;
-
-        let newX = (mx - this.dragOffset.x) / this.tileSize;
-        let newY = (my - this.dragOffset.y) / this.tileSize;
-
+        const mx = (e.clientX - rect.left - this.pan.x) / this.zoom;
+        const my = (e.clientY - rect.top - this.pan.y) / this.zoom;
+        let newX = mx - this.dragOffset.x;
+        let newY = my - this.dragOffset.y;
         if (e.shiftKey) {
-            newX = Math.round(newX * 2) / 2;
-            newY = Math.round(newY * 2) / 2;
-        } else {
-            newX = Math.round(newX * 4) / 4;
-            newY = Math.round(newY * 4) / 4;
+            newX = Math.round(newX / 32) * 32;
+            newY = Math.round(newY / 32) * 32;
         }
-
-        this.selected.grid_x = newX;
-        this.selected.grid_y = newY;
+        this.selected.pos_x = newX;
+        this.selected.pos_y = newY;
         this.updateProps();
         this.render();
-    }
-
-    onMouseUp() {
-        this.dragging = false;
     }
 
     onWheel(e) {
         e.preventDefault();
-        if (e.ctrlKey) {
-            this.selected && (this.selected.width = Math.max(0.25, Math.min(5, this.selected.width + (e.deltaY > 0 ? -0.25 : 0.25))));
-            this.selected && (this.selected.height = this.selected.width);
+        const rect = this.canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        if (e.ctrlKey && this.selected) {
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            this.selected.scale = Math.max(0.1, Math.min(5, (this.selected.scale || 1) + delta));
         } else {
-            this.zoom = Math.max(0.25, Math.min(3, this.zoom + (e.deltaY > 0 ? -0.1 : 0.1)));
+            const oldZoom = this.zoom;
+            this.zoom = Math.max(0.15, Math.min(4, this.zoom + (e.deltaY > 0 ? -0.1 : 0.1)));
+            this.pan.x = mx - (mx - this.pan.x) * (this.zoom / oldZoom);
+            this.pan.y = my - (my - this.pan.y) * (this.zoom / oldZoom);
         }
         this.updateProps();
         this.render();
-    }
-
-    onKeyDown(e) {
-        if (!document.getElementById('city-builder-screen') || document.getElementById('city-builder-screen').classList.contains('hidden')) return;
-
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (this.selected) {
-                this.gridAssets = this.gridAssets.filter(a => a._id !== this.selected._id);
-                this.selected = null;
-                this.updateProps();
-                this.render();
-            }
-        }
-
-        if ((e.key === 'r' || e.key === 'R') && this.selected) {
-            this.selected.rotation = (this.selected.rotation + 90) % 360;
-            this.updateProps();
-            this.render();
-        }
-
-        if (e.key === 'ArrowUp' && this.selected) { this.selected.grid_y -= 0.25; this.updateProps(); this.render(); }
-        if (e.key === 'ArrowDown' && this.selected) { this.selected.grid_y += 0.25; this.updateProps(); this.render(); }
-        if (e.key === 'ArrowLeft' && this.selected) { this.selected.grid_x -= 0.25; this.updateProps(); this.render(); }
-        if (e.key === 'ArrowRight' && this.selected) { this.selected.grid_x += 0.25; this.updateProps(); this.render(); }
-    }
-
-    setupCanvasDrag() {}
-
-    loadImage(item) {
-        const img = new Image();
-        img.src = item.asset_url;
-        img.onload = () => { item._img = img; this.render(); };
-        item._img = img;
-    }
-
-    async loadSavedLayout() {
-        try {
-            const { data } = await window.db.from('city_layout').select('*').order('z_index');
-            if (data) {
-                this.gridAssets = data.map((a, i) => ({ ...a, _id: this.nextId++, _img: null }));
-                this.gridAssets.forEach(a => this.loadImage(a));
-            }
-        } catch (e) {
-            console.warn('[CityBuilder] No saved layout');
-        }
     }
 
     updateProps() {
@@ -237,17 +256,20 @@ class CityBuilder {
             return;
         }
         const s = this.selected;
+        const imgW = s._img?.naturalWidth || '?';
+        const imgH = s._img?.naturalHeight || '?';
         el.innerHTML = `
             <div style="display:flex;flex-direction:column;gap:8px;">
-                <div style="color:#c9d1d9;font-weight:700;">${s.asset_id}</div>
+                <div style="color:#f59e0b;font-weight:700;font-size:13px;">${s.asset_id}</div>
+                <div style="color:rgba(255,255,255,0.3);font-size:10px;">Original: ${imgW}x${imgH}px</div>
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;">Pos X
-                    <input type="number" step="0.25" value="${s.grid_x.toFixed(2)}" onchange="window.cityBuilder.selected.grid_x=parseFloat(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                    <input type="number" step="1" value="${Math.round(s.pos_x)}" onchange="window.cityBuilder.selected.pos_x=parseFloat(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                 </label>
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;">Pos Y
-                    <input type="number" step="0.25" value="${s.grid_y.toFixed(2)}" onchange="window.cityBuilder.selected.grid_y=parseFloat(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                    <input type="number" step="1" value="${Math.round(s.pos_y)}" onchange="window.cityBuilder.selected.pos_y=parseFloat(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                 </label>
-                <label style="color:rgba(255,255,255,0.5);font-size:11px;">Tamanho
-                    <input type="number" step="0.25" min="0.25" max="10" value="${s.width}" onchange="window.cityBuilder.selected.width=parseFloat(this.value);window.cityBuilder.selected.height=parseFloat(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                <label style="color:rgba(255,255,255,0.5);font-size:11px;">Escala (${(s.scale||1).toFixed(2)}x)
+                    <input type="range" min="0.1" max="5" step="0.05" value="${s.scale||1}" oninput="window.cityBuilder.selected.scale=parseFloat(this.value);window.cityBuilder.updateProps();window.cityBuilder.render();" style="width:100%;">
                 </label>
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;">Rotação
                     <select onchange="window.cityBuilder.selected.rotation=parseInt(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;">
@@ -260,107 +282,195 @@ class CityBuilder {
                 <label style="color:rgba(255,255,255,0.5);font-size:11px;">Z-Index
                     <input type="number" value="${s.z_index}" onchange="window.cityBuilder.selected.z_index=parseInt(this.value);window.cityBuilder.render();" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                 </label>
-                <button onclick="window.cityBuilder.gridAssets=window.cityBuilder.gridAssets.filter(a=>a._id!==window.cityBuilder.selected._id);window.cityBuilder.selected=null;window.cityBuilder.updateProps();window.cityBuilder.render();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">🗑️ Remover</button>
+                <button onclick="window.cityBuilder.assets=window.cityBuilder.assets.filter(a=>a._id!==window.cityBuilder.selected._id);window.cityBuilder.selected=null;window.cityBuilder.updateProps();window.cityBuilder.render();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover</button>
             </div>
         `;
+    }
+
+    async loadSavedLayout() {
+        try {
+            const { data } = await window.db.from('city_layout').select('*').order('z_index');
+            if (data) {
+                this.assets = data.map(a => {
+                    const img = new Image();
+                    img.src = a.asset_url;
+                    img.onload = () => this.render();
+                    return {
+                        ...a,
+                        _id: this.nextId++,
+                        pos_x: a.pos_x ?? (a.grid_x * 64),
+                        pos_y: a.pos_y ?? (a.grid_y * 64),
+                        scale: a.scale ?? a.width ?? 1.0,
+                        _img: img
+                    };
+                });
+            }
+        } catch (e) {
+            console.warn('[CityBuilder] No saved layout');
+        }
     }
 
     async save() {
         const status = document.getElementById('cb-save-btn');
         status.textContent = 'Salvando...';
         status.disabled = true;
-
         try {
             await window.db.from('city_layout').delete().neq('id', 0);
-
-            const toSave = this.gridAssets.map(a => ({
+            const toSave = this.assets.map(a => ({
                 asset_id: a.asset_id,
                 asset_url: a.asset_url,
-                grid_x: a.grid_x,
-                grid_y: a.grid_y,
-                width: a.width,
-                height: a.height,
-                rotation: a.rotation,
+                pos_x: a.pos_x,
+                pos_y: a.pos_y,
+                grid_x: a.pos_x / 64,
+                grid_y: a.pos_y / 64,
+                width: a.scale || 1,
+                height: a.scale || 1,
+                scale: a.scale || 1,
+                rotation: a.rotation || 0,
                 z_index: a.z_index
             }));
-
             if (toSave.length > 0) {
                 const { error } = await window.db.from('city_layout').insert(toSave);
                 if (error) throw error;
             }
-
-            status.textContent = '✅ Salvo!';
-            setTimeout(() => { status.textContent = '💾 Salvar'; status.disabled = false; }, 2000);
+            status.textContent = 'Salvo!';
+            setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         } catch (e) {
             console.error('[CityBuilder] Save error:', e);
-            status.textContent = '❌ Erro';
-            setTimeout(() => { status.textContent = '💾 Salvar'; status.disabled = false; }, 2000);
+            status.textContent = 'Erro';
+            setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         }
     }
 
-    render() {
-        if (!this.ctx) return;
-        const ctx = this.ctx;
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-        ctx.clearRect(0, 0, w, h);
+    handlePlayerInput() {
+        let dx = 0, dy = 0;
+        if (this.playerKeys['w'] || this.playerKeys['W'] || this.playerKeys['ArrowUp']) { dy = -1; this.playerDir = 'up'; }
+        else if (this.playerKeys['s'] || this.playerKeys['S'] || this.playerKeys['ArrowDown']) { dy = 1; this.playerDir = 'down'; }
+        else if (this.playerKeys['a'] || this.playerKeys['A'] || this.playerKeys['ArrowLeft']) { dx = -1; this.playerDir = 'left'; }
+        else if (this.playerKeys['d'] || this.playerKeys['D'] || this.playerKeys['ArrowRight']) { dx = 1; this.playerDir = 'right'; }
 
-        ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(0, 0, w, h);
+        if (dx || dy) {
+            const len = Math.sqrt(dx * dx + dy * dy);
+            this.playerX += (dx / len) * this.playerSpeed;
+            this.playerY += (dy / len) * this.playerSpeed;
+        }
+    }
+
+    loop() {
+        if (!this.running) return;
+        if (!this._inputSetup) {
+            this.setupInput();
+            this._inputSetup = true;
+        }
+        this.handlePlayerInput();
+        this.render();
+        requestAnimationFrame(() => this.loop());
+    }
+
+    render() {
+        if (!this.ctx || !this.canvas) return;
+        const ctx = this.ctx;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        if (cw === 0 || ch === 0) return;
+
+        ctx.clearRect(0, 0, cw, ch);
+
+        const camX = this.playerX - cw / 2;
+        const camY = this.playerY - ch / 2;
 
         ctx.save();
+        ctx.translate(-camX * this.zoom + 0, -camY * this.zoom + 0);
         ctx.scale(this.zoom, this.zoom);
-        ctx.translate(this.pan.x, this.pan.y);
 
-        const ts = this.tileSize;
-        const gridW = 50;
-        const gridH = 50;
+        ctx.fillStyle = '#2d5a27';
+        ctx.fillRect(camX - 100, camY - 100, cw / this.zoom + 200, ch / this.zoom + 200);
 
-        for (let gx = 0; gx <= gridW; gx++) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-            ctx.beginPath();
-            ctx.moveTo(gx * ts, 0);
-            ctx.lineTo(gx * ts, gridH * ts);
-            ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1 / this.zoom;
+        const gridSize = 64;
+        const gxStart = Math.floor(camX / gridSize) * gridSize;
+        const gyStart = Math.floor(camY / gridSize) * gridSize;
+        const gxEnd = camX + cw / this.zoom + gridSize;
+        const gyEnd = camY + ch / this.zoom + gridSize;
+        for (let gx = gxStart; gx <= gxEnd; gx += gridSize) {
+            ctx.beginPath(); ctx.moveTo(gx, camY - 100); ctx.lineTo(gx, gyEnd + 100); ctx.stroke();
         }
-        for (let gy = 0; gy <= gridH; gy++) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-            ctx.beginPath();
-            ctx.moveTo(0, gy * ts);
-            ctx.lineTo(gridW * ts, gy * ts);
-            ctx.stroke();
+        for (let gy = gyStart; gy <= gyEnd; gy += gridSize) {
+            ctx.beginPath(); ctx.moveTo(camX - 100, gy); ctx.lineTo(gxEnd + 100, gy); ctx.stroke();
         }
 
-        const sorted = [...this.gridAssets].sort((a, b) => a.z_index - b.z_index);
+        const sorted = [...this.assets].sort((a, b) => (a.z_index || 0) - (b.z_index || 0));
         sorted.forEach(a => {
-            const ax = a.grid_x * ts;
-            const ay = a.grid_y * ts;
-            const aw = a.width * ts;
-            const ah = a.height * ts;
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) return;
+
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+
+            if (a.pos_x + aw < camX - 50 || a.pos_x > camX + cw / this.zoom + 50) return;
+            if (a.pos_y + ah < camY - 50 || a.pos_y > camY + ch / this.zoom + 50) return;
 
             ctx.save();
-            ctx.translate(ax + aw / 2, ay + ah / 2);
-            ctx.rotate((a.rotation || 0) * Math.PI / 180);
-
-            if (a._img && a._img.complete && a._img.naturalWidth) {
-                ctx.drawImage(a._img, -aw / 2, -ah / 2, aw, ah);
+            if (a.rotation) {
+                ctx.translate(a.pos_x + aw / 2, a.pos_y + ah / 2);
+                ctx.rotate((a.rotation || 0) * Math.PI / 180);
+                ctx.drawImage(img, -aw / 2, -ah / 2, aw, ah);
             } else {
-                ctx.fillStyle = 'rgba(255,255,255,0.1)';
-                ctx.fillRect(-aw / 2, -ah / 2, aw, ah);
+                ctx.drawImage(img, a.pos_x, a.pos_y, aw, ah);
             }
 
             if (this.selected && this.selected._id === a._id) {
                 ctx.strokeStyle = '#f59e0b';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([4, 4]);
-                ctx.strokeRect(-aw / 2 - 2, -ah / 2 - 2, aw + 4, ah + 4);
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
+                ctx.strokeRect(-2 / this.zoom, -2 / this.zoom, aw + 4 / this.zoom, ah + 4 / this.zoom);
                 ctx.setLineDash([]);
             }
-
             ctx.restore();
         });
 
+        this.renderPlayer(ctx);
+
         ctx.restore();
+    }
+
+    renderPlayer(ctx) {
+        const ps = this.playerSize;
+        const px = this.playerX - ps / 2;
+        const py = this.playerY - ps / 2;
+
+        if (this.playerSkinImg && this.playerSkinImg.complete && this.playerSkinImg.naturalWidth) {
+            const imgW = this.playerSkinImg.naturalWidth;
+            const imgH = this.playerSkinImg.naturalHeight;
+            const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
+
+            if (isGrid) {
+                const cols = 4, rows = 4;
+                const frameW = imgW / cols;
+                const frameH = imgH / rows;
+                const dirs = ['down', 'left', 'right', 'up'];
+                const row = dirs.indexOf(this.playerDir);
+                ctx.drawImage(this.playerSkinImg,
+                    0, row * frameH, frameW, frameH,
+                    px, py, ps, ps
+                );
+            } else {
+                ctx.drawImage(this.playerSkinImg, px, py, ps, ps);
+            }
+        } else {
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(px, py, ps, ps);
+        }
+
+        const game = window.pokefury;
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0,0,0,0.9)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(game?.playerName || 'Admin', this.playerX, py - 8);
+        ctx.shadowBlur = 0;
     }
 }
 
