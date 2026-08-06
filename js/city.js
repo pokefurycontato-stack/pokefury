@@ -17,7 +17,7 @@ class CityScreen {
         this.playerDir = 'down';
         this.playerMoving = false;
         this.moveProgress = 0;
-        this.playerSpeed = 30;
+        this.playerSpeed = 60;
         this.playerSize = 48;
         this.cameraX = 400;
         this.cameraY = 400;
