@@ -294,7 +294,7 @@ class CityScreen {
     }
 
     checkCollision(nx, ny) {
-        const ps = this.playerSize;
+        const ps = 32;
         const px = nx - ps / 2;
         const py = ny - ps / 2;
         for (const a of this.assets) {
