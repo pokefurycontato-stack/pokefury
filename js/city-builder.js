@@ -1167,27 +1167,27 @@ class CityBuilder {
 
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
 
-            await window.db.from('city_layout').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await window.db.from('city_layout').delete().not('id', 'is', null);
             if (toSave.length > 0) {
                 const { error } = await window.db.from('city_layout').insert(toSave);
                 if (error) throw error;
             }
-            await window.db.from('city_collision_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await window.db.from('city_collision_zones').delete().not('id', 'is', null);
             if (zonesToSave.length > 0) {
                 const { error: ze } = await window.db.from('city_collision_zones').insert(zonesToSave);
                 if (ze) throw ze;
             }
-            await window.db.from('city_teleports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await window.db.from('city_teleports').delete().not('id', 'is', null);
             if (tpToSave.length > 0) {
                 const { error: te } = await window.db.from('city_teleports').insert(tpToSave);
                 if (te) throw te;
             }
-            await window.db.from('city_npcs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await window.db.from('city_npcs').delete().not('id', 'is', null);
             if (npcToSave.length > 0) {
                 const { error: ne } = await window.db.from('city_npcs').insert(npcToSave);
                 if (ne) throw ne;
             }
-            await window.db.from('city_battle_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await window.db.from('city_battle_zones').delete().not('id', 'is', null);
             if (bzToSave.length > 0) {
                 const { error: bze } = await window.db.from('city_battle_zones').insert(bzToSave);
                 if (bze) throw bze;
