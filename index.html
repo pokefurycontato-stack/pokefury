@@ -1248,15 +1248,25 @@
                 <button id="city-teleport-close" style="padding:6px 20px;border:none;border-radius:6px;background:#30363d;color:#aaa;font-size:12px;cursor:pointer;">Cancelar</button>
             </div>
         </div>
+        <!-- NPC Dialogue -->
+        <div id="city-npc-dialogue-overlay" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:860;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);">
+            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #f59e0b;border-radius:12px;padding:24px 32px;min-width:380px;max-width:460px;box-shadow:0 8px 32px rgba(0,0,0,0.6);text-align:center;">
+                <div style="font-size:32px;margin-bottom:8px;">✈️</div>
+                <p id="city-npc-dialogue-msg" style="color:#fff;font-size:14px;line-height:1.6;margin:0 0 20px 0;"></p>
+                <div style="display:flex;gap:12px;justify-content:center;">
+                    <button id="city-npc-dialogue-sim" style="padding:8px 28px;border:none;border-radius:8px;background:#22c55e;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.2s;">Sim</button>
+                    <button id="city-npc-dialogue-nao" style="padding:8px 28px;border:none;border-radius:8px;background:#e94560;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.2s;">Não</button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <!-- City Builder Admin -->
     <div id="city-builder-screen" class="hidden" style="position:fixed;inset:0;z-index:960;background:#0a0e1a;display:flex;flex-direction:column;">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#f59e0b,#ef4444);border-bottom:1px solid #30363d;">
             <h2 style="margin:0;color:#fff;font-size:16px;">🏙️ Criar Cidade - Editor</h2>
             <div style="display:flex;gap:8px;">
                 <button id="cb-collision-zone-btn" title="Desenhar zonas de colisão no mapa" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🔴 Zona Colisão</button>
                 <button id="cb-teleport-btn" title="Criar pontos de teleport" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🌀 Teleport</button>
+                <button id="cb-npc-region-btn" title="Criar NPC de regiões (avião)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">✈️ NPC Regiões</button>
                 <button id="cb-preview-btn" title="Preview do jogador" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">👁️</button>
                 <button id="cb-save-btn" style="padding:6px 14px;border:none;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
                 <button id="cb-close-btn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>

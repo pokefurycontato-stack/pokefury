@@ -44,6 +44,12 @@ class CityBuilder {
         this.teleportDragPart = null;
         this.teleportDragOffset = { x: 0, y: 0 };
 
+        this.npcRegionMode = false;
+        this.npcRegions = [];
+        this.npcRegionDragging = false;
+        this.npcRegionSelectedIdx = -1;
+        this.npcRegionDragOffset = { x: 0, y: 0 };
+
         this.bindEvents();
     }
 
@@ -60,6 +66,8 @@ class CityBuilder {
         if (zoneBtn) zoneBtn.addEventListener('click', () => this.toggleCollisionZoneMode());
         const teleportBtn = document.getElementById('cb-teleport-btn');
         if (teleportBtn) teleportBtn.addEventListener('click', () => this.toggleTeleportMode());
+        const npcRegionBtn = document.getElementById('cb-npc-region-btn');
+        if (npcRegionBtn) npcRegionBtn.addEventListener('click', () => this.toggleNpcRegionMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -90,6 +98,15 @@ class CityBuilder {
                 if ((e.key === 'Delete' || e.key === 'Backspace') && this.teleportSelectedIdx >= 0) {
                     e.preventDefault();
                     this.deleteSelectedTeleport();
+                    return;
+                }
+                return;
+            }
+            if (this.npcRegionMode) {
+                if (e.key === 'Escape') { this.toggleNpcRegionMode(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this.npcRegionSelectedIdx >= 0) {
+                    e.preventDefault();
+                    this.deleteSelectedNpcRegion();
                     return;
                 }
                 return;
@@ -565,6 +582,76 @@ class CityBuilder {
         }
     }
 
+    toggleNpcRegionMode() {
+        this.npcRegionMode = !this.npcRegionMode;
+        const btn = document.getElementById('cb-npc-region-btn');
+        if (btn) btn.style.background = this.npcRegionMode ? '#f59e0b' : 'rgba(255,255,255,0.15)';
+        if (this.npcRegionMode) {
+            this.selected = null;
+            this.collisionZoneMode = false;
+            this.teleportMode = false;
+            const zBtn = document.getElementById('cb-collision-zone-btn');
+            if (zBtn) zBtn.style.background = 'rgba(255,255,255,0.15)';
+            const tBtn = document.getElementById('cb-teleport-btn');
+            if (tBtn) tBtn.style.background = 'rgba(255,255,255,0.15)';
+            this.updateProps();
+            this.canvas.style.cursor = 'crosshair';
+        } else {
+            this.npcRegionSelectedIdx = -1;
+            this.canvas.style.cursor = 'default';
+        }
+        this.render();
+    }
+
+    onNpcRegionMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        for (let i = this.npcRegions.length - 1; i >= 0; i--) {
+            const n = this.npcRegions[i];
+            if (w.x >= n.pos_x && w.x <= n.pos_x + n.width && w.y >= n.pos_y && w.y <= n.pos_y + n.height) {
+                this.npcRegionSelectedIdx = i;
+                this.npcRegionDragging = true;
+                this.npcRegionDragOffset = { x: w.x - n.pos_x, y: w.y - n.pos_y };
+                this.render();
+                return;
+            }
+        }
+        const npc = {
+            npc_type: 'region_selector',
+            pos_x: Math.round(w.x),
+            pos_y: Math.round(w.y),
+            width: 64,
+            height: 64,
+            interaction_width: 128,
+            interaction_height: 128,
+            name: 'Aviador'
+        };
+        this.npcRegions.push(npc);
+        this.npcRegionSelectedIdx = this.npcRegions.length - 1;
+        this.render();
+    }
+
+    onNpcRegionMouseMove(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        if (this.npcRegionDragging && this.npcRegionSelectedIdx >= 0) {
+            const n = this.npcRegions[this.npcRegionSelectedIdx];
+            n.pos_x = Math.round(w.x - this.npcRegionDragOffset.x);
+            n.pos_y = Math.round(w.y - this.npcRegionDragOffset.y);
+            this.render();
+        }
+    }
+
+    onNpcRegionMouseUp(e) {
+        this.npcRegionDragging = false;
+    }
+
+    deleteSelectedNpcRegion() {
+        if (this.npcRegionSelectedIdx >= 0) {
+            this.npcRegions.splice(this.npcRegionSelectedIdx, 1);
+            this.npcRegionSelectedIdx = -1;
+            this.render();
+        }
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -695,6 +782,7 @@ class CityBuilder {
             if (this.collisionEditMode) { this.onCollisionMouseUp(e); return; }
             if (this.collisionZoneMode) { this.onZoneMouseUp(e); return; }
             if (this.teleportMode) { this.onTeleportMouseUp(e); return; }
+            if (this.npcRegionMode) { this.onNpcRegionMouseUp(e); return; }
             this.dragging = false;
         };
         this.canvas.onwheel = (e) => this.onWheel(e);
@@ -715,6 +803,7 @@ class CityBuilder {
         if (this.collisionEditMode) { this.onCollisionMouseDown(e); return; }
         if (this.collisionZoneMode) { this.onZoneMouseDown(e); return; }
         if (this.teleportMode) { this.onTeleportMouseDown(e); return; }
+        if (this.npcRegionMode) { this.onNpcRegionMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
 
@@ -755,6 +844,7 @@ class CityBuilder {
         if (this.collisionEditMode) { this.onCollisionMouseMove(e); return; }
         if (this.collisionZoneMode) { this.onZoneMouseMove(e); return; }
         if (this.teleportMode) { this.onTeleportMouseMove(e); return; }
+        if (this.npcRegionMode) { this.onNpcRegionMouseMove(e); return; }
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
@@ -878,6 +968,17 @@ class CityBuilder {
                     dest_x: t.dest_x, dest_y: t.dest_y
                 }));
             }
+            const { data: npcs } = await window.db.from('city_npcs').select('*');
+            if (npcs) {
+                this.npcRegions = npcs.map(n => ({
+                    npc_type: n.npc_type,
+                    pos_x: n.pos_x, pos_y: n.pos_y,
+                    width: n.width, height: n.height,
+                    interaction_width: n.interaction_width, interaction_height: n.interaction_height,
+                    name: n.name,
+                    sprite_url: n.sprite_url
+                }));
+            }
         } catch (e) {
             console.warn('[CityBuilder] No saved layout');
         }
@@ -923,6 +1024,19 @@ class CityBuilder {
                 }));
                 const { error: te } = await window.db.from('city_teleports').insert(tpToSave);
                 if (te) throw te;
+            }
+            await window.db.from('city_npcs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (this.npcRegions.length > 0) {
+                const npcToSave = this.npcRegions.map(n => ({
+                    npc_type: n.npc_type || 'region_selector',
+                    pos_x: n.pos_x, pos_y: n.pos_y,
+                    width: n.width, height: n.height,
+                    interaction_width: n.interaction_width, interaction_height: n.interaction_height,
+                    name: n.name || 'Aviador',
+                    sprite_url: n.sprite_url || null
+                }));
+                const { error: ne } = await window.db.from('city_npcs').insert(npcToSave);
+                if (ne) throw ne;
             }
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
@@ -1214,6 +1328,31 @@ class CityBuilder {
                 ctx.textAlign = 'center';
                 ctx.fillText(tp.name + ' (Enter=confirmar)', tp.sign_x + tp.sign_width / 2, tp.sign_y - 6 / this.zoom);
             }
+        }
+
+        if (this.npcRegionMode || this.npcRegions.length > 0) {
+            this.npcRegions.forEach((n, i) => {
+                const isSelected = i === this.npcRegionSelectedIdx;
+                ctx.fillStyle = isSelected ? 'rgba(245, 158, 11, 0.5)' : 'rgba(245, 158, 11, 0.3)';
+                ctx.strokeStyle = isSelected ? '#fff' : '#f59e0b';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(n.pos_x, n.pos_y, n.width, n.height);
+                ctx.strokeRect(n.pos_x, n.pos_y, n.width, n.height);
+
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+                ctx.lineWidth = 1 / this.zoom;
+                ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
+                const ix = n.pos_x + n.width / 2 - n.interaction_width / 2;
+                const iy = n.pos_y + n.height / 2 - n.interaction_height / 2;
+                ctx.strokeRect(ix, iy, n.interaction_width, n.interaction_height);
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('✈️ ' + n.name, n.pos_x + n.width / 2, n.pos_y - 6 / this.zoom);
+            });
         }
 
         this.renderPlayer(ctx);

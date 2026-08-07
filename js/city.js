@@ -22,6 +22,9 @@ class CityScreen {
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
+        this.npcs = [];
+        this.nearestNpc = null;
+        this.npcDialogueOpen = false;
 
         this.bindEvents();
     }
@@ -44,8 +47,16 @@ class CityScreen {
                 console.log('[City] Debug:', window._cityDebug ? 'ON' : 'OFF');
             }
             if (e.key === 'e' || e.key === 'E') {
-                if (this.nearestTeleport) {
+                if (this.npcDialogueOpen) return;
+                if (this.nearestNpc) {
+                    this.showNpcDialogue(this.nearestNpc);
+                } else if (this.nearestTeleport) {
                     this.showTeleportMenu(this.nearestTeleport);
+                }
+            }
+            if (e.key === 'Escape') {
+                if (this.npcDialogueOpen) {
+                    this.closeNpcDialogue();
                 }
             }
         });
@@ -67,6 +78,7 @@ class CityScreen {
         await this.loadLayout();
         await this.loadCollisionZones();
         await this.loadTeleports();
+        await this.loadNpcs();
         await this.registerPlayer();
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
@@ -92,6 +104,7 @@ class CityScreen {
         this.running = false;
         window.cityModeActive = false;
         document.getElementById('city-screen').classList.add('hidden');
+        this.closeNpcDialogue();
         this.unregisterPlayer();
         this.players = {};
         if (this.channel) {
@@ -326,6 +339,24 @@ class CityScreen {
         }
     }
 
+    async loadNpcs() {
+        try {
+            const { data, error } = await window.db.from('city_npcs').select('*');
+            if (error) throw error;
+            this.npcs = (data || []).map(n => ({
+                id: n.id, npc_type: n.npc_type, name: n.name,
+                pos_x: n.pos_x, pos_y: n.pos_y,
+                width: n.width, height: n.height,
+                interaction_width: n.interaction_width, interaction_height: n.interaction_height,
+                sprite_url: n.sprite_url
+            }));
+            console.log(`[City] Loaded ${this.npcs.length} NPCs`);
+        } catch (e) {
+            console.warn('[City] NPCs load error:', e.message);
+            this.npcs = [];
+        }
+    }
+
     showTeleportMenu(sign) {
         const popup = document.getElementById('city-teleport-popup');
         const title = document.getElementById('city-teleport-title');
@@ -359,6 +390,40 @@ class CityScreen {
     closeTeleportMenu() {
         const popup = document.getElementById('city-teleport-popup');
         if (popup) popup.classList.add('hidden');
+    }
+
+    showNpcDialogue(npc) {
+        if (npc.npc_type !== 'region_selector') return;
+        const overlay = document.getElementById('city-npc-dialogue-overlay');
+        const msg = document.getElementById('city-npc-dialogue-msg');
+        const simBtn = document.getElementById('city-npc-dialogue-sim');
+        const naoBtn = document.getElementById('city-npc-dialogue-nao');
+        if (!overlay || !msg || !simBtn || !naoBtn) return;
+
+        const charName = this.myPlayer?.character_name || 'Treinador';
+        msg.textContent = `Olá ${charName}, que tal dar uma volta em meu avião e explorar novas regiões?`;
+
+        this.npcDialogueOpen = true;
+
+        simBtn.onclick = () => {
+            this.closeNpcDialogue();
+            if (typeof openWorldMap === 'function') openWorldMap();
+        };
+        naoBtn.onclick = () => {
+            this.closeNpcDialogue();
+        };
+
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
+    }
+
+    closeNpcDialogue() {
+        const overlay = document.getElementById('city-npc-dialogue-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
+        }
+        this.npcDialogueOpen = false;
     }
 
     teleportPlayer(dest) {
@@ -451,6 +516,18 @@ class CityScreen {
             const dist = Math.sqrt((this.playerX - cx) ** 2 + (this.playerY - cy) ** 2);
             if (dist < 80) {
                 this.nearestTeleport = t;
+                break;
+            }
+        }
+
+        this.nearestNpc = null;
+        for (const n of this.npcs) {
+            if (n.npc_type !== 'region_selector') continue;
+            const cx = n.pos_x + n.width / 2;
+            const cy = n.pos_y + n.height / 2;
+            const dist = Math.sqrt((this.playerX - cx) ** 2 + (this.playerY - cy) ** 2);
+            if (dist < (n.interaction_width || 128) / 2) {
+                this.nearestNpc = n;
                 break;
             }
         }
@@ -549,6 +626,25 @@ class CityScreen {
             ctx.fillText(t.name, sx + t.sign_width / 2, sy - 6);
         });
 
+        this.npcs.forEach(n => {
+            const sx = n.pos_x - camX;
+            const sy = n.pos_y - camY;
+            if (sx + n.width < -50 || sx > cw + 50 || sy + n.height < -50 || sy > ch + 50) return;
+            if (n.npc_type === 'region_selector') {
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.fillRect(sx, sy, n.width, n.height);
+                ctx.strokeRect(sx, sy, n.width, n.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 18px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('✈️', sx + n.width / 2, sy + n.height / 2 + 6);
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.fillText(n.name || 'Aviador', sx + n.width / 2, sy - 6);
+            }
+        });
+
         if (window._cityDebug) {
             ctx.fillStyle = 'rgba(231, 76, 60, 0.25)';
             ctx.strokeStyle = '#e74c3c';
@@ -582,6 +678,20 @@ class CityScreen {
             ctx.roundRect(sx - 50, sy - 14, 100, 22, 6);
             ctx.fill();
             ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Aperte E', sx, sy + 1);
+        }
+
+        if (this.nearestNpc && !this.npcDialogueOpen) {
+            const n = this.nearestNpc;
+            const sx = n.pos_x - camX + n.width / 2;
+            const sy = n.pos_y - camY - 20;
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(sx - 50, sy - 14, 100, 22, 6);
+            ctx.fill();
+            ctx.fillStyle = '#000';
             ctx.font = 'bold 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('Aperte E', sx, sy + 1);
