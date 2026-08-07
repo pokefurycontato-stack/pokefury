@@ -1019,18 +1019,27 @@ class CityBuilder {
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
                     img.src = a.asset_url;
-                    img.onload = () => this.render();
+                    img.onload = () => {
+                        console.log('[CityBuilder] asset image loaded', a.asset_url, 'row id:', a.id, 'asset_id:', a.asset_id);
+                        this.render();
+                    };
+                    img.onerror = () => {
+                        console.warn('[CityBuilder] asset image failed to load', a.asset_url, 'row id:', a.id, 'asset_id:', a.asset_id);
+                    };
                     const posX = parseNumber(a.pos_x, parseNumber(a.grid_x, 0) * 64);
                     const posY = parseNumber(a.pos_y, parseNumber(a.grid_y, 0) * 64);
                     const scale = parseNumber(a.scale, parseNumber(a.width, 1.0));
-                    return {
+                    const boxes = Array.isArray(a.collision_boxes)
+                        ? a.collision_boxes
+                        : (typeof a.collision_boxes === 'string' ? JSON.parse(a.collision_boxes || '[]') : []);
+                    const result = {
                         ...a,
                         _id: this.nextId++,
                         pos_x: posX,
                         pos_y: posY,
                         scale: scale,
                         has_collision: a.has_collision === true || String(a.has_collision) === 'true',
-                        collision_boxes: Array.isArray(a.collision_boxes) ? a.collision_boxes : [],
+                        collision_boxes: boxes,
                         layer: parseNumber(a.layer, 0),
                         rotation: parseNumber(a.rotation, 0),
                         z_index: parseNumber(a.z_index, 0),
@@ -1038,6 +1047,19 @@ class CityBuilder {
                         _mask: null,
                         _overlay: null
                     };
+                    console.log('[CityBuilder] loaded asset row', {
+                        id: a.id,
+                        asset_id: a.asset_id,
+                        asset_url: a.asset_url,
+                        pos_x: posX,
+                        pos_y: posY,
+                        scale,
+                        layer: result.layer,
+                        z_index: result.z_index,
+                        has_collision: result.has_collision,
+                        collision_boxes: result.collision_boxes
+                    });
+                    return result;
                 }).filter(Boolean);
                 this.assets.forEach(a => {
                     if (a.has_collision && a._img) {
