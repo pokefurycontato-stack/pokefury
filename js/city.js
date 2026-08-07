@@ -407,7 +407,11 @@ class CityScreen {
 
         simBtn.onclick = () => {
             this.closeNpcDialogue();
-            if (typeof openWorldMap === 'function') openWorldMap();
+            if (typeof openWorldMap === 'function') {
+                const wm = document.getElementById('worldmap-overlay');
+                if (wm) wm.style.zIndex = '970';
+                openWorldMap();
+            }
         };
         naoBtn.onclick = () => {
             this.closeNpcDialogue();

@@ -98,6 +98,7 @@ function closeWorldMap() {
     if (!overlay) return;
     overlay.classList.add('hidden');
     overlay.style.display = 'none';
+    overlay.style.zIndex = '27';
 }
 
 window.openWorldMap = openWorldMap;
