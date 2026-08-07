@@ -1165,53 +1165,29 @@ class CityBuilder {
 
             const backup = { assets: toSave, zones: zonesToSave, teleports: tpToSave, npcs: npcToSave, battleZones: bzToSave };
 
-            const autoSaveKey = 'city_autosave_' + (this.currentCityId || 'default');
-            const prevBackup = localStorage.getItem(autoSaveKey);
-            if (prevBackup) {
-                try {
-                    const prev = JSON.parse(prevBackup);
-                    if (toSave.length < (prev.assets || []).length) {
-                        console.warn('[CityBuilder] ABORTED: current data (' + toSave.length + ') < backup (' + prev.assets.length + '). Restoring from backup.');
-                        this.assets = (prev.assets || []).map(a => {
-                            const img = new Image();
-                            img.src = a.asset_url;
-                            img.onload = () => this.render();
-                            return { ...a, _id: this.nextId++, _img: img, _mask: null, _overlay: null };
-                        });
-                        this.collisionZones = prev.zones || [];
-                        this.teleports = prev.teleports || [];
-                        this.npcRegions = prev.npcs || [];
-                        this.battleZones = prev.battleZones || [];
-                        const layerSet = new Set(this.assets.map(a => a.layer || 0));
-                        this.layers = [...layerSet].sort((a, b) => a - b);
-                        if (this.layers.length === 0) this.layers = [0];
-                        this.render();
-                        status.textContent = 'Dados restaurados do backup!';
-                        setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
-                        return;
-                    }
-                } catch (e) {}
-            }
-
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
 
-            for (let i = 0; i < toSave.length; i += 500) {
-                const batch = toSave.slice(i, i + 500);
-                const { error } = await window.db.from('city_layout').insert(batch);
+            await window.db.from('city_layout').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (toSave.length > 0) {
+                const { error } = await window.db.from('city_layout').insert(toSave);
                 if (error) throw error;
             }
+            await window.db.from('city_collision_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (zonesToSave.length > 0) {
                 const { error: ze } = await window.db.from('city_collision_zones').insert(zonesToSave);
                 if (ze) throw ze;
             }
+            await window.db.from('city_teleports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (tpToSave.length > 0) {
                 const { error: te } = await window.db.from('city_teleports').insert(tpToSave);
                 if (te) throw te;
             }
+            await window.db.from('city_npcs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (npcToSave.length > 0) {
                 const { error: ne } = await window.db.from('city_npcs').insert(npcToSave);
                 if (ne) throw ne;
             }
+            await window.db.from('city_battle_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (bzToSave.length > 0) {
                 const { error: bze } = await window.db.from('city_battle_zones').insert(bzToSave);
                 if (bze) throw bze;
