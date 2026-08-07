@@ -36,6 +36,10 @@ class CityScreen {
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
             this.keys[e.key] = true;
+            if (e.key === 'd' || e.key === 'D') {
+                window._cityDebug = !window._cityDebug;
+                console.log('[City] Debug:', window._cityDebug ? 'ON' : 'OFF');
+            }
         });
         document.addEventListener('keyup', (e) => {
             this.keys[e.key] = false;
@@ -167,6 +171,7 @@ class CityScreen {
             });
             console.log(`[City] Loaded ${this.assets.length} assets`);
             this.assets.forEach(a => {
+                console.log(`[City] Asset ${a.asset_id}: boxes=${JSON.stringify(a.collision_boxes)}, collision=${a.has_collision}, scale=${a.scale}`);
                 if (a.has_collision && a._img) {
                     const buildMask = () => {
                         try { a._mask = this.createMask(a._img); } catch(e) { console.warn('[City] Mask error:', e.message); }
@@ -473,6 +478,41 @@ class CityScreen {
             }
             ctx.restore();
         });
+
+        if (window._cityDebug) {
+            this.assets.forEach(a => {
+                if (!a.has_collision) return;
+                const img = a._img;
+                if (!img || !img.complete || !img.naturalWidth) return;
+                const sc = a.scale || 1;
+                const aw = img.naturalWidth * sc;
+                const ah = img.naturalHeight * sc;
+                const boxes = a.collision_boxes;
+                if (boxes && boxes.length > 0) {
+                    ctx.fillStyle = 'rgba(255,0,0,0.25)';
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 1;
+                    for (const b of boxes) {
+                        const bx = a.pos_x + b.x * aw - camX;
+                        const by = a.pos_y + b.y * ah - camY;
+                        const bw = b.w * aw;
+                        const bh = b.h * ah;
+                        ctx.fillRect(bx, by, bw, bh);
+                        ctx.strokeRect(bx, by, bw, bh);
+                    }
+                } else {
+                    ctx.fillStyle = 'rgba(255,0,0,0.15)';
+                    ctx.strokeStyle = 'rgba(255,0,0,0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.fillRect(a.pos_x - camX, a.pos_y - camY, aw, ah);
+                    ctx.strokeRect(a.pos_x - camX, a.pos_y - camY, aw, ah);
+                }
+            });
+            const ps = 32;
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.playerX - camX - ps / 2, this.playerY - camY - ps / 2, ps, ps);
+        }
 
         const allPlayers = [];
         if (this.myPlayer) allPlayers.push({
