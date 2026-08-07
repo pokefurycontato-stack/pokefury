@@ -66,6 +66,28 @@ function uploadFile(filePath, storagePath) {
   });
 }
 
+async function updateBuilderJS(newFiles) {
+  if (newFiles.length === 0) return;
+  const jsPath = path.join(__dirname, 'js', 'city-builder.js');
+  let content = fs.readFileSync(jsPath, 'utf8');
+
+  for (const file of newFiles) {
+    const name = file.replace('.png', '').replace('.webp', '');
+    const entry = `'${file}'`;
+    if (content.includes(entry)) continue;
+
+    const marker = "'cerca3.png'";
+    const idx = content.indexOf(marker);
+    if (idx === -1) continue;
+
+    const endOfLine = content.indexOf('\n', idx);
+    content = content.slice(0, endOfLine) + `, '${file}'` + content.slice(endOfLine);
+    console.log(`  Added ${file} to city-builder.js`);
+  }
+
+  fs.writeFileSync(jsPath, content, 'utf8');
+}
+
 async function main() {
   console.log('Checking existing assets in Supabase...');
   let existing = [];
@@ -85,24 +107,27 @@ async function main() {
   console.log(`Already in storage (skipping): ${skipped.length}`);
   console.log(`To upload: ${toUpload.length}\n`);
 
-  if (toUpload.length === 0) {
-    console.log('Nothing to upload!');
-    return;
-  }
-
   let uploaded = 0;
-  for (const file of toUpload) {
-    const filePath = path.join(ASSETS_DIR, file);
-    const storagePath = `${FOLDER}/${file}`;
-    try {
-      await uploadFile(filePath, storagePath);
-      uploaded++;
-    } catch (e) {
-      console.error(`  Error uploading ${file}:`, e.message);
+  if (toUpload.length > 0) {
+    for (const file of toUpload) {
+      const filePath = path.join(ASSETS_DIR, file);
+      const storagePath = `${FOLDER}/${file}`;
+      try {
+        await uploadFile(filePath, storagePath);
+        uploaded++;
+      } catch (e) {
+        console.error(`  Error uploading ${file}:`, e.message);
+      }
     }
+    console.log(`\nUploaded ${uploaded}/${toUpload.length} new assets.`);
+  } else {
+    console.log('No new files to upload.');
   }
 
-  console.log(`\nDone! Uploaded ${uploaded}/${toUpload.length} new assets.`);
+  console.log('\nChecking city-builder.js asset list...');
+  await updateBuilderJS(toUpload);
+
+  console.log('\nAll done!');
 }
 
 main().catch(console.error);
