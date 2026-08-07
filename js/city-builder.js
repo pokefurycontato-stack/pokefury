@@ -1011,20 +1011,32 @@ class CityBuilder {
                     const n = parseFloat(value);
                     return Number.isFinite(n) ? n : fallback;
                 };
+                const resolveAssetUrl = (row) => {
+                    if (row.asset_url && typeof row.asset_url === 'string' && row.asset_url.trim().length > 0) {
+                        return row.asset_url.trim();
+                    }
+                    if (row.asset_id && typeof row.asset_id === 'string') {
+                        const asset = this.availableAssets.find(a => a.id === row.asset_id || a.id === row.asset_id.replace(/\.png$/i, ''));
+                        if (asset) return asset.url;
+                        return `assets/assetmap/${row.asset_id.replace(/\.png$/i, '')}.png`;
+                    }
+                    return null;
+                };
                 this.assets = data.map(a => {
-                    if (!a.asset_url || typeof a.asset_url !== 'string') {
-                        console.warn('[CityBuilder] Skipping saved layout row with missing asset_url:', a);
+                    const assetUrl = resolveAssetUrl(a);
+                    if (!assetUrl) {
+                        console.warn('[CityBuilder] Skipping saved layout row with missing asset_url and asset_id fallback:', a);
                         return null;
                     }
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
-                    img.src = a.asset_url;
+                    img.src = assetUrl;
                     img.onload = () => {
-                        console.log('[CityBuilder] asset image loaded', a.asset_url, 'row id:', a.id, 'asset_id:', a.asset_id);
+                        console.log('[CityBuilder] asset image loaded', assetUrl, 'row id:', a.id, 'asset_id:', a.asset_id);
                         this.render();
                     };
                     img.onerror = () => {
-                        console.warn('[CityBuilder] asset image failed to load', a.asset_url, 'row id:', a.id, 'asset_id:', a.asset_id);
+                        console.warn('[CityBuilder] asset image failed to load', assetUrl, 'row id:', a.id, 'asset_id:', a.asset_id);
                     };
                     const posX = parseNumber(a.pos_x, parseNumber(a.grid_x, 0) * 64);
                     const posY = parseNumber(a.pos_y, parseNumber(a.grid_y, 0) * 64);
@@ -1034,6 +1046,7 @@ class CityBuilder {
                         : (typeof a.collision_boxes === 'string' ? JSON.parse(a.collision_boxes || '[]') : []);
                     const result = {
                         ...a,
+                        asset_url: assetUrl,
                         _id: this.nextId++,
                         pos_x: posX,
                         pos_y: posY,
@@ -1050,7 +1063,7 @@ class CityBuilder {
                     console.log('[CityBuilder] loaded asset row', {
                         id: a.id,
                         asset_id: a.asset_id,
-                        asset_url: a.asset_url,
+                        asset_url: assetUrl,
                         pos_x: posX,
                         pos_y: posY,
                         scale,

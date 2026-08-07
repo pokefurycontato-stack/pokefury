@@ -183,21 +183,32 @@ class CityScreen {
                 const n = parseFloat(value);
                 return Number.isFinite(n) ? n : fallback;
             };
+            const resolveAssetUrl = (row) => {
+                if (row.asset_url && typeof row.asset_url === 'string' && row.asset_url.trim().length > 0) {
+                    return row.asset_url.trim();
+                }
+                if (row.asset_id && typeof row.asset_id === 'string') {
+                    return `assets/assetmap/${row.asset_id.replace(/\.png$/i, '')}.png`;
+                }
+                return null;
+            };
             this.assets = (data || []).map(a => {
-                if (!a.asset_url || typeof a.asset_url !== 'string') {
-                    console.warn('[City] Skipping layout row with missing asset_url:', a);
+                const assetUrl = resolveAssetUrl(a);
+                if (!assetUrl) {
+                    console.warn('[City] Skipping layout row with missing asset_url and asset_id fallback:', a);
                     return null;
                 }
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
-                img.src = a.asset_url;
+                img.src = assetUrl;
                 img.onload = () => this.render();
-                img.onerror = () => console.warn('[City] Failed asset load:', a.asset_url, 'row id:', a.id, 'asset_id:', a.asset_id);
+                img.onerror = () => console.warn('[City] Failed asset load:', assetUrl, 'row id:', a.id, 'asset_id:', a.asset_id);
                 const posX = parseNumber(a.pos_x, parseNumber(a.grid_x, 0) * 64);
                 const posY = parseNumber(a.pos_y, parseNumber(a.grid_y, 0) * 64);
                 const scale = parseNumber(a.scale, parseNumber(a.width, 1.0));
                 return {
                     ...a,
+                    asset_url: assetUrl,
                     pos_x: posX,
                     pos_y: posY,
                     scale: scale,
