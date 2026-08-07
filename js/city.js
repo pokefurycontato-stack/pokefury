@@ -350,7 +350,7 @@ class CityScreen {
                 interaction_width: n.interaction_width, interaction_height: n.interaction_height,
                 sprite_url: n.sprite_url
             }));
-            console.log(`[City] Loaded ${this.npcs.length} NPCs`);
+            console.log(`[City] Loaded ${this.npcs.length} NPCs`, this.npcs);
         } catch (e) {
             console.warn('[City] NPCs load error:', e.message);
             this.npcs = [];
@@ -526,7 +526,8 @@ class CityScreen {
             const cx = n.pos_x + n.width / 2;
             const cy = n.pos_y + n.height / 2;
             const dist = Math.sqrt((this.playerX - cx) ** 2 + (this.playerY - cy) ** 2);
-            if (dist < (n.interaction_width || 128) / 2) {
+            console.log(`[City] NPC "${n.name}" at (${n.pos_x},${n.pos_y}) player=(${Math.round(this.playerX)},${Math.round(this.playerY)}) dist=${Math.round(dist)}`);
+            if (dist < 100) {
                 this.nearestNpc = n;
                 break;
             }
