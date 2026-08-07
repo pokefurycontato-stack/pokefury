@@ -177,7 +177,7 @@ class CityScreen {
 
     async loadLayout() {
         try {
-            const { data, error } = await window.db.from('city_layout').select('*').order('z_index');
+            const { data, error } = await window.db.from('city_layout').select('*').order('z_index').limit(5000);
             if (error) throw error;
             this.assets = (data || []).map(a => {
                 const img = new Image();
@@ -311,7 +311,7 @@ class CityScreen {
 
     async loadCollisionZones() {
         try {
-            const { data, error } = await window.db.from('city_collision_zones').select('*');
+            const { data, error } = await window.db.from('city_collision_zones').select('*').limit(5000);
             if (error) throw error;
             this.collisionZones = (data || []).map(z => ({
                 pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
@@ -327,7 +327,7 @@ class CityScreen {
 
     async loadTeleports() {
         try {
-            const { data, error } = await window.db.from('city_teleports').select('*');
+            const { data, error } = await window.db.from('city_teleports').select('*').limit(5000);
             if (error) throw error;
             this.teleports = (data || []).map(t => ({
                 id: t.id, name: t.name,
@@ -344,7 +344,7 @@ class CityScreen {
 
     async loadNpcs() {
         try {
-            const { data, error } = await window.db.from('city_npcs').select('*');
+            const { data, error } = await window.db.from('city_npcs').select('*').limit(5000);
             if (error) throw error;
             this.npcs = (data || []).map(n => ({
                 id: n.id, npc_type: n.npc_type, name: n.name,
@@ -362,7 +362,7 @@ class CityScreen {
 
     async loadBattleZones() {
         try {
-            const { data, error } = await window.db.from('city_battle_zones').select('*');
+            const { data, error } = await window.db.from('city_battle_zones').select('*').limit(5000);
             if (error) throw error;
             this.battleZones = (data || []).map(z => ({
                 id: z.id, zone_name: z.zone_name,

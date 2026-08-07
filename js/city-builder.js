@@ -1025,7 +1025,7 @@ class CityBuilder {
 
     async loadSavedLayout() {
         try {
-            const { data } = await window.db.from('city_layout').select('*').order('z_index');
+            const { data } = await window.db.from('city_layout').select('*').order('z_index').limit(5000);
             if (data) {
                 this.assets = data.map(a => {
                     const img = new Image();
@@ -1059,13 +1059,13 @@ class CityBuilder {
                 this.layers = [...layerSet].sort((a, b) => a - b);
                 if (this.layers.length === 0) this.layers = [0];
             }
-            const { data: zones } = await window.db.from('city_collision_zones').select('*');
+            const { data: zones } = await window.db.from('city_collision_zones').select('*').limit(5000);
             if (zones) {
                 this.collisionZones = zones.map(z => ({
                     pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
                 }));
             }
-            const { data: tps } = await window.db.from('city_teleports').select('*');
+            const { data: tps } = await window.db.from('city_teleports').select('*').limit(5000);
             if (tps) {
                 this.teleports = tps.map(t => ({
                     name: t.name,
@@ -1074,7 +1074,7 @@ class CityBuilder {
                     dest_x: t.dest_x, dest_y: t.dest_y
                 }));
             }
-            const { data: npcs } = await window.db.from('city_npcs').select('*');
+            const { data: npcs } = await window.db.from('city_npcs').select('*').limit(5000);
             if (npcs) {
                 this.npcRegions = npcs.map(n => ({
                     npc_type: n.npc_type,
@@ -1085,7 +1085,7 @@ class CityBuilder {
                     sprite_url: n.sprite_url
                 }));
             }
-            const { data: bz } = await window.db.from('city_battle_zones').select('*');
+            const { data: bz } = await window.db.from('city_battle_zones').select('*').limit(5000);
             if (bz) {
                 this.battleZones = bz.map(z => ({
                     zone_name: z.zone_name,
@@ -1103,7 +1103,7 @@ class CityBuilder {
         status.textContent = 'Salvando...';
         status.disabled = true;
         try {
-            await window.db.from('city_layout').delete().neq('id', 0);
+            await window.db.from('city_layout').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             const toSave = this.assets.map(a => ({
                 asset_id: a.asset_id,
                 asset_url: a.asset_url,
@@ -1116,8 +1116,9 @@ class CityBuilder {
                 has_collision: a.has_collision || false,
                 collision_boxes: (a.collision_boxes && a.collision_boxes.length > 0) ? JSON.parse(JSON.stringify(a.collision_boxes)) : null
             }));
-            if (toSave.length > 0) {
-                const { error } = await window.db.from('city_layout').insert(toSave);
+            for (let i = 0; i < toSave.length; i += 500) {
+                const batch = toSave.slice(i, i + 500);
+                const { error } = await window.db.from('city_layout').insert(batch);
                 if (error) throw error;
             }
             await window.db.from('city_collision_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
