@@ -1087,6 +1087,7 @@ class CityBuilder {
                 const layerSet = new Set(this.assets.map(a => a.layer || 0));
                 this.layers = [...layerSet].sort((a, b) => a - b);
                 if (this.layers.length === 0) this.layers = [0];
+                this.originalCityLayoutIds = new Set(this.assets.filter(a => a.id).map(a => a.id));
             }
             const { data: zones } = await window.db.from('city_collision_zones').select('*').limit(5000);
             if (zones) {
@@ -1157,11 +1158,26 @@ class CityBuilder {
         status.textContent = 'Salvando...';
         status.disabled = true;
         try {
-            const toSave = this.assets.map(a => ({
+            const normalizeNumber = (value, fallback = 0) => {
+                const n = parseFloat(value);
+                return Number.isFinite(n) ? n : fallback;
+            };
+            const dedupeMap = new Map();
+            for (const a of this.assets) {
+                if (!a.asset_id) continue;
+                const posX = normalizeNumber(a.pos_x, 0);
+                const posY = normalizeNumber(a.pos_y, 0);
+                const key = `${a.asset_id}|${posX}|${posY}`;
+                const existing = dedupeMap.get(key);
+                if (existing && existing.id && !a.id) continue;
+                dedupeMap.set(key, a);
+            }
+            const toSave = Array.from(dedupeMap.values()).map(a => ({
+                ...(a.id ? { id: a.id } : {}),
                 asset_id: a.asset_id,
                 asset_url: a.asset_url,
-                pos_x: a.pos_x,
-                pos_y: a.pos_y,
+                pos_x: normalizeNumber(a.pos_x, 0),
+                pos_y: normalizeNumber(a.pos_y, 0),
                 scale: Number.isFinite(a.scale) ? a.scale : 1,
                 rotation: Number.isFinite(a.rotation) ? a.rotation : 0,
                 z_index: Number.isFinite(a.z_index) ? a.z_index : 0,
@@ -1196,11 +1212,29 @@ class CityBuilder {
 
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
 
-            const { error: deleteLayoutError } = await window.db.from('city_layout').delete();
-            if (deleteLayoutError) throw deleteLayoutError;
-            if (toSave.length > 0) {
-                const { error } = await window.db.from('city_layout').insert(toSave);
-                if (error) throw error;
+            const { data: savedAssets, error: upsertError } = await window.db.from('city_layout')
+                .upsert(toSave, { onConflict: 'id' })
+                .select('id,asset_id,pos_x,pos_y');
+            if (upsertError) throw upsertError;
+
+            if (savedAssets && savedAssets.length > 0) {
+                const assetMap = new Map(savedAssets.map(r => [`${r.asset_id}|${normalizeNumber(r.pos_x, 0)}|${normalizeNumber(r.pos_y, 0)}`, r.id]));
+                this.assets.forEach(a => {
+                    if (!a.id) {
+                        const key = `${a.asset_id}|${normalizeNumber(a.pos_x, 0)}|${normalizeNumber(a.pos_y, 0)}`;
+                        const savedId = assetMap.get(key);
+                        if (savedId) a.id = savedId;
+                    }
+                });
+            }
+
+            const savedIds = new Set((savedAssets || []).map(r => r.id).filter(Boolean));
+            if (savedIds.size > 0) {
+                const { error: deleteStaleError } = await window.db.from('city_layout').delete().not('id', 'in', Array.from(savedIds));
+                if (deleteStaleError) throw deleteStaleError;
+            } else {
+                const { error: deleteAllError } = await window.db.from('city_layout').delete();
+                if (deleteAllError) throw deleteAllError;
             }
 
             const { error: deleteZonesError } = await window.db.from('city_collision_zones').delete();
