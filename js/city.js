@@ -253,7 +253,11 @@ class CityScreen {
                 const p = payload.new;
                 if (p.user_id === this.authUserId) return;
                 if (!this.players[p.user_id]) {
-                    this.players[p.user_id] = { ...p, _skinImg: null };
+                    this.players[p.user_id] = {
+                        ...p, _skinImg: null,
+                        fromX: p.pos_x, fromY: p.pos_y,
+                        moveProgress: 1
+                    };
                     if (p.skin_url) {
                         const img = new Image();
                         img.crossOrigin = 'anonymous';
@@ -261,9 +265,13 @@ class CityScreen {
                         this.players[p.user_id]._skinImg = img;
                     }
                 } else {
-                    this.players[p.user_id].pos_x = p.pos_x;
-                    this.players[p.user_id].pos_y = p.pos_y;
-                    this.players[p.user_id].direction = p.direction;
+                    const existing = this.players[p.user_id];
+                    existing.fromX = existing.pos_x ?? existing.fromX;
+                    existing.fromY = existing.pos_y ?? existing.fromY;
+                    existing.pos_x = p.pos_x;
+                    existing.pos_y = p.pos_y;
+                    existing.direction = p.direction;
+                    existing.moveProgress = 0;
                 }
             } else if (payload.eventType === 'DELETE') {
                 delete this.players[payload.old?.user_id];
@@ -375,6 +383,13 @@ class CityScreen {
 
         if (!this.playerMoving) this.handleInput();
 
+        Object.values(this.players).forEach(p => {
+            if (p.moveProgress < 1) {
+                p.moveProgress += 0.08;
+                if (p.moveProgress > 1) p.moveProgress = 1;
+            }
+        });
+
         const targetX = this.playerX;
         const targetY = this.playerY;
         this.cameraX += (targetX - this.cameraX) * 0.15;
@@ -469,7 +484,10 @@ class CityScreen {
             allPlayers.push({
                 ...p,
                 _skinImg: p._skinImg || null,
-                isMe: false
+                isMe: false,
+                fromX: p.fromX ?? p.pos_x,
+                fromY: p.fromY ?? p.pos_y,
+                moveProgress: p.moveProgress ?? 1
             });
         });
 
@@ -480,14 +498,13 @@ class CityScreen {
         allPlayers.forEach(p => {
             const ps = this.playerSize;
             let drawX, drawY;
-            if (p.isMe && this.playerMoving) {
-                const t = this.moveProgress;
-                drawX = (this.playerFromX + (this.playerX - this.playerFromX) * t) - camX - ps / 2;
-                drawY = (this.playerFromY + (this.playerY - this.playerFromY) * t) - camY - ps / 2;
-            } else {
-                drawX = p.pos_x - camX - ps / 2;
-                drawY = p.pos_y - camY - ps / 2;
-            }
+            const mp = p.isMe ? this.moveProgress : (p.moveProgress || 1);
+            const fx = p.isMe ? this.playerFromX : (p.fromX ?? p.pos_x);
+            const fy = p.isMe ? this.playerFromY : (p.fromY ?? p.pos_y);
+            const tx = p.isMe ? this.playerX : p.pos_x;
+            const ty = p.isMe ? this.playerY : p.pos_y;
+            drawX = (fx + (tx - fx) * mp) - camX - ps / 2;
+            drawY = (fy + (ty - fy) * mp) - camY - ps / 2;
 
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
@@ -496,25 +513,19 @@ class CityScreen {
 
             const skinImg = p._skinImg;
             if (skinImg && skinImg.complete && skinImg.naturalWidth) {
-                const sf = p.isMe ? this.playerSpriteFrames : null;
-                if (sf && sf.frameW) {
+                const imgW = skinImg.naturalWidth;
+                const imgH = skinImg.naturalHeight;
+                const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
+                if (isGrid) {
+                    const frameW = imgW / 4;
+                    const frameH = imgH / 4;
                     const dirs = ['down', 'left', 'right', 'up'];
                     const row = dirs.indexOf(p.direction || 'down');
-                    const walkIdx = p.isMe ? Math.min(Math.floor(this.moveProgress * 4), 3) : 0;
-                    ctx.drawImage(skinImg, walkIdx * sf.frameW, row * sf.frameH, sf.frameW, sf.frameH, drawX, drawY, ps, ps);
+                    const pmp = p.isMe ? this.moveProgress : (p.moveProgress || 1);
+                    const walkIdx = Math.min(Math.floor(pmp * 4), 3);
+                    ctx.drawImage(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
                 } else {
-                    const imgW = skinImg.naturalWidth;
-                    const imgH = skinImg.naturalHeight;
-                    const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
-                    if (isGrid) {
-                        const frameW = imgW / 4;
-                        const frameH = imgH / 4;
-                        const dirs = ['down', 'left', 'right', 'up'];
-                        const row = dirs.indexOf(p.direction || 'down');
-                        ctx.drawImage(skinImg, 0, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
-                    } else {
-                        ctx.drawImage(skinImg, drawX, drawY, ps, ps);
-                    }
+                    ctx.drawImage(skinImg, drawX, drawY, ps, ps);
                 }
             } else {
                 ctx.fillStyle = p.isMe ? '#3498db' : '#e94560';
