@@ -36,6 +36,11 @@ class CityBuilder {
         this.zoneDragging = false;
         this.zoneDragOffset = { x: 0, y: 0 };
 
+        this.teleportMode = false;
+        this.teleports = [];
+        this.teleportPlacing = null;
+        this.teleportSelectedIdx = -1;
+
         this.bindEvents();
     }
 
@@ -50,6 +55,8 @@ class CityBuilder {
         if (previewBtn) previewBtn.addEventListener('click', () => this.togglePreview());
         const zoneBtn = document.getElementById('cb-collision-zone-btn');
         if (zoneBtn) zoneBtn.addEventListener('click', () => this.toggleCollisionZoneMode());
+        const teleportBtn = document.getElementById('cb-teleport-btn');
+        if (teleportBtn) teleportBtn.addEventListener('click', () => this.toggleTeleportMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -72,6 +79,16 @@ class CityBuilder {
             }
             if (this.collisionZoneMode && e.key === 'Escape') {
                 this.toggleCollisionZoneMode();
+                return;
+            }
+            if (this.teleportMode) {
+                if (e.key === 'Escape') { this.teleportPlacing = null; this.render(); return; }
+                if (e.key === 'Enter' && this.teleportPlacing) { this.confirmTeleportPlace(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this.teleportSelectedIdx >= 0) {
+                    e.preventDefault();
+                    this.deleteSelectedTeleport();
+                    return;
+                }
                 return;
             }
             const gameKeys = ['w','W','a','A','s','S','d','D','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
@@ -424,6 +441,70 @@ class CityBuilder {
         }
     }
 
+    toggleTeleportMode() {
+        this.teleportMode = !this.teleportMode;
+        const btn = document.getElementById('cb-teleport-btn');
+        if (btn) btn.style.background = this.teleportMode ? '#8b5cf6' : 'rgba(255,255,255,0.15)';
+        if (this.teleportMode) {
+            this.selected = null;
+            this.collisionZoneMode = false;
+            const zBtn = document.getElementById('cb-collision-zone-btn');
+            if (zBtn) zBtn.style.background = 'rgba(255,255,255,0.15)';
+            this.updateProps();
+            this.canvas.style.cursor = 'crosshair';
+            this.teleportPlacing = null;
+        } else {
+            this.teleportPlacing = null;
+            this.teleportSelectedIdx = -1;
+            this.canvas.style.cursor = 'default';
+        }
+        this.render();
+    }
+
+    onTeleportMouseDown(e) {
+        if (e.button === 2) { this.teleportPlacing = null; this.render(); return; }
+        const w = this.screenToWorld(e.clientX, e.clientY);
+
+        for (let i = this.teleports.length - 1; i >= 0; i--) {
+            const t = this.teleports[i];
+            if (w.x >= t.sign_x - 20 && w.x <= t.sign_x + t.sign_width + 20 &&
+                w.y >= t.sign_y - 20 && w.y <= t.sign_y + t.sign_height + 20) {
+                this.teleportSelectedIdx = i;
+                this.render();
+                return;
+            }
+        }
+
+        const name = prompt('Nome do teleport (ex: Pokemart, Laboratório):');
+        if (!name) return;
+
+        this.teleportPlacing = {
+            name: name,
+            sign_x: Math.round(w.x),
+            sign_y: Math.round(w.y),
+            sign_width: 64,
+            sign_height: 64,
+            dest_x: Math.round(w.x),
+            dest_y: Math.round(w.y + 120)
+        };
+        this.render();
+    }
+
+    confirmTeleportPlace() {
+        if (!this.teleportPlacing) return;
+        this.teleports.push({ ...this.teleportPlacing });
+        this.teleportPlacing = null;
+        this.render();
+    }
+
+    deleteSelectedTeleport() {
+        if (this.teleportSelectedIdx >= 0) {
+            this.teleports.splice(this.teleportSelectedIdx, 1);
+            this.teleportSelectedIdx = -1;
+            this.render();
+        }
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -551,6 +632,7 @@ class CityBuilder {
         this.canvas.onmouseup = (e) => {
             if (this.collisionEditMode) { this.onCollisionMouseUp(e); return; }
             if (this.collisionZoneMode) { this.onZoneMouseUp(e); return; }
+            if (this.teleportMode) return;
             this.dragging = false;
         };
         this.canvas.onwheel = (e) => this.onWheel(e);
@@ -570,6 +652,7 @@ class CityBuilder {
         if (this.previewMode) return;
         if (this.collisionEditMode) { this.onCollisionMouseDown(e); return; }
         if (this.collisionZoneMode) { this.onZoneMouseDown(e); return; }
+        if (this.teleportMode) { this.onTeleportMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
 
@@ -609,6 +692,7 @@ class CityBuilder {
         if (this.previewMode) return;
         if (this.collisionEditMode) { this.onCollisionMouseMove(e); return; }
         if (this.collisionZoneMode) { this.onZoneMouseMove(e); return; }
+        if (this.teleportMode) return;
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
@@ -723,6 +807,15 @@ class CityBuilder {
                     pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
                 }));
             }
+            const { data: tps } = await window.db.from('city_teleports').select('*');
+            if (tps) {
+                this.teleports = tps.map(t => ({
+                    name: t.name,
+                    sign_x: t.sign_x, sign_y: t.sign_y,
+                    sign_width: t.sign_width, sign_height: t.sign_height,
+                    dest_x: t.dest_x, dest_y: t.dest_y
+                }));
+            }
         } catch (e) {
             console.warn('[CityBuilder] No saved layout');
         }
@@ -757,6 +850,17 @@ class CityBuilder {
                 }));
                 const { error: ze } = await window.db.from('city_collision_zones').insert(zonesToSave);
                 if (ze) throw ze;
+            }
+            await window.db.from('city_teleports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (this.teleports.length > 0) {
+                const tpToSave = this.teleports.map(t => ({
+                    name: t.name,
+                    sign_x: t.sign_x, sign_y: t.sign_y,
+                    sign_width: t.sign_width, sign_height: t.sign_height,
+                    dest_x: t.dest_x, dest_y: t.dest_y
+                }));
+                const { error: te } = await window.db.from('city_teleports').insert(tpToSave);
+                if (te) throw te;
             }
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
@@ -992,6 +1096,61 @@ class CityBuilder {
                 ctx.lineWidth = 2 / this.zoom;
                 ctx.fillRect(dx, dy, dw, dh);
                 ctx.strokeRect(dx, dy, dw, dh);
+            }
+        }
+
+        if (this.teleportMode || this.teleports.length > 0) {
+            this.teleports.forEach((t, i) => {
+                const isSelected = i === this.teleportSelectedIdx;
+
+                ctx.fillStyle = isSelected ? 'rgba(139, 92, 246, 0.5)' : 'rgba(139, 92, 246, 0.3)';
+                ctx.strokeStyle = isSelected ? '#fff' : '#8b5cf6';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(t.sign_x, t.sign_y, t.sign_width, t.sign_height);
+                ctx.strokeRect(t.sign_x, t.sign_y, t.sign_width, t.sign_height);
+
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.beginPath();
+                ctx.arc(t.dest_x + 16, t.dest_y + 16, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
+                ctx.lineWidth = 1 / this.zoom;
+                ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
+                ctx.beginPath();
+                ctx.moveTo(t.sign_x + t.sign_width / 2, t.sign_y + t.sign_height);
+                ctx.lineTo(t.dest_x + 16, t.dest_y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(t.name, t.sign_x + t.sign_width / 2, t.sign_y - 6 / this.zoom);
+            });
+
+            if (this.teleportPlacing) {
+                const tp = this.teleportPlacing;
+                ctx.fillStyle = 'rgba(139, 92, 246, 0.4)';
+                ctx.strokeStyle = '#8b5cf6';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(tp.sign_x, tp.sign_y, tp.sign_width, tp.sign_height);
+                ctx.strokeRect(tp.sign_x, tp.sign_y, tp.sign_width, tp.sign_height);
+
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
+                ctx.strokeStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.arc(tp.dest_x + 16, tp.dest_y + 16, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(tp.name + ' (Enter=confirmar)', tp.sign_x + tp.sign_width / 2, tp.sign_y - 6 / this.zoom);
             }
         }
 

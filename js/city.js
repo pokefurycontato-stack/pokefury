@@ -34,12 +34,19 @@ class CityScreen {
         });
         const closeBtn = document.getElementById('city-close-btn');
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+        const teleportCloseBtn = document.getElementById('city-teleport-close');
+        if (teleportCloseBtn) teleportCloseBtn.addEventListener('click', () => this.closeTeleportMenu());
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
             this.keys[e.key] = true;
             if (e.key === 'p' || e.key === 'P') {
                 window._cityDebug = !window._cityDebug;
                 console.log('[City] Debug:', window._cityDebug ? 'ON' : 'OFF');
+            }
+            if (e.key === 'e' || e.key === 'E') {
+                if (this.nearestTeleport) {
+                    this.showTeleportMenu(this.nearestTeleport);
+                }
             }
         });
         document.addEventListener('keyup', (e) => {
@@ -59,6 +66,7 @@ class CityScreen {
         await this.loadPlayerSkin(game);
         await this.loadLayout();
         await this.loadCollisionZones();
+        await this.loadTeleports();
         await this.registerPlayer();
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
@@ -295,8 +303,73 @@ class CityScreen {
             console.log(`[City] Loaded ${this.collisionZones.length} collision zones`);
         } catch (e) {
             console.warn('[City] Collision zones load error:', e.message);
-            this.collisionZones = [];
+        this.collisionZones = [];
+        this.teleports = [];
+        this.nearestTeleport = null;
         }
+    }
+
+    async loadTeleports() {
+        try {
+            const { data, error } = await window.db.from('city_teleports').select('*');
+            if (error) throw error;
+            this.teleports = (data || []).map(t => ({
+                id: t.id, name: t.name,
+                sign_x: t.sign_x, sign_y: t.sign_y,
+                sign_width: t.sign_width, sign_height: t.sign_height,
+                dest_x: t.dest_x, dest_y: t.dest_y
+            }));
+            console.log(`[City] Loaded ${this.teleports.length} teleports`);
+        } catch (e) {
+            console.warn('[City] Teleports load error:', e.message);
+            this.teleports = [];
+        }
+    }
+
+    showTeleportMenu(sign) {
+        const popup = document.getElementById('city-teleport-popup');
+        const title = document.getElementById('city-teleport-title');
+        const list = document.getElementById('city-teleport-list');
+        if (!popup || !title || !list) return;
+
+        title.textContent = sign.name;
+        list.innerHTML = '';
+
+        const otherTeleports = this.teleports.filter(t => t.id !== sign.id);
+        if (otherTeleports.length === 0) {
+            list.innerHTML = '<div style="color:rgba(255,255,255,0.4);text-align:center;font-size:12px;">Nenhum destino disponível</div>';
+        } else {
+            otherTeleports.forEach(t => {
+                const btn = document.createElement('button');
+                btn.textContent = t.name;
+                btn.style.cssText = 'padding:10px 16px;border:1px solid #30363d;border-radius:8px;background:rgba(139,92,246,0.15);color:#fff;font-size:13px;cursor:pointer;transition:all 0.2s;text-align:left;';
+                btn.onmouseenter = () => { btn.style.background = 'rgba(139,92,246,0.35)'; btn.style.borderColor = '#8b5cf6'; };
+                btn.onmouseleave = () => { btn.style.background = 'rgba(139,92,246,0.15)'; btn.style.borderColor = '#30363d'; };
+                btn.onclick = () => {
+                    this.teleportPlayer(t);
+                    this.closeTeleportMenu();
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        popup.classList.remove('hidden');
+    }
+
+    closeTeleportMenu() {
+        const popup = document.getElementById('city-teleport-popup');
+        if (popup) popup.classList.add('hidden');
+    }
+
+    teleportPlayer(dest) {
+        this.playerX = dest.dest_x + 32;
+        this.playerY = dest.dest_y + 32;
+        this.playerFromX = this.playerX;
+        this.playerFromY = this.playerY;
+        this.cameraX = this.playerX;
+        this.cameraY = this.playerY;
+        this.syncPosition();
+        console.log(`[City] Teleported to ${dest.name}`);
     }
 
     checkCollision(nx, ny) {
@@ -370,6 +443,17 @@ class CityScreen {
         const targetY = this.playerY;
         this.cameraX += (targetX - this.cameraX) * 0.15;
         this.cameraY += (targetY - this.cameraY) * 0.15;
+
+        this.nearestTeleport = null;
+        for (const t of this.teleports) {
+            const cx = t.sign_x + t.sign_width / 2;
+            const cy = t.sign_y + t.sign_height / 2;
+            const dist = Math.sqrt((this.playerX - cx) ** 2 + (this.playerY - cy) ** 2);
+            if (dist < 80) {
+                this.nearestTeleport = t;
+                break;
+            }
+        }
 
         if (!this._lastSync) this._lastSync = 0;
         this._lastSync++;
@@ -450,6 +534,21 @@ class CityScreen {
             ctx.restore();
         });
 
+        this.teleports.forEach(t => {
+            const sx = t.sign_x - camX;
+            const sy = t.sign_y - camY;
+            if (sx + t.sign_width < -50 || sx > cw + 50 || sy + t.sign_height < -50 || sy > ch + 50) return;
+            ctx.fillStyle = 'rgba(139, 92, 246, 0.35)';
+            ctx.strokeStyle = '#8b5cf6';
+            ctx.lineWidth = 2;
+            ctx.fillRect(sx, sy, t.sign_width, t.sign_height);
+            ctx.strokeRect(sx, sy, t.sign_width, t.sign_height);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(t.name, sx + t.sign_width / 2, sy - 6);
+        });
+
         if (window._cityDebug) {
             ctx.fillStyle = 'rgba(231, 76, 60, 0.25)';
             ctx.strokeStyle = '#e74c3c';
@@ -472,6 +571,20 @@ class CityScreen {
             ctx.font = 'bold 10px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(`${ps}x${ps}`, ppx + ps / 2, ppy - 6);
+        }
+
+        if (this.nearestTeleport) {
+            const t = this.nearestTeleport;
+            const sx = t.sign_x - camX + t.sign_width / 2;
+            const sy = t.sign_y - camY - 20;
+            ctx.fillStyle = 'rgba(139, 92, 246, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(sx - 50, sy - 14, 100, 22, 6);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Aperte E', sx, sy + 1);
         }
 
         const allPlayers = [];

@@ -1237,6 +1237,17 @@
             <div style="flex:1;"></div>
             <span style="color:rgba(255,255,255,0.3);font-size:11px;">WASD ou Setas para mover</span>
         </div>
+        <!-- Teleport Popup -->
+        <div id="city-teleport-popup" class="hidden" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #8b5cf6;border-radius:12px;padding:20px;min-width:280px;z-index:850;box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+            <div style="text-align:center;margin-bottom:16px;">
+                <div style="font-size:24px;margin-bottom:4px;">🌀</div>
+                <h3 id="city-teleport-title" style="margin:0;color:#f59e0b;font-size:16px;">Teleport</h3>
+            </div>
+            <div id="city-teleport-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+            <div style="text-align:center;">
+                <button id="city-teleport-close" style="padding:6px 20px;border:none;border-radius:6px;background:#30363d;color:#aaa;font-size:12px;cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
     </div>
 
     <!-- City Builder Admin -->
@@ -1245,6 +1256,7 @@
             <h2 style="margin:0;color:#fff;font-size:16px;">🏙️ Criar Cidade - Editor</h2>
             <div style="display:flex;gap:8px;">
                 <button id="cb-collision-zone-btn" title="Desenhar zonas de colisão no mapa" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🔴 Zona Colisão</button>
+                <button id="cb-teleport-btn" title="Criar pontos de teleport" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🌀 Teleport</button>
                 <button id="cb-preview-btn" title="Preview do jogador" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">👁️</button>
                 <button id="cb-save-btn" style="padding:6px 14px;border:none;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
                 <button id="cb-close-btn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
