@@ -1190,33 +1190,51 @@ class CityBuilder {
                 collision_boxes: Array.isArray(a.collision_boxes) && a.collision_boxes.length > 0 ? JSON.parse(JSON.stringify(a.collision_boxes)) : []
             }));
             const zonesToSave = this.collisionZones.map(z => ({
-                ...(z.id ? { id: z.id } : {}),
-                pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
+                source: z,
+                payload: {
+                    ...(z.id ? { id: z.id } : {}),
+                    pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
+                }
             }));
             const tpToSave = this.teleports.map(t => ({
-                ...(t.id ? { id: t.id } : {}),
-                name: t.name,
-                sign_x: t.sign_x, sign_y: t.sign_y,
-                sign_width: t.sign_width, sign_height: t.sign_height,
-                dest_x: t.dest_x, dest_y: t.dest_y
+                source: t,
+                payload: {
+                    ...(t.id ? { id: t.id } : {}),
+                    name: t.name,
+                    sign_x: t.sign_x, sign_y: t.sign_y,
+                    sign_width: t.sign_width, sign_height: t.sign_height,
+                    dest_x: t.dest_x, dest_y: t.dest_y
+                }
             }));
             const npcToSave = this.npcRegions.map(n => ({
-                ...(n.id ? { id: n.id } : {}),
-                npc_type: n.npc_type || 'region_selector',
-                pos_x: n.pos_x, pos_y: n.pos_y,
-                width: n.width, height: n.height,
-                interaction_width: n.interaction_width, interaction_height: n.interaction_height,
-                name: n.name || 'Aviador',
-                sprite_url: n.sprite_url || null
+                source: n,
+                payload: {
+                    ...(n.id ? { id: n.id } : {}),
+                    npc_type: n.npc_type || 'region_selector',
+                    pos_x: n.pos_x, pos_y: n.pos_y,
+                    width: n.width, height: n.height,
+                    interaction_width: n.interaction_width, interaction_height: n.interaction_height,
+                    name: n.name || 'Aviador',
+                    sprite_url: n.sprite_url || null
+                }
             }));
             const bzToSave = this.battleZones.map(z => ({
-                ...(z.id ? { id: z.id } : {}),
-                zone_name: z.zone_name,
-                pos_x: z.pos_x, pos_y: z.pos_y,
-                width: z.width, height: z.height
+                source: z,
+                payload: {
+                    ...(z.id ? { id: z.id } : {}),
+                    zone_name: z.zone_name,
+                    pos_x: z.pos_x, pos_y: z.pos_y,
+                    width: z.width, height: z.height
+                }
             }));
 
-            const backup = { assets: toSave, zones: zonesToSave, teleports: tpToSave, npcs: npcToSave, battleZones: bzToSave };
+            const backup = {
+                assets: toSave,
+                zones: zonesToSave.map(z => z.payload),
+                teleports: tpToSave.map(t => t.payload),
+                npcs: npcToSave.map(n => n.payload),
+                battleZones: bzToSave.map(z => z.payload)
+            };
 
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
 
@@ -1258,39 +1276,38 @@ class CityBuilder {
                 });
             }
 
-            const formatIds = (ids, quote = true) => Array.from(ids).map(id => {
-                const value = String(id).replace(/'/g, "''");
-                return quote ? `'${value}'` : value;
-            }).join(',');
-            const deleteStaleRows = async (table, ids, quote = true) => {
-                if (ids.size > 0) {
-                    const idList = formatIds(ids, quote);
-                    const { error } = await window.db.from(table).delete().not('id', 'in', `(${idList})`);
-                    if (error) throw error;
-                } else {
-                    const { error } = await window.db.from(table).delete().not('id', 'is', null);
-                    if (error) throw error;
-                }
+            const fetchIds = async table => {
+                const { data, error } = await window.db.from(table).select('id');
+                if (error) throw error;
+                return new Set((data || []).map(r => r.id).filter(Boolean));
+            };
+            const deleteIds = async (table, ids) => {
+                if (ids.size === 0) return;
+                const { error } = await window.db.from(table).delete().in('id', Array.from(ids));
+                if (error) throw error;
+            };
+            const deleteMissingRows = async (table, currentIds) => {
+                const existingIds = await fetchIds(table);
+                const staleIds = new Set([...existingIds].filter(id => !currentIds.has(id)));
+                await deleteIds(table, staleIds);
             };
 
             const savedIds = new Set(savedAssets.map(r => Number(r.id)).filter(Number.isFinite));
             if (savedIds.size > 0) {
-                const idList = Array.from(savedIds).join(',');
-                const { error: deleteStaleError } = await window.db.from('city_layout').delete().not('id', 'in', `(${idList})`);
-                if (deleteStaleError) throw deleteStaleError;
+                await deleteMissingRows('city_layout', savedIds);
             } else {
                 const { error: deleteAllError } = await window.db.from('city_layout').delete().not('id', 'is', null);
                 if (deleteAllError) throw deleteAllError;
             }
 
-            const syncTable = async (table, rows) => {
+            const syncTable = async (table, items) => {
                 const existing = [];
-                const newRows = [];
-                for (const row of rows) {
-                    if (row.id) {
-                        existing.push(row);
+                const newItems = [];
+                for (const item of items) {
+                    if (item.payload.id) {
+                        existing.push(item.payload);
                     } else {
-                        newRows.push(row);
+                        newItems.push(item);
                     }
                 }
                 const saved = [];
@@ -1301,14 +1318,15 @@ class CityBuilder {
                     if (error) throw error;
                     if (data) saved.push(...data);
                 }
-                if (newRows.length > 0) {
+                if (newItems.length > 0) {
                     const { data, error } = await window.db.from(table)
-                        .insert(newRows)
+                        .insert(newItems.map(item => item.payload))
                         .select('id');
                     if (error) throw error;
                     if (data) {
                         for (let i = 0; i < data.length; i++) {
-                            newRows[i].id = data[i].id;
+                            newItems[i].source.id = data[i].id;
+                            newItems[i].payload.id = data[i].id;
                         }
                         saved.push(...data);
                     }
@@ -1321,10 +1339,10 @@ class CityBuilder {
             const npcIds = await syncTable('city_npcs', npcToSave);
             const bzIds = await syncTable('city_battle_zones', bzToSave);
 
-            await deleteStaleRows('city_collision_zones', zoneIds);
-            await deleteStaleRows('city_teleports', tpIds);
-            await deleteStaleRows('city_npcs', npcIds);
-            await deleteStaleRows('city_battle_zones', bzIds);
+            await deleteMissingRows('city_collision_zones', zoneIds);
+            await deleteMissingRows('city_teleports', tpIds);
+            await deleteMissingRows('city_npcs', npcIds);
+            await deleteMissingRows('city_battle_zones', bzIds);
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         } catch (e) {
