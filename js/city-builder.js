@@ -1252,7 +1252,8 @@ class CityBuilder {
 
             const savedIds = new Set(savedAssets.map(r => r.id).filter(Boolean));
             if (savedIds.size > 0) {
-                const { error: deleteStaleError } = await window.db.from('city_layout').delete().not('id', 'in', Array.from(savedIds));
+                const idList = Array.from(savedIds).map(String).join(',');
+                const { error: deleteStaleError } = await window.db.from('city_layout').delete().not('id', 'in', `(${idList})`);
                 if (deleteStaleError) throw deleteStaleError;
             } else {
                 const { error: deleteAllError } = await window.db.from('city_layout').delete();
