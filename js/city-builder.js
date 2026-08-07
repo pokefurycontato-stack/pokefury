@@ -40,6 +40,9 @@ class CityBuilder {
         this.teleports = [];
         this.teleportPlacing = null;
         this.teleportSelectedIdx = -1;
+        this.teleportDragging = false;
+        this.teleportDragPart = null;
+        this.teleportDragOffset = { x: 0, y: 0 };
 
         this.bindEvents();
     }
@@ -465,12 +468,39 @@ class CityBuilder {
         if (e.button === 2) { this.teleportPlacing = null; this.render(); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
 
+        if (this.teleportPlacing) {
+            const tp = this.teleportPlacing;
+            if (w.x >= tp.dest_x && w.x <= tp.dest_x + 32 && w.y >= tp.dest_y && w.y <= tp.dest_y + 32) {
+                this.teleportDragging = true;
+                this.teleportDragPart = 'dest';
+                this.teleportDragOffset = { x: w.x - tp.dest_x, y: w.y - tp.dest_y };
+                return;
+            }
+            if (w.x >= tp.sign_x && w.x <= tp.sign_x + tp.sign_width && w.y >= tp.sign_y && w.y <= tp.sign_y + tp.sign_height) {
+                this.teleportDragging = true;
+                this.teleportDragPart = 'sign';
+                this.teleportDragOffset = { x: w.x - tp.sign_x, y: w.y - tp.sign_y };
+                return;
+            }
+            return;
+        }
+
         for (let i = this.teleports.length - 1; i >= 0; i--) {
             const t = this.teleports[i];
-            if (w.x >= t.sign_x - 20 && w.x <= t.sign_x + t.sign_width + 20 &&
-                w.y >= t.sign_y - 20 && w.y <= t.sign_y + t.sign_height + 20) {
+            const dx = t.dest_x + 16;
+            const dy = t.dest_y + 16;
+            if (Math.sqrt((w.x - dx) ** 2 + (w.y - dy) ** 2) < 20) {
                 this.teleportSelectedIdx = i;
-                this.render();
+                this.teleportDragging = true;
+                this.teleportDragPart = 'dest';
+                this.teleportDragOffset = { x: w.x - t.dest_x, y: w.y - t.dest_y };
+                return;
+            }
+            if (w.x >= t.sign_x && w.x <= t.sign_x + t.sign_width && w.y >= t.sign_y && w.y <= t.sign_y + t.sign_height) {
+                this.teleportSelectedIdx = i;
+                this.teleportDragging = true;
+                this.teleportDragPart = 'sign';
+                this.teleportDragOffset = { x: w.x - t.sign_x, y: w.y - t.sign_y };
                 return;
             }
         }
@@ -488,6 +518,36 @@ class CityBuilder {
             dest_y: Math.round(w.y + 120)
         };
         this.render();
+    }
+
+    onTeleportMouseMove(e) {
+        if (!this.teleportDragging) return;
+        const w = this.screenToWorld(e.clientX, e.clientY);
+
+        if (this.teleportPlacing) {
+            if (this.teleportDragPart === 'sign') {
+                this.teleportPlacing.sign_x = Math.round(w.x - this.teleportDragOffset.x);
+                this.teleportPlacing.sign_y = Math.round(w.y - this.teleportDragOffset.y);
+            } else {
+                this.teleportPlacing.dest_x = Math.round(w.x - this.teleportDragOffset.x);
+                this.teleportPlacing.dest_y = Math.round(w.y - this.teleportDragOffset.y);
+            }
+        } else if (this.teleportSelectedIdx >= 0) {
+            const t = this.teleports[this.teleportSelectedIdx];
+            if (this.teleportDragPart === 'sign') {
+                t.sign_x = Math.round(w.x - this.teleportDragOffset.x);
+                t.sign_y = Math.round(w.y - this.teleportDragOffset.y);
+            } else {
+                t.dest_x = Math.round(w.x - this.teleportDragOffset.x);
+                t.dest_y = Math.round(w.y - this.teleportDragOffset.y);
+            }
+        }
+        this.render();
+    }
+
+    onTeleportMouseUp(e) {
+        this.teleportDragging = false;
+        this.teleportDragPart = null;
     }
 
     confirmTeleportPlace() {
@@ -632,7 +692,7 @@ class CityBuilder {
         this.canvas.onmouseup = (e) => {
             if (this.collisionEditMode) { this.onCollisionMouseUp(e); return; }
             if (this.collisionZoneMode) { this.onZoneMouseUp(e); return; }
-            if (this.teleportMode) return;
+            if (this.teleportMode) { this.onTeleportMouseUp(e); return; }
             this.dragging = false;
         };
         this.canvas.onwheel = (e) => this.onWheel(e);
@@ -692,7 +752,7 @@ class CityBuilder {
         if (this.previewMode) return;
         if (this.collisionEditMode) { this.onCollisionMouseMove(e); return; }
         if (this.collisionZoneMode) { this.onZoneMouseMove(e); return; }
-        if (this.teleportMode) return;
+        if (this.teleportMode) { this.onTeleportMouseMove(e); return; }
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
