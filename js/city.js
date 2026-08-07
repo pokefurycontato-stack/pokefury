@@ -37,7 +37,7 @@ class CityScreen {
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
             this.keys[e.key] = true;
-            if (e.key === 'd' || e.key === 'D') {
+            if (e.key === 'p' || e.key === 'P') {
                 window._cityDebug = !window._cityDebug;
                 console.log('[City] Debug:', window._cityDebug ? 'ON' : 'OFF');
             }
@@ -461,9 +461,17 @@ class CityScreen {
                 ctx.strokeRect(sx, sy, z.width, z.height);
             }
             const ps = 32;
+            const ppx = this.playerX - camX - ps / 2;
+            const ppy = this.playerY - camY - ps / 2;
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
-            ctx.strokeRect(this.playerX - camX - ps / 2, this.playerY - camY - ps / 2, ps, ps);
+            ctx.fillRect(ppx, ppy, ps, ps);
+            ctx.strokeRect(ppx, ppy, ps, ps);
+            ctx.fillStyle = '#00ff00';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${ps}x${ps}`, ppx + ps / 2, ppy - 6);
         }
 
         const allPlayers = [];
