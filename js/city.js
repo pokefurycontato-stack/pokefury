@@ -755,24 +755,6 @@ class CityScreen {
             if (sx + n.width < -50 || sx > cw + 50 || sy + n.height < -50 || sy > ch + 50) return;
         });
 
-        this.battleZones.forEach(z => {
-            const sx = z.pos_x - camX;
-            const sy = z.pos_y - camY;
-            if (sx + z.width < -50 || sx > cw + 50 || sy + z.height < -50 || sy > ch + 50) return;
-            const isActive = this.currentBattleZone && this.currentBattleZone.id === z.id;
-            ctx.fillStyle = isActive ? 'rgba(233, 69, 96, 0.35)' : 'rgba(233, 69, 96, 0.15)';
-            ctx.strokeStyle = isActive ? '#e94560' : 'rgba(233, 69, 96, 0.4)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([8, 4]);
-            ctx.fillRect(sx, sy, z.width, z.height);
-            ctx.strokeRect(sx, sy, z.width, z.height);
-            ctx.setLineDash([]);
-            ctx.fillStyle = isActive ? '#e94560' : 'rgba(233, 69, 96, 0.7)';
-            ctx.font = 'bold 10px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('⚔️ ' + z.zone_name, sx + z.width / 2, sy - 6);
-        });
-
         if (window._cityDebug) {
             ctx.fillStyle = 'rgba(231, 76, 60, 0.25)';
             ctx.strokeStyle = '#e74c3c';
