@@ -1092,12 +1092,14 @@ class CityBuilder {
             const { data: zones } = await window.db.from('city_collision_zones').select('*').limit(5000);
             if (zones) {
                 this.collisionZones = zones.map(z => ({
+                    id: z.id,
                     pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
                 }));
             }
             const { data: tps } = await window.db.from('city_teleports').select('*').limit(5000);
             if (tps) {
                 this.teleports = tps.map(t => ({
+                    id: t.id,
                     name: t.name,
                     sign_x: t.sign_x, sign_y: t.sign_y,
                     sign_width: t.sign_width, sign_height: t.sign_height,
@@ -1107,6 +1109,7 @@ class CityBuilder {
             const { data: npcs } = await window.db.from('city_npcs').select('*').limit(5000);
             if (npcs) {
                 this.npcRegions = npcs.map(n => ({
+                    id: n.id,
                     npc_type: n.npc_type,
                     pos_x: n.pos_x, pos_y: n.pos_y,
                     width: n.width, height: n.height,
@@ -1118,6 +1121,7 @@ class CityBuilder {
             const { data: bz } = await window.db.from('city_battle_zones').select('*').limit(5000);
             if (bz) {
                 this.battleZones = bz.map(z => ({
+                    id: z.id,
                     zone_name: z.zone_name,
                     pos_x: z.pos_x, pos_y: z.pos_y,
                     width: z.width, height: z.height
@@ -1186,15 +1190,18 @@ class CityBuilder {
                 collision_boxes: Array.isArray(a.collision_boxes) && a.collision_boxes.length > 0 ? JSON.parse(JSON.stringify(a.collision_boxes)) : []
             }));
             const zonesToSave = this.collisionZones.map(z => ({
+                ...(z.id ? { id: z.id } : {}),
                 pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
             }));
             const tpToSave = this.teleports.map(t => ({
+                ...(t.id ? { id: t.id } : {}),
                 name: t.name,
                 sign_x: t.sign_x, sign_y: t.sign_y,
                 sign_width: t.sign_width, sign_height: t.sign_height,
                 dest_x: t.dest_x, dest_y: t.dest_y
             }));
             const npcToSave = this.npcRegions.map(n => ({
+                ...(n.id ? { id: n.id } : {}),
                 npc_type: n.npc_type || 'region_selector',
                 pos_x: n.pos_x, pos_y: n.pos_y,
                 width: n.width, height: n.height,
@@ -1203,6 +1210,7 @@ class CityBuilder {
                 sprite_url: n.sprite_url || null
             }));
             const bzToSave = this.battleZones.map(z => ({
+                ...(z.id ? { id: z.id } : {}),
                 zone_name: z.zone_name,
                 pos_x: z.pos_x, pos_y: z.pos_y,
                 width: z.width, height: z.height
@@ -1250,43 +1258,70 @@ class CityBuilder {
                 });
             }
 
+            const quoteIds = ids => Array.from(ids).map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
+            const deleteStaleRows = async (table, ids) => {
+                if (ids.size > 0) {
+                    const idList = quoteIds(ids);
+                    const { error } = await window.db.from(table).delete().not('id', 'in', `(${idList})`);
+                    if (error) throw error;
+                } else {
+                    const { error } = await window.db.from(table).delete().not('id', 'is', null);
+                    if (error) throw error;
+                }
+            };
+
             const savedIds = new Set(savedAssets.map(r => r.id).filter(Boolean));
             if (savedIds.size > 0) {
-                const idList = Array.from(savedIds).map(String).join(',');
+                const idList = quoteIds(savedIds);
                 const { error: deleteStaleError } = await window.db.from('city_layout').delete().not('id', 'in', `(${idList})`);
                 if (deleteStaleError) throw deleteStaleError;
             } else {
-                const { error: deleteAllError } = await window.db.from('city_layout').delete();
+                const { error: deleteAllError } = await window.db.from('city_layout').delete().not('id', 'is', null);
                 if (deleteAllError) throw deleteAllError;
             }
 
-            const { error: deleteZonesError } = await window.db.from('city_collision_zones').delete();
-            if (deleteZonesError) throw deleteZonesError;
-            if (zonesToSave.length > 0) {
-                const { error: ze } = await window.db.from('city_collision_zones').insert(zonesToSave);
-                if (ze) throw ze;
-            }
+            const syncTable = async (table, rows) => {
+                const existing = [];
+                const newRows = [];
+                for (const row of rows) {
+                    if (row.id) {
+                        existing.push(row);
+                    } else {
+                        newRows.push(row);
+                    }
+                }
+                const saved = [];
+                if (existing.length > 0) {
+                    const { data, error } = await window.db.from(table)
+                        .upsert(existing, { onConflict: 'id' })
+                        .select('id');
+                    if (error) throw error;
+                    if (data) saved.push(...data);
+                }
+                if (newRows.length > 0) {
+                    const { data, error } = await window.db.from(table)
+                        .insert(newRows)
+                        .select('id');
+                    if (error) throw error;
+                    if (data) {
+                        for (let i = 0; i < data.length; i++) {
+                            newRows[i].id = data[i].id;
+                        }
+                        saved.push(...data);
+                    }
+                }
+                return new Set(saved.map(r => r.id).filter(Boolean));
+            };
 
-            const { error: deleteTeleportsError } = await window.db.from('city_teleports').delete();
-            if (deleteTeleportsError) throw deleteTeleportsError;
-            if (tpToSave.length > 0) {
-                const { error: te } = await window.db.from('city_teleports').insert(tpToSave);
-                if (te) throw te;
-            }
+            const zoneIds = await syncTable('city_collision_zones', zonesToSave);
+            const tpIds = await syncTable('city_teleports', tpToSave);
+            const npcIds = await syncTable('city_npcs', npcToSave);
+            const bzIds = await syncTable('city_battle_zones', bzToSave);
 
-            const { error: deleteNpcsError } = await window.db.from('city_npcs').delete();
-            if (deleteNpcsError) throw deleteNpcsError;
-            if (npcToSave.length > 0) {
-                const { error: ne } = await window.db.from('city_npcs').insert(npcToSave);
-                if (ne) throw ne;
-            }
-
-            const { error: deleteBattleZonesError } = await window.db.from('city_battle_zones').delete();
-            if (deleteBattleZonesError) throw deleteBattleZonesError;
-            if (bzToSave.length > 0) {
-                const { error: bze } = await window.db.from('city_battle_zones').insert(bzToSave);
-                if (bze) throw bze;
-            }
+            await deleteStaleRows('city_collision_zones', zoneIds);
+            await deleteStaleRows('city_teleports', tpIds);
+            await deleteStaleRows('city_npcs', npcIds);
+            await deleteStaleRows('city_battle_zones', bzIds);
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         } catch (e) {
