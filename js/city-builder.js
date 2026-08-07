@@ -1258,10 +1258,13 @@ class CityBuilder {
                 });
             }
 
-            const quoteIds = ids => Array.from(ids).map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
-            const deleteStaleRows = async (table, ids) => {
+            const formatIds = (ids, quote = true) => Array.from(ids).map(id => {
+                const value = String(id).replace(/'/g, "''");
+                return quote ? `'${value}'` : value;
+            }).join(',');
+            const deleteStaleRows = async (table, ids, quote = true) => {
                 if (ids.size > 0) {
-                    const idList = quoteIds(ids);
+                    const idList = formatIds(ids, quote);
                     const { error } = await window.db.from(table).delete().not('id', 'in', `(${idList})`);
                     if (error) throw error;
                 } else {
@@ -1270,9 +1273,9 @@ class CityBuilder {
                 }
             };
 
-            const savedIds = new Set(savedAssets.map(r => r.id).filter(Boolean));
+            const savedIds = new Set(savedAssets.map(r => Number(r.id)).filter(Number.isFinite));
             if (savedIds.size > 0) {
-                const idList = quoteIds(savedIds);
+                const idList = Array.from(savedIds).join(',');
                 const { error: deleteStaleError } = await window.db.from('city_layout').delete().not('id', 'in', `(${idList})`);
                 if (deleteStaleError) throw deleteStaleError;
             } else {
