@@ -25,6 +25,8 @@ class CityScreen {
         this.npcs = [];
         this.nearestNpc = null;
         this.npcDialogueOpen = false;
+        this.battleZones = [];
+        this.currentBattleZone = null;
 
         this.bindEvents();
     }
@@ -79,6 +81,7 @@ class CityScreen {
         await this.loadCollisionZones();
         await this.loadTeleports();
         await this.loadNpcs();
+        await this.loadBattleZones();
         await this.registerPlayer();
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
@@ -357,6 +360,22 @@ class CityScreen {
         }
     }
 
+    async loadBattleZones() {
+        try {
+            const { data, error } = await window.db.from('city_battle_zones').select('*');
+            if (error) throw error;
+            this.battleZones = (data || []).map(z => ({
+                id: z.id, zone_name: z.zone_name,
+                pos_x: z.pos_x, pos_y: z.pos_y,
+                width: z.width, height: z.height
+            }));
+            console.log(`[City] Loaded ${this.battleZones.length} battle zones`);
+        } catch (e) {
+            console.warn('[City] Battle zones load error:', e.message);
+            this.battleZones = [];
+        }
+    }
+
     showTeleportMenu(sign) {
         const popup = document.getElementById('city-teleport-popup');
         const title = document.getElementById('city-teleport-title');
@@ -615,11 +634,25 @@ class CityScreen {
             const cx = n.pos_x + n.width / 2;
             const cy = n.pos_y + n.height / 2;
             const dist = Math.sqrt((this.playerX - cx) ** 2 + (this.playerY - cy) ** 2);
-            console.log(`[City] NPC "${n.name}" at (${n.pos_x},${n.pos_y}) player=(${Math.round(this.playerX)},${Math.round(this.playerY)}) dist=${Math.round(dist)}`);
             if (dist < 100) {
                 this.nearestNpc = n;
                 break;
             }
+        }
+
+        const prevZone = this.currentBattleZone;
+        this.currentBattleZone = null;
+        for (const z of this.battleZones) {
+            if (this.playerX >= z.pos_x && this.playerX <= z.pos_x + z.width &&
+                this.playerY >= z.pos_y && this.playerY <= z.pos_y + z.height) {
+                this.currentBattleZone = z;
+                break;
+            }
+        }
+        if (this.currentBattleZone && this.currentBattleZone !== prevZone) {
+            console.log(`[City] Entered battle zone: ${this.currentBattleZone.zone_name}`);
+        } else if (!this.currentBattleZone && prevZone) {
+            console.log(`[City] Left battle zone: ${prevZone.zone_name}`);
         }
 
         if (!this._lastSync) this._lastSync = 0;
@@ -720,6 +753,24 @@ class CityScreen {
             const sx = n.pos_x - camX;
             const sy = n.pos_y - camY;
             if (sx + n.width < -50 || sx > cw + 50 || sy + n.height < -50 || sy > ch + 50) return;
+        });
+
+        this.battleZones.forEach(z => {
+            const sx = z.pos_x - camX;
+            const sy = z.pos_y - camY;
+            if (sx + z.width < -50 || sx > cw + 50 || sy + z.height < -50 || sy > ch + 50) return;
+            const isActive = this.currentBattleZone && this.currentBattleZone.id === z.id;
+            ctx.fillStyle = isActive ? 'rgba(233, 69, 96, 0.35)' : 'rgba(233, 69, 96, 0.15)';
+            ctx.strokeStyle = isActive ? '#e94560' : 'rgba(233, 69, 96, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 4]);
+            ctx.fillRect(sx, sy, z.width, z.height);
+            ctx.strokeRect(sx, sy, z.width, z.height);
+            ctx.setLineDash([]);
+            ctx.fillStyle = isActive ? '#e94560' : 'rgba(233, 69, 96, 0.7)';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚔️ ' + z.zone_name, sx + z.width / 2, sy - 6);
         });
 
         if (window._cityDebug) {

@@ -50,6 +50,14 @@ class CityBuilder {
         this.npcRegionSelectedIdx = -1;
         this.npcRegionDragOffset = { x: 0, y: 0 };
 
+        this.battleZoneMode = false;
+        this.battleZones = [];
+        this.battleZoneDrawStart = null;
+        this.battleZoneDrawCurrent = null;
+        this.battleZoneSelectedIdx = -1;
+        this.battleZoneDragging = false;
+        this.battleZoneDragOffset = { x: 0, y: 0 };
+
         this.bindEvents();
     }
 
@@ -68,6 +76,8 @@ class CityBuilder {
         if (teleportBtn) teleportBtn.addEventListener('click', () => this.toggleTeleportMode());
         const npcRegionBtn = document.getElementById('cb-npc-region-btn');
         if (npcRegionBtn) npcRegionBtn.addEventListener('click', () => this.toggleNpcRegionMode());
+        const battleZoneBtn = document.getElementById('cb-battle-zone-btn');
+        if (battleZoneBtn) battleZoneBtn.addEventListener('click', () => this.toggleBattleZoneMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -107,6 +117,15 @@ class CityBuilder {
                 if ((e.key === 'Delete' || e.key === 'Backspace') && this.npcRegionSelectedIdx >= 0) {
                     e.preventDefault();
                     this.deleteSelectedNpcRegion();
+                    return;
+                }
+                return;
+            }
+            if (this.battleZoneMode) {
+                if (e.key === 'Escape') { this.toggleBattleZoneMode(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this.battleZoneSelectedIdx >= 0) {
+                    e.preventDefault();
+                    this.deleteSelectedBattleZone();
                     return;
                 }
                 return;
@@ -652,6 +671,90 @@ class CityBuilder {
         }
     }
 
+    toggleBattleZoneMode() {
+        this.battleZoneMode = !this.battleZoneMode;
+        const btn = document.getElementById('cb-battle-zone-btn');
+        if (btn) btn.style.background = this.battleZoneMode ? '#e94560' : 'rgba(255,255,255,0.15)';
+        if (this.battleZoneMode) {
+            this.selected = null;
+            this.collisionZoneMode = false;
+            this.teleportMode = false;
+            this.npcRegionMode = false;
+            const zBtn = document.getElementById('cb-collision-zone-btn');
+            if (zBtn) zBtn.style.background = 'rgba(255,255,255,0.15)';
+            const tBtn = document.getElementById('cb-teleport-btn');
+            if (tBtn) tBtn.style.background = 'rgba(255,255,255,0.15)';
+            const nBtn = document.getElementById('cb-npc-region-btn');
+            if (nBtn) nBtn.style.background = 'rgba(255,255,255,0.15)';
+            this.updateProps();
+            this.canvas.style.cursor = 'crosshair';
+        } else {
+            this.battleZoneDrawStart = null;
+            this.battleZoneDrawCurrent = null;
+            this.battleZoneSelectedIdx = -1;
+            this.canvas.style.cursor = 'default';
+        }
+        this.render();
+    }
+
+    onBattleZoneMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        for (let i = this.battleZones.length - 1; i >= 0; i--) {
+            const z = this.battleZones[i];
+            if (w.x >= z.pos_x && w.x <= z.pos_x + z.width && w.y >= z.pos_y && w.y <= z.pos_y + z.height) {
+                this.battleZoneSelectedIdx = i;
+                this.battleZoneDragging = true;
+                this.battleZoneDragOffset = { x: w.x - z.pos_x, y: w.y - z.pos_y };
+                this.render();
+                return;
+            }
+        }
+        this.battleZoneSelectedIdx = -1;
+        this.battleZoneDrawStart = { x: w.x, y: w.y };
+        this.battleZoneDrawCurrent = { x: w.x, y: w.y };
+        this.render();
+    }
+
+    onBattleZoneMouseMove(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        if (this.battleZoneDragging && this.battleZoneSelectedIdx >= 0) {
+            const z = this.battleZones[this.battleZoneSelectedIdx];
+            z.pos_x = w.x - this.battleZoneDragOffset.x;
+            z.pos_y = w.y - this.battleZoneDragOffset.y;
+            this.render();
+        } else if (this.battleZoneDrawStart) {
+            this.battleZoneDrawCurrent = { x: w.x, y: w.y };
+            this.render();
+        }
+    }
+
+    onBattleZoneMouseUp(e) {
+        if (this.battleZoneDrawStart && this.battleZoneDrawCurrent) {
+            let x = this.battleZoneDrawStart.x;
+            let y = this.battleZoneDrawStart.y;
+            let w = this.battleZoneDrawCurrent.x - x;
+            let h = this.battleZoneDrawCurrent.y - y;
+            if (w < 0) { x += w; w = -w; }
+            if (h < 0) { y += h; h = -h; }
+            if (w > 4 && h > 4) {
+                const name = prompt('Nome da zona de batalha (ex: Floresta, Caverna):') || 'Batalha';
+                this.battleZones.push({ zone_name: name, pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h) });
+            }
+            this.battleZoneDrawStart = null;
+            this.battleZoneDrawCurrent = null;
+        }
+        this.battleZoneDragging = false;
+        this.render();
+    }
+
+    deleteSelectedBattleZone() {
+        if (this.battleZoneSelectedIdx >= 0) {
+            this.battleZones.splice(this.battleZoneSelectedIdx, 1);
+            this.battleZoneSelectedIdx = -1;
+            this.render();
+        }
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -783,6 +886,7 @@ class CityBuilder {
             if (this.collisionZoneMode) { this.onZoneMouseUp(e); return; }
             if (this.teleportMode) { this.onTeleportMouseUp(e); return; }
             if (this.npcRegionMode) { this.onNpcRegionMouseUp(e); return; }
+            if (this.battleZoneMode) { this.onBattleZoneMouseUp(e); return; }
             this.dragging = false;
         };
         this.canvas.onwheel = (e) => this.onWheel(e);
@@ -804,6 +908,7 @@ class CityBuilder {
         if (this.collisionZoneMode) { this.onZoneMouseDown(e); return; }
         if (this.teleportMode) { this.onTeleportMouseDown(e); return; }
         if (this.npcRegionMode) { this.onNpcRegionMouseDown(e); return; }
+        if (this.battleZoneMode) { this.onBattleZoneMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
 
@@ -845,6 +950,7 @@ class CityBuilder {
         if (this.collisionZoneMode) { this.onZoneMouseMove(e); return; }
         if (this.teleportMode) { this.onTeleportMouseMove(e); return; }
         if (this.npcRegionMode) { this.onNpcRegionMouseMove(e); return; }
+        if (this.battleZoneMode) { this.onBattleZoneMouseMove(e); return; }
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
@@ -979,6 +1085,14 @@ class CityBuilder {
                     sprite_url: n.sprite_url
                 }));
             }
+            const { data: bz } = await window.db.from('city_battle_zones').select('*');
+            if (bz) {
+                this.battleZones = bz.map(z => ({
+                    zone_name: z.zone_name,
+                    pos_x: z.pos_x, pos_y: z.pos_y,
+                    width: z.width, height: z.height
+                }));
+            }
         } catch (e) {
             console.warn('[CityBuilder] No saved layout');
         }
@@ -1037,6 +1151,16 @@ class CityBuilder {
                 }));
                 const { error: ne } = await window.db.from('city_npcs').insert(npcToSave);
                 if (ne) throw ne;
+            }
+            await window.db.from('city_battle_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (this.battleZones.length > 0) {
+                const bzToSave = this.battleZones.map(z => ({
+                    zone_name: z.zone_name,
+                    pos_x: z.pos_x, pos_y: z.pos_y,
+                    width: z.width, height: z.height
+                }));
+                const { error: bze } = await window.db.from('city_battle_zones').insert(bzToSave);
+                if (bze) throw bze;
             }
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
@@ -1353,6 +1477,33 @@ class CityBuilder {
                 ctx.textAlign = 'center';
                 ctx.fillText('✈️ ' + n.name, n.pos_x + n.width / 2, n.pos_y - 6 / this.zoom);
             });
+        }
+
+        if (this.battleZoneMode || this.battleZones.length > 0) {
+            this.battleZones.forEach((z, i) => {
+                const isSelected = i === this.battleZoneSelectedIdx;
+                ctx.fillStyle = isSelected ? 'rgba(233, 69, 96, 0.45)' : 'rgba(233, 69, 96, 0.25)';
+                ctx.strokeStyle = isSelected ? '#fff' : '#e94560';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.strokeRect(z.pos_x, z.pos_y, z.width, z.height);
+
+                ctx.fillStyle = '#e94560';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('⚔️ ' + z.zone_name, z.pos_x + z.width / 2, z.pos_y - 6 / this.zoom);
+            });
+            if (this.battleZoneDrawStart && this.battleZoneDrawCurrent) {
+                let dx = Math.min(this.battleZoneDrawStart.x, this.battleZoneDrawCurrent.x);
+                let dy = Math.min(this.battleZoneDrawStart.y, this.battleZoneDrawCurrent.y);
+                let dw = Math.abs(this.battleZoneDrawCurrent.x - this.battleZoneDrawStart.x);
+                let dh = Math.abs(this.battleZoneDrawCurrent.y - this.battleZoneDrawStart.y);
+                ctx.fillStyle = 'rgba(233, 69, 96, 0.3)';
+                ctx.strokeStyle = '#e94560';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(dx, dy, dw, dh);
+                ctx.strokeRect(dx, dy, dw, dh);
+            }
         }
 
         this.renderPlayer(ctx);
