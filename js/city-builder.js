@@ -1093,6 +1093,30 @@ class CityBuilder {
                     width: z.width, height: z.height
                 }));
             }
+
+            if (this.assets.length === 0) {
+                const backupKey = 'city_backup_' + (this.currentCityId || 'default');
+                const backup = localStorage.getItem(backupKey);
+                if (backup) {
+                    try {
+                        const b = JSON.parse(backup);
+                        console.warn('[CityBuilder] DB empty, restoring from localStorage backup');
+                        this.assets = (b.assets || []).map(a => {
+                            const img = new Image();
+                            img.src = a.asset_url;
+                            img.onload = () => this.render();
+                            return { ...a, _id: this.nextId++, _img: img, _mask: null, _overlay: null };
+                        });
+                        this.collisionZones = b.zones || [];
+                        this.teleports = b.teleports || [];
+                        this.npcRegions = b.npcs || [];
+                        this.battleZones = b.battleZones || [];
+                        const layerSet = new Set(this.assets.map(a => a.layer || 0));
+                        this.layers = [...layerSet].sort((a, b) => a - b);
+                        if (this.layers.length === 0) this.layers = [0];
+                    } catch (e) {}
+                }
+            }
         } catch (e) {
             console.warn('[CityBuilder] No saved layout');
         }
@@ -1103,7 +1127,6 @@ class CityBuilder {
         status.textContent = 'Salvando...';
         status.disabled = true;
         try {
-            await window.db.from('city_layout').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             const toSave = this.assets.map(a => ({
                 asset_id: a.asset_id,
                 asset_url: a.asset_url,
@@ -1116,50 +1139,55 @@ class CityBuilder {
                 has_collision: a.has_collision || false,
                 collision_boxes: (a.collision_boxes && a.collision_boxes.length > 0) ? JSON.parse(JSON.stringify(a.collision_boxes)) : null
             }));
+            const zonesToSave = this.collisionZones.map(z => ({
+                pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
+            }));
+            const tpToSave = this.teleports.map(t => ({
+                name: t.name,
+                sign_x: t.sign_x, sign_y: t.sign_y,
+                sign_width: t.sign_width, sign_height: t.sign_height,
+                dest_x: t.dest_x, dest_y: t.dest_y
+            }));
+            const npcToSave = this.npcRegions.map(n => ({
+                npc_type: n.npc_type || 'region_selector',
+                pos_x: n.pos_x, pos_y: n.pos_y,
+                width: n.width, height: n.height,
+                interaction_width: n.interaction_width, interaction_height: n.interaction_height,
+                name: n.name || 'Aviador',
+                sprite_url: n.sprite_url || null
+            }));
+            const bzToSave = this.battleZones.map(z => ({
+                zone_name: z.zone_name,
+                pos_x: z.pos_x, pos_y: z.pos_y,
+                width: z.width, height: z.height
+            }));
+
+            const backup = { assets: toSave, zones: zonesToSave, teleports: tpToSave, npcs: npcToSave, battleZones: bzToSave };
+            localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
+
+            await window.db.from('city_layout').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             for (let i = 0; i < toSave.length; i += 500) {
                 const batch = toSave.slice(i, i + 500);
                 const { error } = await window.db.from('city_layout').insert(batch);
                 if (error) throw error;
             }
             await window.db.from('city_collision_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (this.collisionZones.length > 0) {
-                const zonesToSave = this.collisionZones.map(z => ({
-                    pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
-                }));
+            if (zonesToSave.length > 0) {
                 const { error: ze } = await window.db.from('city_collision_zones').insert(zonesToSave);
                 if (ze) throw ze;
             }
             await window.db.from('city_teleports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (this.teleports.length > 0) {
-                const tpToSave = this.teleports.map(t => ({
-                    name: t.name,
-                    sign_x: t.sign_x, sign_y: t.sign_y,
-                    sign_width: t.sign_width, sign_height: t.sign_height,
-                    dest_x: t.dest_x, dest_y: t.dest_y
-                }));
+            if (tpToSave.length > 0) {
                 const { error: te } = await window.db.from('city_teleports').insert(tpToSave);
                 if (te) throw te;
             }
             await window.db.from('city_npcs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (this.npcRegions.length > 0) {
-                const npcToSave = this.npcRegions.map(n => ({
-                    npc_type: n.npc_type || 'region_selector',
-                    pos_x: n.pos_x, pos_y: n.pos_y,
-                    width: n.width, height: n.height,
-                    interaction_width: n.interaction_width, interaction_height: n.interaction_height,
-                    name: n.name || 'Aviador',
-                    sprite_url: n.sprite_url || null
-                }));
+            if (npcToSave.length > 0) {
                 const { error: ne } = await window.db.from('city_npcs').insert(npcToSave);
                 if (ne) throw ne;
             }
             await window.db.from('city_battle_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (this.battleZones.length > 0) {
-                const bzToSave = this.battleZones.map(z => ({
-                    zone_name: z.zone_name,
-                    pos_x: z.pos_x, pos_y: z.pos_y,
-                    width: z.width, height: z.height
-                }));
+            if (bzToSave.length > 0) {
                 const { error: bze } = await window.db.from('city_battle_zones').insert(bzToSave);
                 if (bze) throw bze;
             }
@@ -1167,7 +1195,7 @@ class CityBuilder {
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         } catch (e) {
             console.error('[CityBuilder] Save error:', e);
-            status.textContent = 'Erro';
+            status.textContent = 'Erro - dados salvos localmente';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         }
     }
