@@ -171,13 +171,10 @@ class CityScreen {
             });
             console.log(`[City] Loaded ${this.assets.length} assets`);
             this.assets.forEach(a => {
-                console.log(`[City] Asset ${a.asset_id}: boxes=${JSON.stringify(a.collision_boxes)}, collision=${a.has_collision}, scale=${a.scale}`);
                 if (a.has_collision && a._img) {
-                    const buildMask = () => {
-                        try { a._mask = this.createMask(a._img); } catch(e) { console.warn('[City] Mask error:', e.message); }
-                    };
-                    a._img.onload = buildMask;
-                    if (a._img.complete && a._img.naturalWidth) buildMask();
+                    const checkReady = () => { if (a._img.complete && a._img.naturalWidth) a._ready = true; };
+                    a._img.onload = checkReady;
+                    if (a._img.complete && a._img.naturalWidth) checkReady();
                 }
             });
         } catch (e) {
@@ -286,18 +283,6 @@ class CityScreen {
         });
     }
 
-    createMask(img) {
-        const c = document.createElement('canvas');
-        c.width = img.naturalWidth;
-        c.height = img.naturalHeight;
-        const cx = c.getContext('2d');
-        cx.drawImage(img, 0, 0);
-        const data = cx.getImageData(0, 0, c.width, c.height).data;
-        const mask = new Uint8Array(c.width * c.height);
-        for (let i = 0; i < mask.length; i++) mask[i] = data[i * 4 + 3];
-        return { mask, w: c.width, h: c.height };
-    }
-
     checkCollision(nx, ny) {
         const ps = 32;
         const px = nx - ps / 2;
@@ -317,19 +302,6 @@ class CityScreen {
                     const bw = b.w * aw;
                     const bh = b.h * ah;
                     if (px < bx + bw && px + ps > bx && py < by + bh && py + ps > by) return true;
-                }
-            } else if (a._mask) {
-                const m = a._mask;
-                if (px + ps <= a.pos_x || px >= a.pos_x + aw) continue;
-                if (py + ps <= a.pos_y || py >= a.pos_y + ah) continue;
-                const step = Math.max(4, Math.floor(ps / 6));
-                for (let sx = px + 2; sx < px + ps; sx += step) {
-                    for (let sy = py + 2; sy < py + ps; sy += step) {
-                        if (sx < a.pos_x || sx >= a.pos_x + aw || sy < a.pos_y || sy >= a.pos_y + ah) continue;
-                        const ix = Math.floor((sx - a.pos_x) / sc);
-                        const iy = Math.floor((sy - a.pos_y) / sc);
-                        if (ix >= 0 && ix < m.w && iy >= 0 && iy < m.h && m.mask[iy * m.w + ix] > 128) return true;
-                    }
                 }
             } else {
                 if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) return true;
