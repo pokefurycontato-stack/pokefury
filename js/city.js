@@ -407,11 +407,7 @@ class CityScreen {
 
         simBtn.onclick = () => {
             this.closeNpcDialogue();
-            if (typeof openWorldMap === 'function') {
-                const wm = document.getElementById('worldmap-overlay');
-                if (wm) wm.style.zIndex = '970';
-                openWorldMap();
-            }
+            this.openCityWorldMap();
         };
         naoBtn.onclick = () => {
             this.closeNpcDialogue();
@@ -428,6 +424,91 @@ class CityScreen {
             overlay.style.display = 'none';
         }
         this.npcDialogueOpen = false;
+    }
+
+    openCityWorldMap() {
+        const overlay = document.getElementById('city-worldmap-overlay');
+        const container = document.getElementById('city-worldmap-hotspots');
+        const label = document.getElementById('city-worldmap-region-label');
+        if (!overlay || !container || !label) return;
+
+        const game = window.pokefury;
+        const currentRegion = game?.currentRegion?.name || '';
+        label.textContent = currentRegion ? `📍 Voce esta em: ${currentRegion}` : '';
+
+        container.innerHTML = '';
+        if (typeof WORLD_MAP_REGIONS !== 'undefined') {
+            WORLD_MAP_REGIONS.forEach(r => {
+                const spot = document.createElement('div');
+                spot.className = 'worldmap-spot' + (r.name === currentRegion ? ' current' : '');
+                spot.style.left = `calc(${r.cx * 100}% - 28px)`;
+                spot.style.top = `calc(${r.cy * 100}% - 28px)`;
+                const dot = document.createElement('div');
+                dot.className = 'pokeball-dot';
+                spot.appendChild(dot);
+                spot.title = r.name;
+                spot.addEventListener('click', () => this.cityTravelToRegion(r.name));
+                container.appendChild(spot);
+            });
+        }
+
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
+
+        document.getElementById('city-worldmap-close-btn').onclick = () => this.closeCityWorldMap();
+        overlay.onclick = (e) => { if (e.target === overlay) this.closeCityWorldMap(); };
+    }
+
+    closeCityWorldMap() {
+        const overlay = document.getElementById('city-worldmap-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
+        }
+    }
+
+    async cityTravelToRegion(regionName) {
+        const game = window.pokefury;
+        if (!game || !game.regionManager || !game.currentCharacterId) return;
+
+        const region = game.regionManager.regions.find(
+            r => r.name.toLowerCase() === regionName.toLowerCase()
+        );
+        if (!region) {
+            alert(`Regiao "${regionName}" nao encontrada no banco de dados.`);
+            return;
+        }
+
+        if (game.currentRegion && game.currentRegion.id === region.id) {
+            this.closeCityWorldMap();
+            return;
+        }
+
+        const maps = await game.regionManager.loadRegionMaps(region.id);
+        if (!maps || maps.length === 0) {
+            alert(`Regiao "${regionName}" nao possui mapas.`);
+            return;
+        }
+
+        const firstMap = maps[0];
+        const userId = window.GameData?.userId;
+
+        await game.regionManager.initPlayerProgress(
+            game.currentCharacterId, region.id, firstMap.id, userId
+        );
+
+        game.currentRegion = region;
+        game.currentRegionMaps = maps;
+        game.currentMap = firstMap;
+
+        this.closeCityWorldMap();
+        this.close();
+
+        if (game.overworld2d) {
+            await game.overworld2d.setCurrentMap(firstMap);
+        }
+
+        game.showTransitionBanner(`Viajando para ${regionName}...`);
     }
 
     teleportPlayer(dest) {
