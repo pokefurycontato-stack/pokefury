@@ -21,6 +21,7 @@ class CityScreen {
         this.playerSize = 48;
         this.cameraX = 400;
         this.cameraY = 400;
+        this.collisionZones = [];
 
         this.bindEvents();
     }
@@ -57,6 +58,7 @@ class CityScreen {
 
         await this.loadPlayerSkin(game);
         await this.loadLayout();
+        await this.loadCollisionZones();
         await this.registerPlayer();
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
@@ -283,29 +285,26 @@ class CityScreen {
         });
     }
 
+    async loadCollisionZones() {
+        try {
+            const { data, error } = await window.db.from('city_collision_zones').select('*');
+            if (error) throw error;
+            this.collisionZones = (data || []).map(z => ({
+                pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
+            }));
+            console.log(`[City] Loaded ${this.collisionZones.length} collision zones`);
+        } catch (e) {
+            console.warn('[City] Collision zones load error:', e.message);
+            this.collisionZones = [];
+        }
+    }
+
     checkCollision(nx, ny) {
         const ps = 32;
         const px = nx - ps / 2;
         const py = ny - ps / 2;
-        for (const a of this.assets) {
-            if (!a.has_collision) continue;
-            const img = a._img;
-            if (!img || !img.complete || !img.naturalWidth) continue;
-            const sc = a.scale || 1;
-            const aw = img.naturalWidth * sc;
-            const ah = img.naturalHeight * sc;
-            const boxes = a.collision_boxes;
-            if (boxes && boxes.length > 0) {
-                for (const b of boxes) {
-                    const bx = a.pos_x + b.x * aw;
-                    const by = a.pos_y + b.y * ah;
-                    const bw = b.w * aw;
-                    const bh = b.h * ah;
-                    if (px < bx + bw && px + ps > bx && py < by + bh && py + ps > by) return true;
-                }
-            } else {
-                if (px < a.pos_x + aw && px + ps > a.pos_x && py < a.pos_y + ah && py + ps > a.pos_y) return true;
-            }
+        for (const z of this.collisionZones) {
+            if (px < z.pos_x + z.width && px + ps > z.pos_x && py < z.pos_y + z.height && py + ps > z.pos_y) return true;
         }
         return false;
     }
@@ -452,34 +451,15 @@ class CityScreen {
         });
 
         if (window._cityDebug) {
-            this.assets.forEach(a => {
-                if (!a.has_collision) return;
-                const img = a._img;
-                if (!img || !img.complete || !img.naturalWidth) return;
-                const sc = a.scale || 1;
-                const aw = img.naturalWidth * sc;
-                const ah = img.naturalHeight * sc;
-                const boxes = a.collision_boxes;
-                if (boxes && boxes.length > 0) {
-                    ctx.fillStyle = 'rgba(255,0,0,0.25)';
-                    ctx.strokeStyle = '#ff0000';
-                    ctx.lineWidth = 1;
-                    for (const b of boxes) {
-                        const bx = a.pos_x + b.x * aw - camX;
-                        const by = a.pos_y + b.y * ah - camY;
-                        const bw = b.w * aw;
-                        const bh = b.h * ah;
-                        ctx.fillRect(bx, by, bw, bh);
-                        ctx.strokeRect(bx, by, bw, bh);
-                    }
-                } else {
-                    ctx.fillStyle = 'rgba(255,0,0,0.15)';
-                    ctx.strokeStyle = 'rgba(255,0,0,0.5)';
-                    ctx.lineWidth = 1;
-                    ctx.fillRect(a.pos_x - camX, a.pos_y - camY, aw, ah);
-                    ctx.strokeRect(a.pos_x - camX, a.pos_y - camY, aw, ah);
-                }
-            });
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.25)';
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 2;
+            for (const z of this.collisionZones) {
+                const sx = z.pos_x - camX;
+                const sy = z.pos_y - camY;
+                ctx.fillRect(sx, sy, z.width, z.height);
+                ctx.strokeRect(sx, sy, z.width, z.height);
+            }
             const ps = 32;
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;

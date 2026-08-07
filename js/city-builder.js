@@ -28,6 +28,14 @@ class CityBuilder {
         this.colDrawBox = null;
         this.colSelectedIdx = -1;
 
+        this.collisionZoneMode = false;
+        this.collisionZones = [];
+        this.zoneDrawStart = null;
+        this.zoneDrawCurrent = null;
+        this.zoneSelectedIdx = -1;
+        this.zoneDragging = false;
+        this.zoneDragOffset = { x: 0, y: 0 };
+
         this.bindEvents();
     }
 
@@ -40,6 +48,8 @@ class CityBuilder {
         if (saveBtn) saveBtn.addEventListener('click', () => this.save());
         const previewBtn = document.getElementById('cb-preview-btn');
         if (previewBtn) previewBtn.addEventListener('click', () => this.togglePreview());
+        const zoneBtn = document.getElementById('cb-collision-zone-btn');
+        if (zoneBtn) zoneBtn.addEventListener('click', () => this.toggleCollisionZoneMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -53,6 +63,15 @@ class CityBuilder {
                     this.colSelectedIdx = -1;
                     return;
                 }
+                return;
+            }
+            if (this.collisionZoneMode && (e.key === 'Delete' || e.key === 'Backspace')) {
+                e.preventDefault();
+                this.deleteSelectedZone();
+                return;
+            }
+            if (this.collisionZoneMode && e.key === 'Escape') {
+                this.toggleCollisionZoneMode();
                 return;
             }
             const gameKeys = ['w','W','a','A','s','S','d','D','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
@@ -331,6 +350,80 @@ class CityBuilder {
         this.colDrawStart = null;
     }
 
+    toggleCollisionZoneMode() {
+        this.collisionZoneMode = !this.collisionZoneMode;
+        const btn = document.getElementById('cb-collision-zone-btn');
+        if (btn) btn.style.background = this.collisionZoneMode ? '#e74c3c' : 'rgba(255,255,255,0.15)';
+        if (this.collisionZoneMode) {
+            this.selected = null;
+            this.updateProps();
+            this.canvas.style.cursor = 'crosshair';
+        } else {
+            this.zoneDrawStart = null;
+            this.zoneDrawCurrent = null;
+            this.zoneSelectedIdx = -1;
+            this.canvas.style.cursor = 'default';
+        }
+        this.render();
+    }
+
+    onZoneMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        for (let i = this.collisionZones.length - 1; i >= 0; i--) {
+            const z = this.collisionZones[i];
+            if (w.x >= z.pos_x && w.x <= z.pos_x + z.width && w.y >= z.pos_y && w.y <= z.pos_y + z.height) {
+                this.zoneSelectedIdx = i;
+                this.zoneDragging = true;
+                this.zoneDragOffset = { x: w.x - z.pos_x, y: w.y - z.pos_y };
+                this.render();
+                return;
+            }
+        }
+        this.zoneSelectedIdx = -1;
+        this.zoneDrawStart = { x: w.x, y: w.y };
+        this.zoneDrawCurrent = { x: w.x, y: w.y };
+        this.render();
+    }
+
+    onZoneMouseMove(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        if (this.zoneDragging && this.zoneSelectedIdx >= 0) {
+            const z = this.collisionZones[this.zoneSelectedIdx];
+            z.pos_x = w.x - this.zoneDragOffset.x;
+            z.pos_y = w.y - this.zoneDragOffset.y;
+            this.render();
+        } else if (this.zoneDrawStart) {
+            this.zoneDrawCurrent = { x: w.x, y: w.y };
+            this.render();
+        }
+    }
+
+    onZoneMouseUp(e) {
+        if (this.zoneDrawStart && this.zoneDrawCurrent) {
+            let x = this.zoneDrawStart.x;
+            let y = this.zoneDrawStart.y;
+            let w = this.zoneDrawCurrent.x - x;
+            let h = this.zoneDrawCurrent.y - y;
+            if (w < 0) { x += w; w = -w; }
+            if (h < 0) { y += h; h = -h; }
+            if (w > 4 && h > 4) {
+                this.collisionZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h) });
+            }
+            this.zoneDrawStart = null;
+            this.zoneDrawCurrent = null;
+        }
+        this.zoneDragging = false;
+        this.render();
+    }
+
+    deleteSelectedZone() {
+        if (this.zoneSelectedIdx >= 0) {
+            this.collisionZones.splice(this.zoneSelectedIdx, 1);
+            this.zoneSelectedIdx = -1;
+            this.render();
+        }
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -456,6 +549,7 @@ class CityBuilder {
         this.canvas.onmousemove = (e) => this.onMouseMove(e);
         this.canvas.onmouseup = (e) => {
             if (this.collisionEditMode) { this.onCollisionMouseUp(e); return; }
+            if (this.collisionZoneMode) { this.onZoneMouseUp(e); return; }
             this.dragging = false;
         };
         this.canvas.onwheel = (e) => this.onWheel(e);
@@ -474,6 +568,7 @@ class CityBuilder {
     onMouseDown(e) {
         if (this.previewMode) return;
         if (this.collisionEditMode) { this.onCollisionMouseDown(e); return; }
+        if (this.collisionZoneMode) { this.onZoneMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
 
@@ -512,6 +607,7 @@ class CityBuilder {
     onMouseMove(e) {
         if (this.previewMode) return;
         if (this.collisionEditMode) { this.onCollisionMouseMove(e); return; }
+        if (this.collisionZoneMode) { this.onZoneMouseMove(e); return; }
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
@@ -620,6 +716,12 @@ class CityBuilder {
                 this.layers = [...layerSet].sort((a, b) => a - b);
                 if (this.layers.length === 0) this.layers = [0];
             }
+            const { data: zones } = await window.db.from('city_collision_zones').select('*');
+            if (zones) {
+                this.collisionZones = zones.map(z => ({
+                    pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
+                }));
+            }
         } catch (e) {
             console.warn('[CityBuilder] No saved layout');
         }
@@ -646,6 +748,14 @@ class CityBuilder {
             if (toSave.length > 0) {
                 const { error } = await window.db.from('city_layout').insert(toSave);
                 if (error) throw error;
+            }
+            await window.db.from('city_collision_zones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (this.collisionZones.length > 0) {
+                const zonesToSave = this.collisionZones.map(z => ({
+                    pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
+                }));
+                const { error: ze } = await window.db.from('city_collision_zones').insert(zonesToSave);
+                if (ze) throw ze;
             }
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
@@ -855,6 +965,34 @@ class CityBuilder {
             }
             ctx.restore();
         });
+
+        if (this.collisionZoneMode || this.collisionZones.length > 0) {
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.25)';
+            ctx.strokeStyle = 'rgba(231, 76, 60, 0.8)';
+            ctx.lineWidth = 2 / this.zoom;
+            this.collisionZones.forEach((z, i) => {
+                if (i === this.zoneSelectedIdx) {
+                    ctx.fillStyle = 'rgba(231, 76, 60, 0.4)';
+                    ctx.strokeStyle = '#fff';
+                } else {
+                    ctx.fillStyle = 'rgba(231, 76, 60, 0.25)';
+                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.8)';
+                }
+                ctx.fillRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.strokeRect(z.pos_x, z.pos_y, z.width, z.height);
+            });
+            if (this.zoneDrawStart && this.zoneDrawCurrent) {
+                let dx = Math.min(this.zoneDrawStart.x, this.zoneDrawCurrent.x);
+                let dy = Math.min(this.zoneDrawStart.y, this.zoneDrawCurrent.y);
+                let dw = Math.abs(this.zoneDrawCurrent.x - this.zoneDrawStart.x);
+                let dh = Math.abs(this.zoneDrawCurrent.y - this.zoneDrawStart.y);
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(dx, dy, dw, dh);
+                ctx.strokeRect(dx, dy, dw, dh);
+            }
+        }
 
         this.renderPlayer(ctx);
 
