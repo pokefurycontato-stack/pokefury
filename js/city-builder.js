@@ -916,28 +916,8 @@ class CityBuilder {
             this.selected = hit;
             this.dragging = true;
             this.dragOffset = { x: w.x - hit.pos_x, y: w.y - hit.pos_y };
-        } else if (this.selected) {
-            const src = this.selected;
-            const img = new Image();
-            img.src = src.asset_url;
-            const clone = {
-                _id: this.nextId++,
-                asset_id: src.asset_id,
-                asset_url: src.asset_url,
-                pos_x: w.x,
-                pos_y: w.y,
-                scale: src.scale || 1,
-                rotation: src.rotation || 0,
-                z_index: this.assets.length,
-                layer: this.activeLayer,
-                _img: img
-            };
-            img.onload = () => this.render();
-            this.assets.push(clone);
-            this.selected = clone;
-            this.dragging = true;
-            this.dragOffset = { x: 0, y: 0 };
         } else {
+            // Avoid accidental duplication when clicking empty space.
             this.selected = null;
         }
         this.updateProps();
@@ -1028,23 +1008,28 @@ class CityBuilder {
             const { data } = await window.db.from('city_layout').select('*').order('z_index').limit(5000);
             if (data) {
                 this.assets = data.map(a => {
+                    if (!a.asset_url || typeof a.asset_url !== 'string') {
+                        console.warn('[CityBuilder] Skipping saved layout row with missing asset_url:', a);
+                        return null;
+                    }
                     const img = new Image();
+                    img.crossOrigin = 'anonymous';
                     img.src = a.asset_url;
                     img.onload = () => this.render();
                     return {
                         ...a,
                         _id: this.nextId++,
-                    pos_x: a.pos_x ?? (a.grid_x * 64),
-                    pos_y: a.pos_y ?? (a.grid_y * 64),
-                    scale: a.scale ?? a.width ?? 1.0,
-                    has_collision: a.has_collision || false,
-                    collision_boxes: a.collision_boxes || [],
-                    layer: a.layer || 0,
-                    _img: img,
-                    _mask: null,
-                    _overlay: null
+                        pos_x: Number.isFinite(a.pos_x) ? a.pos_x : (Number.isFinite(a.grid_x) ? a.grid_x * 64 : 0),
+                        pos_y: Number.isFinite(a.pos_y) ? a.pos_y : (Number.isFinite(a.grid_y) ? a.grid_y * 64 : 0),
+                        scale: Number.isFinite(a.scale) ? a.scale : (Number.isFinite(a.width) ? a.width : 1.0),
+                        has_collision: a.has_collision === true,
+                        collision_boxes: Array.isArray(a.collision_boxes) ? a.collision_boxes : [],
+                        layer: Number.isFinite(a.layer) ? a.layer : 0,
+                        _img: img,
+                        _mask: null,
+                        _overlay: null
                     };
-                });
+                }).filter(Boolean);
                 this.assets.forEach(a => {
                     if (a.has_collision && a._img) {
                         const build = () => {
@@ -1133,12 +1118,12 @@ class CityBuilder {
                 asset_url: a.asset_url,
                 pos_x: a.pos_x,
                 pos_y: a.pos_y,
-                scale: a.scale || 1,
-                rotation: a.rotation || 0,
-                z_index: a.z_index || 0,
-                layer: a.layer || 0,
-                has_collision: a.has_collision || false,
-                collision_boxes: (a.collision_boxes && a.collision_boxes.length > 0) ? JSON.parse(JSON.stringify(a.collision_boxes)) : null
+                scale: Number.isFinite(a.scale) ? a.scale : 1,
+                rotation: Number.isFinite(a.rotation) ? a.rotation : 0,
+                z_index: Number.isFinite(a.z_index) ? a.z_index : 0,
+                layer: Number.isFinite(a.layer) ? a.layer : 0,
+                has_collision: a.has_collision === true,
+                collision_boxes: Array.isArray(a.collision_boxes) && a.collision_boxes.length > 0 ? JSON.parse(JSON.stringify(a.collision_boxes)) : []
             }));
             const zonesToSave = this.collisionZones.map(z => ({
                 pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height
@@ -1167,27 +1152,36 @@ class CityBuilder {
 
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
 
-            await window.db.from('city_layout').delete().not('id', 'is', null);
+            const { error: deleteLayoutError } = await window.db.from('city_layout').delete();
+            if (deleteLayoutError) throw deleteLayoutError;
             if (toSave.length > 0) {
                 const { error } = await window.db.from('city_layout').insert(toSave);
                 if (error) throw error;
             }
-            await window.db.from('city_collision_zones').delete().not('id', 'is', null);
+
+            const { error: deleteZonesError } = await window.db.from('city_collision_zones').delete();
+            if (deleteZonesError) throw deleteZonesError;
             if (zonesToSave.length > 0) {
                 const { error: ze } = await window.db.from('city_collision_zones').insert(zonesToSave);
                 if (ze) throw ze;
             }
-            await window.db.from('city_teleports').delete().not('id', 'is', null);
+
+            const { error: deleteTeleportsError } = await window.db.from('city_teleports').delete();
+            if (deleteTeleportsError) throw deleteTeleportsError;
             if (tpToSave.length > 0) {
                 const { error: te } = await window.db.from('city_teleports').insert(tpToSave);
                 if (te) throw te;
             }
-            await window.db.from('city_npcs').delete().not('id', 'is', null);
+
+            const { error: deleteNpcsError } = await window.db.from('city_npcs').delete();
+            if (deleteNpcsError) throw deleteNpcsError;
             if (npcToSave.length > 0) {
                 const { error: ne } = await window.db.from('city_npcs').insert(npcToSave);
                 if (ne) throw ne;
             }
-            await window.db.from('city_battle_zones').delete().not('id', 'is', null);
+
+            const { error: deleteBattleZonesError } = await window.db.from('city_battle_zones').delete();
+            if (deleteBattleZonesError) throw deleteBattleZonesError;
             if (bzToSave.length > 0) {
                 const { error: bze } = await window.db.from('city_battle_zones').insert(bzToSave);
                 if (bze) throw bze;

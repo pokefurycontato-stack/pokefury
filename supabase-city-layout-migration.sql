@@ -14,6 +14,13 @@ SET
     scale = COALESCE(scale, width, 1.0)
 WHERE pos_x IS NULL;
 
+ALTER TABLE city_layout ADD COLUMN IF NOT EXISTS layer INTEGER DEFAULT 0;
+ALTER TABLE city_layout ADD COLUMN IF NOT EXISTS has_collision BOOLEAN DEFAULT false;
+ALTER TABLE city_layout ADD COLUMN IF NOT EXISTS collision_boxes JSONB DEFAULT '[]'::jsonb;
+UPDATE city_layout
+SET collision_boxes = '[]'::jsonb
+WHERE collision_boxes IS NULL;
+
 -- city_players tambem usa pos_x/pos_y em pixels
 ALTER TABLE city_players ADD COLUMN IF NOT EXISTS pos_x FLOAT;
 ALTER TABLE city_players ADD COLUMN IF NOT EXISTS pos_y FLOAT;

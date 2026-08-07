@@ -180,21 +180,27 @@ class CityScreen {
             const { data, error } = await window.db.from('city_layout').select('*').order('z_index').limit(5000);
             if (error) throw error;
             this.assets = (data || []).map(a => {
+                if (!a.asset_url || typeof a.asset_url !== 'string') {
+                    console.warn('[City] Skipping layout row with missing asset_url:', a);
+                    return null;
+                }
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
                 img.src = a.asset_url;
-                img.onload = () => {};
+                img.onload = () => this.render();
+                img.onerror = () => console.warn('[City] Failed asset load:', a.asset_url, 'row id:', a.id, 'asset_id:', a.asset_id);
                 return {
                     ...a,
-                    pos_x: a.pos_x ?? (a.grid_x * 64),
-                    pos_y: a.pos_y ?? (a.grid_y * 64),
-                    scale: a.scale ?? a.width ?? 1.0,
-                    has_collision: a.has_collision || false,
-                    collision_boxes: a.collision_boxes || [],
+                    pos_x: Number.isFinite(a.pos_x) ? a.pos_x : (Number.isFinite(a.grid_x) ? a.grid_x * 64 : 0),
+                    pos_y: Number.isFinite(a.pos_y) ? a.pos_y : (Number.isFinite(a.grid_y) ? a.grid_y * 64 : 0),
+                    scale: Number.isFinite(a.scale) ? a.scale : (Number.isFinite(a.width) ? a.width : 1.0),
+                    has_collision: a.has_collision === true,
+                    collision_boxes: Array.isArray(a.collision_boxes) ? a.collision_boxes : [],
+                    layer: Number.isFinite(a.layer) ? a.layer : 0,
                     _img: img,
                     _mask: null
                 };
-            });
+            }).filter(Boolean);
             console.log(`[City] Loaded ${this.assets.length} assets`);
             this.assets.forEach(a => {
                 if (a.has_collision && a._img) {

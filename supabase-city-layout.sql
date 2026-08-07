@@ -5,10 +5,14 @@ CREATE TABLE IF NOT EXISTS city_layout (
     asset_url TEXT NOT NULL,
     grid_x FLOAT NOT NULL DEFAULT 0,
     grid_y FLOAT NOT NULL DEFAULT 0,
-    width FLOAT NOT NULL DEFAULT 1,
-    height FLOAT NOT NULL DEFAULT 1,
+    pos_x FLOAT NOT NULL DEFAULT 0,
+    pos_y FLOAT NOT NULL DEFAULT 0,
+    scale FLOAT NOT NULL DEFAULT 1.0,
     rotation INTEGER NOT NULL DEFAULT 0,
     z_index INTEGER NOT NULL DEFAULT 0,
+    layer INTEGER NOT NULL DEFAULT 0,
+    has_collision BOOLEAN NOT NULL DEFAULT false,
+    collision_boxes JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
