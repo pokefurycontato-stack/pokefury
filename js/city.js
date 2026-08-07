@@ -406,10 +406,12 @@ class CityScreen {
         this.npcDialogueOpen = true;
 
         simBtn.onclick = () => {
+            console.log('[City] NPC Sim clicked');
             this.closeNpcDialogue();
             this.openCityWorldMap();
         };
         naoBtn.onclick = () => {
+            console.log('[City] NPC Nao clicked');
             this.closeNpcDialogue();
         };
 
@@ -427,9 +429,11 @@ class CityScreen {
     }
 
     openCityWorldMap() {
+        console.log('[City] openCityWorldMap called');
         const overlay = document.getElementById('city-worldmap-overlay');
         const container = document.getElementById('city-worldmap-hotspots');
         const label = document.getElementById('city-worldmap-region-label');
+        console.log('[City] overlay:', !!overlay, 'container:', !!container, 'label:', !!label);
         if (!overlay || !container || !label) return;
 
         const game = window.pokefury;
