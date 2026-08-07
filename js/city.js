@@ -635,19 +635,6 @@ class CityScreen {
             const sx = n.pos_x - camX;
             const sy = n.pos_y - camY;
             if (sx + n.width < -50 || sx > cw + 50 || sy + n.height < -50 || sy > ch + 50) return;
-            if (n.npc_type === 'region_selector') {
-                ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
-                ctx.strokeStyle = '#f59e0b';
-                ctx.lineWidth = 2;
-                ctx.fillRect(sx, sy, n.width, n.height);
-                ctx.strokeRect(sx, sy, n.width, n.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 18px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('✈️', sx + n.width / 2, sy + n.height / 2 + 6);
-                ctx.font = 'bold 10px Inter, sans-serif';
-                ctx.fillText(n.name || 'Aviador', sx + n.width / 2, sy - 6);
-            }
         });
 
         if (window._cityDebug) {
