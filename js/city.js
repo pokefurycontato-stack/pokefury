@@ -179,6 +179,10 @@ class CityScreen {
         try {
             const { data, error } = await window.db.from('city_layout').select('*').order('z_index').limit(5000);
             if (error) throw error;
+            const parseNumber = (value, fallback = 0) => {
+                const n = parseFloat(value);
+                return Number.isFinite(n) ? n : fallback;
+            };
             this.assets = (data || []).map(a => {
                 if (!a.asset_url || typeof a.asset_url !== 'string') {
                     console.warn('[City] Skipping layout row with missing asset_url:', a);
@@ -189,14 +193,19 @@ class CityScreen {
                 img.src = a.asset_url;
                 img.onload = () => this.render();
                 img.onerror = () => console.warn('[City] Failed asset load:', a.asset_url, 'row id:', a.id, 'asset_id:', a.asset_id);
+                const posX = parseNumber(a.pos_x, parseNumber(a.grid_x, 0) * 64);
+                const posY = parseNumber(a.pos_y, parseNumber(a.grid_y, 0) * 64);
+                const scale = parseNumber(a.scale, parseNumber(a.width, 1.0));
                 return {
                     ...a,
-                    pos_x: Number.isFinite(a.pos_x) ? a.pos_x : (Number.isFinite(a.grid_x) ? a.grid_x * 64 : 0),
-                    pos_y: Number.isFinite(a.pos_y) ? a.pos_y : (Number.isFinite(a.grid_y) ? a.grid_y * 64 : 0),
-                    scale: Number.isFinite(a.scale) ? a.scale : (Number.isFinite(a.width) ? a.width : 1.0),
-                    has_collision: a.has_collision === true,
+                    pos_x: posX,
+                    pos_y: posY,
+                    scale: scale,
+                    has_collision: a.has_collision === true || String(a.has_collision) === 'true',
                     collision_boxes: Array.isArray(a.collision_boxes) ? a.collision_boxes : [],
-                    layer: Number.isFinite(a.layer) ? a.layer : 0,
+                    layer: parseNumber(a.layer, 0),
+                    rotation: parseNumber(a.rotation, 0),
+                    z_index: parseNumber(a.z_index, 0),
                     _img: img,
                     _mask: null
                 };
