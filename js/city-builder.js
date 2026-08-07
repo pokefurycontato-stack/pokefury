@@ -603,7 +603,8 @@ class CityBuilder {
             'casa1.png', 'casa2.png', 'casa3.png', 'casa4.png', 'casa5.png',
             'pokemart.png', 'laboratorio.png',
             'centropokemon.png', 'basquete.png', 'arena.png',
-            'cerca1.png', 'cerca2.png', 'cerca3.png', 'placa.png'
+            'cerca1.png', 'cerca2.png', 'cerca3.png', 'placa.png', 'granite-cave-b1.png', 'hoenn-route-102.png', 'kanto-route-19.png', 'mt-coronet-f3.png', 'mt-pyre-exterior.png', 'pokemon-center.png', 'rock-tunnel-b1.png', 'safari.png', 'shoal-cave-ice-room.png', 'terra-cave-end.png',
+            'pedra.png', 'gramav1.png', 'pedrav1.png', 'aguav1.png', 'icev1.png', 'psiv1.png', 'eletricov1.png', 'vulcv1.png'
         ];
         this.availableAssets = files.map(f => ({
             id: f.replace('.png', ''),
