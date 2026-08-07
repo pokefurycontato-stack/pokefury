@@ -245,7 +245,7 @@ class CityScreen {
 
     unregisterPlayer() {
         if (this.authUserId && this.authUserId !== 'local') {
-            window.db.from('city_players').delete().eq('user_id', this.authUserId).catch(() => {});
+            window.db.from('city_players').delete().eq('user_id', this.authUserId).then(() => {}).catch(() => {});
         }
     }
 
