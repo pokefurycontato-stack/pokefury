@@ -5,29 +5,8 @@ const path = require('path');
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZXZ3bm5wenNvbHRicnJqZHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MDE3NjEsImV4cCI6MjEwMDQ3Nzc2MX0.xlZ4LgzmQ-DZUz1kDk3oucmlvjCkty1TgzfN2IDxhoY';
 const BASE = 'odevwnnpzsoltbrrjdts.supabase.co';
 const BUCKET = 'sprites';
-const FOLDER = 'city-assets';
 
 const ASSETS_DIR = path.join(__dirname, 'assets', 'assetmap');
-
-function supabaseGet(path) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: BASE,
-      path: `/storage/v1/object/list/${BUCKET}/${path}`,
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${API_KEY}` }
-    };
-    const req = https.request(options, (res) => {
-      let body = '';
-      res.on('data', (chunk) => body += chunk);
-      res.on('end', () => {
-        try { resolve(JSON.parse(body)); } catch(e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.end();
-  });
-}
 
 function uploadFile(filePath, storagePath) {
   return new Promise((resolve, reject) => {
@@ -52,7 +31,7 @@ function uploadFile(filePath, storagePath) {
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const url = `https://${BASE}/storage/v1/object/public/${BUCKET}/${storagePath}`;
-          console.log(`  UPLOADED: ${storagePath}`);
+          console.log(`  OK: ${storagePath} -> ${url}`);
           resolve(url);
         } else {
           console.error(`  FAIL (${res.statusCode}): ${storagePath} - ${body}`);
@@ -67,42 +46,24 @@ function uploadFile(filePath, storagePath) {
 }
 
 async function main() {
-  console.log('Checking existing assets in Supabase...');
-  let existing = [];
-  try {
-    const data = await supabaseGet(FOLDER);
-    if (Array.isArray(data)) existing = data.map(f => f.name);
-  } catch(e) {
-    console.warn('Could not list existing files, will upload all:', e.message);
-  }
-  console.log(`  Found ${existing.length} existing files in storage\n`);
-
-  const localFiles = fs.readdirSync(ASSETS_DIR).filter(f => f.endsWith('.png') || f.endsWith('.webp'));
-  const toUpload = localFiles.filter(f => !existing.includes(f));
-  const skipped = localFiles.filter(f => existing.includes(f));
-
-  console.log(`Local files: ${localFiles.length}`);
-  console.log(`Already in storage (skipping): ${skipped.length}`);
-  console.log(`To upload: ${toUpload.length}\n`);
-
-  if (toUpload.length === 0) {
-    console.log('Nothing to upload!');
-    return;
-  }
-
-  let uploaded = 0;
-  for (const file of toUpload) {
+  const files = fs.readdirSync(ASSETS_DIR).filter(f => f.endsWith('.png') || f.endsWith('.webp'));
+  console.log(`Uploading ${files.length} city assets...\n`);
+  
+  const results = [];
+  for (const file of files) {
     const filePath = path.join(ASSETS_DIR, file);
-    const storagePath = `${FOLDER}/${file}`;
+    const storagePath = `city-assets/${file}`;
     try {
-      await uploadFile(filePath, storagePath);
-      uploaded++;
+      const url = await uploadFile(filePath, storagePath);
+      results.push({ file, url });
     } catch (e) {
       console.error(`  Error uploading ${file}:`, e.message);
     }
   }
-
-  console.log(`\nDone! Uploaded ${uploaded}/${toUpload.length} new assets.`);
+  
+  console.log(`\nDone! ${results.length}/${files.length} uploaded.`);
+  console.log('\nAsset URLs for city_layout table:');
+  results.forEach(r => console.log(`  ${r.file}: ${r.url}`));
 }
 
 main().catch(console.error);
