@@ -1096,7 +1096,8 @@ class CityBuilder {
 
             if (this.assets.length === 0) {
                 const backupKey = 'city_backup_' + (this.currentCityId || 'default');
-                const backup = localStorage.getItem(backupKey);
+                const autoSaveKey = 'city_autosave_' + (this.currentCityId || 'default');
+                const backup = localStorage.getItem(autoSaveKey) || localStorage.getItem(backupKey);
                 if (backup) {
                     try {
                         const b = JSON.parse(backup);
@@ -1301,7 +1302,35 @@ class CityBuilder {
         }
         this.handlePlayerInput();
         this.render();
+
+        if (!this._autoSaveTimer) this._autoSaveTimer = 0;
+        this._autoSaveTimer++;
+        if (this._autoSaveTimer >= 1800) {
+            this._autoSaveTimer = 0;
+            this.autoSaveBackup();
+        }
+
         requestAnimationFrame(() => this.loop());
+    }
+
+    autoSaveBackup() {
+        try {
+            const toSave = this.assets.map(a => ({
+                asset_id: a.asset_id, asset_url: a.asset_url,
+                pos_x: a.pos_x, pos_y: a.pos_y, scale: a.scale || 1,
+                rotation: a.rotation || 0, z_index: a.z_index || 0,
+                layer: a.layer || 0, has_collision: a.has_collision || false,
+                collision_boxes: a.collision_boxes || null
+            }));
+            const backup = {
+                assets: toSave,
+                zones: this.collisionZones,
+                teleports: this.teleports,
+                npcs: this.npcRegions,
+                battleZones: this.battleZones
+            };
+            localStorage.setItem('city_autosave_' + (this.currentCityId || 'default'), JSON.stringify(backup));
+        } catch (e) {}
     }
 
     render() {
