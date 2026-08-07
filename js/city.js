@@ -177,7 +177,7 @@ class CityScreen {
 
     async loadLayout() {
         try {
-            const { data, error } = await window.db.from('city_layout').select('*').order('z_index').limit(5000);
+            const { data, error } = await window.db.from('city_layout').select('*').order('z_index');
             if (error) throw error;
             const parseNumber = (value, fallback = 0) => {
                 const n = parseFloat(value);

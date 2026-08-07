@@ -1005,7 +1005,7 @@ class CityBuilder {
 
     async loadSavedLayout() {
         try {
-            const { data } = await window.db.from('city_layout').select('*').order('z_index').limit(5000);
+            const { data } = await window.db.from('city_layout').select('*').order('z_index');
             if (data) {
                 const parseNumber = (value, fallback = 0) => {
                     const n = parseFloat(value);
