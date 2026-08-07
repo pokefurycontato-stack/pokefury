@@ -1212,12 +1212,34 @@ class CityBuilder {
 
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
 
-            const { data: savedAssets, error: upsertError } = await window.db.from('city_layout')
-                .upsert(toSave, { onConflict: 'id' })
-                .select('id,asset_id,pos_x,pos_y');
-            if (upsertError) throw upsertError;
+            const existingRows = [];
+            const newRows = [];
+            for (const a of toSave) {
+                if (a.id) {
+                    existingRows.push(a);
+                } else {
+                    newRows.push(a);
+                }
+            }
 
-            if (savedAssets && savedAssets.length > 0) {
+            const savedAssets = [];
+            if (existingRows.length > 0) {
+                const { data: updatedRows, error: updateError } = await window.db.from('city_layout')
+                    .upsert(existingRows, { onConflict: 'id' })
+                    .select('id,asset_id,pos_x,pos_y');
+                if (updateError) throw updateError;
+                if (updatedRows) savedAssets.push(...updatedRows);
+            }
+
+            if (newRows.length > 0) {
+                const { data: insertedRows, error: insertError } = await window.db.from('city_layout')
+                    .insert(newRows)
+                    .select('id,asset_id,pos_x,pos_y');
+                if (insertError) throw insertError;
+                if (insertedRows) savedAssets.push(...insertedRows);
+            }
+
+            if (savedAssets.length > 0) {
                 const assetMap = new Map(savedAssets.map(r => [`${r.asset_id}|${normalizeNumber(r.pos_x, 0)}|${normalizeNumber(r.pos_y, 0)}`, r.id]));
                 this.assets.forEach(a => {
                     if (!a.id) {
@@ -1228,7 +1250,7 @@ class CityBuilder {
                 });
             }
 
-            const savedIds = new Set((savedAssets || []).map(r => r.id).filter(Boolean));
+            const savedIds = new Set(savedAssets.map(r => r.id).filter(Boolean));
             if (savedIds.size > 0) {
                 const { error: deleteStaleError } = await window.db.from('city_layout').delete().not('id', 'in', Array.from(savedIds));
                 if (deleteStaleError) throw deleteStaleError;
