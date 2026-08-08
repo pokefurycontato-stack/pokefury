@@ -667,12 +667,17 @@ class CityScreen {
 
     chooseWeightedEncounter(encounters) {
         if (!Array.isArray(encounters) || encounters.length === 0) return null;
+        const TIER_WEIGHT = { common: 1, uncommon: 1, rare: 1, legendary: 0.00001, inicial: 0.00001 };
         const pool = encounters.filter(e => e && (e.weight == null || e.weight >= 0));
         if (pool.length === 0) return null;
-        const total = pool.reduce((sum, e) => sum + (Number.isFinite(e.weight) ? e.weight : 50), 0);
+        const getWeight = (e) => {
+            const base = Number.isFinite(e.weight) ? e.weight : 50;
+            return base * (TIER_WEIGHT[e.rarity] ?? 1);
+        };
+        const total = pool.reduce((sum, e) => sum + getWeight(e), 0);
         let roll = Math.random() * total;
         for (const e of pool) {
-            roll -= (Number.isFinite(e.weight) ? e.weight : 50);
+            roll -= getWeight(e);
             if (roll <= 0) return e;
         }
         return pool[pool.length - 1];
