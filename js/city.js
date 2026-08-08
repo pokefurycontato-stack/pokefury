@@ -507,7 +507,12 @@ class CityScreen {
             }
             const encounter = this.chooseWeightedEncounter(encounters);
             if (!encounter) continue;
-            const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || encounter.sprite_url || null;
+            const isShiny = (typeof getShinyChance === 'function') ? (Math.random() < (1 / getShinyChance())) : false;
+            const spriteUrl = (window.PokeAPI && encounter.pokemon_id)
+                ? (isShiny
+                    ? `${window.PokeAPI.supabaseStorageUrl}/animated-front-shiny/${encounter.pokemon_id}.gif`
+                    : window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id))
+                : (encounter.sprite_url || null);
             const el = document.createElement('img');
             el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;display:none;';
             if (spriteUrl) el.src = spriteUrl;
@@ -517,6 +522,7 @@ class CityScreen {
                 biome,
                 encounter,
                 spriteUrl,
+                isShiny,
                 _el: el,
                 pos_x: point.pos_x,
                 pos_y: point.pos_y,
@@ -570,8 +576,8 @@ class CityScreen {
         const pokemonId = encounter.pokemon_id || encounter.pokemon_name;
         const spriteUrl = p.spriteUrl || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || null;
         const level = this.getCityBattleLevel(encounter);
-        console.log('[City] Visible pokemon battle with', pokemonId, 'level', level);
-        await game.startBattleWithPokemon(pokemonId, level, spriteUrl);
+        console.log('[City] Visible pokemon battle with', pokemonId, 'level', level, 'shiny', !!p.isShiny);
+        await game.startBattleWithPokemon(pokemonId, level, spriteUrl, !!p.isShiny);
         if (game.state === 'battle') {
             p.active = false;
             p.respawnTimer = 20;
@@ -657,11 +663,16 @@ class CityScreen {
         if (!encounter) return;
 
         const pokemonId = encounter.pokemon_id || encounter.pokemon_name;
-        const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || encounter.sprite_url || null;
+        const isShiny = (typeof getShinyChance === 'function') ? (Math.random() < (1 / getShinyChance())) : false;
+        const spriteUrl = (window.PokeAPI && encounter.pokemon_id)
+            ? (isShiny
+                ? `${window.PokeAPI.supabaseStorageUrl}/animated-front-shiny/${encounter.pokemon_id}.gif`
+                : window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id))
+            : (encounter.sprite_url || null);
         const level = this.getCityBattleLevel(encounter);
 
         console.log('[City] Triggering spawn battle with', pokemonId, 'level', level, 'zone', zone.id || 'unknown');
-        await game.startBattleWithPokemon(pokemonId, level, spriteUrl);
+        await game.startBattleWithPokemon(pokemonId, level, spriteUrl, isShiny);
         this.spawnZoneCooldown = 240;
     }
 

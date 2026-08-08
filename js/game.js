@@ -937,7 +937,7 @@ class PokeFuryGame {
         this._turnLocked = false;
     }
 
-    async startBattleWithPokemon(pokemonName, level, spriteUrl) {
+    async startBattleWithPokemon(pokemonName, level, spriteUrl, isShinyOverride) {
         if (this._battleStarting || this._battleEnding || this.state === 'battle') return;
         this._battleStarting = true;
         this._wildInitialEntrances = { player: false, enemy: false };
@@ -957,7 +957,7 @@ class PokeFuryGame {
                 console.error('[PokeFury] Failed to load pokemon data for:', pokemonName);
                 return;
             }
-            const isShiny = Math.random() < (1 / getShinyChance());
+            const isShiny = isShinyOverride != null ? isShinyOverride : (Math.random() < (1 / getShinyChance()));
             const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
             if (!pokemon || pokemon.currentHp <= 0) {
                 console.error('[PokeFury] Pokemon created with 0 HP, fixing...');
