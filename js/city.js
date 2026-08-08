@@ -47,16 +47,6 @@ class CityScreen {
         });
         const closeBtn = document.getElementById('city-close-btn');
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
-        const premiumBtn = document.getElementById('city-premium-btn');
-        if (premiumBtn) premiumBtn.addEventListener('click', () => this.openPremiumModal());
-        const pokedexBtn = document.getElementById('city-pokedex-btn');
-        if (pokedexBtn) pokedexBtn.addEventListener('click', () => {
-            if (window.pokefury) window.pokefury.openPokedex();
-        });
-        const bagBtn = document.getElementById('city-bag-btn');
-        if (bagBtn) bagBtn.addEventListener('click', () => {
-            if (window.pokefury) window.pokefury.openMochila();
-        });
         const teleportCloseBtn = document.getElementById('city-teleport-close');
         if (teleportCloseBtn) teleportCloseBtn.addEventListener('click', () => this.closeTeleportMenu());
         document.addEventListener('keydown', (e) => {
