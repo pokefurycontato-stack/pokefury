@@ -2768,3 +2768,14 @@ body {
     background: linear-gradient(135deg, #9b59b6, #8e44ad);
     color: #fff;
 }
+
+/* TOPBAR NEON GLOW */
+@keyframes neonGlow {
+    0%   { filter: drop-shadow(0 0 4px #00aaff) drop-shadow(0 0 8px #00aaff) drop-shadow(0 0 16px rgba(0,170,255,0.5)); }
+    33%  { filter: drop-shadow(0 0 4px #ff3344) drop-shadow(0 0 8px #ff3344) drop-shadow(0 0 16px rgba(255,51,68,0.5)); }
+    66%  { filter: drop-shadow(0 0 4px #ffcc00) drop-shadow(0 0 8px #ffcc00) drop-shadow(0 0 16px rgba(255,204,0,0.5)); }
+    100% { filter: drop-shadow(0 0 4px #00aaff) drop-shadow(0 0 8px #00aaff) drop-shadow(0 0 16px rgba(0,170,255,0.5)); }
+}
+.topbar-neon {
+    animation: neonGlow 3s ease-in-out infinite;
+}
