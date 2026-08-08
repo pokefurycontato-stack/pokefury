@@ -1,5 +1,5 @@
 export class Chat {
-    constructor() {
+    constructor(options = {}) {
         this.db = window.db;
         this.userId = null;
         this.playerName = 'Treinador';
@@ -9,6 +9,8 @@ export class Chat {
         this.isOpen = true;
         this.unreadGlobal = 0;
         this.unreadTrade = 0;
+        this.prefix = options.prefix || '';
+        this.container = options.container || null;
     }
 
     init(userId, playerName) {
@@ -20,41 +22,47 @@ export class Chat {
     }
 
     buildUI() {
-        const existing = document.getElementById('chat-container');
+        const existing = document.getElementById(this.prefix + 'chat-container');
         if (existing) return;
 
         const html = `
-        <div id="chat-container">
-            <div id="chat-tabs">
+        <div id="${this.prefix}chat-container">
+            <div id="${this.prefix}chat-tabs">
                 <button class="chat-tab active" data-channel="global">
                     <span class="chat-tab-dot"></span> Global
-                    <span class="chat-badge hidden" id="badge-global">0</span>
+                    <span class="chat-badge hidden" id="${this.prefix}badge-global">0</span>
                 </button>
                 <button class="chat-tab" data-channel="trade">
                     <span class="chat-tab-dot trade"></span> Trade
-                    <span class="chat-badge hidden" id="badge-trade">0</span>
+                    <span class="chat-badge hidden" id="${this.prefix}badge-trade">0</span>
                 </button>
             </div>
-            <div id="chat-messages"></div>
-            <div id="chat-input-area">
-                <input id="chat-input" type="text" placeholder="Digite sua mensagem..." maxlength="200" autocomplete="off" />
-                <button id="chat-send">▶</button>
+            <div id="${this.prefix}chat-messages"></div>
+            <div id="${this.prefix}chat-input-area">
+                <input id="${this.prefix}chat-input" type="text" placeholder="Digite sua mensagem..." maxlength="200" autocomplete="off" />
+                <button id="${this.prefix}chat-send">▶</button>
             </div>
         </div>`;
 
-        const sidebarChat = document.querySelector('.sidebar-chat');
-        if (sidebarChat) {
-            sidebarChat.innerHTML = html;
+        if (this.container) {
+            this.container.innerHTML = html;
         } else {
-            const layer = document.getElementById('ui-layer');
-            if (layer) layer.insertAdjacentHTML('beforeend', html);
+            const sidebarChat = document.querySelector('.sidebar-chat');
+            if (sidebarChat) {
+                sidebarChat.innerHTML = html;
+            } else {
+                const layer = document.getElementById('ui-layer');
+                if (layer) layer.insertAdjacentHTML('beforeend', html);
+            }
         }
 
+        this.root = document.getElementById(this.prefix + 'chat-container');
         this.setupEvents();
     }
 
     setupEvents() {
-        const tabs = document.querySelectorAll('.chat-tab');
+        const root = this.root || document;
+        const tabs = root.querySelectorAll('.chat-tab');
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
@@ -67,8 +75,8 @@ export class Chat {
             });
         });
 
-        const input = document.getElementById('chat-input');
-        const sendBtn = document.getElementById('chat-send');
+        const input = document.getElementById(this.prefix + 'chat-input');
+        const sendBtn = document.getElementById(this.prefix + 'chat-send');
 
         const doSend = () => {
             const text = input.value.trim();
@@ -87,7 +95,7 @@ export class Chat {
     }
 
     async loadMessages() {
-        const box = document.getElementById('chat-messages');
+        const box = document.getElementById(this.prefix + 'chat-messages');
         if (!box) return;
 
         try {
@@ -113,7 +121,7 @@ export class Chat {
         if (this.subscription) return;
 
         this.subscription = this.db
-            .channel('chat-realtime')
+            .channel((this.prefix || '') + 'chat-realtime')
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -126,7 +134,7 @@ export class Chat {
 
     onNewMessage(msg) {
         if (msg.channel === this.channel) {
-            const box = document.getElementById('chat-messages');
+            const box = document.getElementById(this.prefix + 'chat-messages');
             if (box) {
                 this.appendMessage(msg, true);
                 const isNearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
@@ -142,7 +150,7 @@ export class Chat {
     }
 
     appendMessage(msg, animate) {
-        const box = document.getElementById('chat-messages');
+        const box = document.getElementById(this.prefix + 'chat-messages');
         if (!box) return;
 
         const div = document.createElement('div');
@@ -161,8 +169,8 @@ export class Chat {
     }
 
     updateBadges() {
-        const bGlobal = document.getElementById('badge-global');
-        const bTrade = document.getElementById('badge-trade');
+        const bGlobal = document.getElementById(this.prefix + 'badge-global');
+        const bTrade = document.getElementById(this.prefix + 'badge-trade');
         if (bGlobal) {
             bGlobal.textContent = this.unreadGlobal;
             bGlobal.classList.toggle('hidden', this.unreadGlobal === 0 || this.channel === 'global');

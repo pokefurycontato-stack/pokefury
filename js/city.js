@@ -51,6 +51,8 @@ class CityScreen {
         if (teleportCloseBtn) teleportCloseBtn.addEventListener('click', () => this.closeTeleportMenu());
         document.addEventListener('keydown', (e) => {
             if (!this.running) return;
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             this.keys[e.key] = true;
             if (e.key === 'p' || e.key === 'P') {
                 window._cityDebug = !window._cityDebug;
@@ -71,6 +73,8 @@ class CityScreen {
             }
         });
         document.addEventListener('keyup', (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             this.keys[e.key] = false;
         });
     }
@@ -97,6 +101,7 @@ class CityScreen {
         this.cameraY = this.playerY;
         await this.loadExistingPlayers();
         this.subscribeRealtime();
+        this._setupCityChat();
 
         this.resizeCanvas();
         this.running = true;
@@ -111,6 +116,24 @@ class CityScreen {
 
         window._cityBeforeUnload = () => this.unregisterPlayer();
         window.addEventListener('beforeunload', window._cityBeforeUnload);
+    }
+
+    _setupCityChat() {
+        if (this._chat) return;
+        const game = window.pokefury;
+        if (!game || !window.Chat) return;
+        const wrap = document.getElementById('city-chat-wrap');
+        if (!wrap) return;
+        const chatRef = game.chat;
+        const userId = (chatRef && chatRef.userId) || window.GameData?.userId;
+        const playerName = (chatRef && chatRef.playerName) || 'Treinador';
+        if (!userId) return;
+        try {
+            this._chat = new window.Chat({ prefix: 'city-', container: wrap });
+            this._chat.init(userId, playerName);
+        } catch (e) {
+            console.warn('[City] Failed to init city chat:', e);
+        }
     }
 
     close() {

@@ -1629,6 +1629,87 @@ body {
 #chat-send:hover { background: #c23152; }
 #chat-send:active { transform: scale(0.92); }
 
+/* ===== CITY CHAT (bottom-left) ===== */
+#city-chat-wrap {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    width: 300px;
+    height: 260px;
+    z-index: 55;
+    pointer-events: auto;
+    background: rgba(13, 17, 23, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+#city-chat-wrap #city-chat-container {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+}
+#city-chat-wrap #city-chat-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+#city-chat-wrap #city-chat-messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+#city-chat-wrap #city-chat-messages::-webkit-scrollbar { width: 4px; }
+#city-chat-wrap #city-chat-messages::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
+#city-chat-wrap #city-chat-input-area {
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+#city-chat-wrap #city-chat-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #fff;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+#city-chat-wrap #city-chat-input:focus { border-color: #e94560; }
+#city-chat-wrap #city-chat-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+#city-chat-wrap #city-chat-send {
+    background: #e94560;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    width: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+}
+#city-chat-wrap #city-chat-send:hover { background: #c23152; }
+#city-chat-wrap #city-chat-send:active { transform: scale(0.92); }
+
 /* ========== MOCHILA ========== */
 .mochila-tab {
     padding: 8px 14px; border: none; border-bottom: 2px solid transparent;
