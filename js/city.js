@@ -30,6 +30,9 @@ class CityScreen {
         this.spawnZones = [];
         this.currentSpawnZone = null;
         this.spawnZoneCooldown = 0;
+        this.spawnPoints = [];
+        this.wildPokemon = [];
+        this.wildPokemonCooldown = 0;
 
         this.bindEvents();
     }
@@ -86,6 +89,7 @@ class CityScreen {
         await this.loadNpcs();
         await this.loadBattleZones();
         await this.loadSpawnZones();
+        await this.loadSpawnPoints();
         await this.registerPlayer();
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
@@ -420,6 +424,175 @@ class CityScreen {
         } catch (e) {
             console.warn('[City] Spawn zones load error:', e.message);
             this.spawnZones = [];
+        }
+    }
+
+    async loadSpawnPoints() {
+        try {
+            const { data, error } = await window.db.from('city_spawn_points').select('*').limit(5000);
+            if (error) throw error;
+            this.spawnPoints = (data || []).map(p => ({
+                id: p.id,
+                pos_x: p.pos_x, pos_y: p.pos_y
+            }));
+            console.log(`[City] Loaded ${this.spawnPoints.length} spawn points`);
+        } catch (e) {
+            console.warn('[City] Spawn points load error:', e.message);
+            this.spawnPoints = [];
+        }
+        await this.spawnVisiblePokemon();
+    }
+
+    getSpawnZoneBiomeForPoint(point) {
+        for (const z of this.spawnZones) {
+            if (point.pos_x >= z.pos_x && point.pos_x <= z.pos_x + z.width &&
+                point.pos_y >= z.pos_y && point.pos_y <= z.pos_y + z.height) {
+                return z.biome || null;
+            }
+        }
+        return null;
+    }
+
+    async resolveSpawnEncounters(biome) {
+        const game = window.pokefury;
+        if (!game || !game.regionManager) return [];
+        let encounters = [];
+        try {
+            let mapId = null;
+            if (biome) {
+                const region = game.currentRegion;
+                if (region) {
+                    const maps = await game.regionManager.loadRegionMaps(region.id);
+                    const biomeMap = (maps || []).find(m =>
+                        String(m.name || '').trim().toLowerCase() === String(biome).trim().toLowerCase()
+                    );
+                    if (biomeMap) mapId = biomeMap.id;
+                }
+            }
+            if (!mapId) mapId = game.currentMap?.id;
+            if (mapId) encounters = await game.regionManager.loadMapEncounters(mapId);
+        } catch (e) {
+            console.warn('[City] Failed to resolve spawn encounters:', e.message);
+        }
+        return encounters;
+    }
+
+    async spawnVisiblePokemon() {
+        for (const el of this.wildPokemon) {
+            if (el._img) el._img = null;
+        }
+        this.wildPokemon = [];
+        if (!this.spawnPoints || this.spawnPoints.length === 0) return;
+
+        for (const point of this.spawnPoints) {
+            const biome = this.getSpawnZoneBiomeForPoint(point);
+            const encounters = await this.resolveSpawnEncounters(biome);
+            if (!encounters || encounters.length === 0) {
+                console.warn(`[City] No encounters for spawn point at (${point.pos_x}, ${point.pos_y}) biome=${biome}`);
+                continue;
+            }
+            const encounter = this.chooseWeightedEncounter(encounters);
+            if (!encounter) continue;
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || encounter.sprite_url || null;
+            if (spriteUrl) img.src = spriteUrl;
+            this.wildPokemon.push({
+                point,
+                biome,
+                encounter,
+                spriteUrl,
+                _img: img,
+                pos_x: point.pos_x,
+                pos_y: point.pos_y,
+                baseX: point.pos_x,
+                baseY: point.pos_y,
+                targetX: point.pos_x,
+                targetY: point.pos_y,
+                moveTimer: 0,
+                active: true,
+                respawnTimer: 0
+            });
+        }
+        console.log(`[City] Spawned ${this.wildPokemon.length} visible pokemon`);
+    }
+
+    updateWildPokemon(dt) {
+        if (this.wildPokemonCooldown > 0) this.wildPokemonCooldown -= dt;
+        for (const p of this.wildPokemon) {
+            if (!p.active) {
+                if (p.respawnTimer > 0) {
+                    p.respawnTimer -= dt;
+                    if (p.respawnTimer <= 0) {
+                        p.active = true;
+                        p.pos_x = p.baseX;
+                        p.pos_y = p.baseY;
+                    }
+                }
+                continue;
+            }
+            p.moveTimer -= dt;
+            if (p.moveTimer <= 0) {
+                p.moveTimer = 2 + Math.random() * 3;
+                const r = 48;
+                p.targetX = p.baseX + (Math.random() * 2 - 1) * r;
+                p.targetY = p.baseY + (Math.random() * 2 - 1) * r;
+            }
+            const dx = p.targetX - p.pos_x;
+            const dy = p.targetY - p.pos_y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 4) {
+                const speed = 45;
+                p.pos_x += (dx / dist) * speed * dt;
+                p.pos_y += (dy / dist) * speed * dt;
+            }
+            if (this.wildPokemonCooldown <= 0) {
+                const pd = Math.hypot(this.playerX - p.pos_x, this.playerY - p.pos_y);
+                if (pd < 34) {
+                    this.wildPokemonCooldown = 1;
+                    this.triggerVisiblePokemonBattle(p);
+                }
+            }
+        }
+    }
+
+    async triggerVisiblePokemonBattle(p) {
+        if (!p || !p.encounter) return;
+        const game = window.pokefury;
+        if (!game || game.state === 'battle' || game._battleStarting) return;
+        const encounter = p.encounter;
+        const pokemonId = encounter.pokemon_id || encounter.pokemon_name;
+        const spriteUrl = p.spriteUrl || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || null;
+        const level = this.getCityBattleLevel(encounter);
+        console.log('[City] Visible pokemon battle with', pokemonId, 'level', level);
+        await game.startBattleWithPokemon(pokemonId, level, spriteUrl);
+        if (game.state === 'battle') {
+            p.active = false;
+            p.respawnTimer = 20;
+        }
+    }
+
+    renderWildPokemon(ctx, camX, camY, cw, ch) {
+        for (const p of this.wildPokemon) {
+            if (!p.active) continue;
+            const img = p._img;
+            const aw = 36;
+            const ah = 36;
+            const sx = p.pos_x - camX - aw / 2;
+            const sy = p.pos_y - camY - ah;
+            if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) continue;
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(p.pos_x - camX, p.pos_y - camY, 12, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            if (img && img.complete && img.naturalWidth) {
+                ctx.drawImage(img, sx, sy, aw, ah);
+            } else {
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(p.pos_x - camX, p.pos_y - camY, 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
@@ -802,6 +975,8 @@ class CityScreen {
         if (this._lastSync % 15 === 0) {
             this.syncPosition();
         }
+
+        this.updateWildPokemon(0.016);
     }
 
     async syncPosition() {
@@ -875,6 +1050,8 @@ class CityScreen {
             }
             ctx.restore();
         });
+
+        this.renderWildPokemon(ctx, camX, camY, cw, ch);
 
         this.teleports.forEach(t => {
             const sx = t.sign_x - camX;

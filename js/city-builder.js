@@ -69,6 +69,10 @@ class CityBuilder {
         this.spawnZoneDragOffset = { x: 0, y: 0 };
         this.availableRegionMaps = [];
 
+        this.spawnPointMode = false;
+        this.spawnPoints = [];
+        this.spawnPointSelectedIdx = -1;
+
         this.bindEvents();
     }
 
@@ -89,6 +93,8 @@ class CityBuilder {
         if (npcRegionBtn) npcRegionBtn.addEventListener('click', () => this.toggleNpcRegionMode());
         const spawnZoneBtn = document.getElementById('cb-spawn-zone-btn');
         if (spawnZoneBtn) spawnZoneBtn.addEventListener('click', () => this.toggleSpawnZoneMode());
+        const spawnPointBtn = document.getElementById('cb-spawn-point-btn');
+        if (spawnPointBtn) spawnPointBtn.addEventListener('click', () => this.toggleSpawnPointMode());
         const battleZoneBtn = document.getElementById('cb-battle-zone-btn');
         if (battleZoneBtn) battleZoneBtn.addEventListener('click', () => this.toggleBattleZoneMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
@@ -139,6 +145,15 @@ class CityBuilder {
                 if ((e.key === 'Delete' || e.key === 'Backspace') && this.spawnZoneSelectedIdx >= 0) {
                     e.preventDefault();
                     this.deleteSelectedSpawnZone();
+                    return;
+                }
+                return;
+            }
+            if (this.spawnPointMode) {
+                if (e.key === 'Escape') { this.toggleSpawnPointMode(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this.spawnPointSelectedIdx >= 0) {
+                    e.preventDefault();
+                    this.deleteSelectedSpawnPoint();
                     return;
                 }
                 return;
@@ -808,6 +823,65 @@ class CityBuilder {
         }
     }
 
+    toggleSpawnPointMode() {
+        this.spawnPointMode = !this.spawnPointMode;
+        const btn = document.getElementById('cb-spawn-point-btn');
+        if (btn) btn.style.background = this.spawnPointMode ? '#f59e0b' : 'rgba(255,255,255,0.15)';
+        if (this.spawnPointMode) {
+            this.selected = null;
+            this.collisionZoneMode = false;
+            this.teleportMode = false;
+            this.npcRegionMode = false;
+            this.spawnZoneMode = false;
+            this.battleZoneMode = false;
+            ['cb-collision-zone-btn', 'cb-teleport-btn', 'cb-npc-region-btn', 'cb-spawn-zone-btn', 'cb-battle-zone-btn'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) b.style.background = 'rgba(255,255,255,0.15)';
+            });
+            this.updateProps();
+            this.canvas.style.cursor = 'crosshair';
+        } else {
+            this.spawnPointSelectedIdx = -1;
+            this.canvas.style.cursor = 'default';
+        }
+        this.render();
+    }
+
+    onSpawnPointMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        for (let i = this.spawnPoints.length - 1; i >= 0; i--) {
+            const p = this.spawnPoints[i];
+            const d = Math.hypot(w.x - p.pos_x, w.y - p.pos_y);
+            if (d < 24 / this.zoom) {
+                this.spawnPointSelectedIdx = i;
+                this.updateProps();
+                this.render();
+                return;
+            }
+        }
+        this.spawnPoints.push({ pos_x: Math.round(w.x), pos_y: Math.round(w.y) });
+        this.spawnPointSelectedIdx = this.spawnPoints.length - 1;
+        this.updateProps();
+        this.render();
+    }
+
+    deleteSelectedSpawnPoint() {
+        if (this.spawnPointSelectedIdx >= 0) {
+            this.spawnPoints.splice(this.spawnPointSelectedIdx, 1);
+            this.spawnPointSelectedIdx = -1;
+            this.updateProps();
+            this.render();
+        }
+    }
+
+    updateSelectedSpawnPointPos(key, value) {
+        if (this.spawnPointSelectedIdx >= 0) {
+            this.spawnPoints[this.spawnPointSelectedIdx][key] = value;
+            this.updateProps();
+            this.render();
+        }
+    }
+
     toggleBattleZoneMode() {
         this.battleZoneMode = !this.battleZoneMode;
         const btn = document.getElementById('cb-battle-zone-btn');
@@ -1051,6 +1125,7 @@ class CityBuilder {
         if (this.npcRegionMode) { this.onNpcRegionMouseDown(e); return; }
         if (this.spawnZoneMode) { this.onSpawnZoneMouseDown(e); return; }
         if (this.battleZoneMode) { this.onBattleZoneMouseDown(e); return; }
+        if (this.spawnPointMode) { this.onSpawnPointMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
 
@@ -1137,6 +1212,32 @@ class CityBuilder {
                             <input type="number" step="1" value="${Math.round(z.height)}" onchange="window.cityBuilder.updateSelectedSpawnZonePos('height', parseFloat(this.value))" style="flex:1;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                         </label>
                         <button onclick="window.cityBuilder.deleteSelectedSpawnZone();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover zona</button>
+                    </div>
+                `;
+                return;
+            }
+            if (this.spawnPointSelectedIdx >= 0) {
+                const p = this.spawnPoints[this.spawnPointSelectedIdx];
+                const zone = this.spawnZones.find(z =>
+                    p.pos_x >= z.pos_x && p.pos_x <= z.pos_x + z.width &&
+                    p.pos_y >= z.pos_y && p.pos_y <= z.pos_y + z.height
+                );
+                el.innerHTML = `
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <div style="color:#f59e0b;font-weight:700;font-size:13px;">Spawn Point</div>
+                        <div style="color:rgba(255,255,255,0.4);font-size:11px;">ID: ${p.id || 'novo'}</div>
+                        <div style="color:rgba(255,255,255,0.6);font-size:11px;">
+                            ${zone ? `Dentro da zona: <b>${zone.biome || 'sem bioma'}</b>` : '<span style="color:#e94560;">Fora de qualquer zona de spawn - sem efeito</span>'}
+                        </div>
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;">
+                            Pos X
+                            <input type="number" step="1" value="${Math.round(p.pos_x)}" onchange="window.cityBuilder.updateSelectedSpawnPointPos('pos_x', parseFloat(this.value))" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                        </label>
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;">
+                            Pos Y
+                            <input type="number" step="1" value="${Math.round(p.pos_y)}" onchange="window.cityBuilder.updateSelectedSpawnPointPos('pos_y', parseFloat(this.value))" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                        </label>
+                        <button onclick="window.cityBuilder.deleteSelectedSpawnPoint();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover ponto</button>
                     </div>
                 `;
                 return;
@@ -1314,6 +1415,13 @@ class CityBuilder {
                     biome: z.biome || null
                 }));
             }
+            const { data: spts } = await window.db.from('city_spawn_points').select('*').limit(5000);
+            if (spts) {
+                this.spawnPoints = spts.map(p => ({
+                    id: p.id,
+                    pos_x: p.pos_x, pos_y: p.pos_y
+                }));
+            }
 
             if (this.assets.length === 0) {
                 const backupKey = 'city_backup_' + (this.currentCityId || 'default');
@@ -1334,6 +1442,7 @@ class CityBuilder {
                         this.npcRegions = b.npcs || [];
                         this.battleZones = b.battleZones || [];
                         this.spawnZones = b.spawnZones || [];
+                        this.spawnPoints = b.spawnPoints || [];
                         const layerSet = new Set(this.assets.map(a => a.layer || 0));
                         this.layers = [...layerSet].sort((a, b) => a - b);
                         if (this.layers.length === 0) this.layers = [0];
@@ -1444,6 +1553,13 @@ class CityBuilder {
                     biome: z.biome || null
                 }
             }));
+            const spawnPointToSave = this.spawnPoints.map(p => ({
+                source: p,
+                payload: {
+                    ...(p.id ? { id: p.id } : {}),
+                    pos_x: p.pos_x, pos_y: p.pos_y
+                }
+            }));
 
             const backup = {
                 assets: toSave,
@@ -1451,7 +1567,8 @@ class CityBuilder {
                 teleports: tpToSave.map(t => t.payload),
                 npcs: npcToSave.map(n => n.payload),
                 battleZones: bzToSave.map(z => z.payload),
-                spawnZones: spawnToSave.map(z => z.payload)
+                spawnZones: spawnToSave.map(z => z.payload),
+                spawnPoints: spawnPointToSave.map(p => p.payload)
             };
 
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
@@ -1556,12 +1673,14 @@ class CityBuilder {
             const npcIds = await syncTable('city_npcs', npcToSave);
             const bzIds = await syncTable('city_battle_zones', bzToSave);
             const spawnIds = await syncTable('city_spawn_zones', spawnToSave);
+            const spawnPointIds = await syncTable('city_spawn_points', spawnPointToSave);
 
             await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
             await deleteMissingRows('city_teleports', tpIds, tpToSave);
             await deleteMissingRows('city_npcs', npcIds, npcToSave);
             await deleteMissingRows('city_battle_zones', bzIds, bzToSave);
             await deleteMissingRows('city_spawn_zones', spawnIds, spawnToSave);
+            await deleteMissingRows('city_spawn_points', spawnPointIds, spawnPointToSave);
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         } catch (e) {
@@ -1858,6 +1977,23 @@ class CityBuilder {
                 ctx.fillRect(dx, dy, dw, dh);
                 ctx.strokeRect(dx, dy, dw, dh);
             }
+        }
+
+        if (this.spawnPointMode || this.spawnPoints.length > 0) {
+            this.spawnPoints.forEach((p, i) => {
+                const isSel = i === this.spawnPointSelectedIdx;
+                ctx.beginPath();
+                ctx.arc(p.pos_x, p.pos_y, (isSel ? 10 : 8) / this.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = isSel ? '#fff' : '#f59e0b';
+                ctx.fill();
+                ctx.strokeStyle = isSel ? '#f59e0b' : '#fff';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(`P${i + 1}`, p.pos_x, p.pos_y - (14 / this.zoom));
+            });
         }
 
         if (this.teleportMode || this.teleports.length > 0) {
