@@ -977,12 +977,6 @@ class CityScreen {
         if (this.currentSpawnZone && this.currentSpawnZone !== prevSpawn) {
             console.log('[City] Entered spawn zone:', this.currentSpawnZone.id || 'unknown');
         }
-        if (this.spawnZoneCooldown > 0) {
-            this.spawnZoneCooldown -= 1;
-        }
-        if (this.currentSpawnZone && this.spawnZoneCooldown <= 0) {
-            this.triggerCitySpawnBattle(this.currentSpawnZone).catch(e => console.warn('[City] Spawn battle error:', e));
-        }
 
         if (!this._lastSync) this._lastSync = 0;
         this._lastSync++;
@@ -1087,8 +1081,8 @@ class CityScreen {
                 const sx = z.pos_x - camX;
                 const sy = z.pos_y - camY;
                 if (sx + z.width < -50 || sx > cw + 50 || sy + z.height < -50 || sy > ch + 50) return;
-                ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
-                ctx.strokeStyle = this.currentSpawnZone === z ? '#22c55e' : 'rgba(34, 197, 94, 0.6)';
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.12)';
+                ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
                 ctx.lineWidth = 2;
                 ctx.fillRect(sx, sy, z.width, z.height);
                 ctx.strokeRect(sx, sy, z.width, z.height);
