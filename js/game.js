@@ -608,6 +608,7 @@ class PokeFuryGame {
         if (!this.afkManager) {
             this.afkManager = new AFKManager(this);
             this.setupAfkPanel();
+            this.setupAfkPanel('city-');
             const typeChart = await loadTypeEffectiveness();
             this.afkManager.setTypeChart(typeChart);
         }
@@ -2740,8 +2741,8 @@ class PokeFuryGame {
         });
     }
 
-    updatePartyPanel() {
-        const list = document.getElementById('party-list');
+    updatePartyPanel(listEl, opts = {}) {
+        const list = listEl || document.getElementById('party-list');
         if (!list) return;
         list.innerHTML = '';
 
@@ -2841,26 +2842,28 @@ class PokeFuryGame {
             list.appendChild(slot);
         }
 
-        let healBtn = document.getElementById('heal-pokemon-btn');
-        const isPokemonCenter = this.currentMap && this.currentMap.name === 'Centro Pokemon';
-        const hasHealAnywhere = window.boostsManager && window.boostsManager.isActive('center_anywhere');
-        const canHeal = isPokemonCenter || hasHealAnywhere;
-        if (canHeal) {
-            if (!healBtn) {
-                healBtn = document.createElement('button');
-                healBtn.id = 'heal-pokemon-btn';
-                healBtn.style.cssText = 'width:100%;margin-top:8px;padding:10px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(233,69,96,0.3)';
-                healBtn.onmouseenter = () => { healBtn.style.transform = 'scale(1.03)'; healBtn.style.boxShadow = '0 4px 12px rgba(233,69,96,0.5)'; };
-                healBtn.onmouseleave = () => { healBtn.style.transform = 'scale(1)'; healBtn.style.boxShadow = '0 2px 8px rgba(233,69,96,0.3)'; };
-                healBtn.onclick = () => this.healAllPokemon();
-                list.parentElement.appendChild(healBtn);
+        if (opts.withHeal !== false) {
+            let healBtn = document.getElementById('heal-pokemon-btn');
+            const isPokemonCenter = this.currentMap && this.currentMap.name === 'Centro Pokemon';
+            const hasHealAnywhere = window.boostsManager && window.boostsManager.isActive('center_anywhere');
+            const canHeal = isPokemonCenter || hasHealAnywhere;
+            if (canHeal) {
+                if (!healBtn) {
+                    healBtn = document.createElement('button');
+                    healBtn.id = 'heal-pokemon-btn';
+                    healBtn.style.cssText = 'width:100%;margin-top:8px;padding:10px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(233,69,96,0.3)';
+                    healBtn.onmouseenter = () => { healBtn.style.transform = 'scale(1.03)'; healBtn.style.boxShadow = '0 4px 12px rgba(233,69,96,0.5)'; };
+                    healBtn.onmouseleave = () => { healBtn.style.transform = 'scale(1)'; healBtn.style.boxShadow = '0 2px 8px rgba(233,69,96,0.3)'; };
+                    healBtn.onclick = () => this.healAllPokemon();
+                    list.parentElement.appendChild(healBtn);
+                }
+                healBtn.textContent = this.playerTeam.every(p => !p.fainted && p.currentHp === p.stats.hp) ? 'Time Curado!' : 'Curar Pokemons';
+                healBtn.disabled = this.playerTeam.every(p => !p.fainted && p.currentHp === p.stats.hp);
+                healBtn.style.opacity = healBtn.disabled ? '0.5' : '1';
+                healBtn.style.cursor = healBtn.disabled ? 'default' : 'pointer';
+            } else if (healBtn) {
+                healBtn.remove();
             }
-            healBtn.textContent = this.playerTeam.every(p => !p.fainted && p.currentHp === p.stats.hp) ? 'Time Curado!' : 'Curar Pokemons';
-            healBtn.disabled = this.playerTeam.every(p => !p.fainted && p.currentHp === p.stats.hp);
-            healBtn.style.opacity = healBtn.disabled ? '0.5' : '1';
-            healBtn.style.cursor = healBtn.disabled ? 'default' : 'pointer';
-        } else if (healBtn) {
-            healBtn.remove();
         }
     }
 
@@ -3700,23 +3703,24 @@ openEventsPanel() {
         this.setupDonatePokemonForm();
     }
 
-    setupAfkPanel() {
+    setupAfkPanel(prefix = '') {
         const afk = this.afkManager;
         if (!afk) return;
 
-        const searchCheck = document.getElementById('afk-auto-search');
-        const battleCheck = document.getElementById('afk-auto-battle');
-        const healCheck = document.getElementById('afk-auto-heal');
-        const healSliderWrap = document.getElementById('afk-heal-slider-wrap');
-        const healSlider = document.getElementById('afk-heal-slider');
-        const healVal = document.getElementById('afk-heal-val');
-        const healPotionWrap = document.getElementById('afk-heal-potion-wrap');
-        const healPotionSelect = document.getElementById('afk-heal-potion');
-        const captureCheck = document.getElementById('afk-auto-capture');
-        const captureOptions = document.getElementById('afk-capture-options');
-        const startBtn = document.getElementById('afk-start-btn');
-        const stopBtn = document.getElementById('afk-stop-btn');
-        const statusEl = document.getElementById('afk-status');
+        const searchCheck = document.getElementById(prefix + 'afk-auto-search');
+        const battleCheck = document.getElementById(prefix + 'afk-auto-battle');
+        const healCheck = document.getElementById(prefix + 'afk-auto-heal');
+        const healSliderWrap = document.getElementById(prefix + 'afk-heal-slider-wrap');
+        const healSlider = document.getElementById(prefix + 'afk-heal-slider');
+        const healVal = document.getElementById(prefix + 'afk-heal-val');
+        const healPotionWrap = document.getElementById(prefix + 'afk-heal-potion-wrap');
+        const healPotionSelect = document.getElementById(prefix + 'afk-heal-potion');
+        const captureCheck = document.getElementById(prefix + 'afk-auto-capture');
+        const captureOptions = document.getElementById(prefix + 'afk-capture-options');
+        const startBtn = document.getElementById(prefix + 'afk-start-btn');
+        const stopBtn = document.getElementById(prefix + 'afk-stop-btn');
+        const statusEl = document.getElementById(prefix + 'afk-status');
+        if (!searchCheck || !startBtn || !stopBtn || !statusEl) return;
 
         const RARITIES = [
             { key: 'common', label: 'Comum' },
@@ -3727,13 +3731,14 @@ openEventsPanel() {
             { key: 'shiny', label: 'Shiny' }
         ];
 
-        const rarityList = document.getElementById('afk-rarity-list');
+        const rarityList = document.getElementById(prefix + 'afk-rarity-list');
         RARITIES.forEach(r => {
             const row = document.createElement('div');
             row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 0;';
+            const boxId = prefix + 'afk-rarity-' + r.key;
             row.innerHTML = `
-                <input type="checkbox" id="afk-rarity-${r.key}" style="accent-color:#e94560;width:12px;height:12px;">
-                <label for="afk-rarity-${r.key}" style="font-size:10px;font-weight:600;flex:1;cursor:pointer;color:#fff;">${r.label}</label>
+                <input type="checkbox" id="${boxId}" style="accent-color:#e94560;width:12px;height:12px;">
+                <label for="${boxId}" style="font-size:10px;font-weight:600;flex:1;cursor:pointer;color:#fff;">${r.label}</label>
                 <select class="afk-rarity-ball" data-rarity="${r.key}" style="display:none;width:90px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#fff;font-size:9px;padding:2px 3px;font-family:Inter;">
                     <option value="">Selecione</option>
                 </select>
@@ -3781,8 +3786,8 @@ openEventsPanel() {
             captureOptions.style.display = captureCheck.checked ? 'block' : 'none';
         });
 
-        const healTeamWrap = document.getElementById('afk-heal-anywhere-wrap');
-        const healTeamCheck = document.getElementById('afk-auto-heal-team');
+        const healTeamWrap = document.getElementById(prefix + 'afk-heal-anywhere-wrap');
+        const healTeamCheck = document.getElementById(prefix + 'afk-auto-heal-team');
         if (healTeamWrap && healTeamCheck) {
             if (window.boostsManager && window.boostsManager.isActive('center_anywhere')) {
                 healTeamWrap.style.display = 'block';

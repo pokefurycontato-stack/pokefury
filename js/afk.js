@@ -60,7 +60,12 @@ export class AFKManager {
                     await this._healTeamAfterBattle();
                 }
                 this._wasInBattle = false;
-                if (this._visitingCenter) {
+                if (window.cityModeActive) {
+                    // Inside the city: only auto-farm inside a battle zone.
+                    if (this.autoSearch && window.cityScreen && window.cityScreen.currentBattleZone) {
+                        await this._handleCityBattleZone();
+                    }
+                } else if (this._visitingCenter) {
                     await this._handleCenterVisit();
                 } else if (this.autoSearch) {
                     await this._handleOverworld();
@@ -97,6 +102,44 @@ export class AFKManager {
     // ============================================================
     // OVERWORLD: Walk to nearest Pokemon
     // ============================================================
+
+    async _handleCityBattleZone() {
+        const city = window.cityScreen;
+        if (!city || !window.cityModeActive) return;
+        if (!city.currentBattleZone) return;
+        if (city.playerMoving) return;
+
+        const playerPokemon = getFirstAlive(this.game.playerTeam);
+        if (playerPokemon && this._allMovesExhausted(playerPokemon)) {
+            // Cannot walk to the Pokemon Center from the city (the city player
+            // position is independent from the overworld). Let the battle handle
+            // PP-exhausted fights via Struggle, or wait for the player to heal.
+            return;
+        }
+
+        // Find nearest active visible pokemon in the city
+        let nearest = null;
+        let minDist = Infinity;
+        for (const p of city.wildPokemon) {
+            if (!p.active) continue;
+            const dist = Math.hypot(p.pos_x - city.playerX, p.pos_y - city.playerY);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = p;
+            }
+        }
+        if (!nearest) return;
+
+        // Walk one step toward it using the city's key-based movement
+        const dx = nearest.pos_x - city.playerX;
+        const dy = nearest.pos_y - city.playerY;
+        let dir = null;
+        if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+        else dir = dy > 0 ? 'ArrowDown' : 'ArrowUp';
+
+        city.keys[dir] = true;
+        setTimeout(() => { city.keys[dir] = false; }, 60);
+    }
 
     async _handleOverworld() {
         const ow = this.game.overworld2d;

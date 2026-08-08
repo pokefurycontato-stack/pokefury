@@ -117,6 +117,7 @@ class CityScreen {
         this.running = false;
         window.cityModeActive = false;
         document.getElementById('city-screen').classList.add('hidden');
+        this.hideBattleZoneUI();
         this.closeNpcDialogue();
         this.unregisterPlayer();
         this.players = {};
@@ -568,6 +569,33 @@ class CityScreen {
         }
     }
 
+    showBattleZoneUI() {
+        const ui = document.getElementById('city-battle-ui');
+        if (!ui) return;
+        ui.classList.remove('hidden');
+        const game = window.pokefury;
+        if (game && game.updatePartyPanel) {
+            game.updatePartyPanel(document.getElementById('city-party-list'), { withHeal: false });
+        }
+        const afk = game && game.afkManager;
+        const startBtn = document.getElementById('city-afk-start-btn');
+        const stopBtn = document.getElementById('city-afk-stop-btn');
+        const statusEl = document.getElementById('city-afk-status');
+        if (afk && startBtn && stopBtn && statusEl) {
+            const running = !!afk.running;
+            startBtn.style.display = running ? 'none' : 'block';
+            stopBtn.style.display = running ? 'block' : 'none';
+            stopBtn.classList.toggle('hidden', !running);
+            statusEl.textContent = running ? 'Executando...' : 'Parado';
+            statusEl.style.color = running ? '#4ecdc4' : 'rgba(255,255,255,0.4)';
+        }
+    }
+
+    hideBattleZoneUI() {
+        const ui = document.getElementById('city-battle-ui');
+        if (ui) ui.classList.add('hidden');
+    }
+
     async triggerVisiblePokemonBattle(p) {
         if (!p || !p.encounter) return;
         const game = window.pokefury;
@@ -977,8 +1005,10 @@ class CityScreen {
         }
         if (this.currentBattleZone && this.currentBattleZone !== prevZone) {
             console.log(`[City] Entered battle zone: ${this.currentBattleZone.zone_name}`);
+            this.showBattleZoneUI();
         } else if (!this.currentBattleZone && prevZone) {
             console.log(`[City] Left battle zone: ${prevZone.zone_name}`);
+            this.hideBattleZoneUI();
         }
 
         const prevSpawn = this.currentSpawnZone;

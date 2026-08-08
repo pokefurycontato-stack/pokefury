@@ -1230,6 +1230,34 @@
         </div>
         <div id="city-canvas-wrap" style="flex:1;position:relative;overflow:hidden;">
             <canvas id="city-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+            <div id="city-battle-ui" class="hidden" style="position:absolute;top:8px;right:8px;width:230px;z-index:60;display:flex;flex-direction:column;gap:6px;pointer-events:none;">
+                <div class="right-section" style="pointer-events:auto;background:rgba(15,15,35,0.92);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;">
+                    <div class="right-section-title">AUTO FARM</div>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-search"> Procurar batalhas</label>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-battle"> Batalhar automático</label>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-heal"> Auto cura</label>
+                    <div id="city-afk-heal-slider-wrap" class="afk-sub-option" style="display:none">
+                        <input type="range" id="city-afk-heal-slider" min="10" max="90" value="40">
+                        <div class="afk-slider-labels"><span>10%</span><span id="city-afk-heal-val">40%</span><span>90%</span></div>
+                    </div>
+                    <div id="city-afk-heal-potion-wrap" class="afk-sub-option" style="display:none">
+                        <select id="city-afk-heal-potion"><option value="">Selecione poção</option></select>
+                    </div>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-capture"> Captura automática</label>
+                    <div id="city-afk-capture-options" class="afk-sub-option" style="display:none">
+                        <div id="city-afk-rarity-list"></div>
+                    </div>
+                    <div class="afk-buttons">
+                        <button id="city-afk-start-btn" class="afk-btn-start">INICIAR</button>
+                        <button id="city-afk-stop-btn" class="afk-btn-stop hidden">PARAR</button>
+                    </div>
+                    <div id="city-afk-status" class="afk-status">Parado</div>
+                </div>
+                <div class="right-section" style="pointer-events:auto;background:rgba(15,15,35,0.92);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;">
+                    <div class="right-section-title">TIME</div>
+                    <div id="city-party-list" style="display:flex;flex-direction:column;gap:4px"></div>
+                </div>
+            </div>
         </div>
         <div style="padding:8px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:12px;">
             <span id="city-pos" style="color:rgba(255,255,255,0.4);font-size:12px;">X: 0 Y: 0</span>
@@ -1319,7 +1347,7 @@
     <script src="js/gym-leaders-admin.js"></script>
     <script src="js/boosts.js"></script>
     <script src="js/event-pokemon-admin.js"></script>
-    <script src="js/city.js?v=20260807i"></script>
+    <script src="js/city.js?v=20260807j"></script>
     <script src="js/city-builder.js?v=20260807i"></script>
 </body>
 </html>
