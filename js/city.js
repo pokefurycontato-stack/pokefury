@@ -47,6 +47,16 @@ class CityScreen {
         });
         const closeBtn = document.getElementById('city-close-btn');
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+        const premiumBtn = document.getElementById('city-premium-btn');
+        if (premiumBtn) premiumBtn.addEventListener('click', () => this.openPremiumModal());
+        const pokedexBtn = document.getElementById('city-pokedex-btn');
+        if (pokedexBtn) pokedexBtn.addEventListener('click', () => {
+            if (window.pokefury) window.pokefury.openPokedex();
+        });
+        const bagBtn = document.getElementById('city-bag-btn');
+        if (bagBtn) bagBtn.addEventListener('click', () => {
+            if (window.pokefury) window.pokefury.openMochila();
+        });
         const teleportCloseBtn = document.getElementById('city-teleport-close');
         if (teleportCloseBtn) teleportCloseBtn.addEventListener('click', () => this.closeTeleportMenu());
         document.addEventListener('keydown', (e) => {
@@ -117,6 +127,7 @@ class CityScreen {
         this.running = false;
         window.cityModeActive = false;
         document.getElementById('city-screen').classList.add('hidden');
+        document.getElementById('city-premium-modal')?.classList.add('hidden');
         this.hideBattleZoneUI();
         this.closeNpcDialogue();
         this.unregisterPlayer();
@@ -136,6 +147,14 @@ class CityScreen {
         if (window._cityBeforeUnload) {
             window.removeEventListener('beforeunload', window._cityBeforeUnload);
         }
+    }
+
+    openPremiumModal() {
+        const game = window.pokefury;
+        if (game && game.currentCharacterId && window.premiumStore) {
+            window.premiumStore.setCurrentChar(game.currentCharacterId);
+        }
+        document.getElementById('city-premium-modal')?.classList.remove('hidden');
     }
 
     async loadPlayerSkin(game) {
@@ -1274,3 +1293,18 @@ class CityScreen {
 document.addEventListener('DOMContentLoaded', () => {
     window.cityScreen = new CityScreen();
 });
+
+window._cityOpenPremiumShop = function(shop) {
+    document.getElementById('city-premium-modal')?.classList.add('hidden');
+    const game = window.pokefury;
+    if (game && game.currentCharacterId && window.premiumStore) {
+        window.premiumStore.setCurrentChar(game.currentCharacterId);
+    }
+    if (shop === 'buy') {
+        window.premiumStore?.openBuyDiamonds();
+    } else if (shop === 'shop') {
+        window.premiumStore?.openDiamondShop();
+    } else if (shop === 'skin') {
+        window.premiumStore?.openSkinShop();
+    }
+};

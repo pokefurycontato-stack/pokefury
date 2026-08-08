@@ -1227,7 +1227,20 @@
             <canvas id="city-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
             <div style="position:absolute;top:10px;left:0;right:0;z-index:40;pointer-events:none;display:flex;align-items:center;">
                 <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/pokefury.png" alt="PokéFury" style="height:55px;width:auto;object-fit:contain;margin-left:16px;">
-                <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/topbar_crop.png" alt="Topbar" style="height:45px;width:auto;object-fit:contain;margin-left:auto;margin-right:auto;">
+                <div style="pointer-events:auto;display:flex;align-items:center;gap:8px;margin-left:auto;margin-right:auto;">
+                    <button id="city-premium-btn" style="display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(123,47,247,0.25),rgba(196,113,245,0.15));border:1px solid rgba(123,47,247,0.4);border-radius:10px;padding:6px 14px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='linear-gradient(135deg,rgba(123,47,247,0.45),rgba(196,113,245,0.3))';this.style.borderColor='rgba(123,47,247,0.7)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(123,47,247,0.25),rgba(196,113,245,0.15))';this.style.borderColor='rgba(123,47,247,0.4)'">
+                        <span style="font-size:18px">💎</span>
+                        <span style="color:#e0b0ff;font-size:11px;font-weight:700;letter-spacing:0.5px;">PREMIUM</span>
+                    </button>
+                    <button id="city-pokedex-btn" style="display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(244,67,54,0.2),rgba(255,152,0,0.15));border:1px solid rgba(244,67,54,0.35);border-radius:10px;padding:6px 14px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='linear-gradient(135deg,rgba(244,67,54,0.4),rgba(255,152,0,0.3))';this.style.borderColor='rgba(244,67,54,0.6)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(244,67,54,0.2),rgba(255,152,0,0.15))';this.style.borderColor='rgba(244,67,54,0.35)'">
+                        <span style="font-size:18px">📖</span>
+                        <span style="color:#ffab91;font-size:11px;font-weight:700;letter-spacing:0.5px;">POKÉDEX</span>
+                    </button>
+                    <button id="city-bag-btn" style="display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(76,175,80,0.2),rgba(139,195,74,0.15));border:1px solid rgba(76,175,80,0.35);border-radius:10px;padding:6px 14px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='linear-gradient(135deg,rgba(76,175,80,0.4),rgba(139,195,74,0.3))';this.style.borderColor='rgba(76,175,80,0.6)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(76,175,80,0.2),rgba(139,195,74,0.15))';this.style.borderColor='rgba(76,175,80,0.35)'">
+                        <span style="font-size:18px">🎒</span>
+                        <span style="color:#a5d6a7;font-size:11px;font-weight:700;letter-spacing:0.5px;">MOCHILA</span>
+                    </button>
+                </div>
                 <button id="city-close-btn" style="pointer-events:auto;background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;margin-right:16px;">✕</button>
             </div>
             <div id="city-battle-ui" class="hidden" style="position:absolute;top:78px;right:8px;width:230px;z-index:60;display:flex;flex-direction:column;gap:6px;pointer-events:none;">
@@ -1339,6 +1352,45 @@
             <span>Del: remover</span>
             <span>R: girar</span>
             <span>Scroll: zoom</span>
+        </div>
+    </div>
+
+    <!-- ===== CITY PREMIUM MODAL ===== -->
+    <div id="city-premium-modal" class="hidden" style="position:fixed;inset:0;z-index:850;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);" onclick="document.getElementById('city-premium-modal').classList.add('hidden')"></div>
+        <div style="position:relative;width:90%;max-width:680px;background:linear-gradient(145deg,#12151f,#1a1f35);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 40px rgba(123,47,247,0.08);">
+            <button onclick="document.getElementById('city-premium-modal').classList.add('hidden')" style="position:absolute;top:12px;right:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#aaa;font-size:18px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='#aaa'">✕</button>
+            <div style="text-align:center;margin-bottom:24px;">
+                <div style="font-size:32px;margin-bottom:6px;">💎</div>
+                <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:0.5px;">Premium Store</div>
+                <div style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:4px;">Escolha uma loja para explorar</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;" id="city-premium-options">
+                <button class="city-premium-option" onclick="window._cityOpenPremiumShop('buy')" style="display:flex;align-items:center;gap:16px;width:100%;padding:16px 18px;background:linear-gradient(135deg,rgba(79,195,247,0.08),rgba(79,195,247,0.03));border:1px solid rgba(79,195,247,0.2);border-radius:14px;cursor:pointer;text-align:left;transition:all 0.25s;" onmouseover="this.style.background='linear-gradient(135deg,rgba(79,195,247,0.18),rgba(79,195,247,0.08))';this.style.borderColor='rgba(79,195,247,0.5)';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(79,195,247,0.08),rgba(79,195,247,0.03))';this.style.borderColor='rgba(79,195,247,0.2)';this.style.transform='translateY(0)'">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#1565c0,#0d47a1);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">💰</div>
+                    <div style="flex:1;">
+                        <div style="color:#fff;font-size:14px;font-weight:700;">Compre Diamantes</div>
+                        <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;">Compre diamantes com PIX ou Crédito — cada um por apenas R$ 0,50</div>
+                    </div>
+                    <div style="color:rgba(255,255,255,0.2);font-size:18px;">›</div>
+                </button>
+                <button class="city-premium-option" onclick="window._cityOpenPremiumShop('shop')" style="display:flex;align-items:center;gap:16px;width:100%;padding:16px 18px;background:linear-gradient(135deg,rgba(123,47,247,0.08),rgba(123,47,247,0.03));border:1px solid rgba(123,47,247,0.2);border-radius:14px;cursor:pointer;text-align:left;transition:all 0.25s;" onmouseover="this.style.background='linear-gradient(135deg,rgba(123,47,247,0.18),rgba(123,47,247,0.08))';this.style.borderColor='rgba(123,47,247,0.5)';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(123,47,247,0.08),rgba(123,47,247,0.03))';this.style.borderColor='rgba(123,47,247,0.2)';this.style.transform='translateY(0)'">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#7b2ff7,#6a1b9a);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">💎</div>
+                    <div style="flex:1;">
+                        <div style="color:#fff;font-size:14px;font-weight:700;">Loja de Diamantes</div>
+                        <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;">Gaste seus diamantes em boosts, VIP e itens exclusivos</div>
+                    </div>
+                    <div style="color:rgba(255,255,255,0.2);font-size:18px;">›</div>
+                </button>
+                <button class="city-premium-option" onclick="window._cityOpenPremiumShop('skin')" style="display:flex;align-items:center;gap:16px;width:100%;padding:16px 18px;background:linear-gradient(135deg,rgba(255,152,0,0.08),rgba(255,152,0,0.03));border:1px solid rgba(255,152,0,0.2);border-radius:14px;cursor:pointer;text-align:left;transition:all 0.25s;" onmouseover="this.style.background='linear-gradient(135deg,rgba(255,152,0,0.18),rgba(255,152,0,0.08))';this.style.borderColor='rgba(255,152,0,0.5)';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,152,0,0.08),rgba(255,152,0,0.03))';this.style.borderColor='rgba(255,152,0,0.2)';this.style.transform='translateY(0)'">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#e65100,#bf360c);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎨</div>
+                    <div style="flex:1;">
+                        <div style="color:#fff;font-size:14px;font-weight:700;">Skin Shop</div>
+                        <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;">Skin exclusivas para seu personagem com diamantes</div>
+                    </div>
+                    <div style="color:rgba(255,255,255,0.2);font-size:18px;">›</div>
+                </button>
+            </div>
         </div>
     </div>
 
