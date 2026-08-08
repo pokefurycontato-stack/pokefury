@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS city_spawn_zones (
     pos_y FLOAT NOT NULL DEFAULT 0,
     width FLOAT NOT NULL DEFAULT 128,
     height FLOAT NOT NULL DEFAULT 128,
+    region_map_id UUID REFERENCES region_maps(id),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

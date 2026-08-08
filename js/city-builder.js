@@ -65,6 +65,7 @@ class CityBuilder {
         this.spawnZoneSelectedIdx = -1;
         this.spawnZoneDragging = false;
         this.spawnZoneDragOffset = { x: 0, y: 0 };
+        this.availableRegionMaps = [];
 
         this.bindEvents();
     }
@@ -179,6 +180,7 @@ class CityBuilder {
 
         await this.loadPlayerSkin(game);
         await this.loadAssets();
+        await this.loadRegionMaps();
         await this.loadSavedLayout();
         this.renderLayerTabs();
 
@@ -736,6 +738,7 @@ class CityBuilder {
                 this.spawnZoneSelectedIdx = i;
                 this.spawnZoneDragging = true;
                 this.spawnZoneDragOffset = { x: w.x - z.pos_x, y: w.y - z.pos_y };
+                this.updateProps();
                 this.render();
                 return;
             }
@@ -743,6 +746,7 @@ class CityBuilder {
         this.spawnZoneSelectedIdx = -1;
         this.spawnZoneDrawStart = { x: w.x, y: w.y };
         this.spawnZoneDrawCurrent = { x: w.x, y: w.y };
+        this.updateProps();
         this.render();
     }
 
@@ -752,6 +756,7 @@ class CityBuilder {
             const z = this.spawnZones[this.spawnZoneSelectedIdx];
             z.pos_x = w.x - this.spawnZoneDragOffset.x;
             z.pos_y = w.y - this.spawnZoneDragOffset.y;
+            this.updateProps();
             this.render();
         } else if (this.spawnZoneDrawStart) {
             this.spawnZoneDrawCurrent = { x: w.x, y: w.y };
@@ -768,7 +773,7 @@ class CityBuilder {
             if (w < 0) { x += w; w = -w; }
             if (h < 0) { y += h; h = -h; }
             if (w > 4 && h > 4) {
-                this.spawnZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h) });
+                this.spawnZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h), region_map_id: null });
             }
             this.spawnZoneDrawStart = null;
             this.spawnZoneDrawCurrent = null;
@@ -781,6 +786,7 @@ class CityBuilder {
         if (this.spawnZoneSelectedIdx >= 0) {
             this.spawnZones.splice(this.spawnZoneSelectedIdx, 1);
             this.spawnZoneSelectedIdx = -1;
+            this.updateProps();
             this.render();
         }
     }
@@ -1083,6 +1089,41 @@ class CityBuilder {
     updateProps() {
         const el = document.getElementById('cb-props-content');
         if (!this.selected) {
+            if (this.spawnZoneSelectedIdx >= 0) {
+                const z = this.spawnZones[this.spawnZoneSelectedIdx];
+                const mapOptions = this.availableRegionMaps.map(m => `<option value="${m.id}" ${m.id === z.region_map_id ? 'selected' : ''}>${m.display_name}</option>`).join('');
+                el.innerHTML = `
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <div style="color:#f59e0b;font-weight:700;font-size:13px;">Spawn Zone</div>
+                        <div style="color:rgba(255,255,255,0.4);font-size:11px;">ID: ${z.id || 'novo'}</div>
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;">
+                            Mapa de encontros
+                            <select onchange="window.cityBuilder.updateSpawnZoneRegionMap(this.value)" style="width:100%;padding:6px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                                <option value="">Nenhum</option>
+                                ${mapOptions}
+                            </select>
+                        </label>
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;">
+                            Pos X
+                            <input type="number" step="1" value="${Math.round(z.pos_x)}" onchange="window.cityBuilder.updateSelectedSpawnZonePos('pos_x', parseFloat(this.value))" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                        </label>
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;">
+                            Pos Y
+                            <input type="number" step="1" value="${Math.round(z.pos_y)}" onchange="window.cityBuilder.updateSelectedSpawnZonePos('pos_y', parseFloat(this.value))" style="width:100%;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                        </label>
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;display:flex;gap:8px;">
+                            <span>W</span>
+                            <input type="number" step="1" value="${Math.round(z.width)}" onchange="window.cityBuilder.updateSelectedSpawnZonePos('width', parseFloat(this.value))" style="flex:1;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                        </label>
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;display:flex;gap:8px;">
+                            <span>H</span>
+                            <input type="number" step="1" value="${Math.round(z.height)}" onchange="window.cityBuilder.updateSelectedSpawnZonePos('height', parseFloat(this.value))" style="flex:1;padding:4px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                        </label>
+                        <button onclick="window.cityBuilder.deleteSelectedSpawnZone();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover zona</button>
+                    </div>
+                `;
+                return;
+            }
             el.innerHTML = '<span style="color:rgba(255,255,255,0.4)">Selecione um asset</span>';
             return;
         }
@@ -1252,7 +1293,8 @@ class CityBuilder {
                 this.spawnZones = sp.map(z => ({
                     id: z.id,
                     pos_x: z.pos_x, pos_y: z.pos_y,
-                    width: z.width, height: z.height
+                    width: z.width, height: z.height,
+                    region_map_id: z.region_map_id || null
                 }));
             }
 
@@ -1283,6 +1325,26 @@ class CityBuilder {
             }
         } catch (e) {
             console.warn('[CityBuilder] No saved layout');
+        }
+    }
+
+    async loadRegionMaps() {
+        try {
+            const [{ data: regions, error: regionError }, { data: maps, error: mapError }] = await Promise.all([
+                window.db.from('regions').select('id,name').order('sort_order'),
+                window.db.from('region_maps').select('id,name,region_id,sort_order').order('region_id', { ascending: true }).order('sort_order', { ascending: true })
+            ]);
+            if (regionError) throw regionError;
+            if (mapError) throw mapError;
+            const regionNames = new Map((regions || []).map(r => [r.id, r.name]));
+            this.availableRegionMaps = (maps || []).map(m => ({
+                ...m,
+                region_name: regionNames.get(m.region_id) || 'Sem regiao',
+                display_name: `${regionNames.get(m.region_id) || 'Sem regiao'} / ${m.name}`
+            }));
+        } catch (e) {
+            console.warn('[CityBuilder] Failed to load region maps:', e.message || e);
+            this.availableRegionMaps = [];
         }
     }
 
@@ -1361,7 +1423,8 @@ class CityBuilder {
                 payload: {
                     ...(z.id ? { id: z.id } : {}),
                     pos_x: z.pos_x, pos_y: z.pos_y,
-                    width: z.width, height: z.height
+                    width: z.width, height: z.height,
+                    region_map_id: z.region_map_id || null
                 }
             }));
 

@@ -413,7 +413,8 @@ class CityScreen {
             this.spawnZones = (data || []).map(z => ({
                 id: z.id,
                 pos_x: z.pos_x, pos_y: z.pos_y,
-                width: z.width, height: z.height
+                width: z.width, height: z.height,
+                region_map_id: z.region_map_id || null
             }));
             console.log(`[City] Loaded ${this.spawnZones.length} spawn zones`);
         } catch (e) {
@@ -430,8 +431,9 @@ class CityScreen {
 
         let encounters = [];
         try {
-            if (game.currentMap?.id && game.regionManager) {
-                encounters = await game.regionManager.loadMapEncounters(game.currentMap.id);
+            const mapId = zone.region_map_id || game.currentMap?.id;
+            if (mapId && game.regionManager) {
+                encounters = await game.regionManager.loadMapEncounters(mapId);
             }
         } catch (e) {
             console.warn('[City] Failed to load map encounters for spawn battle:', e.message);
