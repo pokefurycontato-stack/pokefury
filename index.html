@@ -1223,14 +1223,14 @@
 
     <!-- City Screen -->
     <div id="city-screen" class="hidden" style="position:fixed;inset:0;z-index:800;background:#0a0e1a;display:flex;flex-direction:column;">
-        <div style="position:relative;height:104px;flex-shrink:0;">
-            <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/pokefury.png" alt="PokéFury" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);height:42px;width:auto;object-fit:contain;">
-            <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/topbar_crop.png" alt="Topbar" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:100px;width:auto;object-fit:contain;">
-            <button id="city-close-btn" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;">✕</button>
-        </div>
         <div id="city-canvas-wrap" style="flex:1;position:relative;overflow:hidden;">
             <canvas id="city-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
-            <div id="city-battle-ui" class="hidden" style="position:absolute;top:8px;right:8px;width:230px;z-index:60;display:flex;flex-direction:column;gap:6px;pointer-events:none;">
+            <div style="position:absolute;top:10px;left:0;right:0;z-index:40;pointer-events:none;display:flex;align-items:center;">
+                <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/pokefury.png" alt="PokéFury" style="height:42px;width:auto;object-fit:contain;margin-left:16px;">
+                <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/topbar_crop.png" alt="Topbar" style="height:56px;width:auto;object-fit:contain;margin-left:auto;margin-right:auto;">
+                <button id="city-close-btn" style="pointer-events:auto;background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;margin-right:16px;">✕</button>
+            </div>
+            <div id="city-battle-ui" class="hidden" style="position:absolute;top:78px;right:8px;width:230px;z-index:60;display:flex;flex-direction:column;gap:6px;pointer-events:none;">
                 <div class="right-section" style="pointer-events:auto;background:rgba(15,15,35,0.92);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;">
                     <div class="right-section-title">AUTO FARM</div>
                     <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-search"> Procurar batalhas</label>
