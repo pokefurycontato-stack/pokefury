@@ -27,6 +27,9 @@ class CityScreen {
         this.npcDialogueOpen = false;
         this.battleZones = [];
         this.currentBattleZone = null;
+        this.spawnZones = [];
+        this.currentSpawnZone = null;
+        this.spawnZoneCooldown = 0;
 
         this.bindEvents();
     }
@@ -82,6 +85,7 @@ class CityScreen {
         await this.loadTeleports();
         await this.loadNpcs();
         await this.loadBattleZones();
+        await this.loadSpawnZones();
         await this.registerPlayer();
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
@@ -402,6 +406,78 @@ class CityScreen {
         }
     }
 
+    async loadSpawnZones() {
+        try {
+            const { data, error } = await window.db.from('city_spawn_zones').select('*').limit(5000);
+            if (error) throw error;
+            this.spawnZones = (data || []).map(z => ({
+                id: z.id,
+                pos_x: z.pos_x, pos_y: z.pos_y,
+                width: z.width, height: z.height
+            }));
+            console.log(`[City] Loaded ${this.spawnZones.length} spawn zones`);
+        } catch (e) {
+            console.warn('[City] Spawn zones load error:', e.message);
+            this.spawnZones = [];
+        }
+    }
+
+    async triggerCitySpawnBattle(zone) {
+        if (!zone || !window.pokefury) return;
+        const game = window.pokefury;
+        if (game.state === 'battle' || game._battleStarting) return;
+        if (this.spawnZoneCooldown > 0) return;
+
+        let encounters = [];
+        try {
+            if (game.currentMap?.id && game.regionManager) {
+                encounters = await game.regionManager.loadMapEncounters(game.currentMap.id);
+            }
+        } catch (e) {
+            console.warn('[City] Failed to load map encounters for spawn battle:', e.message);
+        }
+
+        if (!encounters || encounters.length === 0) {
+            encounters = [
+                { pokemon_name: 'Rattata', pokemon_id: 19, weight: 100, sprite_url: null, rarity: 'common' },
+                { pokemon_name: 'Pidgey', pokemon_id: 16, weight: 80, sprite_url: null, rarity: 'common' },
+                { pokemon_name: 'Zubat', pokemon_id: 41, weight: 60, sprite_url: null, rarity: 'common' }
+            ];
+        }
+
+        const encounter = this.chooseWeightedEncounter(encounters);
+        if (!encounter) return;
+
+        const pokemonId = encounter.pokemon_id || encounter.pokemon_name;
+        const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || encounter.sprite_url || null;
+        const level = this.getCityBattleLevel(encounter);
+
+        console.log('[City] Triggering spawn battle with', pokemonId, 'level', level, 'zone', zone.id || 'unknown');
+        await game.startBattleWithPokemon(pokemonId, level, spriteUrl);
+        this.spawnZoneCooldown = 240;
+    }
+
+    chooseWeightedEncounter(encounters) {
+        if (!Array.isArray(encounters) || encounters.length === 0) return null;
+        const pool = encounters.filter(e => e && (e.weight == null || e.weight >= 0));
+        if (pool.length === 0) return null;
+        const total = pool.reduce((sum, e) => sum + (Number.isFinite(e.weight) ? e.weight : 50), 0);
+        let roll = Math.random() * total;
+        for (const e of pool) {
+            roll -= (Number.isFinite(e.weight) ? e.weight : 50);
+            if (roll <= 0) return e;
+        }
+        return pool[pool.length - 1];
+    }
+
+    getCityBattleLevel(encounter) {
+        const game = window.pokefury;
+        const highest = game?.playerTeam?.reduce((max, p) => Math.max(max, p?.level || 1), 1) || 1;
+        const minLevel = Math.max(1, highest - 2);
+        const maxLevel = Math.min(100, highest + 2);
+        return Math.floor(minLevel + Math.random() * (maxLevel - minLevel + 1));
+    }
+
     showTeleportMenu(sign) {
         const popup = document.getElementById('city-teleport-popup');
         const title = document.getElementById('city-teleport-title');
@@ -681,6 +757,25 @@ class CityScreen {
             console.log(`[City] Left battle zone: ${prevZone.zone_name}`);
         }
 
+        const prevSpawn = this.currentSpawnZone;
+        this.currentSpawnZone = null;
+        for (const z of this.spawnZones) {
+            if (this.playerX >= z.pos_x && this.playerX <= z.pos_x + z.width &&
+                this.playerY >= z.pos_y && this.playerY <= z.pos_y + z.height) {
+                this.currentSpawnZone = z;
+                break;
+            }
+        }
+        if (this.currentSpawnZone && this.currentSpawnZone !== prevSpawn) {
+            console.log('[City] Entered spawn zone:', this.currentSpawnZone.id || 'unknown');
+        }
+        if (this.spawnZoneCooldown > 0) {
+            this.spawnZoneCooldown -= 1;
+        }
+        if (this.currentSpawnZone && this.spawnZoneCooldown <= 0) {
+            this.triggerCitySpawnBattle(this.currentSpawnZone).catch(e => console.warn('[City] Spawn battle error:', e));
+        }
+
         if (!this._lastSync) this._lastSync = 0;
         this._lastSync++;
         if (this._lastSync % 15 === 0) {
@@ -774,6 +869,23 @@ class CityScreen {
             ctx.textAlign = 'center';
             ctx.fillText(t.name, sx + t.sign_width / 2, sy - 6);
         });
+
+        if (this.spawnZones.length > 0) {
+            this.spawnZones.forEach((z, i) => {
+                const sx = z.pos_x - camX;
+                const sy = z.pos_y - camY;
+                if (sx + z.width < -50 || sx > cw + 50 || sy + z.height < -50 || sy > ch + 50) return;
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
+                ctx.strokeStyle = this.currentSpawnZone === z ? '#22c55e' : 'rgba(34, 197, 94, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.fillRect(sx, sy, z.width, z.height);
+                ctx.strokeRect(sx, sy, z.width, z.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Spawn', sx + z.width / 2, sy - 6);
+            });
+        }
 
         this.npcs.forEach(n => {
             const sx = n.pos_x - camX;

@@ -6,5 +6,6 @@ BEGIN
     DELETE FROM city_teleports;
     DELETE FROM city_npcs;
     DELETE FROM city_battle_zones;
+    DELETE FROM city_spawn_zones;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

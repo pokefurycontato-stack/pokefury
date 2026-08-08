@@ -58,6 +58,14 @@ class CityBuilder {
         this.battleZoneDragging = false;
         this.battleZoneDragOffset = { x: 0, y: 0 };
 
+        this.spawnZoneMode = false;
+        this.spawnZones = [];
+        this.spawnZoneDrawStart = null;
+        this.spawnZoneDrawCurrent = null;
+        this.spawnZoneSelectedIdx = -1;
+        this.spawnZoneDragging = false;
+        this.spawnZoneDragOffset = { x: 0, y: 0 };
+
         this.bindEvents();
     }
 
@@ -76,6 +84,8 @@ class CityBuilder {
         if (teleportBtn) teleportBtn.addEventListener('click', () => this.toggleTeleportMode());
         const npcRegionBtn = document.getElementById('cb-npc-region-btn');
         if (npcRegionBtn) npcRegionBtn.addEventListener('click', () => this.toggleNpcRegionMode());
+        const spawnZoneBtn = document.getElementById('cb-spawn-zone-btn');
+        if (spawnZoneBtn) spawnZoneBtn.addEventListener('click', () => this.toggleSpawnZoneMode());
         const battleZoneBtn = document.getElementById('cb-battle-zone-btn');
         if (battleZoneBtn) battleZoneBtn.addEventListener('click', () => this.toggleBattleZoneMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
@@ -117,6 +127,15 @@ class CityBuilder {
                 if ((e.key === 'Delete' || e.key === 'Backspace') && this.npcRegionSelectedIdx >= 0) {
                     e.preventDefault();
                     this.deleteSelectedNpcRegion();
+                    return;
+                }
+                return;
+            }
+            if (this.spawnZoneMode) {
+                if (e.key === 'Escape') { this.toggleSpawnZoneMode(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this.spawnZoneSelectedIdx >= 0) {
+                    e.preventDefault();
+                    this.deleteSelectedSpawnZone();
                     return;
                 }
                 return;
@@ -412,6 +431,9 @@ class CityBuilder {
         if (btn) btn.style.background = this.collisionZoneMode ? '#e74c3c' : 'rgba(255,255,255,0.15)';
         if (this.collisionZoneMode) {
             this.selected = null;
+            this.spawnZoneMode = false;
+            const sBtn = document.getElementById('cb-spawn-zone-btn');
+            if (sBtn) sBtn.style.background = 'rgba(255,255,255,0.15)';
             this.updateProps();
             this.canvas.style.cursor = 'crosshair';
         } else {
@@ -487,8 +509,11 @@ class CityBuilder {
         if (this.teleportMode) {
             this.selected = null;
             this.collisionZoneMode = false;
+            this.spawnZoneMode = false;
             const zBtn = document.getElementById('cb-collision-zone-btn');
             if (zBtn) zBtn.style.background = 'rgba(255,255,255,0.15)';
+            const sBtn = document.getElementById('cb-spawn-zone-btn');
+            if (sBtn) sBtn.style.background = 'rgba(255,255,255,0.15)';
             this.updateProps();
             this.canvas.style.cursor = 'crosshair';
             this.teleportPlacing = null;
@@ -609,10 +634,13 @@ class CityBuilder {
             this.selected = null;
             this.collisionZoneMode = false;
             this.teleportMode = false;
+            this.spawnZoneMode = false;
             const zBtn = document.getElementById('cb-collision-zone-btn');
             if (zBtn) zBtn.style.background = 'rgba(255,255,255,0.15)';
             const tBtn = document.getElementById('cb-teleport-btn');
             if (tBtn) tBtn.style.background = 'rgba(255,255,255,0.15)';
+            const sBtn = document.getElementById('cb-spawn-zone-btn');
+            if (sBtn) sBtn.style.background = 'rgba(255,255,255,0.15)';
             this.updateProps();
             this.canvas.style.cursor = 'crosshair';
         } else {
@@ -671,6 +699,92 @@ class CityBuilder {
         }
     }
 
+    toggleSpawnZoneMode() {
+        this.spawnZoneMode = !this.spawnZoneMode;
+        const btn = document.getElementById('cb-spawn-zone-btn');
+        if (btn) btn.style.background = this.spawnZoneMode ? '#22c55e' : 'rgba(255,255,255,0.15)';
+        if (this.spawnZoneMode) {
+            this.selected = null;
+            this.collisionZoneMode = false;
+            this.teleportMode = false;
+            this.npcRegionMode = false;
+            this.battleZoneMode = false;
+            const zBtn = document.getElementById('cb-collision-zone-btn');
+            if (zBtn) zBtn.style.background = 'rgba(255,255,255,0.15)';
+            const tBtn = document.getElementById('cb-teleport-btn');
+            if (tBtn) tBtn.style.background = 'rgba(255,255,255,0.15)';
+            const nBtn = document.getElementById('cb-npc-region-btn');
+            if (nBtn) nBtn.style.background = 'rgba(255,255,255,0.15)';
+            const bBtn = document.getElementById('cb-battle-zone-btn');
+            if (bBtn) bBtn.style.background = 'rgba(255,255,255,0.15)';
+            this.updateProps();
+            this.canvas.style.cursor = 'crosshair';
+        } else {
+            this.spawnZoneDrawStart = null;
+            this.spawnZoneDrawCurrent = null;
+            this.spawnZoneSelectedIdx = -1;
+            this.canvas.style.cursor = 'default';
+        }
+        this.render();
+    }
+
+    onSpawnZoneMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        for (let i = this.spawnZones.length - 1; i >= 0; i--) {
+            const z = this.spawnZones[i];
+            if (w.x >= z.pos_x && w.x <= z.pos_x + z.width && w.y >= z.pos_y && w.y <= z.pos_y + z.height) {
+                this.spawnZoneSelectedIdx = i;
+                this.spawnZoneDragging = true;
+                this.spawnZoneDragOffset = { x: w.x - z.pos_x, y: w.y - z.pos_y };
+                this.render();
+                return;
+            }
+        }
+        this.spawnZoneSelectedIdx = -1;
+        this.spawnZoneDrawStart = { x: w.x, y: w.y };
+        this.spawnZoneDrawCurrent = { x: w.x, y: w.y };
+        this.render();
+    }
+
+    onSpawnZoneMouseMove(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        if (this.spawnZoneDragging && this.spawnZoneSelectedIdx >= 0) {
+            const z = this.spawnZones[this.spawnZoneSelectedIdx];
+            z.pos_x = w.x - this.spawnZoneDragOffset.x;
+            z.pos_y = w.y - this.spawnZoneDragOffset.y;
+            this.render();
+        } else if (this.spawnZoneDrawStart) {
+            this.spawnZoneDrawCurrent = { x: w.x, y: w.y };
+            this.render();
+        }
+    }
+
+    onSpawnZoneMouseUp(e) {
+        if (this.spawnZoneDrawStart && this.spawnZoneDrawCurrent) {
+            let x = this.spawnZoneDrawStart.x;
+            let y = this.spawnZoneDrawStart.y;
+            let w = this.spawnZoneDrawCurrent.x - x;
+            let h = this.spawnZoneDrawCurrent.y - y;
+            if (w < 0) { x += w; w = -w; }
+            if (h < 0) { y += h; h = -h; }
+            if (w > 4 && h > 4) {
+                this.spawnZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h) });
+            }
+            this.spawnZoneDrawStart = null;
+            this.spawnZoneDrawCurrent = null;
+        }
+        this.spawnZoneDragging = false;
+        this.render();
+    }
+
+    deleteSelectedSpawnZone() {
+        if (this.spawnZoneSelectedIdx >= 0) {
+            this.spawnZones.splice(this.spawnZoneSelectedIdx, 1);
+            this.spawnZoneSelectedIdx = -1;
+            this.render();
+        }
+    }
+
     toggleBattleZoneMode() {
         this.battleZoneMode = !this.battleZoneMode;
         const btn = document.getElementById('cb-battle-zone-btn');
@@ -680,12 +794,15 @@ class CityBuilder {
             this.collisionZoneMode = false;
             this.teleportMode = false;
             this.npcRegionMode = false;
+            this.spawnZoneMode = false;
             const zBtn = document.getElementById('cb-collision-zone-btn');
             if (zBtn) zBtn.style.background = 'rgba(255,255,255,0.15)';
             const tBtn = document.getElementById('cb-teleport-btn');
             if (tBtn) tBtn.style.background = 'rgba(255,255,255,0.15)';
             const nBtn = document.getElementById('cb-npc-region-btn');
             if (nBtn) nBtn.style.background = 'rgba(255,255,255,0.15)';
+            const sBtn = document.getElementById('cb-spawn-zone-btn');
+            if (sBtn) sBtn.style.background = 'rgba(255,255,255,0.15)';
             this.updateProps();
             this.canvas.style.cursor = 'crosshair';
         } else {
@@ -908,6 +1025,7 @@ class CityBuilder {
         if (this.collisionZoneMode) { this.onZoneMouseDown(e); return; }
         if (this.teleportMode) { this.onTeleportMouseDown(e); return; }
         if (this.npcRegionMode) { this.onNpcRegionMouseDown(e); return; }
+        if (this.spawnZoneMode) { this.onSpawnZoneMouseDown(e); return; }
         if (this.battleZoneMode) { this.onBattleZoneMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
@@ -930,6 +1048,7 @@ class CityBuilder {
         if (this.collisionZoneMode) { this.onZoneMouseMove(e); return; }
         if (this.teleportMode) { this.onTeleportMouseMove(e); return; }
         if (this.npcRegionMode) { this.onNpcRegionMouseMove(e); return; }
+        if (this.spawnZoneMode) { this.onSpawnZoneMouseMove(e); return; }
         if (this.battleZoneMode) { this.onBattleZoneMouseMove(e); return; }
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
@@ -1127,6 +1246,14 @@ class CityBuilder {
                     width: z.width, height: z.height
                 }));
             }
+            const { data: sp } = await window.db.from('city_spawn_zones').select('*').limit(5000);
+            if (sp) {
+                this.spawnZones = sp.map(z => ({
+                    id: z.id,
+                    pos_x: z.pos_x, pos_y: z.pos_y,
+                    width: z.width, height: z.height
+                }));
+            }
 
             if (this.assets.length === 0) {
                 const backupKey = 'city_backup_' + (this.currentCityId || 'default');
@@ -1146,6 +1273,7 @@ class CityBuilder {
                         this.teleports = b.teleports || [];
                         this.npcRegions = b.npcs || [];
                         this.battleZones = b.battleZones || [];
+                        this.spawnZones = b.spawnZones || [];
                         const layerSet = new Set(this.assets.map(a => a.layer || 0));
                         this.layers = [...layerSet].sort((a, b) => a - b);
                         if (this.layers.length === 0) this.layers = [0];
@@ -1227,13 +1355,22 @@ class CityBuilder {
                     width: z.width, height: z.height
                 }
             }));
+            const spawnToSave = this.spawnZones.map(z => ({
+                source: z,
+                payload: {
+                    ...(z.id ? { id: z.id } : {}),
+                    pos_x: z.pos_x, pos_y: z.pos_y,
+                    width: z.width, height: z.height
+                }
+            }));
 
             const backup = {
                 assets: toSave,
                 zones: zonesToSave.map(z => z.payload),
                 teleports: tpToSave.map(t => t.payload),
                 npcs: npcToSave.map(n => n.payload),
-                battleZones: bzToSave.map(z => z.payload)
+                battleZones: bzToSave.map(z => z.payload),
+                spawnZones: spawnToSave.map(z => z.payload)
             };
 
             localStorage.setItem('city_backup_' + (this.currentCityId || 'default'), JSON.stringify(backup));
@@ -1286,19 +1423,18 @@ class CityBuilder {
                 const { error } = await window.db.from(table).delete().in('id', Array.from(ids));
                 if (error) throw error;
             };
-            const deleteMissingRows = async (table, currentIds) => {
+            const deleteMissingRows = async (table, currentIds, sourceItems) => {
+                if (sourceItems && sourceItems.length > 0 && currentIds.size === 0) {
+                    console.warn(`[CityBuilder] Skipping delete for ${table} because save returned no row IDs`);
+                    return;
+                }
                 const existingIds = await fetchIds(table);
                 const staleIds = new Set([...existingIds].filter(id => !currentIds.has(id)));
                 await deleteIds(table, staleIds);
             };
 
             const savedIds = new Set(savedAssets.map(r => Number(r.id)).filter(Number.isFinite));
-            if (savedIds.size > 0) {
-                await deleteMissingRows('city_layout', savedIds);
-            } else {
-                const { error: deleteAllError } = await window.db.from('city_layout').delete().not('id', 'is', null);
-                if (deleteAllError) throw deleteAllError;
-            }
+            await deleteMissingRows('city_layout', savedIds, toSave);
 
             const syncTable = async (table, items) => {
                 const existing = [];
@@ -1338,11 +1474,13 @@ class CityBuilder {
             const tpIds = await syncTable('city_teleports', tpToSave);
             const npcIds = await syncTable('city_npcs', npcToSave);
             const bzIds = await syncTable('city_battle_zones', bzToSave);
+            const spawnIds = await syncTable('city_spawn_zones', spawnToSave);
 
-            await deleteMissingRows('city_collision_zones', zoneIds);
-            await deleteMissingRows('city_teleports', tpIds);
-            await deleteMissingRows('city_npcs', npcIds);
-            await deleteMissingRows('city_battle_zones', bzIds);
+            await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
+            await deleteMissingRows('city_teleports', tpIds, tpToSave);
+            await deleteMissingRows('city_npcs', npcIds, npcToSave);
+            await deleteMissingRows('city_battle_zones', bzIds, bzToSave);
+            await deleteMissingRows('city_spawn_zones', spawnIds, spawnToSave);
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         } catch (e) {
@@ -1478,7 +1616,8 @@ class CityBuilder {
                 zones: this.collisionZones,
                 teleports: this.teleports,
                 npcs: this.npcRegions,
-                battleZones: this.battleZones
+                battleZones: this.battleZones,
+                spawnZones: this.spawnZones
             };
             localStorage.setItem('city_autosave_' + (this.currentCityId || 'default'), JSON.stringify(backup));
         } catch (e) {}
@@ -1600,6 +1739,38 @@ class CityBuilder {
                 let dy = Math.min(this.zoneDrawStart.y, this.zoneDrawCurrent.y);
                 let dw = Math.abs(this.zoneDrawCurrent.x - this.zoneDrawStart.x);
                 let dh = Math.abs(this.zoneDrawCurrent.y - this.zoneDrawStart.y);
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(dx, dy, dw, dh);
+                ctx.strokeRect(dx, dy, dw, dh);
+            }
+        }
+
+        if (this.spawnZoneMode || this.spawnZones.length > 0) {
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.25)';
+            ctx.strokeStyle = 'rgba(34, 197, 94, 0.8)';
+            ctx.lineWidth = 2 / this.zoom;
+            this.spawnZones.forEach((z, i) => {
+                if (i === this.spawnZoneSelectedIdx) {
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
+                    ctx.strokeStyle = '#fff';
+                } else {
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.25)';
+                    ctx.strokeStyle = 'rgba(34, 197, 94, 0.8)';
+                }
+                ctx.fillRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.strokeRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('Spawn', z.pos_x + z.width / 2, z.pos_y - 6 / this.zoom);
+            });
+            if (this.spawnZoneDrawStart && this.spawnZoneDrawCurrent) {
+                let dx = Math.min(this.spawnZoneDrawStart.x, this.spawnZoneDrawCurrent.x);
+                let dy = Math.min(this.spawnZoneDrawStart.y, this.spawnZoneDrawCurrent.y);
+                let dw = Math.abs(this.spawnZoneDrawCurrent.x - this.spawnZoneDrawStart.x);
+                let dh = Math.abs(this.spawnZoneDrawCurrent.y - this.spawnZoneDrawStart.y);
                 ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
                 ctx.strokeStyle = '#22c55e';
                 ctx.lineWidth = 2 / this.zoom;
