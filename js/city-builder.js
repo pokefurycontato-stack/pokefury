@@ -1,3 +1,5 @@
+const CITY_SPAWN_BIOMES = ['Floresta', 'Montanha', 'Torre', 'Industrial', 'Penhasco', 'Praia', 'Vulcao', 'Geleira'];
+
 class CityBuilder {
     constructor() {
         this.canvas = null;
@@ -180,7 +182,6 @@ class CityBuilder {
 
         await this.loadPlayerSkin(game);
         await this.loadAssets();
-        await this.loadRegionMaps();
         await this.loadSavedLayout();
         this.renderLayerTabs();
 
@@ -773,7 +774,7 @@ class CityBuilder {
             if (w < 0) { x += w; w = -w; }
             if (h < 0) { y += h; h = -h; }
             if (w > 4 && h > 4) {
-                this.spawnZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h), region_map_id: null });
+                this.spawnZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h), region_map_id: null, biome: null });
             }
             this.spawnZoneDrawStart = null;
             this.spawnZoneDrawCurrent = null;
@@ -786,6 +787,22 @@ class CityBuilder {
         if (this.spawnZoneSelectedIdx >= 0) {
             this.spawnZones.splice(this.spawnZoneSelectedIdx, 1);
             this.spawnZoneSelectedIdx = -1;
+            this.updateProps();
+            this.render();
+        }
+    }
+
+    updateSelectedSpawnZonePos(key, value) {
+        if (this.spawnZoneSelectedIdx >= 0) {
+            this.spawnZones[this.spawnZoneSelectedIdx][key] = value;
+            this.updateProps();
+            this.render();
+        }
+    }
+
+    updateSpawnZoneBiome(value) {
+        if (this.spawnZoneSelectedIdx >= 0) {
+            this.spawnZones[this.spawnZoneSelectedIdx].biome = value || null;
             this.updateProps();
             this.render();
         }
@@ -1091,16 +1108,16 @@ class CityBuilder {
         if (!this.selected) {
             if (this.spawnZoneSelectedIdx >= 0) {
                 const z = this.spawnZones[this.spawnZoneSelectedIdx];
-                const mapOptions = this.availableRegionMaps.map(m => `<option value="${m.id}" ${m.id === z.region_map_id ? 'selected' : ''}>${m.display_name}</option>`).join('');
+                const biomeOptions = CITY_SPAWN_BIOMES.map(b => `<option value="${b}" ${z.biome === b ? 'selected' : ''}>${b}</option>`).join('');
                 el.innerHTML = `
                     <div style="display:flex;flex-direction:column;gap:8px;">
                         <div style="color:#f59e0b;font-weight:700;font-size:13px;">Spawn Zone</div>
                         <div style="color:rgba(255,255,255,0.4);font-size:11px;">ID: ${z.id || 'novo'}</div>
                         <label style="color:rgba(255,255,255,0.5);font-size:11px;">
-                            Mapa de encontros
-                            <select onchange="window.cityBuilder.updateSpawnZoneRegionMap(this.value)" style="width:100%;padding:6px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
+                            Bioma (encontros seguem a regiao atual do treinador)
+                            <select onchange="window.cityBuilder.updateSpawnZoneBiome(this.value)" style="width:100%;padding:6px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                                 <option value="">Nenhum</option>
-                                ${mapOptions}
+                                ${biomeOptions}
                             </select>
                         </label>
                         <label style="color:rgba(255,255,255,0.5);font-size:11px;">
@@ -1294,7 +1311,8 @@ class CityBuilder {
                     id: z.id,
                     pos_x: z.pos_x, pos_y: z.pos_y,
                     width: z.width, height: z.height,
-                    region_map_id: z.region_map_id || null
+                    region_map_id: z.region_map_id || null,
+                    biome: z.biome || null
                 }));
             }
 
@@ -1424,7 +1442,8 @@ class CityBuilder {
                     ...(z.id ? { id: z.id } : {}),
                     pos_x: z.pos_x, pos_y: z.pos_y,
                     width: z.width, height: z.height,
-                    region_map_id: z.region_map_id || null
+                    region_map_id: z.region_map_id || null,
+                    biome: z.biome || null
                 }
             }));
 
@@ -1828,7 +1847,7 @@ class CityBuilder {
                 ctx.fillStyle = '#fff';
                 ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
                 ctx.textAlign = 'center';
-                ctx.fillText('Spawn', z.pos_x + z.width / 2, z.pos_y - 6 / this.zoom);
+                ctx.fillText(z.biome ? `Spawn ${z.biome}` : 'Spawn', z.pos_x + z.width / 2, z.pos_y - 6 / this.zoom);
             });
             if (this.spawnZoneDrawStart && this.spawnZoneDrawCurrent) {
                 let dx = Math.min(this.spawnZoneDrawStart.x, this.spawnZoneDrawCurrent.x);

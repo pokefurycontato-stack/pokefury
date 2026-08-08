@@ -414,7 +414,8 @@ class CityScreen {
                 id: z.id,
                 pos_x: z.pos_x, pos_y: z.pos_y,
                 width: z.width, height: z.height,
-                region_map_id: z.region_map_id || null
+                region_map_id: z.region_map_id || null,
+                biome: z.biome || null
             }));
             console.log(`[City] Loaded ${this.spawnZones.length} spawn zones`);
         } catch (e) {
@@ -431,7 +432,26 @@ class CityScreen {
 
         let encounters = [];
         try {
-            const mapId = zone.region_map_id || game.currentMap?.id;
+            let mapId = null;
+            if (zone.biome) {
+                // Resolve o mapa do bioma na regiao atual do treinador
+                const region = game.currentRegion;
+                if (region && game.regionManager) {
+                    const maps = await game.regionManager.loadRegionMaps(region.id);
+                    const biomeMap = (maps || []).find(m =>
+                        String(m.name || '').trim().toLowerCase() === String(zone.biome).trim().toLowerCase()
+                    );
+                    if (biomeMap) {
+                        mapId = biomeMap.id;
+                        console.log(`[City] Spawn biome "${zone.biome}" resolved to map "${biomeMap.name}" in region "${region.name}"`);
+                    } else {
+                        console.warn(`[City] Biome "${zone.biome}" not found in region "${region.name}", using fallback`);
+                    }
+                }
+            }
+            if (!mapId) {
+                mapId = zone.region_map_id || game.currentMap?.id;
+            }
             if (mapId && game.regionManager) {
                 encounters = await game.regionManager.loadMapEncounters(mapId);
             }
@@ -885,7 +905,7 @@ class CityScreen {
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 10px Inter, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('Spawn', sx + z.width / 2, sy - 6);
+                ctx.fillText(z.biome ? z.biome : 'Spawn', sx + z.width / 2, sy - 6);
             });
         }
 
