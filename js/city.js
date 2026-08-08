@@ -414,7 +414,6 @@ class CityScreen {
                 id: z.id,
                 pos_x: z.pos_x, pos_y: z.pos_y,
                 width: z.width, height: z.height,
-                region_map_id: z.region_map_id || null,
                 biome: z.biome || null
             }));
             console.log(`[City] Loaded ${this.spawnZones.length} spawn zones`);
@@ -450,7 +449,7 @@ class CityScreen {
                 }
             }
             if (!mapId) {
-                mapId = zone.region_map_id || game.currentMap?.id;
+                mapId = game.currentMap?.id;
             }
             if (mapId && game.regionManager) {
                 encounters = await game.regionManager.loadMapEncounters(mapId);

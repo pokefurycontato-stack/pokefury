@@ -774,7 +774,7 @@ class CityBuilder {
             if (w < 0) { x += w; w = -w; }
             if (h < 0) { y += h; h = -h; }
             if (w > 4 && h > 4) {
-                this.spawnZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h), region_map_id: null, biome: null });
+                this.spawnZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h), biome: null });
             }
             this.spawnZoneDrawStart = null;
             this.spawnZoneDrawCurrent = null;
@@ -1311,7 +1311,6 @@ class CityBuilder {
                     id: z.id,
                     pos_x: z.pos_x, pos_y: z.pos_y,
                     width: z.width, height: z.height,
-                    region_map_id: z.region_map_id || null,
                     biome: z.biome || null
                 }));
             }
@@ -1442,7 +1441,6 @@ class CityBuilder {
                     ...(z.id ? { id: z.id } : {}),
                     pos_x: z.pos_x, pos_y: z.pos_y,
                     width: z.width, height: z.height,
-                    region_map_id: z.region_map_id || null,
                     biome: z.biome || null
                 }
             }));

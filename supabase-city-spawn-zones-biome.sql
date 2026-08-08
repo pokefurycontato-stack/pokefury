@@ -1,12 +1,10 @@
 -- ============================================================
--- SPAWN ZONES: add biome column
--- Run this ONCE in Supabase SQL Editor
--- A zona de spawn agora usa um BIOMA (ex: Floresta, Praia, Vulcao...)
--- e os encontros sao resolvidos pelo bioma + regiao atual do treinador
+-- SPAWN ZONES: garantia da coluna biome
+-- Run this ONCE in Supabase SQL Editor (ou junto com o arquivo principal)
 -- ============================================================
 
-ALTER TABLE city_spawn_zones
-ADD COLUMN IF NOT EXISTS biome TEXT;
+-- Remove a coluna antiga (region_map_id) se existir no schema
+ALTER TABLE city_spawn_zones DROP COLUMN IF EXISTS region_map_id;
 
--- Renomear coluna antiga para manter compatibilidade (opcional)
--- ALTER TABLE city_spawn_zones RENAME COLUMN region_map_id TO region_map_id_old;
+-- Garante a coluna biome
+ALTER TABLE city_spawn_zones ADD COLUMN IF NOT EXISTS biome TEXT;
