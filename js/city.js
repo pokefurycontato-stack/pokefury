@@ -120,6 +120,11 @@ class CityScreen {
         this.closeNpcDialogue();
         this.unregisterPlayer();
         this.players = {};
+        if (this.wildPokemonLayer) {
+            this.wildPokemonLayer.remove();
+            this.wildPokemonLayer = null;
+        }
+        this.wildPokemon = [];
         if (this.channel) {
             this.channel.unsubscribe();
             this.channel = null;
@@ -480,11 +485,18 @@ class CityScreen {
     }
 
     async spawnVisiblePokemon() {
-        for (const el of this.wildPokemon) {
-            if (el._img) el._img = null;
-        }
+        if (this.wildPokemonLayer) this.wildPokemonLayer.remove();
+        this.wildPokemonLayer = null;
         this.wildPokemon = [];
         if (!this.spawnPoints || this.spawnPoints.length === 0) return;
+
+        const wrap = document.getElementById('city-canvas-wrap');
+        if (!wrap) return;
+        const layer = document.createElement('div');
+        layer.id = 'city-wild-pokemon-layer';
+        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:5;';
+        wrap.appendChild(layer);
+        this.wildPokemonLayer = layer;
 
         for (const point of this.spawnPoints) {
             const biome = this.getSpawnZoneBiomeForPoint(point);
@@ -495,28 +507,36 @@ class CityScreen {
             }
             const encounter = this.chooseWeightedEncounter(encounters);
             if (!encounter) continue;
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
             const spriteUrl = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || encounter.sprite_url || null;
-            if (spriteUrl) img.src = spriteUrl;
+            const el = document.createElement('img');
+            el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;display:none;';
+            if (spriteUrl) el.src = spriteUrl;
+            layer.appendChild(el);
             this.wildPokemon.push({
                 point,
                 biome,
                 encounter,
                 spriteUrl,
-                _img: img,
+                _el: el,
                 pos_x: point.pos_x,
                 pos_y: point.pos_y,
                 baseX: point.pos_x,
                 baseY: point.pos_y,
-                targetX: point.pos_x,
-                targetY: point.pos_y,
-                moveTimer: 0,
                 active: true,
                 respawnTimer: 0
             });
         }
         console.log(`[City] Spawned ${this.wildPokemon.length} visible pokemon`);
+    }
+
+    getWildPokemonSize(p) {
+        const enc = p.encounter;
+        let base = 64;
+        if (enc.pokemon_id && window.PokeAPI && window.PokeAPI.pokemonCache) {
+            const data = window.PokeAPI.pokemonCache[String(enc.pokemon_id)];
+            if (data && data.height) base = 64 + Math.min(56, Math.round((data.height - 5) * 3));
+        }
+        return base;
     }
 
     updateWildPokemon(dt) {
@@ -527,30 +547,14 @@ class CityScreen {
                     p.respawnTimer -= dt;
                     if (p.respawnTimer <= 0) {
                         p.active = true;
-                        p.pos_x = p.baseX;
-                        p.pos_y = p.baseY;
+                        if (p._el) p._el.style.display = 'block';
                     }
                 }
                 continue;
             }
-            p.moveTimer -= dt;
-            if (p.moveTimer <= 0) {
-                p.moveTimer = 2 + Math.random() * 3;
-                const r = 48;
-                p.targetX = p.baseX + (Math.random() * 2 - 1) * r;
-                p.targetY = p.baseY + (Math.random() * 2 - 1) * r;
-            }
-            const dx = p.targetX - p.pos_x;
-            const dy = p.targetY - p.pos_y;
-            const dist = Math.hypot(dx, dy);
-            if (dist > 4) {
-                const speed = 45;
-                p.pos_x += (dx / dist) * speed * dt;
-                p.pos_y += (dy / dist) * speed * dt;
-            }
             if (this.wildPokemonCooldown <= 0) {
                 const pd = Math.hypot(this.playerX - p.pos_x, this.playerY - p.pos_y);
-                if (pd < 34) {
+                if (pd < 38) {
                     this.wildPokemonCooldown = 1;
                     this.triggerVisiblePokemonBattle(p);
                 }
@@ -571,30 +575,38 @@ class CityScreen {
         if (game.state === 'battle') {
             p.active = false;
             p.respawnTimer = 20;
+            if (p._el) p._el.style.display = 'none';
         }
     }
 
-    renderWildPokemon(ctx, camX, camY, cw, ch) {
+    renderWildPokemon() {
+        const layer = this.wildPokemonLayer;
+        if (!layer) return;
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const wrapRect = layer.getBoundingClientRect();
+        const scaleX = canvasRect.width / this.canvas.width;
+        const scaleY = canvasRect.height / this.canvas.height;
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
+        const camX = this.cameraX - this.canvas.width / 2;
+        const camY = this.cameraY - this.canvas.height / 2;
+
         for (const p of this.wildPokemon) {
             if (!p.active) continue;
-            const img = p._img;
-            const aw = 36;
-            const ah = 36;
-            const sx = p.pos_x - camX - aw / 2;
-            const sy = p.pos_y - camY - ah;
-            if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) continue;
-            ctx.fillStyle = 'rgba(0,0,0,0.25)';
-            ctx.beginPath();
-            ctx.ellipse(p.pos_x - camX, p.pos_y - camY, 12, 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            if (img && img.complete && img.naturalWidth) {
-                ctx.drawImage(img, sx, sy, aw, ah);
-            } else {
-                ctx.fillStyle = '#f59e0b';
-                ctx.beginPath();
-                ctx.arc(p.pos_x - camX, p.pos_y - camY, 10, 0, Math.PI * 2);
-                ctx.fill();
+            const el = p._el;
+            if (!el) continue;
+            const sz = this.getWildPokemonSize(p);
+            const sx = p.pos_x - camX;
+            const sy = p.pos_y - camY;
+            if (sx + sz < -50 || sx > this.canvas.width + 50 || sy + sz < -50 || sy > this.canvas.height + 50) {
+                el.style.display = 'none';
+                continue;
             }
+            el.style.display = 'block';
+            el.style.left = (offsetX + (sx - sz / 2) * scaleX) + 'px';
+            el.style.top = (offsetY + (sy - sz) * scaleY) + 'px';
+            el.style.width = (sz * scaleX) + 'px';
+            el.style.height = (sz * scaleY) + 'px';
         }
     }
 
@@ -1053,7 +1065,7 @@ class CityScreen {
             ctx.restore();
         });
 
-        this.renderWildPokemon(ctx, camX, camY, cw, ch);
+        this.renderWildPokemon();
 
         this.teleports.forEach(t => {
             const sx = t.sign_x - camX;
