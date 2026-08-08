@@ -22,6 +22,8 @@ class CityScreen {
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
+        this.teleports = [];
+        this.nearestTeleport = null;
         this.npcs = [];
         this.nearestNpc = null;
         this.npcDialogueOpen = false;
