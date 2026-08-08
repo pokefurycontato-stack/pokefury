@@ -555,15 +555,14 @@ class CityScreen {
         return base;
     }
 
-    updateWildPokemon(dt) {
+    async updateWildPokemon(dt) {
         if (this.wildPokemonCooldown > 0) this.wildPokemonCooldown -= dt;
         for (const p of this.wildPokemon) {
             if (!p.active) {
                 if (p.respawnTimer > 0) {
                     p.respawnTimer -= dt;
                     if (p.respawnTimer <= 0) {
-                        p.active = true;
-                        if (p._el) p._el.style.display = 'block';
+                        await this.reshuffleWildPokemon(p);
                     }
                 }
                 continue;
@@ -576,6 +575,33 @@ class CityScreen {
                 }
             }
         }
+    }
+
+    async reshuffleWildPokemon(p) {
+        // Like the overworld, pick a NEW random encounter for this spawn point
+        // so the same pokemon doesn't keep coming back after a battle.
+        const biome = p.biome || this.getSpawnZoneBiomeForPoint(p.point);
+        let encounters = [];
+        try {
+            encounters = await this.resolveSpawnEncounters(biome);
+        } catch (e) {
+            console.warn('[City] Reshuffle encounters failed:', e.message);
+        }
+        const encounter = this.chooseWeightedEncounter(encounters);
+        if (encounter) {
+            p.encounter = encounter;
+            const isShiny = (typeof getShinyChance === 'function') ? (Math.random() < (1 / getShinyChance())) : false;
+            const spriteUrl = (window.PokeAPI && encounter.pokemon_id)
+                ? (isShiny
+                    ? `${window.PokeAPI.supabaseStorageUrl}/animated-front-shiny/${encounter.pokemon_id}.gif`
+                    : window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id))
+                : (encounter.sprite_url || null);
+            p.isShiny = isShiny;
+            p.spriteUrl = spriteUrl;
+            if (p._el && spriteUrl) p._el.src = spriteUrl;
+        }
+        p.active = true;
+        if (p._el) p._el.style.display = 'block';
     }
 
     showBattleZoneUI() {

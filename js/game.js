@@ -956,6 +956,7 @@ class PokeFuryGame {
             const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
             if (!pokemonData) {
                 console.error('[PokeFury] Failed to load pokemon data for:', pokemonName);
+                this._battleStarting = false;
                 return;
             }
             const isShiny = isShinyOverride != null ? isShinyOverride : (Math.random() < (1 / getShinyChance()));
