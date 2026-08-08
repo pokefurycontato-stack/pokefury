@@ -2770,7 +2770,7 @@ body {
 }
 
 /* TOPBAR NEON GLOW - cada cor segue a imagem */
-@keyframes neonPulse {
+@keyframes topbarNeonPulse {
     0%   { opacity: 0.6; }
     50%  { opacity: 1; }
     100% { opacity: 0.6; }
@@ -2786,15 +2786,15 @@ body {
 .topbar-glow-left {
     clip-path: inset(0 75% 0 0);
     filter: drop-shadow(0 0 3px #00aaff) drop-shadow(0 0 6px #00aaff) drop-shadow(0 0 12px rgba(0,170,255,0.6));
-    animation: neonPulse 2s ease-in-out infinite;
+    animation: topbarNeonPulse 2s ease-in-out infinite;
 }
 .topbar-glow-center {
     clip-path: inset(0 25% 0 25%);
     filter: drop-shadow(0 0 3px #ff3344) drop-shadow(0 0 6px #ff3344) drop-shadow(0 0 12px rgba(255,51,68,0.6));
-    animation: neonPulse 2s ease-in-out infinite 0.6s;
+    animation: topbarNeonPulse 2s ease-in-out infinite 0.6s;
 }
 .topbar-glow-right {
     clip-path: inset(0 0 0 75%);
     filter: drop-shadow(0 0 3px #ffcc00) drop-shadow(0 0 6px #ffcc00) drop-shadow(0 0 12px rgba(255,204,0,0.6));
-    animation: neonPulse 2s ease-in-out infinite 1.2s;
+    animation: topbarNeonPulse 2s ease-in-out infinite 1.2s;
 }
