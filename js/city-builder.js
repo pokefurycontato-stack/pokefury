@@ -1003,6 +1003,7 @@ class CityBuilder {
             if (this.collisionZoneMode) { this.onZoneMouseUp(e); return; }
             if (this.teleportMode) { this.onTeleportMouseUp(e); return; }
             if (this.npcRegionMode) { this.onNpcRegionMouseUp(e); return; }
+            if (this.spawnZoneMode) { this.onSpawnZoneMouseUp(e); return; }
             if (this.battleZoneMode) { this.onBattleZoneMouseUp(e); return; }
             this.dragging = false;
         };
