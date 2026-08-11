@@ -107,10 +107,10 @@ function uploadChunked(fileData, fileSize, mime, storagePath) {
 
       const headers = {
         'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': isLast ? mime : 'application/octet-stream',
+        'Content-Type': mime,
         'Content-Length': chunk.length,
         'Content-Range': `bytes ${start}-${end - 1}/${fileSize}`,
-        'x-upsert': isLast ? 'true' : 'false'
+        'x-upsert': 'true'
       };
 
       const options = {
