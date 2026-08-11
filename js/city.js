@@ -93,6 +93,8 @@ class CityScreen {
         window.cityModeActive = true;
         this.canvas = this.canvas || document.getElementById('city-canvas');
         this.ctx = this.canvas.getContext('2d');
+        this.ctx.imageSmoothingEnabled = true;
+        if ('imageSmoothingQuality' in this.ctx) this.ctx.imageSmoothingQuality = 'high';
 
         // Cache para jogadores (nao-admin): reabre a cidade sem recarregar tudo.
         // Admin sempre recarrega (para ver alteracoes no city builder).

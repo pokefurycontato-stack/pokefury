@@ -286,6 +286,8 @@ class CityBuilder {
         window.cityModeActive = true;
         this.canvas = document.getElementById('cb-canvas');
         this.ctx = this.canvas.getContext('2d');
+        this.ctx.imageSmoothingEnabled = true;
+        if ('imageSmoothingQuality' in this.ctx) this.ctx.imageSmoothingQuality = 'high';
 
         try {
             const { data } = await window.db.from('city_player_spawn').select('pos_x, pos_y').limit(1).maybeSingle();
