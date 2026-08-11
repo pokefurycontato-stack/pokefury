@@ -17,6 +17,7 @@ class CityBuilder {
         this.camY = 0;
         this.playerX = 400;
         this.playerY = 400;
+        this.moveProgress = 1;
         this.playerDir = 'down';
         this.playerSkinImg = null;
         this.playerKeys = {};
