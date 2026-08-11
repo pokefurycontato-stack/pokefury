@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokeFury - Combates Fréneticos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- ==================== AUTH SCREEN ==================== -->
+    <div id="auth-screen">
+        <div class="auth-bg-particles" id="particles"></div>
+        <div class="auth-container">
+            <div class="auth-brand">
+                <img src="assets/pokefury-logo.png" alt="PokeFury" class="auth-logo">
+                <p class="auth-tagline">Combates Fréneticos de Alta Qualidade</p>
+            </div>
+            <div class="auth-card" id="auth-card">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-tab="login">Entrar</button>
+                    <button class="auth-tab" data-tab="register">Criar Conta</button>
+                    <div class="auth-tab-indicator"></div>
+                </div>
+                <form id="login-form" class="auth-form active">
+                    <div class="input-group">
+                        <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                        <input type="email" id="login-username" placeholder="E-mail" required autocomplete="email">
+                        <div class="input-line"></div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                        <input type="password" id="login-password" placeholder="Senha" required autocomplete="current-password">
+                        <div class="input-line"></div>
+                        <button type="button" class="toggle-password" data-target="login-password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
+                    <div class="form-options">
+                        <label class="remember-me"><input type="checkbox" id="remember-me"><span class="checkmark"></span> Lembrar de mim</label>
+                    </div>
+                    <button type="submit" class="auth-submit"><span>Entrar na Batalha</span></button>
+                    <div class="auth-error hidden" id="login-error"></div>
+                </form>
+                <form id="register-form" class="auth-form">
+                    <div class="input-group">
+                        <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                        <input type="text" id="reg-username" placeholder="Nome de treinador" required autocomplete="username">
+                        <div class="input-line"></div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+                        <input type="email" id="reg-email" placeholder="E-mail" required autocomplete="email">
+                        <div class="input-line"></div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                        <input type="password" id="reg-password" placeholder="Senha (min. 6 caracteres)" required minlength="6" autocomplete="new-password">
+                        <div class="input-line"></div>
+                        <button type="button" class="toggle-password" data-target="reg-password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                        <input type="password" id="reg-confirm" placeholder="Confirmar senha" required minlength="6" autocomplete="new-password">
+                        <div class="input-line"></div>
+                    </div>
+                    <div class="password-strength" id="password-strength"><div class="strength-bar"><div class="strength-fill"></div></div><span class="strength-text"></span></div>
+                    <button type="submit" class="auth-submit register-submit"><span>Criar Conta</span></button>
+                    <div class="auth-error hidden" id="register-error"></div>
+                </form>
+                <div class="auth-divider"><span>ou continue com</span></div>
+                <div class="social-login">
+                    <button type="button" class="social-btn google-btn"><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg><span>Google</span></button>
+                    <button type="button" class="social-btn discord-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg><span>Discord</span></button>
+                    <button type="button" class="social-btn github-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg><span>GitHub</span></button>
+                </div>
+            </div>
+            <p class="auth-footer">© 2026 PokeFury. Todos os direitos reservados.</p>
+        </div>
+    </div>
+
+    <!-- ==================== CHARACTER SCREEN ==================== -->
+    <div id="character-screen" class="hidden">
+        <div class="char-bg-particles" id="char-particles"></div>
+        <div class="char-container">
+            <div class="char-header">
+                <img src="assets/pokefury-logo.png" alt="PokeFury" class="char-logo">
+            </div>
+            <div id="char-create" class="char-panel hidden">
+                <h2 class="char-title">Crie seu Treinador</h2>
+                <p class="char-subtitle">Personalize seu personagem para a jornada</p>
+                <p class="char-count" id="char-count"></p>
+                <div class="char-avatar-grid" id="avatar-grid"></div>
+                <div class="char-form">
+                    <div class="input-group">
+                        <div class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                        <input type="text" id="char-name" placeholder="Nome do treinador" required maxlength="16">
+                        <div class="input-line"></div>
+                    </div>
+                    <div class="char-starter-title">Escolha seu Pokémon inicial</div>
+                    <div class="char-starter-grid" id="starter-grid"></div>
+                    <button type="button" class="auth-submit" id="btn-start-adventure">
+                        <span>Começar Aventura</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="char-select" class="char-panel hidden">
+                <h2 class="char-title">Seus Treinadores</h2>
+                <p class="char-subtitle">Escolha um personagem para continuar</p>
+                <div class="char-list" id="char-list"></div>
+                <button type="button" class="auth-submit" id="btn-new-character">
+                    <span>Novo Treinador</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+            </div>
+            <button id="btn-logout-char" class="logout-btn">Sair da conta</button>
+        </div>
+    </div>
+
+    <!-- ==================== GAME WRAPPER ==================== -->
+    <div id="game-wrapper" class="hidden">
+
+        <!-- TOP BAR -->
+        <nav id="top-bar">
+            <div class="top-bar-nav">
+                <button class="nav-btn" data-screen="city"><span class="nav-icon">🏙️</span><span>Cidade</span></button>
+                <button class="nav-btn active" data-screen="map"><span class="nav-icon">🗺️</span><span>Exploração</span></button>
+                <button class="nav-btn" data-screen="pokedex"><span class="nav-icon">📖</span><span>Pokédex</span></button>
+                <button class="nav-btn" data-screen="team"><span class="nav-icon">⚔️</span><span>Equipe</span></button>
+                <button class="nav-btn" data-screen="bag"><span class="nav-icon">🎒</span><span>Mochila</span></button>
+                <button class="nav-btn" data-screen="shop"><span class="nav-icon">🏪</span><span>Loja</span></button>
+            </div>
+            <div class="top-bar-right">
+                <span id="location-name">Área Selvagem</span>
+            </div>
+        </nav>
+
+        <!-- GAME BODY -->
+        <div id="game-body">
+
+            <!-- SIDEBAR -->
+            <aside id="sidebar">
+                <div class="sidebar-scroll">
+
+                    <!-- Profile -->
+                    <div class="sidebar-profile">
+                        <div class="profile-avatar" id="profile-avatar">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <div class="profile-info">
+                            <div class="profile-name" id="profile-name">Treinador</div>
+                            <div id="vip-badge" class="vip-badge hidden">VIP</div>
+                            <div class="profile-level" id="profile-level">Nv. 1</div>
+                            <div class="trainer-exp-bar"><div class="trainer-exp-fill" id="trainer-exp-fill"></div></div>
+                            <div id="boosts-display" class="boosts-display"></div>
+                        </div>
+                    </div>
+
+                    <!-- Currencies -->
+                    <div class="sidebar-currencies">
+                        <div class="currency-row">
+                            <span class="currency-icon dia">💎</span>
+                            <span class="currency-label">Diamantes</span>
+                            <span class="currency-val" id="c-diamonds">0</span>
+                        </div>
+                        <div class="currency-row">
+                            <span class="currency-icon gold">🪙</span>
+                            <span class="currency-label">Gold</span>
+                            <span class="currency-val" id="c-gold">0</span>
+                        </div>
+                        <div class="currency-row">
+        <span class="currency-icon silver">⚪</span>
+        <span class="currency-label">Prata</span>
+        <span class="currency-val" id="c-silver">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Premium -->
+                    <div class="sidebar-section">
+                        <div class="section-header premium" data-toggle="premium">
+                            <span>⭐ Premium</span><span class="arrow">▶</span>
+                        </div>
+                        <div class="section-items" id="premium-items">
+                            <button class="item-btn" id="btn-buy-diamonds">💎 Compre Diamantes</button>
+                            <button class="item-btn" id="btn-diamond-shop">🏪 Loja de Diamantes</button>
+                            <button class="item-btn" id="btn-skin-shop">🎨 Skin Shop</button>
+                        </div>
+                    </div>
+
+                    <!-- Inventário -->
+                    <div class="sidebar-section">
+                        <div class="section-header" data-toggle="inventory">
+                            <span>🎒 Inventário</span><span class="arrow">▶</span>
+                        </div>
+                        <div class="section-items" id="inventory-items">
+                            <button class="item-btn" id="btn-mochila">🎒 Mochila</button>
+                            <button class="item-btn" id="btn-skin-inventory">🎨 Skins</button>
+                            <button class="item-btn" id="btn-pc-pokemon">PC Pokemon</button>
+                        </div>
+                    </div>
+
+                    <!-- Batalhas -->
+                    <div class="sidebar-section">
+                        <div class="section-header" data-toggle="battles">
+                            <span>⚔️ Batalhas</span><span class="arrow">▶</span>
+                        </div>
+                        <div class="section-items" id="battles-items">
+                            <button class="item-btn" id="btn-gym-leaders">Líderes de Ginásio</button>
+                            <button class="item-btn" id="btn-arena">⚔️ Arena</button>
+                            <button class="item-btn">Desafios</button>
+                        </div>
+                    </div>
+
+<!-- Mercado -->
+<div class="sidebar-section">
+    <div class="section-header" data-toggle="market">
+        <span>🏪 Mercado</span><span class="arrow">▶</span>
+    </div>
+    <div class="section-items" id="market-items">
+        <button class="item-btn" onclick="window.openPokeMart?.()">PokéMart</button>
+        <button class="item-btn">Leilão</button>
+    </div>
+</div>
+
+                    <!-- Gameplay -->
+                    <div class="sidebar-section">
+                        <div class="section-header" data-toggle="gameplay">
+                            <span>🎮 Gameplay</span><span class="arrow">▶</span>
+                        </div>
+                        <div class="section-items" id="gameplay-items">
+                            <button class="item-btn">Configurações</button>
+                            <button class="item-btn">Conquistas</button>
+                            <button class="item-btn">Ranking</button>
+                        </div>
+                    </div>
+
+<!-- Admin Panel -->
+<div id="admin-panel" class="sidebar-section hidden">
+    <div class="sidebar-section-title">Admin</div>
+    <div class="sidebar-section-items">
+        <button class="item-btn admin-btn" id="admin-btn-regions">Regioes</button>
+        <button class="item-btn admin-btn" id="admin-btn-gym-leaders">Líderes de Ginásio</button>
+        <button class="item-btn admin-btn" id="admin-btn-donate">Doar</button>
+        <button class="item-btn admin-btn" id="admin-btn-events" style="background:linear-gradient(135deg,#e94560,#c23152);">Eventos</button>
+        <button class="item-btn admin-btn" id="admin-btn-premium">💎 Loja Premium</button>
+        <button class="item-btn admin-btn" id="admin-btn-battle-pos">🎯 Posições PVP</button>
+        <button class="item-btn admin-btn" id="admin-btn-new-pokemon" style="background:linear-gradient(135deg,#7b2ff7,#c471f5);">⚡ Novo Pokemon</button>
+        <button class="item-btn admin-btn" id="admin-btn-city-builder" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">🏙️ Criar Cidade</button>
+        <button class="item-btn admin-btn" id="admin-btn-profile" style="background:linear-gradient(135deg,#38bdf8,#6366f1);">🖼️ Perfil</button>
+    </div>
+</div>
+
+                    <!-- Logout -->
+                    <button id="btn-switch-character" class="switch-char-btn">Trocar Personagem</button>
+
+                    <!-- Chat Container (populated by chat.js) -->
+                    <div class="sidebar-chat"></div>
+
+                    <button id="btn-logout" class="logout-btn">Sair da conta</button>
+                </div>
+            </aside>
+
+            <!-- MAIN AREA -->
+            <main id="main-area">
+                <canvas id="game-canvas"></canvas>
+                <div id="worldmap-minimap" class="hidden" style="display:none!important">>
+                    <img id="worldmap-minimap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" alt="Mapa Mundial">
+                    <div id="worldmap-minimap-dot"></div>
+                    <span id="worldmap-minimap-label">🌍 Mapa Mundial</span>
+                </div>
+                <div id="map-nav-canvas" class="hidden"></div>
+
+                    <div id="ui-layer">
+                    <!-- Battle Screen -->
+                    <div id="battle-screen" class="hidden">
+                        <div id="battle-ui">
+                            <div id="enemy-info" class="enemy-hp-box">
+                                <div class="enemy-hp-name" id="enemy-hp-name"></div>
+                                <div class="enemy-hp-level" id="enemy-hp-level"></div>
+                                <div class="enemy-hp-bar-bg">
+                                    <div class="enemy-hp-bar-fill" id="enemy-hp-bar-fill"></div>
+                                </div>
+                                <div class="enemy-hp-text" id="enemy-hp-text"></div>
+                            </div>
+                            <div id="player-info" class="player-hp-box">
+                                <div class="player-hp-name" id="player-hp-name"></div>
+                                <div class="player-hp-level" id="player-hp-level"></div>
+                                <div class="player-hp-bar-bg">
+                                    <div class="player-hp-bar-fill" id="player-hp-bar-fill"></div>
+                                </div>
+                                <div class="player-hp-text" id="player-hp-text"></div>
+                            </div>
+                            <div id="battle-log"><p id="battle-message"></p></div>
+                             <button id="battle-speed-btn" onclick="window.pokefury.toggleBattleSpeed()" style="position:absolute;top:10px;left:205px;z-index:30;padding:4px 10px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter;backdrop-filter:blur(4px)">⚡ 1x</button>
+                             <button id="battle-tera-btn" onclick="window.pokefury.activateTerastal()" style="position:absolute;top:10px;left:270px;z-index:30;padding:4px 10px;background:linear-gradient(135deg,#6a5acd,#9370db);border:1px solid rgba(255,255,255,0.3);border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter;backdrop-filter:blur(4px)">💎 Tera</button>
+                            <div id="battle-actions">
+                                <img src="assets/botoesataque.png" class="battle-actions-img" draggable="false">
+                                <div class="battle-action-zone" data-action="fight" style="top:8%;left:3%;width:45%;height:42%"></div>
+                                <div class="battle-action-zone" data-action="bag" style="top:8%;right:3%;width:45%;height:42%"></div>
+                                <div class="battle-action-zone" data-action="pokemon" style="bottom:8%;left:3%;width:45%;height:42%"></div>
+                                <div class="battle-action-zone" data-action="run" style="bottom:8%;right:3%;width:45%;height:42%"></div>
+                            </div>
+                            <div id="move-selection" class="hidden">
+                                <div id="move-buttons"></div>
+                                <button id="btn-back" class="action-btn small">VOLTAR</button>
+                            </div>
+                        </div>
+                        <div id="weather-canvas-wrap">
+                            <canvas id="weather-canvas"></canvas>
+                            <div id="weather-sun-overlay" class="weather-overlay hidden"></div>
+                            <div id="weather-rain-overlay" class="weather-overlay hidden"></div>
+                            <div id="weather-sand-overlay" class="weather-overlay hidden"></div>
+                            <div id="weather-hail-overlay" class="weather-overlay hidden"></div>
+                            <div id="weather-label" class="hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- Gym Leaders Screen -->
+                    <div id="gym-screen" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;background:#0a0a1e;">
+                        <div style="display:flex;height:100%;">
+                            <div style="flex:1;position:relative;overflow:hidden;">
+                                <canvas id="gym-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;image-rendering:pixelated;"></canvas>
+                                <div id="gym-leader-spot" style="position:absolute;top:calc(12% + 10px);left:50%;transform:translateX(-50%);text-align:center;z-index:5;">
+                                    <div id="gym-leader-sprite" style="width:120px;height:120px;margin:0 auto 8px;background:#1a1a2e;border-radius:50%;border:3px solid rgba(233,69,96,0.5);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                        <img id="gym-leader-img" src="" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                                    </div>
+                                    <div id="gym-leader-name" style="color:#e94560;font-size:16px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,0.8);"></div>
+                                    <div id="gym-leader-type" style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px;"></div>
+                                    <div id="gym-leader-badge" style="color:#ffd700;font-size:10px;margin-top:4px;"></div>
+                                    <div id="gym-leader-pokemon" style="margin-top:6px;display:flex;flex-wrap:wrap;justify-content:center;gap:2px;"></div>
+                                </div>
+                                <div id="gym-player-spot" style="position:absolute;bottom:8%;left:50%;transform:translateX(-50%);z-index:5;">
+                                    <div style="width:48px;height:48px;background:rgba(233,69,96,0.3);border-radius:50%;border:2px solid rgba(233,69,96,0.6);display:flex;align-items:center;justify-content:center;">
+                                        <div style="width:32px;height:32px;background:linear-gradient(135deg,#e94560,#c23152);border-radius:50%;"></div>
+                                    </div>
+                                </div>
+                                <button id="gym-battle-btn" onclick="window.pokefury.startGymLeaderBattle()" style="position:absolute;bottom:4%;left:50%;transform:translateX(-50%);z-index:10;padding:12px 32px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(233,69,96,0.5);text-transform:uppercase;letter-spacing:1px;">⚔️ Desafiar Líder</button>
+                                <button id="gym-back-btn" onclick="window.pokefury.closeGymLeaders()" style="position:absolute;top:12px;left:12px;z-index:10;padding:8px 16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">← Voltar</button>
+                            </div>
+                            <div id="gym-sidebar" style="width:260px;background:rgba(10,10,30,0.95);border-left:1px solid rgba(255,255,255,0.1);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
+                                <div>
+                                    <div style="font-size:11px;font-weight:700;color:#ffd700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Regiões</div>
+                                    <div id="gym-region-list" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+                                </div>
+                                <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
+                                    <div style="font-size:13px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Ginásios</div>
+                                    <div id="gym-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+            </div>
+        </div>
+                    </div>
+
+                    <!-- Move Learning Popup -->
+                    <div id="move-learn-popup" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);">
+                        <div style="background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:24px;max-width:420px;width:90%;text-align:center;">
+                            <div id="learn-pokemon-name" style="color:#e94560;font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:8px;"></div>
+                            <div id="learn-msg" style="color:#fff;font-size:16px;font-weight:600;margin-bottom:12px;"></div>
+                            <div id="learn-move-info" style="background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;margin-bottom:16px;"></div>
+                            <div id="learn-buttons"></div>
+                        </div>
+                    </div>
+
+                    <!-- Pokemon PC Overlay -->
+                    <div id="pc-overlay" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);">
+                        <div id="pc-container" style="position:relative;display:flex;flex-direction:column;align-items:center;">
+                            <div id="pc-header" style="width:100%;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                <button id="pc-close" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:Inter;font-size:12px;font-weight:600;">Fechar</button>
+                                <span id="pc-box-name" style="color:#fff;font-family:Inter;font-size:14px;font-weight:700;">Box 1</span>
+                                <div style="color:rgba(255,255,255,0.5);font-family:Inter;font-size:11px;">0/30</div>
+                            </div>
+                            <div id="pc-box-area" style="position:relative;width:420px;height:320px;">
+                                <img src="assets/boxpkm.png" style="width:100%;height:100%;image-rendering:auto;" alt="PC Box">
+                                <div id="pc-slots" style="position:absolute;top:calc(18% + 30px);left:10%;width:80%;height:calc(72% - 30px);display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(5,1fr);gap:3px;"></div>
+                                <div id="pc-arrow-left" style="position:absolute;top:0;left:0;width:12%;height:18%;cursor:pointer;display:flex;align-items:center;justify-content:center;"></div>
+                                <div id="pc-arrow-right" style="position:absolute;top:0;right:0;width:12%;height:18%;cursor:pointer;display:flex;align-items:center;justify-content:center;"></div>
+                            </div>
+                            <div id="pc-party-bar" style="width:100%;margin-top:8px;padding:6px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;"></div>
+                        </div>
+                    </div>
+
+    <!-- mochila moved to body level -->
+
+                    <!-- PokéMart Overlay -->
+                    <div id="pokemart-overlay" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:26;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);">
+                        <div id="pokemart-box" style="width:960px;max-height:90%;background:rgba(15,20,35,0.97);border:1px solid rgba(46,160,67,0.4);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;">
+                            <div class="pm-banner-wrap">
+                                <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/pokemart.png" class="pm-banner" alt="PokéMart">
+                                <div class="pm-banner-fade"></div>
+                                <button id="pm-close-banner" class="pm-close-btn">✕</button>
+                            </div>
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                                <span style="color:#fff;font-size:15px;font-weight:700;font-family:Inter,sans-serif;">🛒 PokéMart</span>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span style="color:#aaa;font-size:12px;font-family:Inter,sans-serif;">💰 <span id="pm-prata">0</span> Prata</span>
+                                    <button id="pm-close" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px;">✕</button>
+                                </div>
+                            </div>
+                            <div id="pm-tabs" style="display:flex;gap:2px;padding:6px 12px 0;overflow-x:auto;">
+                                <button class="pm-tab active" data-cat="pokeball">🔴 PokéBalls</button>
+                                <button class="pm-tab" data-cat="medicine">💊 Medicina</button>
+                                <button class="pm-tab" data-cat="stone">💎 Pedras</button>
+                                <button class="pm-tab" data-cat="tm">📜 TMs</button>
+                                <button class="pm-tab" data-cat="tr">📕 TRs</button>
+                                <button class="pm-tab" data-cat="special">⭐ Itens Especiais</button>
+                            </div>
+                            <div id="pm-search" style="padding:5px 12px;">
+                                <input type="text" id="pm-search-input" placeholder="Buscar item..." style="width:100%;padding:7px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;box-sizing:border-box;">
+                            </div>
+                            <div id="pm-grid" style="display:flex;flex-direction:column;gap:6px;padding:0 12px 14px;overflow-y:auto;max-height:320px;min-height:120px;"></div>
+                            <div id="pm-empty" style="display:none;text-align:center;padding:40px 20px;color:rgba(255,255,255,0.3);font-size:13px;font-family:Inter,sans-serif;">Nenhum item encontrado.</div>
+                        </div>
+                    </div>
+
+                    <!-- World Map Overlay -->
+                    <div id="worldmap-overlay" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:27;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.90);backdrop-filter:blur(6px);">
+                        <div id="worldmap-box" style="position:relative;display:inline-block;">
+                            <img id="worldmap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" style="max-width:90vw;max-height:85vh;border-radius:12px;display:block;" alt="Mapa Mundial">
+                            <div id="worldmap-hotspots"></div>
+                            <button onclick="if(window.closeWorldMap)window.closeWorldMap()" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;transition:background 0.2s;">✕</button>
+                            <div id="worldmap-region-label" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#00ff44;font-family:Inter,sans-serif;font-size:14px;font-weight:700;padding:8px 20px;border-radius:8px;border:1px solid rgba(0,255,68,0.3);pointer-events:none;text-align:center;white-space:nowrap;"></div>
+                        </div>
+                    </div>
+
+                    <!-- HUD (party bar only) -->
+                    <div id="hud" class="hidden">
+                        <div id="hud-bottom">
+                            <div id="party-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- RIGHT SIDEBAR -->
+            <aside id="right-sidebar">
+                <div class="sidebar-scroll">
+
+                    <!-- Minimap -->
+                    <div id="right-minimap" class="right-section" onclick="if(window.openWorldMap)window.openWorldMap()">
+                        <img id="right-minimap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" alt="Mapa Mundial">
+                        <div id="right-minimap-dot"></div>
+                        <span class="minimap-label">🌍 Mapa Mundial</span>
+                    </div>
+
+                    <!-- Biome Grid -->
+                    <div class="right-section">
+                        <div class="right-section-title">Biomas</div>
+                        <div id="biome-grid" class="biome-grid"></div>
+                    </div>
+
+                    <!-- Auto Farm -->
+                    <div id="afk-panel" class="right-section">
+                        <div class="right-section-title">AUTO FARM</div>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-search"> Procurar batalhas</label>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-battle"> Batalhar automático</label>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-heal"> Auto cura</label>
+                        <div id="afk-heal-slider-wrap" class="afk-sub-option" style="display:none">
+                            <input type="range" id="afk-heal-slider" min="10" max="90" value="40">
+                            <div class="afk-slider-labels"><span>10%</span><span id="afk-heal-val">40%</span><span>90%</span></div>
+                        </div>
+                        <div id="afk-heal-potion-wrap" class="afk-sub-option" style="display:none">
+                            <select id="afk-heal-potion"><option value="">Selecione poção</option></select>
+                        </div>
+                        <label class="afk-checkbox"><input type="checkbox" id="afk-auto-capture"> Captura automática</label>
+                        <div id="afk-capture-options" class="afk-sub-option" style="display:none">
+                            <div id="afk-rarity-list"></div>
+                        </div>
+                        <div id="afk-heal-anywhere-wrap" class="afk-sub-option afk-heal-team" style="display:none">
+                            <label class="afk-checkbox afk-heal-label"><input type="checkbox" id="afk-auto-heal-team"> Curar time completo após batalha</label>
+                            <div class="afk-heal-hint">Cura todos os Pokémon se algum estiver ferido</div>
+                        </div>
+                        <div class="afk-buttons">
+                            <button id="afk-start-btn" class="afk-btn-start">INICIAR</button>
+                            <button id="afk-stop-btn" class="afk-btn-stop hidden">PARAR</button>
+                        </div>
+                        <div id="afk-status" class="afk-status">Parado</div>
+                    </div>
+
+                    <!-- Team -->
+                    <div id="party-panel" class="right-section">
+                        <div class="right-section-title">TIME</div>
+                        <div id="party-list" style="display:flex;flex-direction:column;gap:4px"></div>
+                    </div>
+
+                </div>
+            </aside>
+
+        </div>
+    </div>
+
+    <!-- ==================== MAP EDITOR OVERLAY ==================== -->
+    <div id="map-editor-overlay" class="hidden">
+        <div class="editor-topbar">
+            <div class="editor-topbar-left">
+                <button id="editor-btn-close" class="editor-btn-close" title="Fechar">✕</button>
+                <span class="editor-title">Map Creator</span>
+                <span id="editor-coords" class="editor-coords">40x30 | Tile: grass</span>
+            </div>
+            <div class="editor-topbar-center" id="editor-tools"></div>
+            <div class="editor-topbar-right">
+                <label class="editor-label">Largura</label>
+                <input type="number" id="editor-grid-w" class="editor-input" value="40" min="10" max="100">
+                <label class="editor-label">Altura</label>
+                <input type="number" id="editor-grid-h" class="editor-input" value="30" min="10" max="100">
+                <button id="editor-btn-resize" class="editor-action-btn">Aplicar</button>
+                <button id="editor-btn-clear" class="editor-action-btn danger">Limpar</button>
+            </div>
+        </div>
+        <div class="editor-body">
+            <div class="editor-sidebar-left">
+                <div class="editor-sidebar-title">Camadas</div>
+                <div id="editor-layers" class="editor-layers"></div>
+                <div class="editor-sidebar-title">Cores</div>
+                <div id="tile-palette" class="tile-palette"></div>
+                <div class="editor-sidebar-title" style="margin-top:12px">Mapas Salvos</div>
+                <div id="saved-maps-list" class="saved-maps-list"></div>
+                <div class="editor-sidebar-actions">
+                    <input type="text" id="map-name-input" class="editor-text-input" placeholder="Nome do mapa...">
+                    <button id="editor-btn-save" class="editor-action-btn primary">Salvar</button>
+                    <button id="editor-btn-load" class="editor-action-btn">Carregar</button>
+                    <button id="editor-btn-export" class="editor-action-btn">Exportar JSON</button>
+                </div>
+            </div>
+            <div class="editor-canvas-wrap">
+                <canvas id="editor-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== REGION MANAGER OVERLAY ==================== -->
+    <div id="region-overlay" class="hidden">
+        <div class="region-topbar">
+            <div class="region-topbar-left">
+                <button id="region-btn-close" class="editor-btn-close" title="Fechar">✕</button>
+                <span class="editor-title">Gerenciar Regioes</span>
+            </div>
+            <div class="region-topbar-right">
+                <button id="region-btn-create" class="editor-action-btn primary">+ Nova Regiao</button>
+            </div>
+        </div>
+        <div class="region-body">
+            <div class="region-sidebar">
+                <div class="editor-sidebar-title">Regioes</div>
+                <div id="region-list" class="region-list"></div>
+            </div>
+            <div class="region-main">
+                <div id="region-detail" class="region-detail">
+                    <div class="region-empty">
+                        <p>Selecione uma regiao ou crie uma nova</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== GYM LEADERS ADMIN OVERLAY ==================== -->
+    <div id="gym-admin-overlay" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:200;background:#0a0a1e;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(20,20,40,0.98);border-bottom:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button id="gym-admin-close" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:16px;">✕</button>
+                <span style="color:#fff;font-size:14px;font-weight:700;">Gerenciar Líderes de Ginásio</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button id="gym-admin-add-region" style="padding:8px 16px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Nova Região</button>
+            </div>
+        </div>
+        <div style="flex:1;display:flex;overflow:hidden;">
+            <div style="width:240px;background:rgba(15,15,35,0.95);border-right:1px solid rgba(255,255,255,0.1);overflow-y:auto;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Regiões</div>
+                <div id="gym-admin-regions-list"></div>
+            </div>
+            <div style="width:280px;background:rgba(20,20,40,0.95);border-right:1px solid rgba(255,255,255,0.1);overflow-y:auto;padding:12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <span style="font-size:11px;font-weight:700;color:#e94560;text-transform:uppercase;letter-spacing:1px;">Líderes</span>
+                    <button id="gym-admin-add-leader" style="padding:4px 10px;background:rgba(76,175,80,0.2);border:1px solid rgba(76,175,80,0.4);border-radius:4px;color:#4caf50;font-size:10px;font-weight:700;cursor:pointer;">+ Adicionar</button>
+                </div>
+                <div id="gym-admin-leaders-list"></div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:16px;background:rgba(25,25,50,0.95);">
+                <div id="gym-admin-editor">
+                    <div style="text-align:center;color:rgba(255,255,255,0.3);margin-top:40px;">
+                        <div style="font-size:48px;margin-bottom:12px;">🏟️</div>
+                        <p>Selecione um líder ou crie uma nova região</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAP PICKER MODAL ==================== -->
+    <div id="map-picker-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Escolher Mapa</span>
+                <button id="map-picker-close" class="editor-btn-close">✕</button>
+            </div>
+            <div id="map-picker-grid" class="map-picker-grid"></div>
+        </div>
+    </div>
+
+    <!-- ==================== ENCOUNTER EDITOR MODAL ==================== -->
+    <div id="encounter-modal" class="hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content encounter-modal-content">
+            <div class="modal-header">
+                <span>Editar Encontros Selvagens</span>
+                <button id="encounter-modal-close" class="editor-btn-close">✕</button>
+            </div>
+            <div id="encounter-list" class="encounter-list"></div>
+            <div class="encounter-add">
+                <div style="display:flex;gap:8px;align-items:center;width:100%">
+                    <input type="text" id="encounter-pokemon-name" class="editor-text-input" placeholder="Nome do Pokemon (ex: Pikachu, Charizard, Mewtwo...)" style="flex:1">
+                    <input type="number" id="encounter-weight" class="editor-input" placeholder="Peso" value="50" style="width:70px">
+                    <button id="encounter-add-btn" class="editor-action-btn primary">+ Adicionar</button>
+                </div>
+                <div id="encounter-preview" class="encounter-preview"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAP ZONE EDITOR OVERLAY ==================== -->
+    <div id="zone-editor-overlay" class="hidden">
+        <div class="zone-topbar">
+            <div class="zone-topbar-left">
+                <button id="zone-btn-close" class="editor-btn-close" title="Fechar">✕</button>
+                <span class="editor-title" id="zone-map-name">Editor de Zonas</span>
+            </div>
+            <div class="zone-topbar-center" id="zone-tools"></div>
+            <div class="zone-topbar-right">
+                <button id="zone-btn-change-image" class="editor-action-btn">Trocar Imagem</button>
+                <button id="zone-btn-save" class="editor-action-btn primary">Salvar Zonas</button>
+            </div>
+        </div>
+        <div class="zone-body">
+            <div class="zone-sidebar">
+                <div class="editor-sidebar-title">Colisao (vermelho)</div>
+                <div class="zone-hint">Arraste para criar retangulos onde o jogador NAO pode andar (paredes, obstaculos)</div>
+                <div class="editor-sidebar-title" style="margin-top:16px">Spawn Pokemon (verde)</div>
+                <div class="zone-hint">Arraste para criar retangulos onde pokemons podem aparecer e caminhar</div>
+                <div class="editor-sidebar-title" style="margin-top:16px">Spawn Treinador (azul)</div>
+                <div class="zone-hint">Clique para definir onde o jogador spawna ao entrar no mapa</div>
+                <div class="editor-sidebar-title" style="margin-top:16px">Zonas Cadastradas</div>
+                <div id="zone-list" class="zone-list"></div>
+            </div>
+            <div class="zone-canvas-wrap">
+                <canvas id="zone-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Image Picker Modal -->
+    <div id="map-image-modal" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.8)">
+        <div style="background:#1a1a2e;border-radius:12px;padding:20px;max-width:800px;max-height:80vh;overflow-y:auto;width:90%">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h3 style="color:#e94560;margin:0">Trocar Imagem do Mapa</h3>
+                <button id="map-image-modal-close" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
+            </div>
+            <div id="map-image-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px"></div>
+        </div>
+    </div>
+
+    <!-- Donate Screen (Admin Only) -->
+    <div id="donate-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto">
+        <div style="max-width:900px;margin:0 auto;padding:24px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+                <h2 style="color:#e94560;margin:0;font-family:Inter,sans-serif">Doar Itens e Pokemon</h2>
+                <button id="donate-close" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer">✕</button>
+            </div>
+
+            <!-- Character Search -->
+            <div style="margin-bottom:20px;position:relative">
+                <label style="color:rgba(255,255,255,0.6);font-size:12px;font-family:Inter,sans-serif;display:block;margin-bottom:4px">Buscar Personagem</label>
+                <input id="donate-search" type="text" placeholder="Digite o nome do personagem..." style="width:100%;padding:10px 14px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                <div id="donate-search-results" style="position:absolute;top:100%;left:0;right:0;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:10;display:none"></div>
+            </div>
+
+            <!-- Character Info (hidden until selected) -->
+            <div id="donate-char-info" class="hidden">
+                <div style="background:#1a1a2e;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                        <div>
+                            <span id="donate-char-name" style="color:#fff;font-size:18px;font-weight:700;font-family:Inter,sans-serif"></span>
+                            <span id="donate-char-level" style="color:rgba(255,255,255,0.5);font-size:13px;margin-left:8px;font-family:Inter,sans-serif"></span>
+                        </div>
+                    </div>
+                    <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:8px;font-family:Inter,sans-serif">Time Atual:</div>
+                    <div id="donate-char-team" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+                </div>
+
+                <!-- Donate Currencies -->
+                <div style="background:#1a1a2e;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08)">
+                    <div style="color:#e94560;font-size:14px;font-weight:700;margin-bottom:12px;font-family:Inter,sans-serif">Doar Moedas</div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                        <div>
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif;display:flex;align-items:center;gap:4px">💎 Diamantes</label>
+                            <input id="donate-diamonds" type="number" min="0" value="0" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(79,195,247,0.3);border-radius:6px;color:#4fc3f7;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none;margin-top:4px">
+                        </div>
+                        <div>
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif;display:flex;align-items:center;gap:4px">🪙 Ouro</label>
+                            <input id="donate-gold" type="number" min="0" value="0" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,215,0,0.3);border-radius:6px;color:#ffd700;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none;margin-top:4px">
+                        </div>
+                        <div>
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif;display:flex;align-items:center;gap:4px">🪙 Prata</label>
+                            <input id="donate-silver" type="number" min="0" value="0" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(192,192,192,0.3);border-radius:6px;color:#c0c0c0;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none;margin-top:4px">
+                        </div>
+                    </div>
+                    <button id="donate-currency-btn" style="margin-top:12px;padding:8px 16px;background:#e94560;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Doar Moedas</button>
+                    <div id="donate-currency-result" style="margin-top:8px;font-size:12px;font-family:Inter,sans-serif;display:none"></div>
+                </div>
+
+                <!-- Donate Items -->
+                <div style="background:#1a1a2e;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08)">
+                    <div style="color:#e94560;font-size:14px;font-weight:700;margin-bottom:12px;font-family:Inter,sans-serif">Doar Item</div>
+                    <div style="display:flex;gap:8px;align-items:flex-end">
+                        <div style="flex:2;position:relative">
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nome do Item</label>
+                            <input id="donate-item-name" type="text" placeholder="Ex: Potion" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <div id="donate-item-results" style="position:absolute;top:100%;left:0;right:0;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:0 0 6px 6px;max-height:150px;overflow-y:auto;z-index:10;display:none"></div>
+                        </div>
+                        <div style="flex:1">
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Qtd</label>
+                            <input id="donate-item-qty" type="number" min="1" value="1" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                        </div>
+                        <button id="donate-item-btn" style="padding:8px 16px;background:#e94560;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Doar</button>
+                    </div>
+                </div>
+
+                <!-- Donate Pokemon -->
+                <div style="background:#1a1a2e;border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.08)">
+                    <div style="color:#e94560;font-size:14px;font-weight:700;margin-bottom:12px;font-family:Inter,sans-serif">Doar Pokemon</div>
+
+                    <!-- Pokemon Name + Preview -->
+                    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+                        <div style="flex:1;position:relative">
+                            <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nome do Pokemon</label>
+                            <input id="donate-poke-name" type="text" placeholder="Ex: Charmander" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <div id="donate-poke-results" style="position:absolute;top:100%;left:0;right:0;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:0 0 6px 6px;max-height:150px;overflow-y:auto;z-index:10;display:none"></div>
+                        </div>
+                        <div id="donate-poke-preview" style="width:80px;height:80px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                            <span style="color:rgba(255,255,255,0.2);font-size:10px;font-family:Inter,sans-serif">Preview</span>
+                        </div>
+                    </div>
+
+                    <!-- Level -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nivel</label>
+                        <input id="donate-poke-level" type="number" min="1" max="100" value="5" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                    </div>
+
+                    <!-- IVs -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">IVs (0-31)</label>
+                        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">HP</label><input class="donate-iv" data-stat="hp" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Atk</label><input class="donate-iv" data-stat="attack" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Def</label><input class="donate-iv" data-stat="defense" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpA</label><input class="donate-iv" data-stat="spAtk" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpD</label><input class="donate-iv" data-stat="spDef" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Spe</label><input class="donate-iv" data-stat="speed" type="number" min="0" max="31" value="15" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                        </div>
+                    </div>
+
+                    <!-- EVs -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">EVs (0-252, total max 510)</label>
+                        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">HP</label><input class="donate-ev" data-stat="hp" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Atk</label><input class="donate-ev" data-stat="attack" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Def</label><input class="donate-ev" data-stat="defense" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpA</label><input class="donate-ev" data-stat="spAtk" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">SpD</label><input class="donate-ev" data-stat="spDef" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                            <div><label style="color:rgba(255,255,255,0.3);font-size:9px;font-family:Inter,sans-serif">Spe</label><input class="donate-ev" data-stat="speed" type="number" min="0" max="252" value="0" style="width:100%;padding:6px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:#fff;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none"></div>
+                        </div>
+                    </div>
+
+                    <!-- Nature -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Nature</label>
+                        <select id="donate-poke-nature" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <option value="hardy">Hardy</option><option value="lonely">Lonely</option><option value="brave">Brave</option><option value="adamant">Adamant</option><option value="naughty">Naughty</option>
+                            <option value="bold">Bold</option><option value="docile">Docile</option><option value="relaxed">Relaxed</option><option value="impish">Impish</option><option value="lax">Lax</option>
+                            <option value="timid">Timid</option><option value="hasty">Hasty</option><option value="serious">Serious</option><option value="jolly">Jolly</option><option value="naive">Naive</option>
+                            <option value="modest">Modest</option><option value="mild">Mild</option><option value="quiet">Quiet</option><option value="bashful">Bashful</option><option value="rash">Rash</option>
+                            <option value="calm">Calm</option><option value="gentle">Gentle</option><option value="sassy">Sassy</option><option value="careful">Careful</option><option value="quirky">Quirky</option>
+                        </select>
+                    </div>
+
+                    <!-- Ability -->
+                    <div style="margin-bottom:12px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Habilidade</label>
+                        <select id="donate-poke-ability" style="width:100%;padding:8px 10px;background:#0d1117;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+                            <option value="">Selecione um pokemon primeiro</option>
+                        </select>
+                    </div>
+
+                    <!-- Moves -->
+                    <div style="margin-bottom:16px">
+                        <label style="color:rgba(255,255,255,0.5);font-size:11px;font-family:Inter,sans-serif">Movimentos (max 4)</label>
+                        <div id="donate-poke-moves" style="display:flex;flex-direction:column;gap:6px"></div>
+                        <button id="donate-add-move" style="margin-top:6px;padding:4px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;font-family:Inter,sans-serif">+ Adicionar Movimento</button>
+                    </div>
+
+                    <button id="donate-poke-btn" style="width:100%;padding:10px;background:#e94560;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Doar Pokemon</button>
+                </div>
+            </div>
+
+            <!-- Donate Result -->
+            <div id="donate-result" class="hidden" style="margin-top:16px;padding:12px;border-radius:8px;font-family:Inter,sans-serif;font-size:13px;text-align:center"></div>
+        </div>
+    </div>
+
+    <script src="js/supabase-config.js?v=20260808g"></script>
+    <script src="js/items-data.js"></script>
+    <script src="js/pokemart.js"></script>
+    <script src="js/worldmap.js"></script>
+    <script src="js/game-data.js?v=20260815c"></script>
+    <script src="js/pokeapi.js?v=20260808g"></script>
+    <script src="js/auth.js?v=20260808g"></script>
+    <script type="module" src="js/data.js"></script>
+    <script type="module" src="js/utils.js"></script>
+    <script type="module" src="js/battle.js"></script>
+    <script type="module" src="js/ui.js?v=20260808g"></script>
+    <script type="module" src="js/game.js?v=20260815c"></script>
+    <script type="module" src="js/afk.js"></script>
+    <script src="js/pvp-system.js"></script>
+    <script type="module">
+        import { PVPBattle } from './js/pvp-battle.js';
+        window.PVPBattle = PVPBattle;
+    </script>
+    <script type="module" src="js/type-effects.js"></script>
+    <script type="module" src="js/map-editor.js"></script>
+    <script type="module" src="js/zone-editor.js"></script>
+    <script type="module" src="js/region-manager.js"></script>
+    <script type="module" src="js/chat.js"></script>
+    <script>
+    (function(){
+        var _origSelectNode = Range.prototype.selectNode;
+        Range.prototype.selectNode = function(node){
+            if(!node || !node.parentNode){
+                console.warn('[PokeFury] Range.selectNode skipped: detached node');
+                return;
+            }
+            return _origSelectNode.call(this, node);
+        };
+    })();
+    </script>
+
+    <div id="pokemon-info-popup" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:950;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7)">
+        <div id="pokemon-info-box" style="background:#161b22;border:1px solid #30363d;border-radius:12px;width:340px;max-height:85vh;overflow-y:auto;padding:16px;position:relative">
+            <button id="pokemon-info-close" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#f44336;font-size:18px;cursor:pointer;z-index:1">✕</button>
+            <div id="pokemon-info-content"></div>
+        </div>
+    </div>
+
+    <div id="pokedex-overlay" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:12px">
+                <span style="font-size:22px">📖</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Pokédex</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <input id="pokedex-search" type="text" placeholder="Buscar por nome ou número..." style="padding:6px 12px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;width:260px;outline:none">
+                <button id="pokedex-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+            </div>
+        </div>
+        <div style="display:flex;flex:1;overflow:hidden">
+            <div id="pokedex-list-wrap" style="width:280px;display:flex;flex-direction:column;background:#161b22;border-right:1px solid #30363d;flex-shrink:0">
+                <div id="pokedex-tabs" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid #21262d"></div>
+                <div id="pokedex-list" style="flex:1;overflow-y:auto"></div>
+            </div>
+            <div id="pokedex-detail" style="flex:1;overflow-y:auto;padding:14px 20px;color:#fff">
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);font-size:15px">Selecione um Pokémon para ver os detalhes</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== COMPRE DIAMANTES ===== -->
+    <div id="buy-diamonds-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="position:relative;width:100%">
+            <button id="buy-diamonds-close" style="position:absolute;top:12px;right:16px;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:22px;cursor:pointer;z-index:10;padding:6px 12px;border-radius:8px;backdrop-filter:blur(4px)">✕</button>
+            <div class="premium-banner buy-diamonds-banner">
+                <div class="premium-banner-glow"></div>
+                <div class="premium-banner-title">
+                    <img src="assets/pokefury-logo.png" alt="PokeFury" class="premium-banner-logo" onerror="this.style.display='none'">
+                    <span class="premium-banner-sub">LOJA DE DIAMANTES</span>
+                </div>
+                <div class="premium-banner-price">
+                    CADA DIAMANTE CUSTA APENAS <span class="premium-banner-value">R$ 0,50!</span>
+                </div>
+                <div class="premium-banner-benefits">
+                    <div class="premium-banner-benefit"><span class="benefit-check">✔</span> Comprar Produtos e Benefícios na Loja</div>
+                    <div class="premium-banner-benefit"><span class="benefit-check">✔</span> Comprar Pokémons de Outros Jogadores</div>
+                </div>
+            </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:24px">
+            <div id="buy-diamonds-display" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+                <div class="diamond-icon-anim">💎</div>
+                <div style="color:rgba(255,255,255,0.5);font-size:13px">Seus Diamantes</div>
+                <div id="buy-diamonds-count" style="color:#4fc3f7;font-size:32px;font-weight:800;text-shadow:0 0 20px rgba(79,195,247,0.5)">0</div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+                <button id="btn-recharge-pix" class="premium-recharge-btn pix">
+                    <span class="recharge-icon">📱</span>
+                    <span>PIX</span>
+                </button>
+                <button id="btn-recharge-credit" class="premium-recharge-btn credit">
+                    <span class="recharge-icon">💳</span>
+                    <span>Crédito</span>
+                </button>
+            </div>
+            <div style="width:100%;max-width:1100px">
+                <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:12px;text-align:center">Produtos Disponíveis</div>
+                <div id="buy-diamonds-products" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LOJA DE DIAMANTES ===== -->
+    <div id="diamond-shop-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <button id="diamond-shop-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer">✕</button>
+                <span style="font-size:20px">💎</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Loja de Diamantes</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:16px">💎</span>
+                <span id="diamond-shop-count" style="color:#4fc3f7;font-size:18px;font-weight:700">0</span>
+            </div>
+        </div>
+        <div class="premium-banner diamond-shop-banner">
+            <div class="premium-banner-glow"></div>
+            <div class="premium-banner-title">
+                <span class="premium-banner-diamond-icon">💎</span>
+                <span class="premium-banner-sub">Use seus diamantes para comprar benefícios e itens exclusivos!</span>
+            </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:20px">
+            <div style="width:100%;max-width:1100px">
+                <div id="diamond-shop-products" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px"></div>
+                <div id="diamond-shop-empty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);padding:40px;font-size:14px">Nenhum produto disponível ainda</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SKIN SHOP ===== -->
+    <div id="skin-shop-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <button id="skin-shop-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer">✕</button>
+                <span style="font-size:20px">🎨</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Skin Shop</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:16px">💎</span>
+                <span id="skin-shop-count" style="color:#4fc3f7;font-size:18px;font-weight:700">0</span>
+            </div>
+        </div>
+        <div class="premium-banner skin-shop-banner">
+            <div class="premium-banner-glow"></div>
+            <div class="premium-banner-title">
+                <span class="premium-banner-diamond-icon">🎨</span>
+                <span class="premium-banner-sub">Customize a aparência dos seus Pokémon e do seu treinador!</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:0;border-bottom:1px solid #30363d;flex-shrink:0;justify-content:center">
+            <button class="skin-shop-tab active" data-tab="all">Todos</button>
+            <button class="skin-shop-tab" data-tab="pokemon_skin">Pokémon</button>
+            <button class="skin-shop-tab" data-tab="player_skin">Treinador</button>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:20px">
+            <div style="width:100%;max-width:1100px">
+                <div id="skin-shop-products" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px"></div>
+                <div id="skin-shop-empty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);padding:40px;font-size:14px">Nenhuma skin disponível ainda</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SKIN INVENTORY ===== -->
+    <div id="skin-inventory-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <button id="skin-inventory-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer">✕</button>
+                <span style="font-size:20px">🎨</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Minhas Skins</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:0;border-bottom:1px solid #30363d;flex-shrink:0;justify-content:center">
+            <button class="skin-inv-tab active" data-tab="player_skin">👤 Skin de Personagem</button>
+            <button class="skin-inv-tab" data-tab="pokemon_skin">⚡ Skin de Pokémon</button>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 16px;gap:20px">
+            <div style="width:100%;max-width:1100px">
+                <div id="skin-inventory-list" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px"></div>
+                <div id="skin-inventory-empty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);padding:40px;font-size:14px">Nenhuma skin comprada ainda</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PREMIUM ADMIN ===== -->
+    <div id="premium-admin-screen" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:910;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <button id="premium-admin-close" style="background:none;border:none;color:#f44336;font-size:20px;cursor:pointer">✕</button>
+                <span style="font-size:20px">⚙️</span>
+                <span style="color:#fff;font-size:16px;font-weight:700">Gerenciar Loja Premium</span>
+            </div>
+            <button id="premium-admin-new" style="padding:8px 16px;border:none;border-radius:8px;background:linear-gradient(135deg,#e94560,#c23152);color:#fff;font-size:13px;font-weight:700;cursor:pointer">+ Novo Produto</button>
+        </div>
+        <div style="display:flex;gap:0;border-bottom:1px solid #30363d;flex-shrink:0">
+            <button class="premium-admin-tab active" data-tab="buy_diamonds">Compre Diamantes</button>
+            <button class="premium-admin-tab" data-tab="diamond_shop">Loja de Diamantes</button>
+            <button class="premium-admin-tab" data-tab="skin_shop">🎨 Skin Shop</button>
+        </div>
+        <div id="premium-admin-list" style="flex:1;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
+    <!-- ===== PREMIUM ADMIN FORM MODAL ===== -->
+    <div id="premium-form-modal" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:920;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px)">
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:14px;padding:24px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+                <span id="premium-form-title" style="color:#fff;font-size:16px;font-weight:700">Novo Produto</span>
+                <button id="premium-form-close" style="background:none;border:none;color:#f44336;font-size:18px;cursor:pointer">✕</button>
+            </div>
+            <form id="premium-form" style="display:flex;flex-direction:column;gap:14px">
+                <input type="hidden" id="pf-id">
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Nome do Produto</label>
+                    <input id="pf-name" type="text" required style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Descrição</label>
+                    <textarea id="pf-desc" rows="3" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;resize:vertical"></textarea>
+                </div>
+                <div style="display:flex;gap:12px">
+                    <div style="flex:1">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Preço em R$</label>
+                        <input id="pf-price-brl" type="number" min="0" step="0.01" value="0" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                    </div>
+                    <div style="flex:1">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Preço em Diamantes</label>
+                        <input id="pf-price-diamonds" type="number" min="0" value="0" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                    </div>
+                </div>
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:6px">Destino</label>
+                    <div style="display:flex;gap:12px">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:rgba(255,255,255,0.7);font-size:13px">
+                            <input type="radio" name="pf-dest" value="buy_diamonds" checked> Compre Diamantes
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:rgba(255,255,255,0.7);font-size:13px">
+                            <input type="radio" name="pf-dest" value="diamond_shop"> Loja de Diamantes
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:rgba(255,255,255,0.7);font-size:13px">
+                            <input type="radio" name="pf-dest" value="skin_shop"> Skin Shop
+                        </label>
+                    </div>
+                </div>
+                <div id="pf-skin-fields" style="display:none">
+                    <div style="display:flex;gap:12px">
+                        <div style="flex:1">
+                            <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Tipo de Skin</label>
+                            <select id="pf-skin-type" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                                <option value="pokemon_skin">Pokémon Skin</option>
+                                <option value="player_skin">Treinador Skin</option>
+                            </select>
+                        </div>
+                        <div style="flex:1">
+                            <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Target ID</label>
+                            <input id="pf-target-id" type="text" placeholder="pokemon_id ou male/female" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Sprite Sheet (256x256 4x4 grid, só para Treinador)</label>
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <label style="flex:1;padding:16px;border:2px dashed #30363d;border-radius:8px;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;transition:border-color 0.2s">
+                                <input id="pf-sprite" type="file" accept="image/*" style="display:none">
+                                Clique para fazer upload do sprite sheet
+                            </label>
+                            <img id="pf-sprite-preview" style="width:60px;height:60px;border-radius:8px;object-fit:cover;display:none" onerror="this.style.display='none'">
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px">Imagem do Card</label>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <label id="pf-image-label" style="flex:1;padding:20px;border:2px dashed #30363d;border-radius:8px;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;transition:border-color 0.2s">
+                            <input id="pf-image" type="file" accept="image/*" style="display:none">
+                            Clique para fazer upload
+                        </label>
+                        <img id="pf-image-preview" style="width:60px;height:60px;border-radius:8px;object-fit:cover;display:none" onerror="this.style.display='none'">
+                    </div>
+                </div>
+                <button type="submit" style="padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#e94560,#c23152);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">Salvar Produto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Event Pokemon Admin Screen -->
+    <div id="event-pokemon-screen" class="hidden" style="position:fixed;inset:0;z-index:950;background:#0a0e1a;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-bottom:1px solid #30363d;">
+            <h2 style="margin:0;color:#e94560;font-size:18px;">⚡ Criar Pokemon de Evento</h2>
+            <button id="ep-close-btn" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;">✕</button>
+        </div>
+        <div id="ep-form-container" style="flex:1;overflow-y:auto;padding:20px;display:flex;justify-content:center;">
+            <form id="ep-form" style="width:100%;max-width:700px;display:flex;flex-direction:column;gap:16px;">
+                <!-- Nome -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Nome do Pokemon</label>
+                    <input id="ep-name" type="text" required placeholder="Ex: Mewtwo Omega" style="width:100%;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;box-sizing:border-box;">
+                </div>
+
+                <!-- Sprites -->
+                <div style="display:flex;gap:16px;">
+                    <div style="flex:1;">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Sprite Frente (batalha)</label>
+                        <label style="display:block;padding:16px;border:2px dashed #30363d;border-radius:8px;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;transition:border-color 0.2s;">
+                            <input id="ep-sprite-front" type="file" accept="image/*" style="display:none;">
+                            Clique para upload
+                        </label>
+                        <img id="ep-sprite-front-preview" style="width:80px;height:80px;border-radius:8px;object-fit:contain;display:none;margin-top:8px;background:#161b22;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Sprite Costas (batalha)</label>
+                        <label style="display:block;padding:16px;border:2px dashed #30363d;border-radius:8px;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;transition:border-color 0.2s;">
+                            <input id="ep-sprite-back" type="file" accept="image/*" style="display:none;">
+                            Clique para upload
+                        </label>
+                        <img id="ep-sprite-back-preview" style="width:80px;height:80px;border-radius:8px;object-fit:contain;display:none;margin-top:8px;background:#161b22;">
+                    </div>
+                </div>
+
+                <!-- Tipos -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Tipos</label>
+                    <div style="display:flex;gap:8px;">
+                        <select id="ep-type1" required style="flex:1;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;">
+                            <option value="normal">Normal</option><option value="fire">Fire</option><option value="water">Water</option>
+                            <option value="electric">Electric</option><option value="grass">Grass</option><option value="ice">Ice</option>
+                            <option value="fighting">Fighting</option><option value="poison">Poison</option><option value="ground">Ground</option>
+                            <option value="flying">Flying</option><option value="psychic">Psychic</option><option value="bug">Bug</option>
+                            <option value="rock">Rock</option><option value="ghost">Ghost</option><option value="dragon">Dragon</option>
+                            <option value="dark">Dark</option><option value="steel">Steel</option><option value="fairy">Fairy</option>
+                        </select>
+                        <select id="ep-type2" style="flex:1;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;">
+                            <option value="">Nenhum</option><option value="normal">Normal</option><option value="fire">Fire</option>
+                            <option value="water">Water</option><option value="electric">Electric</option><option value="grass">Grass</option>
+                            <option value="ice">Ice</option><option value="fighting">Fighting</option><option value="poison">Poison</option>
+                            <option value="ground">Ground</option><option value="flying">Flying</option><option value="psychic">Psychic</option>
+                            <option value="bug">Bug</option><option value="rock">Rock</option><option value="ghost">Ghost</option>
+                            <option value="dragon">Dragon</option><option value="dark">Dark</option><option value="steel">Steel</option>
+                            <option value="fairy">Fairy</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stats Base -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Stats Base</label>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                        <div><label style="color:#ff6b6b;font-size:11px;">HP</label><input id="ep-hp" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#ffa94d;font-size:11px;">Attack</label><input id="ep-attack" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#ffd43b;font-size:11px;">Defense</label><input id="ep-defense" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#69db7c;font-size:11px;">Sp.Atk</label><input id="ep-sp-atk" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#4dabf7;font-size:11px;">Sp.Def</label><input id="ep-sp-def" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                        <div><label style="color:#da77f2;font-size:11px;">Speed</label><input id="ep-speed" type="number" min="1" max="255" value="100" required style="width:100%;padding:8px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:13px;box-sizing:border-box;"></div>
+                    </div>
+                </div>
+
+                <!-- Habilidades -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Habilidades (clique para adicionar)</label>
+                    <div id="ep-ability-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+                    <div style="position:relative;">
+                        <input id="ep-ability-search" type="text" placeholder="Buscar habilidade..." autocomplete="off" style="width:100%;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;box-sizing:border-box;">
+                        <div id="ep-ability-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#161b22;border:1px solid #30363d;border-radius:0 0 8px 8px;z-index:10;"></div>
+                    </div>
+                </div>
+
+                <!-- Pokemon Base (cópia de movimentos) -->
+                <div>
+                    <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:4px;">Pokemon Base (copiar aprendizado de movimentos)</label>
+                    <div style="position:relative;">
+                        <input id="ep-base-search" type="text" placeholder="Buscar pokemon base..." autocomplete="off" style="width:100%;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:14px;box-sizing:border-box;">
+                        <div id="ep-base-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#161b22;border:1px solid #30363d;border-radius:0 0 8px 8px;z-index:10;"></div>
+                    </div>
+                    <div id="ep-base-selected" style="margin-top:6px;color:#c471f5;font-size:13px;"></div>
+                </div>
+
+                <!-- Salvar -->
+                <button type="submit" id="ep-save-btn" style="padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#7b2ff7,#c471f5);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity 0.2s;">
+                    ⚡ Criar Pokemon
+                </button>
+                <div id="ep-status" style="text-align:center;font-size:13px;min-height:20px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- City Screen -->
+    <div id="city-screen" class="hidden" style="position:fixed;inset:0;z-index:800;background:#0a0e1a;display:flex;flex-direction:column;">
+        <div id="city-canvas-wrap" style="flex:1;position:relative;overflow:hidden;">
+            <canvas id="city-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+            <div style="position:absolute;top:10px;left:0;right:0;z-index:40;pointer-events:none;display:flex;align-items:center;">
+                <img src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/pokefury.png" alt="PokéFury" style="height:55px;width:auto;object-fit:contain;margin-left:16px;">
+                <div id="city-topbar-wrap" style="pointer-events:auto;position:relative;margin-left:auto;margin-right:auto;height:40px;">
+                    <img src="assets/ferramentas/novatopbar.png" alt="Topbar glow" class="topbar-glow" style="height:40px;width:auto;object-fit:contain;display:block;">
+                    <img src="assets/ferramentas/novatopbar.png" alt="Topbar" class="topbar-base" style="height:40px;width:auto;object-fit:contain;display:block;">
+                    <button id="city-premium-btn" onclick="var m=document.getElementById('city-premium-modal');if(m){m.classList.remove('hidden');var g=window.pokefury;if(g&&g.currentCharacterId&&window.premiumStore)window.premiumStore.setCurrentChar(g.currentCharacterId);}" style="position:absolute;top:0;left:0;width:24%;height:100%;cursor:pointer;background:none;border:none;outline:none;" title="Premium"></button>
+                    <button id="city-pokedex-btn" onclick="window.pokefury?.openPokedex()" style="position:absolute;top:0;left:25%;width:24%;height:100%;cursor:pointer;background:none;border:none;outline:none;" title="Pokédex"></button>
+                    <button id="city-perfil-btn" onclick="window.profileScreen.open()" style="position:absolute;top:0;left:50%;width:24%;height:100%;cursor:pointer;background:none;border:none;outline:none;" title="Perfil"></button>
+                    <button id="city-bag-btn" onclick="window.pokefury?.openMochila()" style="position:absolute;top:0;left:75%;width:25%;height:100%;cursor:pointer;background:none;border:none;outline:none;" title="Mochila"></button>
+                </div>
+                <button id="city-close-btn" style="pointer-events:auto;background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;margin-right:16px;">✕</button>
+            </div>
+            <div id="city-chat-wrap"></div>
+            <div id="city-battle-ui" class="hidden" style="position:absolute;top:78px;right:8px;width:230px;z-index:60;display:flex;flex-direction:column;gap:6px;pointer-events:none;">
+                <div class="right-section" style="pointer-events:auto;background:rgba(15,15,35,0.92);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;">
+                    <div class="right-section-title">AUTO FARM</div>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-search"> Procurar batalhas</label>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-battle"> Batalhar automático</label>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-heal"> Auto cura</label>
+                    <div id="city-afk-heal-slider-wrap" class="afk-sub-option" style="display:none">
+                        <input type="range" id="city-afk-heal-slider" min="10" max="90" value="40">
+                        <div class="afk-slider-labels"><span>10%</span><span id="city-afk-heal-val">40%</span><span>90%</span></div>
+                    </div>
+                    <div id="city-afk-heal-potion-wrap" class="afk-sub-option" style="display:none">
+                        <select id="city-afk-heal-potion"><option value="">Selecione poção</option></select>
+                    </div>
+                    <div id="city-afk-heal-anywhere-wrap" class="afk-sub-option afk-heal-team" style="display:none">
+                        <label class="afk-checkbox afk-heal-label"><input type="checkbox" id="city-afk-auto-heal-team"> Curar time completo após batalha</label>
+                        <div class="afk-heal-hint">Cura todos os Pokémon se algum estiver ferido</div>
+                    </div>
+                    <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-capture"> Captura automática</label>
+                    <div id="city-afk-capture-options" class="afk-sub-option" style="display:none">
+                        <div id="city-afk-rarity-list"></div>
+                    </div>
+                    <div class="afk-buttons">
+                        <button id="city-afk-start-btn" class="afk-btn-start">INICIAR</button>
+                        <button id="city-afk-stop-btn" class="afk-btn-stop hidden">PARAR</button>
+                    </div>
+                    <div id="city-afk-status" class="afk-status">Parado</div>
+                </div>
+                <div class="right-section" style="pointer-events:auto;background:rgba(15,15,35,0.92);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px;">
+                    <div class="right-section-title">TIME</div>
+                    <div id="city-party-list" style="display:flex;flex-direction:column;gap:4px"></div>
+                </div>
+            </div>
+        </div>
+        <div style="padding:8px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:12px;">
+            <span id="city-pos" style="color:rgba(255,255,255,0.4);font-size:12px;">X: 0 Y: 0</span>
+            <div style="flex:1;"></div>
+            <span style="color:rgba(255,255,255,0.3);font-size:11px;">WASD ou Setas para mover</span>
+        </div>
+        <!-- Teleport Popup -->
+        <div id="city-teleport-popup" class="hidden" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #8b5cf6;border-radius:12px;padding:20px;min-width:280px;z-index:850;box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+            <div style="text-align:center;margin-bottom:16px;">
+                <div style="font-size:24px;margin-bottom:4px;">🌀</div>
+                <h3 id="city-teleport-title" style="margin:0;color:#f59e0b;font-size:16px;">Teleport</h3>
+            </div>
+            <div id="city-teleport-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+            <div style="text-align:center;">
+                <button id="city-teleport-close" style="padding:6px 20px;border:none;border-radius:6px;background:#30363d;color:#aaa;font-size:12px;cursor:pointer;">Cancelar</button>
+            </div>
+        </div>
+        <!-- NPC Dialogue -->
+        <div id="city-npc-dialogue-overlay" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:860;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);">
+            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #f59e0b;border-radius:12px;padding:24px 32px;min-width:380px;max-width:460px;box-shadow:0 8px 32px rgba(0,0,0,0.6);text-align:center;">
+                <div id="city-npc-dialogue-icon" style="font-size:32px;margin-bottom:8px;">✈️</div>
+                <p id="city-npc-dialogue-msg" style="color:#fff;font-size:14px;line-height:1.6;margin:0 0 20px 0;"></p>
+                <div style="display:flex;gap:12px;justify-content:center;">
+                    <button id="city-npc-dialogue-sim" style="padding:8px 28px;border:none;border-radius:8px;background:#22c55e;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.2s;">Sim</button>
+                    <button id="city-npc-dialogue-nao" style="padding:8px 28px;border:none;border-radius:8px;background:#e94560;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.2s;">Não</button>
+                    <button id="city-npc-dialogue-ok" style="display:none;padding:8px 28px;border:none;border-radius:8px;background:#e94560;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.2s;">OK</button>
+                </div>
+            </div>
+        </div>
+        <!-- City World Map -->
+        <div id="city-worldmap-overlay" class="hidden" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:970;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.90);backdrop-filter:blur(6px);">
+            <div id="city-worldmap-box" style="position:relative;display:inline-block;">
+                <img id="city-worldmap-img" src="https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/ferramentas/mapamund.png" style="max-width:90vw;max-height:85vh;border-radius:12px;display:block;" alt="Mapa Mundial">
+                <div id="city-worldmap-hotspots"></div>
+                <button id="city-worldmap-close-btn" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);border:none;color:#fff;font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;">✕</button>
+                <div id="city-worldmap-region-label" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#00ff44;font-family:Inter,sans-serif;font-size:14px;font-weight:700;padding:8px 20px;border-radius:8px;border:1px solid rgba(0,255,68,0.3);pointer-events:none;text-align:center;white-space:nowrap;"></div>
+            </div>
+        </div>
+    </div>
+    <div id="city-builder-screen" class="hidden" style="position:fixed;inset:0;z-index:960;background:#0a0e1a;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#f59e0b,#ef4444);border-bottom:1px solid #30363d;">
+            <h2 style="margin:0;color:#fff;font-size:16px;">🏙️ Criar Cidade - Editor</h2>
+            <div style="display:flex;gap:8px;">
+                <button id="cb-collision-zone-btn" title="Desenhar zonas de colisão no mapa" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🔴 Zona Colisão</button>
+                <button id="cb-teleport-btn" title="Criar pontos de teleport" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🌀 Teleport</button>
+                <button id="cb-npc-region-btn" title="Criar NPC de regiões (avião)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">✈️ NPC Regiões</button>
+                <button id="cb-nurse-btn" title="Enfermeira Joy (cura Pokémon)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">💉 NPC Joy</button>
+                <button id="cb-professor-btn" title="Professor Carvalho" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🎓 Professor</button>
+                <button id="cb-narrator-btn" title="Narrador de combates (Arena PVP)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🎙️ Narrador</button>
+                <button id="cb-vendor-btn" title="Vendedor PokéMart" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">� Vendedor</button>
+                <button id="cb-banker-btn" title="Banqueira (Leilao de Pokemons)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🏦 Banqueira</button>
+                <button id="cb-safari-btn" title="Gerente do Safari (teleportes de safari)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🏕 Safari</button>
+                <button id="cb-spawn-btn" title="Marcar spawn dos jogadores" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">📍 Spawn</button>
+                <button id="cb-pc-btn" title="PC Pokémon (local para abrir o PC — sem sprite)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">💻 PC Pokemon</button>
+                <button id="cb-spawn-zone-btn" title="Criar zonas de spawn de Pokemon" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🟢 Spawn</button>
+                <button id="cb-spawn-point-btn" title="Criar pontos de spawn de Pokemon (pokemon visivel andando)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">📍 Ponto</button>
+                <button id="cb-battle-zone-btn" title="Criar zonas de batalha" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">⚔️ Zona Batalha</button>
+                <button id="cb-preview-btn" title="Preview do jogador" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">👁️</button>
+                <button id="cb-save-btn" style="padding:6px 14px;border:none;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
+                <button id="cb-close-btn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
+            </div>
+        </div>
+        <div id="cb-layers-bar" style="display:flex;align-items:center;gap:4px;padding:6px 16px;background:#111827;border-bottom:1px solid #30363d;overflow-x:auto;">
+            <span style="color:rgba(255,255,255,0.4);font-size:11px;margin-right:4px;white-space:nowrap;">Layers:</span>
+            <div id="cb-layer-tabs" style="display:flex;gap:4px;"></div>
+            <button id="cb-add-layer-btn" title="Adicionar layer" style="width:26px;height:26px;border:none;border-radius:4px;background:#30363d;color:#22c55e;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+        </div>
+        <div style="display:flex;flex:1;overflow:hidden;">
+            <!-- Sidebar de assets -->
+            <div id="cb-assets-panel" style="width:180px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
+                <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Assets</div>
+                <div id="cb-assets-list"></div>
+            </div>
+            <!-- Canvas do editor -->
+            <div id="cb-canvas-wrap" style="flex:1;position:relative;overflow:hidden;background:#1a1a2e;">
+                <canvas id="cb-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+            </div>
+            <!-- Propriedades -->
+            <div id="cb-props-panel" style="width:200px;background:#161b22;border-left:1px solid #30363d;padding:12px;overflow-y:auto;">
+                <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Propriedades</div>
+                <div id="cb-props-content" style="color:rgba(255,255,255,0.4);font-size:12px;">Selecione um asset</div>
+            </div>
+        </div>
+        <div style="padding:6px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:16px;font-size:11px;color:rgba(255,255,255,0.4);">
+            <span>Grid: 64px</span>
+            <span>Click: selecionar</span>
+            <span>Drag: mover</span>
+            <span>Del: remover</span>
+            <span>R: girar</span>
+            <span>Scroll: zoom</span>
+        </div>
+    </div>
+
+    <!-- ===== CITY PREMIUM MODAL (image-based) ===== -->
+    <div id="city-premium-modal" class="hidden" style="position:fixed;inset:0;z-index:850;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);" onclick="document.getElementById('city-premium-modal').classList.add('hidden')"></div>
+        <div id="city-premium-box" style="position:relative;width:90%;max-width:520px;">
+            <button onclick="document.getElementById('city-premium-modal').classList.add('hidden')" style="position:absolute;top:-8px;right:-8px;z-index:10;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#aaa;font-size:18px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='#aaa'">✕</button>
+            <img src="assets/ferramentas/premiumstore.png" alt="Premium Store" style="width:100%;height:auto;border-radius:14px;display:block;">
+            <button onclick="window._cityOpenPremiumShop('buy')" style="position:absolute;top:0;left:0;width:100%;height:50%;cursor:pointer;background:none;border:none;outline:none;" title="Compre Diamantes"></button>
+            <button onclick="window._cityOpenPremiumShop('shop')" style="position:absolute;top:50%;left:0;width:100%;height:20%;cursor:pointer;background:none;border:none;outline:none;" title="Loja de Diamantes"></button>
+            <button onclick="window._cityOpenPremiumShop('skin')" style="position:absolute;top:70%;left:0;width:100%;height:30%;cursor:pointer;background:none;border:none;outline:none;" title="Skin Shop"></button>
+        </div>
+    </div>
+
+    <!-- MOCHILA OVERLAY (body-level to avoid stacking context issues) -->
+    <div id="mochila-overlay" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);">
+        <div id="mochila-box" style="width:560px;max-height:90%;background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;">
+            <div id="mochila-header" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <span style="color:#fff;font-size:15px;font-weight:700;font-family:Inter,sans-serif;">🎒 Mochila</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span id="mochila-count" style="color:rgba(255,255,255,0.4);font-size:11px;font-family:Inter,sans-serif;">0 itens</span>
+                    <button id="mochila-close" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:Inter;font-size:11px;font-weight:600;">Fechar</button>
+                </div>
+            </div>
+            <div id="mochila-tabs" style="display:flex;gap:2px;padding:8px 12px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <button class="mochila-tab active" data-category="pocoes">🧪 Poções</button>
+                <button class="mochila-tab" data-category="pokebolas">🔴 Pokébolas</button>
+                <button class="mochila-tab" data-category="itens">📦 Itens</button>
+                <button class="mochila-tab" data-category="tm_hm">💿 TM/HM</button>
+            </div>
+            <div id="mochila-search" style="padding:8px 12px;">
+                <input type="text" id="mochila-search-input" placeholder="Buscar item..." style="width:100%;padding:7px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;box-sizing:border-box;">
+            </div>
+            <div id="mochila-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:8px 12px 14px;overflow-y:auto;max-height:420px;min-height:200px;">
+            </div>
+            <div id="mochila-empty" style="display:none;text-align:center;padding:40px 20px;color:rgba(255,255,255,0.3);font-size:13px;font-family:Inter,sans-serif;">
+                Nenhum item nesta categoria.
+            </div>
+        </div>
+    </div>
+
+<!-- ===== TELA DE CARREGAMENTO (loading-screen) ===== -->
+    <div id="loading-screen" aria-hidden="true">
+        <img class="loading-bg" src="assets/ferramentas/telaloading.png" alt="Carregando...">
+        <div class="loading-ui">
+            <div class="loading-bar">
+                <div class="loading-fill" id="loading-progress-fill"></div>
+            </div>
+            <div class="loading-percent" id="loading-percent">0%</div>
+            <div class="loading-dica-wrap">
+                <span class="loading-dica-label">💡 Dica</span>
+                <span class="loading-dica-text" id="loading-dica-text"></span>
+            </div>
+        </div>
+    </div>
+    <!-- Profile Screen -->
+    <style>
+        .pf-el { position: absolute; }
+        .pf-sprite { width: 100%; height: 100%; object-fit: contain; }
+        .pf-text { color: #fff; font-size: 16px; font-weight: 700; font-family: Inter, sans-serif; display: flex; align-items: center; justify-content: center; text-shadow: 0 2px 4px rgba(0,0,0,0.8); text-align: center; box-sizing: border-box; }
+        .pf-currency { font-variant-numeric: tabular-nums; }
+        .pf-silver { color: #d7d9dc; } .pf-gold { color: #f5d06a; } .pf-diamond { color: #c4b5fd; }
+        .pf-badges, .pf-titles { font-size: 14px; }
+        .pf-btn { width: 100%; height: 100%; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 18px; border-radius: 8px; cursor: pointer; }
+        .pf-benefits { width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 6px; font-family: Inter, sans-serif; }
+        .pf-benefit { background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 4px 8px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .pf-benefit-time { color: #f59e0b; font-weight: 700; white-space: nowrap; font-size: 11px; }
+    </style>
+    <div id="profile-screen" class="hidden" style="position:fixed;inset:0;z-index:850;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);">
+        <div style="position:absolute;top:14px;right:14px;z-index:10;">
+            <button onclick="window.profileScreen.close()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;">✕ Fechar</button>
+        </div>
+        <div style="display:flex;gap:20px;align-items:flex-start;max-width:95vw;max-height:90vh;">
+            <div id="profile-stage" style="position:relative;">
+                <img id="profile-bg" alt="Perfil" style="display:block;width:100%;height:auto;border-radius:12px;user-select:none;">
+                <div id="profile-elements" style="position:absolute;inset:0;"></div>
+            </div>
+            <div id="profile-team-box" style="min-width:220px;max-width:260px;background:#0d1117;border:1px solid #30363d;border-radius:12px;padding:14px;max-height:80vh;overflow-y:auto;">
+                <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:10px;text-align:center;">Time Atual</div>
+                <div id="profile-team-list"></div>
+            </div>
+        </div>
+    </div>
+    <script src="js/premium-store.js"></script>
+    <script src="js/premium-admin.js"></script>
+    <script src="js/gym-leaders-admin.js"></script>
+    <script src="js/boosts.js"></script>
+    <script src="js/event-pokemon-admin.js"></script>
+    <script src="js/loading-screen.js"></script>
+    <script src="js/city.js?v=20260810j"></script>
+    <script src="js/professor-quests.js?v=20260815c"></script>
+    <script src="js/city-builder.js?v=20260810a"></script>
+    <script src="js/profile.js?v=20260815n"></script>
+    <script src="js/profile-admin.js?v=20260815a"></script>
+    <script src="js/auction.js?v=1"></script>
+</body>
+</html>

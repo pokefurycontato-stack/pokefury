@@ -1,0 +1,95 @@
+{
+  "downloadedNormal": 0,
+  "downloadedShiny": 0,
+  "skippedNormal": 993,
+  "skippedShiny": 993,
+  "missingNormal": [
+    {
+      "id": 784,
+      "name": "Kommo-O",
+      "variant": "normal",
+      "sdName": "commoo"
+    },
+    {
+      "id": 990,
+      "name": "Iron-Treads",
+      "variant": "normal",
+      "sdName": "iron-treads"
+    },
+    {
+      "id": 991,
+      "name": "Iron-Bundle",
+      "variant": "normal",
+      "sdName": "iron-bundle"
+    },
+    {
+      "id": 992,
+      "name": "Iron-Hands",
+      "variant": "normal",
+      "sdName": "iron-hands"
+    },
+    {
+      "id": 993,
+      "name": "Iron-Jugulis",
+      "variant": "normal",
+      "sdName": "iron-jugulis"
+    },
+    {
+      "id": 994,
+      "name": "Iron-Moth",
+      "variant": "normal",
+      "sdName": "iron-moth"
+    },
+    {
+      "id": 995,
+      "name": "Iron-Thorns",
+      "variant": "normal",
+      "sdName": "iron-thorns"
+    }
+  ],
+  "missingShiny": [
+    {
+      "id": 784,
+      "name": "Kommo-O",
+      "variant": "normal",
+      "sdName": "commoo"
+    },
+    {
+      "id": 990,
+      "name": "Iron-Treads",
+      "variant": "normal",
+      "sdName": "iron-treads"
+    },
+    {
+      "id": 991,
+      "name": "Iron-Bundle",
+      "variant": "normal",
+      "sdName": "iron-bundle"
+    },
+    {
+      "id": 992,
+      "name": "Iron-Hands",
+      "variant": "normal",
+      "sdName": "iron-hands"
+    },
+    {
+      "id": 993,
+      "name": "Iron-Jugulis",
+      "variant": "normal",
+      "sdName": "iron-jugulis"
+    },
+    {
+      "id": 994,
+      "name": "Iron-Moth",
+      "variant": "normal",
+      "sdName": "iron-moth"
+    },
+    {
+      "id": 995,
+      "name": "Iron-Thorns",
+      "variant": "normal",
+      "sdName": "iron-thorns"
+    }
+  ],
+  "timestamp": "2026-07-24T18:01:47.124Z"
+}

@@ -1,0 +1,7 @@
+node_modules/
+assets/models-3d/
+assets/overworld-sheets/
+assets/overworld-sheets-shiny/
+.git/
+*.sql
+supabase/

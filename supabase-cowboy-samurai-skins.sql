@@ -1,0 +1,17 @@
+INSERT INTO skin_products (name, description, skin_type, target_id, price_diamonds, image_url, sprite_url, active, sort_order) VALUES
+('Cowboy Masculino', 'Skin de personagem', 'player_skin', 'male', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/cowboymasc.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/cowboymasc.png',
+ true, 14),
+('Cowboy Feminino', 'Skin de personagem', 'player_skin', 'female', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/cowboyfem.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/cowboyfem.png',
+ true, 15),
+('Samurai Masculino', 'Skin de personagem', 'player_skin', 'male', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/samuraimasc.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/samuraimasc.png',
+ true, 16),
+('Samurai Feminino', 'Skin de personagem', 'player_skin', 'female', 50,
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/samuraifem.png',
+ 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/store-products/skins/samuraifem.png',
+ true, 17);
