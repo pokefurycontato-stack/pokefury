@@ -1523,6 +1523,11 @@ toggleVendorMode() {
             name: f.replace('.png', ''),
             url: `assets/assetmap/${f}`
         }));
+        this.availableAssets.forEach(a => {
+            const img = new Image();
+            img.src = a.url;
+            img.onload = () => { a._nw = img.naturalWidth; a._nh = img.naturalHeight; };
+        });
         this.renderAssetList();
     }
 
@@ -1563,6 +1568,8 @@ toggleVendorMode() {
             z_index: this.assets.length,
             layer: this.activeLayer,
             _img: img,
+            _nw: asset._nw,
+            _nh: asset._nh,
             _mask: null,
             _overlay: null
         };
