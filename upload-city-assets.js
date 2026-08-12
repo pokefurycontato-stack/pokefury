@@ -66,7 +66,7 @@ function uploadFile(filePath, storagePath) {
 
     const options = {
       hostname: BASE,
-      path: `/storage/v1/object/${BUCKET}/${storagePath}`,
+      path: `/storage/v1/object/${BUCKET}/${storagePath.split('/').map(encodeURIComponent).join('/')}`,
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
@@ -115,7 +115,7 @@ function uploadChunked(fileData, fileSize, mime, storagePath) {
 
       const options = {
         hostname: BASE,
-        path: `/storage/v1/object/${BUCKET}/${storagePath}`,
+        path: `/storage/v1/object/${BUCKET}/${storagePath.split('/').map(encodeURIComponent).join('/')}`,
         method: isLast ? 'POST' : 'PUT',
         headers
       };
