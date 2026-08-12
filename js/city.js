@@ -1998,6 +1998,103 @@ class CityScreen {
         ctx.restore();
     }
 
+    _rayRectIntersect(px, py, dx, dy, rect) {
+        let tmin = -Infinity, tmax = Infinity;
+        if (Math.abs(dx) < 1e-9) {
+            if (px < rect.pos_x || px > rect.pos_x + rect.width) return null;
+        } else {
+            let t1 = (rect.pos_x - px) / dx;
+            let t2 = (rect.pos_x + rect.width - px) / dx;
+            if (t1 > t2) { const tmp = t1; t1 = t2; t2 = tmp; }
+            tmin = Math.max(tmin, t1);
+            tmax = Math.min(tmax, t2);
+        }
+        if (Math.abs(dy) < 1e-9) {
+            if (py < rect.pos_y || py > rect.pos_y + rect.height) return null;
+        } else {
+            let t1 = (rect.pos_y - py) / dy;
+            let t2 = (rect.pos_y + rect.height - py) / dy;
+            if (t1 > t2) { const tmp = t1; t1 = t2; t2 = tmp; }
+            tmin = Math.max(tmin, t1);
+            tmax = Math.min(tmax, t2);
+        }
+        if (tmax < tmin || tmax < 0) return null;
+        return tmin >= 0 ? tmin : tmax;
+    }
+
+    renderLightWithShadows(ctx, wx, wy, radius, intensity, camX, camY) {
+        const sx = wx - camX;
+        const sy = wy - camY;
+        if (sx < -radius - 200 || sx > ctx.canvas.width + radius + 200 || sy < -radius - 200 || sy > ctx.canvas.height + radius + 200) return;
+
+        // Collect occluders near this light
+        const occluders = [];
+        for (const z of this.collisionZones) {
+            const cx = z.pos_x + z.width / 2;
+            const cy = z.pos_y + z.height / 2;
+            const d = Math.hypot(cx - wx, cy - wy);
+            if (d < radius + Math.max(z.width, z.height) * 1.5) {
+                occluders.push(z);
+            }
+        }
+
+        if (occluders.length === 0) {
+            const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+            grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
+            grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
+            grad.addColorStop(1, 'rgba(255,180,80,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+
+        // Generate rays to each corner of each occluder (with epsilon offsets)
+        const angles = [];
+        for (const z of occluders) {
+            const corners = [
+                [z.pos_x, z.pos_y],
+                [z.pos_x + z.width, z.pos_y],
+                [z.pos_x + z.width, z.pos_y + z.height],
+                [z.pos_x, z.pos_y + z.height]
+            ];
+            for (const [cx, cy] of corners) {
+                const a = Math.atan2(cy - wy, cx - wx);
+                angles.push(a - 0.0001, a, a + 0.0001);
+            }
+        }
+        angles.sort((a, b) => a - b);
+
+        // Build visibility polygon
+        const pts = [];
+        for (const a of angles) {
+            const dx = Math.cos(a);
+            const dy = Math.sin(a);
+            let minT = radius;
+            for (const z of occluders) {
+                const t = this._rayRectIntersect(wx, wy, dx, dy, z);
+                if (t != null && t < minT) minT = t;
+            }
+            pts.push({ x: wx + dx * minT - camX, y: wy + dy * minT - camY });
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        for (const p of pts) ctx.lineTo(p.x, p.y);
+        ctx.closePath();
+        ctx.clip();
+
+        const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+        grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
+        grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
+        grad.addColorStop(1, 'rgba(255,180,80,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(sx - radius, sy - radius, radius * 2, radius * 2);
+        ctx.restore();
+    }
+
     updateWeatherHud() {
         const el = document.getElementById('city-weather-hud');
         if (!el) return;
@@ -2454,18 +2551,7 @@ class CityScreen {
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
             for (const l of this.lights) {
-                const sx = l.pos_x - camX;
-                const sy = l.pos_y - camY;
-                if (sx < -200 || sx > cw + 200 || sy < -200 || sy > ch + 200) continue;
-                const radius = (l.radius || 120) * (0.6 + intensity * 0.4);
-                const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
-                grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
-                grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
-                grad.addColorStop(1, 'rgba(255,180,80,0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(sx, sy, radius, 0, Math.PI * 2);
-                ctx.fill();
+                this.renderLightWithShadows(ctx, l.pos_x, l.pos_y, l.radius || 120, intensity, camX, camY);
             }
             ctx.restore();
         }
