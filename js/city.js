@@ -1,3 +1,17 @@
+const NOCTURNAL_POKEMON_IDS = new Set([
+    19, 20, 41, 42, 169, 92, 93, 94, 163, 164, 198, 200, 215, 461,
+    228, 229, 167, 168, 261, 262, 302, 353, 354, 355, 356, 477, 358,
+    207, 472, 434, 435, 425, 426, 442, 453, 454, 331, 332, 48, 49,
+    96, 97, 35, 36, 46, 47
+]);
+
+const DIURNAL_POKEMON_IDS = new Set([
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 43, 44, 45, 69, 70, 71,
+    172, 25, 26, 52, 53, 54, 55, 83, 84, 85, 58, 59, 179, 180, 181, 187,
+    188, 189, 191, 192, 193, 194, 283, 284, 285, 406, 407, 408, 415, 416,
+    417, 418, 420, 421, 422, 423
+]);
+
 class CityScreen {
     constructor() {
         this.canvas = null;
@@ -677,18 +691,22 @@ class CityScreen {
             let serverSprite = null;
             if (charId) {
                 try {
-                    const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
-                        p_character_id: charId,
-                        p_biome: biome
-                    });
-                    if (!error && data?.success) {
-                        encounter = {
-                            pokemon_id: data.pokemon_id,
-                            pokemon_name: data.pokemon_name,
-                            sprite_url: data.sprite_url
-                        };
-                        isShiny = data.is_shiny || false;
-                        serverSprite = data.sprite_url;
+                    for (let roll = 0; roll < 3; roll++) {
+                        const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
+                            p_character_id: charId,
+                            p_biome: biome
+                        });
+                        if (!error && data?.success) {
+                            encounter = {
+                                pokemon_id: data.pokemon_id,
+                                pokemon_name: data.pokemon_name,
+                                sprite_url: data.sprite_url
+                            };
+                            isShiny = data.is_shiny || false;
+                            serverSprite = data.sprite_url;
+                            if (this.isPokemonTimeValid(encounter.pokemon_id)) break;
+                            encounter = null;
+                        }
                     }
                 } catch (e) {}
             }
@@ -769,18 +787,22 @@ class CityScreen {
 
         if (charId) {
             try {
-                const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
-                    p_character_id: charId,
-                    p_biome: biome
-                });
-                if (!error && data?.success) {
-                    encounter = {
-                        pokemon_id: data.pokemon_id,
-                        pokemon_name: data.pokemon_name,
-                        sprite_url: data.sprite_url
-                    };
-                    isShiny = data.is_shiny || false;
-                    serverSprite = data.sprite_url;
+                for (let roll = 0; roll < 3; roll++) {
+                    const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
+                        p_character_id: charId,
+                        p_biome: biome
+                    });
+                    if (!error && data?.success) {
+                        encounter = {
+                            pokemon_id: data.pokemon_id,
+                            pokemon_name: data.pokemon_name,
+                            sprite_url: data.sprite_url
+                        };
+                        isShiny = data.is_shiny || false;
+                        serverSprite = data.sprite_url;
+                        if (this.isPokemonTimeValid(encounter.pokemon_id)) break;
+                        encounter = null;
+                    }
                 }
             } catch (e) {}
         }
@@ -1854,6 +1876,7 @@ class CityScreen {
 
     update() {
         this._updateWeatherParticles();
+        this.updateWeatherHud();
         if (this.playerMoving) {
             this.moveProgress += 0.04;
             if (this.moveProgress >= 1) {
@@ -1964,6 +1987,38 @@ class CityScreen {
         if (h < 0.45) return 'clear';
         if (h < 0.78) return 'rain';
         return 'snow';
+    }
+
+    isPokemonTimeValid(pokemonId) {
+        const isNight = this.getDayNight().isNight;
+        if (isNight && DIURNAL_POKEMON_IDS.has(pokemonId)) return false;
+        if (!isNight && NOCTURNAL_POKEMON_IDS.has(pokemonId)) return false;
+        return true;
+    }
+
+    updateWeatherHud() {
+        const el = document.getElementById('city-weather-hud');
+        if (!el) return;
+        const dn = this.getDayNight();
+        const weather = this._weather || 'clear';
+        const dayPhase = dn.dayPhase;
+        let timeIcon, timeLabel;
+        if (dn.isNight) {
+            timeIcon = '🌙'; timeLabel = 'Noite';
+        } else if (dayPhase < 0.2) {
+            timeIcon = '🌅'; timeLabel = 'Amanhecer';
+        } else if (dayPhase < 0.8) {
+            timeIcon = '☀️'; timeLabel = 'Dia';
+        } else {
+            timeIcon = '🌇'; timeLabel = 'Entardecer';
+        }
+        let weatherIcon = '';
+        if (weather === 'rain') weatherIcon = '🌧️';
+        else if (weather === 'snow') weatherIcon = '❄️';
+        const key = timeIcon + '|' + timeLabel + '|' + weather + '|' + weatherIcon;
+        if (this._hudKey === key) return;
+        this._hudKey = key;
+        el.innerHTML = `<span>${timeIcon}</span><span style="font-size:12px;">${timeLabel}</span>` + (weatherIcon ? `<span>${weatherIcon}</span>` : '');
     }
 
     _updateWeatherParticles() {
