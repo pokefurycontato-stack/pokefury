@@ -1681,8 +1681,12 @@ toggleVendorMode() {
     duplicateAsset(source, worldX, worldY) {
         const img = new Image();
         img.src = source.asset_url;
-        const snapItem = { _img: null, scale: source.scale || 1.0, _id: -1 };
-        const snapped = this.snapPosition(worldX, worldY, { _img: source._img, scale: source.scale || 1.0, _id: source._id });
+        const prevLast = this._lastAddedAsset;
+        if (!prevLast || prevLast._id === source._id) {
+            this._lastAddedAsset = source;
+        }
+        const snapped = this.snapPosition(worldX, worldY, { _img: source._img, _nw: source._nw, _nh: source._nh, scale: source.scale || 1.0, _id: -1 });
+        this._lastAddedAsset = prevLast;
         const item = {
             _id: this.nextId++,
             asset_id: source.asset_id,
