@@ -1706,7 +1706,7 @@ toggleVendorMode() {
         const img = asset._img || asset;
         const w = (img.naturalWidth || 0) * (asset.scale || 1);
         const h = (img.naturalHeight || 0) * (asset.scale || 1);
-        const SNAP = 24;
+        const SNAP = 40;
         let bestX = x, bestY = y, bestDist = SNAP;
         for (const a of this.assets) {
             if (a._id === asset._id) continue;
@@ -1720,6 +1720,7 @@ toggleVendorMode() {
                 { nx: a.pos_x, ny: a.pos_y - h, d: Math.abs(y - (a.pos_y - h)) },  // above
                 { nx: a.pos_x + aw, ny: a.pos_y, d: Math.abs(x - (a.pos_x + aw)) }, // right
                 { nx: a.pos_x - w, ny: a.pos_y, d: Math.abs(x - (a.pos_x - w)) },  // left
+                { nx: a.pos_x, ny: a.pos_y, d: Math.min(Math.abs(x - a.pos_x), Math.abs(y - a.pos_y)) } // same position
             ];
             for (const c of candidates) {
                 if (c.d < bestDist) {
@@ -1752,6 +1753,10 @@ toggleVendorMode() {
         if (e.shiftKey) {
             newX = Math.round(newX / 32) * 32;
             newY = Math.round(newY / 32) * 32;
+        } else {
+            const snapped = this.snapPosition(newX, newY, this.selected);
+            newX = snapped.x;
+            newY = snapped.y;
         }
         this.selected.pos_x = newX;
         this.selected.pos_y = newY;
