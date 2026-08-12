@@ -31,6 +31,7 @@ class CityScreen {
         this.weatherParticles = [];
         this._weather = null;
         this.puddles = [];
+        this.lights = [];
         this.battleZones = [];
         this.currentBattleZone = null;
         this.spawnZones = [];
@@ -107,6 +108,7 @@ class CityScreen {
             await this.spawnVisiblePokemon();
             if (LS) LS.setProgress(40);
             await this.loadPlayerSpawn();
+            await this.loadLights();
             await this.syncServerTime();
             await this.registerPlayer();
             this.cameraX = this.playerX;
@@ -152,6 +154,7 @@ class CityScreen {
             await this.loadSpawnPoints(); // depende de spawnZones
             if (LS) LS.setProgress(72);
             await this.loadPlayerSpawn();
+            await this.loadLights();
             await this.syncServerTime();
             await this.registerPlayer();
             if (LS) LS.setProgress(80);
@@ -1028,6 +1031,13 @@ class CityScreen {
                 console.log('[City] Spawn loaded:', this.playerX, this.playerY);
             }
         } catch (e) { console.warn('[City] Spawn load failed:', e); }
+    }
+
+    async loadLights() {
+        try {
+            const { data } = await window.db.from('city_lights').select('*');
+            if (data) this.lights = data;
+        } catch (e) {}
     }
 
     showSafariTeleportMenu() {
@@ -2435,6 +2445,28 @@ class CityScreen {
             ctx.globalAlpha = dn.darkness;
             ctx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
             ctx.fillRect(0, 0, cw, ch);
+            ctx.restore();
+        }
+
+        // Night lights (lamps glow as it gets dark)
+        if (dn.darkness > 0.15 && this.lights.length > 0) {
+            const intensity = Math.min(1, (dn.darkness - 0.15) / 0.5);
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            for (const l of this.lights) {
+                const sx = l.pos_x - camX;
+                const sy = l.pos_y - camY;
+                if (sx < -200 || sx > cw + 200 || sy < -200 || sy > ch + 200) continue;
+                const radius = (l.radius || 120) * (0.6 + intensity * 0.4);
+                const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+                grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
+                grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
+                grad.addColorStop(1, 'rgba(255,180,80,0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
             ctx.restore();
         }
 

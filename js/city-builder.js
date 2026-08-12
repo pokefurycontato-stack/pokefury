@@ -63,6 +63,8 @@ class CityBuilder {
         this.bankerMode = false;
         this.safariMode = false;
         this.spawnMode = false;
+        this.lightMode = false;
+        this.lights = [];
         this.pcMode = false;
 
         this.battleZoneMode = false;
@@ -118,6 +120,8 @@ class CityBuilder {
         if (safariBtn) safariBtn.addEventListener('click', () => this.toggleSafariMode());
         const spawnBtn = document.getElementById('cb-spawn-btn');
         if (spawnBtn) spawnBtn.addEventListener('click', () => this.toggleSpawnMode());
+        const lightBtn = document.getElementById('cb-light-btn');
+        if (lightBtn) lightBtn.addEventListener('click', () => this.toggleLightMode());
         const pcBtn = document.getElementById('cb-pc-btn');
         if (pcBtn) pcBtn.addEventListener('click', () => this.togglePcMode());
         const spawnZoneBtn = document.getElementById('cb-spawn-zone-btn');
@@ -223,6 +227,15 @@ class CityBuilder {
                 }
                 return;
             }
+            if (this.lightMode) {
+                if (e.key === 'Escape') { this.toggleLightMode(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this._selectedLight) {
+                    e.preventDefault();
+                    this.deleteSelectedLight();
+                    return;
+                }
+                return;
+            }
             if (this.pcMode) {
                 if (e.key === 'Escape') { this.togglePcMode(); return; }
                 if ((e.key === 'Delete' || e.key === 'Backspace') && this.npcRegionSelectedIdx >= 0) {
@@ -292,6 +305,10 @@ class CityBuilder {
         try {
             const { data } = await window.db.from('city_player_spawn').select('pos_x, pos_y').limit(1).maybeSingle();
             if (data) { this.playerX = data.pos_x; this.playerY = data.pos_y; }
+        } catch (e) {}
+        try {
+            const { data: lights } = await window.db.from('city_lights').select('*');
+            if (lights) this.lights = lights;
         } catch (e) {}
 
         await this.loadPlayerSkin(game);
@@ -1138,6 +1155,55 @@ toggleVendorMode() {
         } catch (er) { alert('Erro ao salvar spawn'); }
     }
 
+    toggleLightMode() {
+        this.lightMode = !this.lightMode;
+        const btn = document.getElementById('cb-light-btn');
+        if (btn) btn.style.background = this.lightMode ? '#fbbf24' : 'rgba(255,255,255,0.15)';
+        if (this.lightMode) {
+            this.selected = null;
+            this.collisionZoneMode = false; this.teleportMode = false; this.npcRegionMode = false;
+            this.spawnZoneMode = false; this.battleZoneMode = false; this.spawnPointMode = false;
+            this.spawnMode = false;
+            const resetIds = ['cb-collision-zone-btn', 'cb-teleport-btn', 'cb-npc-region-btn', 'cb-spawn-zone-btn', 'cb-battle-zone-btn', 'cb-spawn-point-btn', 'cb-nurse-btn', 'cb-professor-btn', 'cb-narrator-btn', 'cb-vendor-btn', 'cb-banker-btn', 'cb-safari-btn', 'cb-spawn-btn', 'cb-pc-btn'];
+            resetIds.forEach(id => { const b = document.getElementById(id); if (b) b.style.background = 'rgba(255,255,255,0.15)'; });
+            this.canvas.style.cursor = 'crosshair';
+        } else {
+            this.canvas.style.cursor = 'default';
+            this._lightPreview = null;
+        }
+    }
+
+    async onLightMouseDown(e) {
+        if (this.collisionZoneMode || this.teleportMode || this.npcRegionMode || this.spawnZoneMode || this.battleZoneMode || this.spawnPointMode) return;
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        // Click on existing light -> select it (for deletion)
+        for (const l of this.lights) {
+            if (Math.hypot(w.x - l.pos_x, w.y - l.pos_y) < (l.radius || 120)) {
+                this._selectedLight = l;
+                this.render();
+                return;
+            }
+        }
+        // Otherwise place a new light
+        try {
+            const { data, error } = await window.db.from('city_lights').insert({ pos_x: Math.round(w.x), pos_y: Math.round(w.y) }).select().single();
+            if (!error && data) {
+                this.lights.push(data);
+                this._selectedLight = data;
+            }
+        } catch (er) {}
+        this.render();
+    }
+
+    async deleteSelectedLight() {
+        if (!this._selectedLight) return;
+        const id = this._selectedLight.id;
+        this.lights = this.lights.filter(l => l.id !== id);
+        this._selectedLight = null;
+        try { await window.db.from('city_lights').delete().eq('id', id); } catch (e) {}
+        this.render();
+    }
+
     togglePcMode() {
         this.pcMode = !this.pcMode;
         const btn = document.getElementById('cb-pc-btn');
@@ -1658,6 +1724,7 @@ toggleVendorMode() {
         if (this.bankerMode) { this.onBankerMouseDown(e); return; }
         if (this.safariMode) { this.onSafariMouseDown(e); return; }
         if (this.spawnMode) { this.onSpawnMouseDown(e); return; }
+        if (this.lightMode) { this.onLightMouseDown(e); return; }
         if (this.pcMode) { this.onPcMouseDown(e); return; }
         const w = this.screenToWorld(e.clientX, e.clientY);
         const hit = this.getAssetHit(w.x, w.y);
@@ -1759,6 +1826,12 @@ toggleVendorMode() {
         if (this.narratorMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.vendorMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.pcMode) { this.onNpcRegionMouseMove(e); return; }
+        if (this.lightMode) {
+            const w = this.screenToWorld(e.clientX, e.clientY);
+            this._lightPreview = { x: w.x, y: w.y };
+            this.render();
+            return;
+        }
         if (!this.dragging || !this.selected) return;
         const w = this.screenToWorld(e.clientX, e.clientY);
         let newX = w.x - this.dragOffset.x;
@@ -2733,7 +2806,38 @@ toggleVendorMode() {
 
         this.renderPlayer(ctx);
 
+        // Lights (spots) - always show glow in builder (preview)
+        for (const l of this.lights) {
+            this.renderLightGlow(ctx, l.pos_x, l.pos_y, l.radius || 120, l.color || '#ffddaa', l === this._selectedLight);
+        }
+        if (this.lightMode && this._lightPreview) {
+            this.renderLightGlow(ctx, this._lightPreview.x, this._lightPreview.y, 120, '#ffddaa', false);
+        }
+
         ctx.restore();
+    }
+
+    renderLightGlow(ctx, x, y, radius, color, selected) {
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        grad.addColorStop(0, 'rgba(255,220,150,0.55)');
+        grad.addColorStop(0.3, 'rgba(255,200,120,0.30)');
+        grad.addColorStop(1, 'rgba(255,180,80,0)');
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Center marker
+        ctx.fillStyle = selected ? '#fff' : '#fbbf24';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2 / this.zoom;
+        ctx.beginPath();
+        ctx.arc(x, y, 6 / this.zoom, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
     }
 
     renderPlayer(ctx) {
