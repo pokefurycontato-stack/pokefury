@@ -2551,7 +2551,18 @@ class CityScreen {
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
             for (const l of this.lights) {
-                this.renderLightWithShadows(ctx, l.pos_x, l.pos_y, l.radius || 120, intensity, camX, camY);
+                const sx = l.pos_x - camX;
+                const sy = l.pos_y - camY;
+                if (sx < -300 || sx > cw + 300 || sy < -300 || sy > ch + 300) continue;
+                const radius = (l.radius || 120);
+                const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+                grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
+                grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
+                grad.addColorStop(1, 'rgba(255,180,80,0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                ctx.fill();
             }
             ctx.restore();
         }
