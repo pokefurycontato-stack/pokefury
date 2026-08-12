@@ -1587,6 +1587,7 @@ toggleVendorMode() {
         };
         this.assets.push(item);
         this.selected = item;
+        this._lastAddedAsset = item;
         this.updateProps();
         this.render();
     }
@@ -1695,6 +1696,8 @@ toggleVendorMode() {
             has_collision: source.has_collision || false,
             collision_boxes: source.collision_boxes ? JSON.parse(JSON.stringify(source.collision_boxes)) : [],
             _img: img,
+            _nw: source._nw,
+            _nh: source._nh,
             _mask: null,
             _overlay: null
         };
@@ -1709,6 +1712,7 @@ toggleVendorMode() {
         };
         this.assets.push(item);
         this.selected = item;
+        this._lastAddedAsset = item;
         this.updateProps();
         this.render();
     }
@@ -1718,8 +1722,8 @@ toggleVendorMode() {
         const w = (asset._nw || img.naturalWidth || 0) * (asset.scale || 1);
         const h = (asset._nh || img.naturalHeight || 0) * (asset.scale || 1);
 
-        const last = [...this.assets].filter(a => a._id !== asset._id).pop();
-        if (!last) return { x, y };
+        const last = this._lastAddedAsset;
+        if (!last || last._id === asset._id) return { x, y };
 
         const aw = (last._nw || last._img?.naturalWidth || 0) * (last.scale || 1);
         const ah = (last._nh || last._img?.naturalHeight || 0) * (last.scale || 1);
