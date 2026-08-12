@@ -1,17 +1,3 @@
-const NOCTURNAL_POKEMON_IDS = new Set([
-    19, 20, 41, 42, 169, 92, 93, 94, 163, 164, 198, 200, 215, 461,
-    228, 229, 167, 168, 261, 262, 302, 353, 354, 355, 356, 477, 358,
-    207, 472, 434, 435, 425, 426, 442, 453, 454, 331, 332, 48, 49,
-    96, 97, 35, 36, 46, 47
-]);
-
-const DIURNAL_POKEMON_IDS = new Set([
-    10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 43, 44, 45, 69, 70, 71,
-    172, 25, 26, 52, 53, 54, 55, 83, 84, 85, 58, 59, 179, 180, 181, 187,
-    188, 189, 191, 192, 193, 194, 283, 284, 285, 406, 407, 408, 415, 416,
-    417, 418, 420, 421, 422, 423
-]);
-
 class CityScreen {
     constructor() {
         this.canvas = null;
@@ -692,22 +678,19 @@ class CityScreen {
             let serverSprite = null;
             if (charId) {
                 try {
-                    for (let roll = 0; roll < 3; roll++) {
-                        const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
-                            p_character_id: charId,
-                            p_biome: biome
-                        });
-                        if (!error && data?.success) {
-                            encounter = {
-                                pokemon_id: data.pokemon_id,
-                                pokemon_name: data.pokemon_name,
-                                sprite_url: data.sprite_url
-                            };
-                            isShiny = data.is_shiny || false;
-                            serverSprite = data.sprite_url;
-                            if (this.isPokemonTimeValid(encounter.pokemon_id)) break;
-                            encounter = null;
-                        }
+                    const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
+                        p_character_id: charId,
+                        p_biome: biome,
+                        p_is_night: this.getDayNight().isNight
+                    });
+                    if (!error && data?.success) {
+                        encounter = {
+                            pokemon_id: data.pokemon_id,
+                            pokemon_name: data.pokemon_name,
+                            sprite_url: data.sprite_url
+                        };
+                        isShiny = data.is_shiny || false;
+                        serverSprite = data.sprite_url;
                     }
                 } catch (e) {}
             }
@@ -788,22 +771,19 @@ class CityScreen {
 
         if (charId) {
             try {
-                for (let roll = 0; roll < 3; roll++) {
-                    const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
-                        p_character_id: charId,
-                        p_biome: biome
-                    });
-                    if (!error && data?.success) {
-                        encounter = {
-                            pokemon_id: data.pokemon_id,
-                            pokemon_name: data.pokemon_name,
-                            sprite_url: data.sprite_url
-                        };
-                        isShiny = data.is_shiny || false;
-                        serverSprite = data.sprite_url;
-                        if (this.isPokemonTimeValid(encounter.pokemon_id)) break;
-                        encounter = null;
-                    }
+                const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
+                    p_character_id: charId,
+                    p_biome: biome,
+                    p_is_night: this.getDayNight().isNight
+                });
+                if (!error && data?.success) {
+                    encounter = {
+                        pokemon_id: data.pokemon_id,
+                        pokemon_name: data.pokemon_name,
+                        sprite_url: data.sprite_url
+                    };
+                    isShiny = data.is_shiny || false;
+                    serverSprite = data.sprite_url;
                 }
             } catch (e) {}
         }
