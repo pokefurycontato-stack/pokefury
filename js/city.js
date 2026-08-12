@@ -44,6 +44,7 @@ class CityScreen {
         this.npcDialogueOpen = false;
         this.weatherParticles = [];
         this._weather = null;
+        this.puddles = [];
         this.battleZones = [];
         this.currentBattleZone = null;
         this.spawnZones = [];
@@ -1996,6 +1997,17 @@ class CityScreen {
         return true;
     }
 
+    drawSpriteReflection(img, srcX, srcY, srcW, srcH, dx, dy, dw, dh) {
+        if (this._weather !== 'rain') return;
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.translate(dx + dw / 2, dy + dh);
+        ctx.scale(1, -1);
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, -dw / 2, -dh, dw, dh * 0.55);
+        ctx.restore();
+    }
+
     updateWeatherHud() {
         const el = document.getElementById('city-weather-hud');
         if (!el) return;
@@ -2021,6 +2033,20 @@ class CityScreen {
         el.innerHTML = `<span>${timeIcon}</span><span style="font-size:12px;">${timeLabel}</span>` + (weatherIcon ? `<span>${weatherIcon}</span>` : '');
     }
 
+    _generatePuddles() {
+        this.puddles = [];
+        for (let i = 0; i < 50; i++) {
+            const x = 200 + (Math.abs(Math.sin(i * 37.7)) * 4500);
+            const y = 200 + (Math.abs(Math.cos(i * 53.3)) * 4500);
+            this.puddles.push({
+                x, y,
+                rx: 20 + (Math.abs(Math.sin(i * 17)) * 30),
+                ry: 8 + (Math.abs(Math.cos(i * 23)) * 8),
+                opacity: 0.12 + (Math.abs(Math.sin(i * 29)) * 0.18)
+            });
+        }
+    }
+
     _updateWeatherParticles() {
         const w = this.canvas.width;
         const h = this.canvas.height;
@@ -2028,6 +2054,8 @@ class CityScreen {
         if (weather !== this._weather) {
             this._weather = weather;
             this.weatherParticles = [];
+            if (weather === 'rain') this._generatePuddles();
+            else this.puddles = [];
         }
         if (weather === 'clear') { this.weatherParticles = []; return; }
 
@@ -2181,6 +2209,27 @@ class CityScreen {
             ctx.restore();
         });
 
+        // Puddles during rain
+        if (this._weather === 'rain' && this.puddles.length > 0) {
+            for (const pd of this.puddles) {
+                const sx = pd.x - camX;
+                const sy = pd.y - camY;
+                if (sx < -80 || sx > cw + 80 || sy < -40 || sy > ch + 40) continue;
+                ctx.save();
+                ctx.globalAlpha = pd.opacity;
+                ctx.fillStyle = '#8ec8e8';
+                ctx.beginPath();
+                ctx.ellipse(sx, sy, pd.rx, pd.ry, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = pd.opacity * 0.6;
+                ctx.fillStyle = '#d0ecff';
+                ctx.beginPath();
+                ctx.ellipse(sx - pd.rx * 0.2, sy - pd.ry * 0.3, pd.rx * 0.5, pd.ry * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
         this.renderWildPokemon();
 
         this.teleports.forEach(t => {
@@ -2257,8 +2306,10 @@ class CityScreen {
                     }
                     ctx.drawImage(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
                     if (clipBottom > 0) ctx.restore();
+                    this.drawSpriteReflection(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
                 } else {
                     ctx.drawImage(img, sx, sy, ps, ps);
+                    this.drawSpriteReflection(img, 0, 0, img.naturalWidth, img.naturalHeight, sx, sy, ps, ps);
                 }
             } else {
                 ctx.fillStyle = n.npc_type === 'professor' ? '#ffd54f' : (n.npc_type === 'narrator' ? '#f59e0b' : (n.npc_type === 'vendor' ? '#2f855a' : (n.npc_type === 'banker' ? '#8b5cf6' : '#ff8fab')));
@@ -2377,8 +2428,10 @@ class CityScreen {
                     const isMoving = p.isMe ? (this.moveProgress < 1.0) : (pmp < 1.0 && (dx > 2 || dy > 2));
                     const walkIdx = isMoving ? Math.min(Math.floor(pmp * 4), 3) : 1;
                     ctx.drawImage(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
+                    this.drawSpriteReflection(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
                 } else {
                     ctx.drawImage(skinImg, drawX, drawY, ps, ps);
+                    this.drawSpriteReflection(skinImg, 0, 0, skinImg.naturalWidth, skinImg.naturalHeight, drawX, drawY, ps, ps);
                 }
             } else {
                 ctx.fillStyle = p.isMe ? '#3498db' : '#e94560';
