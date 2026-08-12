@@ -104,6 +104,7 @@ class CityScreen {
             await this.spawnVisiblePokemon();
             if (LS) LS.setProgress(40);
             await this.loadPlayerSpawn();
+            await this.syncServerTime();
             await this.registerPlayer();
             this.cameraX = this.playerX;
             this.cameraY = this.playerY;
@@ -148,6 +149,7 @@ class CityScreen {
             await this.loadSpawnPoints(); // depende de spawnZones
             if (LS) LS.setProgress(72);
             await this.loadPlayerSpawn();
+            await this.syncServerTime();
             await this.registerPlayer();
             if (LS) LS.setProgress(80);
             await this.loadExistingPlayers();
@@ -1947,10 +1949,23 @@ class CityScreen {
         } catch (e) {}
     }
 
+    serverNow() {
+        return Date.now() + (this._serverTimeOffset || 0);
+    }
+
+    async syncServerTime() {
+        try {
+            const { data, error } = await window.db.rpc('get_server_time');
+            if (!error && data != null) {
+                this._serverTimeOffset = data - Date.now();
+            }
+        } catch (e) {}
+    }
+
     getDayNight() {
         const CYCLE = 30 * 60 * 1000;  // 30 min total (15 day + 15 night)
         const DAY = 15 * 60 * 1000;    // 15 min day
-        const t = Date.now() % CYCLE;
+        const t = this.serverNow() % CYCLE;
         const isNight = t >= DAY;
         const dayPhase = t / DAY;                     // 0..1 dentro do dia
         const nightPhase = (t - DAY) / (CYCLE - DAY); // 0..1 dentro da noite
