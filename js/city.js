@@ -1947,6 +1947,50 @@ class CityScreen {
         } catch (e) {}
     }
 
+    getDayNight() {
+        const CYCLE = 30 * 60 * 1000;  // 30 min total (15 day + 15 night)
+        const DAY = 15 * 60 * 1000;    // 15 min day
+        const t = Date.now() % CYCLE;
+        const isNight = t >= DAY;
+        const dayPhase = t / DAY;                     // 0..1 dentro do dia
+        const nightPhase = (t - DAY) / (CYCLE - DAY); // 0..1 dentro da noite
+
+        // darkness: 0 = dia claro, 1 = noite total
+        let darkness = 0;
+        let tint = { r: 0, g: 0, b: 0 };
+        if (!isNight) {
+            // Amanhecer (0-20% do dia): laranja -> dia claro
+            if (dayPhase < 0.2) {
+                const p = dayPhase / 0.2;
+                darkness = 0.25 * (1 - p);
+                tint = { r: 255, g: 140, b: 60 }; // laranja amanhecer
+            }
+            // Entardecer (80-100% do dia): dia claro -> laranja
+            else if (dayPhase > 0.8) {
+                const p = (dayPhase - 0.8) / 0.2;
+                darkness = 0.35 * p;
+                tint = { r: 255, g: 90, b: 40 }; // laranja entardecer
+            } else {
+                darkness = 0;
+                tint = { r: 0, g: 0, b: 0 };
+            }
+        } else {
+            // Noite: escuro com tons de azul
+            const p = nightPhase;
+            // transição suave: início e fim da noite um pouco mais claros
+            let nightDarkness = 0.72;
+            if (p < 0.15) nightDarkness = 0.5 + (0.72 - 0.5) * (p / 0.15);
+            else if (p > 0.85) nightDarkness = 0.72 - (0.72 - 0.45) * ((p - 0.85) / 0.15);
+            darkness = nightDarkness;
+            tint = { r: 20, g: 30, b: 80 }; // azul noite
+        }
+
+        // Ângulo do sol (para sombras): 0 = leste, PI/2 = sul (meio-dia), PI = oeste
+        const sunAngle = isNight ? Math.PI : (Math.PI * dayPhase);
+
+        return { isNight, darkness, tint, sunAngle, dayPhase, nightPhase };
+    }
+
     loop() {
         if (!this.running) return;
         this.update();
@@ -1965,6 +2009,12 @@ class CityScreen {
 
         const camX = this.cameraX - cw / 2;
         const camY = this.cameraY - ch / 2;
+
+        const dn = this.getDayNight();
+        const sunHeight = Math.max(0.15, Math.sin(dn.sunAngle));
+        const shadowLen = (1 - sunHeight) * 16;
+        const shadowOffX = -Math.cos(dn.sunAngle) * shadowLen;
+        const shadowOffY = 2 + sunHeight * 3;
 
         ctx.fillStyle = '#2d5a27';
         ctx.fillRect(0, 0, cw, ch);
@@ -2051,7 +2101,7 @@ class CityScreen {
 
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
-            ctx.ellipse(sx + ps / 2, sy + ps - 2, ps / 3, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(sx + ps / 2 + shadowOffX, sy + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
             ctx.fill();
 
             const img = n._img;
@@ -2185,7 +2235,7 @@ class CityScreen {
 
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
-            ctx.ellipse(drawX + ps / 2, drawY + ps - 2, ps / 3, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(drawX + ps / 2 + shadowOffX, drawY + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
             ctx.fill();
 
             const skinImg = p._skinImg;
@@ -2222,6 +2272,15 @@ class CityScreen {
         });
 
         ctx.restore();
+
+        // Day/night overlay
+        if (dn.darkness > 0.01) {
+            ctx.save();
+            ctx.globalAlpha = dn.darkness;
+            ctx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.restore();
+        }
 
         const posEl = document.getElementById('city-pos');
         if (posEl) posEl.textContent = `X: ${Math.round(this.playerX)} Y: ${Math.round(this.playerY)}`;
