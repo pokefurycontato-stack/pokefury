@@ -1706,31 +1706,28 @@ toggleVendorMode() {
         const img = asset._img || asset;
         const w = (img.naturalWidth || 0) * (asset.scale || 1);
         const h = (img.naturalHeight || 0) * (asset.scale || 1);
-        const SNAP = 40;
-        let bestX = x, bestY = y, bestDist = SNAP;
-        for (const a of this.assets) {
-            if (a._id === asset._id) continue;
-            if ((a.layer || 0) !== this.activeLayer) continue;
-            const ai = a._img;
-            if (!ai || !ai.complete || !ai.naturalWidth) continue;
-            const aw = ai.naturalWidth * (a.scale || 1);
-            const ah = ai.naturalHeight * (a.scale || 1);
-            const candidates = [
-                { nx: a.pos_x, ny: a.pos_y + ah, d: Math.abs(y - (a.pos_y + ah)) }, // below
-                { nx: a.pos_x, ny: a.pos_y - h, d: Math.abs(y - (a.pos_y - h)) },  // above
-                { nx: a.pos_x + aw, ny: a.pos_y, d: Math.abs(x - (a.pos_x + aw)) }, // right
-                { nx: a.pos_x - w, ny: a.pos_y, d: Math.abs(x - (a.pos_x - w)) },  // left
-                { nx: a.pos_x, ny: a.pos_y, d: Math.min(Math.abs(x - a.pos_x), Math.abs(y - a.pos_y)) } // same position
-            ];
-            for (const c of candidates) {
-                if (c.d < bestDist) {
-                    bestDist = c.d;
-                    bestX = c.nx;
-                    bestY = c.ny;
-                }
-            }
+        const SNAP = 48;
+
+        // Snap only to the last added asset (excluding the current one)
+        const last = [...this.assets].filter(a => a._id !== asset._id).pop();
+        if (!last) return { x, y };
+
+        const ai = last._img;
+        if (!ai || !ai.complete || !ai.naturalWidth) return { x, y };
+        const aw = ai.naturalWidth * (last.scale || 1);
+        const ah = ai.naturalHeight * (last.scale || 1);
+
+        const candidates = [
+            { nx: last.pos_x, ny: last.pos_y + ah, d: Math.hypot(x - last.pos_x, y - (last.pos_y + ah)) }, // below
+            { nx: last.pos_x, ny: last.pos_y - h, d: Math.hypot(x - last.pos_x, y - (last.pos_y - h)) },  // above
+            { nx: last.pos_x + aw, ny: last.pos_y, d: Math.hypot(x - (last.pos_x + aw), y - last.pos_y) }, // right
+            { nx: last.pos_x - w, ny: last.pos_y, d: Math.hypot(x - (last.pos_x - w), y - last.pos_y) },  // left
+        ];
+        let best = null, bestDist = SNAP;
+        for (const c of candidates) {
+            if (c.d < bestDist) { bestDist = c.d; best = c; }
         }
-        return { x: bestX, y: bestY };
+        return best ? { x: best.nx, y: best.ny } : { x, y };
     }
 
     onMouseMove(e) {
@@ -1753,10 +1750,6 @@ toggleVendorMode() {
         if (e.shiftKey) {
             newX = Math.round(newX / 32) * 32;
             newY = Math.round(newY / 32) * 32;
-        } else {
-            const snapped = this.snapPosition(newX, newY, this.selected);
-            newX = snapped.x;
-            newY = snapped.y;
         }
         this.selected.pos_x = newX;
         this.selected.pos_y = newY;
