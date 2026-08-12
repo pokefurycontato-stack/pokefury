@@ -412,6 +412,15 @@ export function showBattleMessage(message, autoHideMs = 0) {
             const msgEl = $('#battle-message');
             if (!msgEl) { resolve(); return; }
 
+            // Quando a aba está em segundo plano, pula a animação de digitação
+            // para a batalha não congelar (browsers pausam setInterval/rAF).
+            if (document.hidden) {
+                msgEl.innerText = message;
+                msgEl.classList.add('visible');
+                resolve();
+                return;
+            }
+
             if (battleMessageInterval) {
                 clearInterval(battleMessageInterval);
                 battleMessageInterval = null;

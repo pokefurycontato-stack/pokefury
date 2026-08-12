@@ -23,6 +23,8 @@ export class BattleAnimations {
     }
 
     _sleep(ms) {
+        // Quando a aba está em segundo plano, resolve imediatamente para não congelar
+        if (document.hidden) return Promise.resolve();
         return new Promise(resolve => setTimeout(resolve, Math.round(ms / (this.speedMultiplier || 1))));
     }
 

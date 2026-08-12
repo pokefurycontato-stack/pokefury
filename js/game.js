@@ -7309,7 +7309,10 @@ openEventsPanel() {
         }
         activeEntries.add(pokemon);
         try {
-        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => {
+            if (document.hidden) { resolve(); return; }
+            requestAnimationFrame(resolve);
+        });
         const sprites = getBattlePokemonSprites();
         const sprite = sprites[side];
         if (!sprite) return;
