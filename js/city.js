@@ -1957,8 +1957,9 @@ class CityScreen {
     }
 
     getWeather() {
-        const SLOT = 7.5 * 60 * 1000; // muda na metade do dia e na metade da noite
-        const slot = Math.floor(this.serverNow() / SLOT);
+        const SLOT = 15 * 60 * 1000;      // clima muda a cada 15 min
+        const OFFSET = 7.5 * 60 * 1000;   // deslocado no meio entre dia e noite
+        const slot = Math.floor((this.serverNow() + OFFSET) / SLOT);
         const h = Math.abs(Math.sin(slot * 127.1 + 311.7) * 43758.5453) % 1;
         if (h < 0.45) return 'clear';
         if (h < 0.78) return 'rain';
