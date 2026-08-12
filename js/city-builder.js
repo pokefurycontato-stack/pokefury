@@ -1567,6 +1567,8 @@ toggleVendorMode() {
             _overlay: null
         };
         img.onload = () => {
+            item._nw = img.naturalWidth;
+            item._nh = img.naturalHeight;
             const snapped = this.snapPosition(item.pos_x, item.pos_y, item);
             item.pos_x = snapped.x;
             item.pos_y = snapped.y;
@@ -1690,6 +1692,8 @@ toggleVendorMode() {
             _overlay: null
         };
         img.onload = () => {
+            item._nw = img.naturalWidth;
+            item._nh = img.naturalHeight;
             if (item.has_collision) {
                 item._mask = this.createMask(img);
                 item._overlay = this.createOverlay(img);
@@ -1704,18 +1708,15 @@ toggleVendorMode() {
 
     snapPosition(x, y, asset) {
         const img = asset._img || asset;
-        const w = (img.naturalWidth || 0) * (asset.scale || 1);
-        const h = (img.naturalHeight || 0) * (asset.scale || 1);
-        const SNAP = 48;
+        const w = asset._nw || (img.naturalWidth || 0) * (asset.scale || 1);
+        const h = asset._nh || (img.naturalHeight || 0) * (asset.scale || 1);
 
-        // Snap only to the last added asset (excluding the current one)
         const last = [...this.assets].filter(a => a._id !== asset._id).pop();
         if (!last) return { x, y };
 
-        const ai = last._img;
-        if (!ai || !ai.complete || !ai.naturalWidth) return { x, y };
-        const aw = ai.naturalWidth * (last.scale || 1);
-        const ah = ai.naturalHeight * (last.scale || 1);
+        const aw = last._nw || (last._img?.naturalWidth || 0) * (last.scale || 1);
+        const ah = last._nh || (last._img?.naturalHeight || 0) * (last.scale || 1);
+        if (!aw || !ah) return { x, y };
 
         const candidates = [
             { nx: last.pos_x, ny: last.pos_y + ah, d: Math.hypot(x - last.pos_x, y - (last.pos_y + ah)) }, // below
@@ -1723,11 +1724,11 @@ toggleVendorMode() {
             { nx: last.pos_x + aw, ny: last.pos_y, d: Math.hypot(x - (last.pos_x + aw), y - last.pos_y) }, // right
             { nx: last.pos_x - w, ny: last.pos_y, d: Math.hypot(x - (last.pos_x - w), y - last.pos_y) },  // left
         ];
-        let best = null, bestDist = SNAP;
+        let best = candidates[0];
         for (const c of candidates) {
-            if (c.d < bestDist) { bestDist = c.d; best = c; }
+            if (c.d < best.d) best = c;
         }
-        return best ? { x: best.nx, y: best.ny } : { x, y };
+        return { x: best.nx, y: best.ny };
     }
 
     onMouseMove(e) {
