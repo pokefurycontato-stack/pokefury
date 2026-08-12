@@ -1567,6 +1567,9 @@ toggleVendorMode() {
             _overlay: null
         };
         img.onload = () => {
+            const snapped = this.snapPosition(item.pos_x, item.pos_y, item);
+            item.pos_x = snapped.x;
+            item.pos_y = snapped.y;
             this.render();
             if (item.has_collision) {
                 item._mask = this.createMask(img);
@@ -1654,11 +1657,79 @@ toggleVendorMode() {
             this.dragging = true;
             this.dragOffset = { x: w.x - hit.pos_x, y: w.y - hit.pos_y };
         } else {
-            // Avoid accidental duplication when clicking empty space.
+            // Duplicate the selected asset when clicking empty space
+            if (this.selected && this.selected.asset_id) {
+                this.duplicateAsset(this.selected, w.x, w.y);
+                return;
+            }
             this.selected = null;
         }
         this.updateProps();
         this.render();
+    }
+
+    duplicateAsset(source, worldX, worldY) {
+        const img = new Image();
+        img.src = source.asset_url;
+        const snapItem = { _img: null, scale: source.scale || 1.0, _id: -1 };
+        const snapped = this.snapPosition(worldX, worldY, { _img: source._img, scale: source.scale || 1.0, _id: source._id });
+        const item = {
+            _id: this.nextId++,
+            asset_id: source.asset_id,
+            asset_url: source.asset_url,
+            pos_x: snapped.x,
+            pos_y: snapped.y,
+            scale: source.scale || 1.0,
+            rotation: source.rotation || 0,
+            z_index: this.assets.length,
+            layer: this.activeLayer,
+            has_collision: source.has_collision || false,
+            collision_boxes: source.collision_boxes ? JSON.parse(JSON.stringify(source.collision_boxes)) : [],
+            _img: img,
+            _mask: null,
+            _overlay: null
+        };
+        img.onload = () => {
+            if (item.has_collision) {
+                item._mask = this.createMask(img);
+                item._overlay = this.createOverlay(img);
+            }
+            this.render();
+        };
+        this.assets.push(item);
+        this.selected = item;
+        this.updateProps();
+        this.render();
+    }
+
+    snapPosition(x, y, asset) {
+        const img = asset._img || asset;
+        const w = (img.naturalWidth || 0) * (asset.scale || 1);
+        const h = (img.naturalHeight || 0) * (asset.scale || 1);
+        const SNAP = 24;
+        let bestX = x, bestY = y, bestDist = SNAP;
+        for (const a of this.assets) {
+            if (a._id === asset._id) continue;
+            if ((a.layer || 0) !== this.activeLayer) continue;
+            const ai = a._img;
+            if (!ai || !ai.complete || !ai.naturalWidth) continue;
+            const aw = ai.naturalWidth * (a.scale || 1);
+            const ah = ai.naturalHeight * (a.scale || 1);
+            const candidates = [
+                { nx: a.pos_x, ny: a.pos_y + ah, d: Math.abs(y - (a.pos_y + ah)) }, // below
+                { nx: a.pos_x, ny: a.pos_y - h, d: Math.abs(y - (a.pos_y - h)) },  // above
+                { nx: a.pos_x + aw, ny: a.pos_y, d: Math.abs(x - (a.pos_x + aw)) }, // right
+                { nx: a.pos_x - w, ny: a.pos_y, d: Math.abs(x - (a.pos_x - w)) },  // left
+            ];
+            for (const c of candidates) {
+                if (c.d < bestDist) {
+                    bestDist = c.d;
+                    bestX = c.nx;
+                    bestY = c.ny;
+                }
+            }
+        }
+        return { x: bestX, y: bestY };
     }
 
     onMouseMove(e) {
