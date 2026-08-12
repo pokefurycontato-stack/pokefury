@@ -28,6 +28,8 @@ class CityScreen {
         this.npcs = [];
         this.nearestNpc = null;
         this.npcDialogueOpen = false;
+        this.weatherParticles = [];
+        this._weather = null;
         this.battleZones = [];
         this.currentBattleZone = null;
         this.spawnZones = [];
@@ -1851,6 +1853,7 @@ class CityScreen {
     }
 
     update() {
+        this._updateWeatherParticles();
         if (this.playerMoving) {
             this.moveProgress += 0.04;
             if (this.moveProgress >= 1) {
@@ -1951,6 +1954,55 @@ class CityScreen {
 
     serverNow() {
         return Date.now() + (this._serverTimeOffset || 0);
+    }
+
+    getWeather() {
+        const SLOT = 4 * 60 * 1000; // muda a cada 4 minutos
+        const slot = Math.floor(this.serverNow() / SLOT);
+        const h = Math.abs(Math.sin(slot * 127.1 + 311.7) * 43758.5453) % 1;
+        if (h < 0.45) return 'clear';
+        if (h < 0.78) return 'rain';
+        return 'snow';
+    }
+
+    _updateWeatherParticles() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const weather = this.getWeather();
+        if (weather !== this._weather) {
+            this._weather = weather;
+            this.weatherParticles = [];
+        }
+        if (weather === 'clear') { this.weatherParticles = []; return; }
+
+        const target = weather === 'rain' ? 120 : 70;
+        while (this.weatherParticles.length < target) {
+            this.weatherParticles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                speed: weather === 'rain' ? (9 + Math.random() * 6) : (1.2 + Math.random() * 2),
+                len: weather === 'rain' ? (15 + Math.random() * 15) : 0,
+                size: weather === 'rain' ? 0 : (2 + Math.random() * 4),
+                opacity: 0.2 + Math.random() * 0.4,
+                wind: weather === 'rain' ? (-1.5 - Math.random() * 1) : 0,
+                wobble: Math.random() * Math.PI * 2,
+                wobbleSpeed: 0.02 + Math.random() * 0.03
+            });
+        }
+
+        for (const p of this.weatherParticles) {
+            if (weather === 'rain') {
+                p.x += p.wind;
+                p.y += p.speed;
+                if (p.y > h) { p.y = -p.len; p.x = Math.random() * w; }
+                if (p.x < -20) p.x = w + 10;
+            } else {
+                p.wobble += p.wobbleSpeed;
+                p.x += Math.sin(p.wobble) * 0.8;
+                p.y += p.speed;
+                if (p.y > h + 10) { p.y = -10; p.x = Math.random() * w; }
+            }
+        }
     }
 
     async syncServerTime() {
@@ -2294,6 +2346,28 @@ class CityScreen {
             ctx.globalAlpha = dn.darkness;
             ctx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
             ctx.fillRect(0, 0, cw, ch);
+            ctx.restore();
+        }
+
+        // Weather particles
+        const weather = this._weather || 'clear';
+        if (weather !== 'clear') {
+            ctx.save();
+            for (const p of this.weatherParticles) {
+                if (weather === 'rain') {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p.x + p.wind * 0.5, p.y + p.len);
+                    ctx.strokeStyle = `rgba(120,180,255,${p.opacity})`;
+                    ctx.lineWidth = 1.2;
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(220,235,255,${p.opacity})`;
+                    ctx.fill();
+                }
+            }
             ctx.restore();
         }
 
