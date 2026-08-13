@@ -2615,7 +2615,7 @@ class CityScreen {
                     const dx = Math.abs((p.pos_x || 0) - (p.fromX || p.pos_x || 0));
                     const dy = Math.abs((p.pos_y || 0) - (p.fromY || p.pos_y || 0));
                     const isMoving = p.isMe ? (this.moveProgress < 1.0) : (pmp < 1.0 && (dx > 2 || dy > 2));
-                    const walkIdx = isMoving ? Math.min(Math.floor(pmp * 4), 3) : 1;
+                    const walkIdx = isMoving ? Math.min(Math.floor(pmp * 4), 3) : 0;
                     ctx.drawImage(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
                     this.drawSpriteReflection(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
                 } else {
