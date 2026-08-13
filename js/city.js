@@ -397,6 +397,10 @@ class CityScreen {
 
         if (!userId) { return; }
 
+        this._isVisible = true;
+        this._lastActivityTime = Date.now();
+        this.setupVisibilityWatchdog();
+
         // Limpa entradas antigas deste usuario e registra当前位置
         try {
             await window.db.from('city_players').delete().eq('user_id', userId);
@@ -408,13 +412,45 @@ class CityScreen {
                 pos_y: this.playerY,
                 direction: this.playerDir,
                 equipped_title: this.myEquippedTitle || null,
-                equipped_title_id: this.myEquippedTitleId || null
+                equipped_title_id: this.myEquippedTitleId || null,
+                is_visible: true
             });
         } catch (e) {
         }
     }
 
+    setupVisibilityWatchdog() {
+        if (this._visibilityBound) return;
+        this._visibilityBound = true;
+        const mark = () => {
+            this._lastActivityTime = Date.now();
+            if (this._isVisible === false) {
+                this._isVisible = true;
+                if (this.authUserId && this.authUserId !== 'local') {
+                    window.db.from('city_players').update({ is_visible: true }).eq('user_id', this.authUserId).catch(() => {});
+                }
+            }
+        };
+        ['click', 'keydown', 'pointerdown', 'touchstart', 'scroll', 'mousemove'].forEach(evt => {
+            window.addEventListener(evt, mark, { passive: true });
+        });
+        this._visTimer = setInterval(() => this._syncVisibility(), 30000);
+    }
+
+    async _syncVisibility() {
+        if (!this.authUserId || this.authUserId === 'local') return;
+        const inactive = Date.now() - this._lastActivityTime > 5 * 60 * 1000;
+        if (inactive && this._isVisible !== false) {
+            this._isVisible = false;
+            try { await window.db.from('city_players').update({ is_visible: false }).eq('user_id', this.authUserId); } catch (e) {}
+        } else if (!inactive && this._isVisible !== true) {
+            this._isVisible = true;
+            try { await window.db.from('city_players').update({ is_visible: true }).eq('user_id', this.authUserId); } catch (e) {}
+        }
+    }
+
     unregisterPlayer() {
+        if (this._visTimer) { clearInterval(this._visTimer); this._visTimer = null; }
         if (this.authUserId && this.authUserId !== 'local') {
             window.db.from('city_players').delete().eq('user_id', this.authUserId).then(() => {}).catch(() => {});
         }
@@ -426,6 +462,7 @@ class CityScreen {
             if (error) throw error;
             (data || []).forEach(p => {
                 if (p.user_id === this.authUserId) return;
+                if (p.is_visible === false) return;
                 this.players[p.user_id] = { ...p, _skinImg: null };
                 if (p.skin_url) {
                     const img = new Image();
@@ -445,6 +482,10 @@ class CityScreen {
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                 const p = payload.new;
                 if (p.user_id === this.authUserId) return;
+                if (p.is_visible === false) {
+                    delete this.players[p.user_id];
+                    return;
+                }
                 if (!this.players[p.user_id]) {
                     this.players[p.user_id] = {
                         ...p, _skinImg: null,
