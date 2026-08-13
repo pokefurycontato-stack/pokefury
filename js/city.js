@@ -670,7 +670,7 @@ class CityScreen {
                 n._idleT = (n._idleT || 0) - dt;
                 n.direction = 'down';
                 n.walkFrame = 0;
-                if (n._idleT <= 0 && Math.random() < 0.04) {
+                if (n._idleT <= 0 && Math.random() < 0.04 * (this._dt || 1)) {
                     const ox = Math.round((Math.random() * 2 - 1) * maxOffset);
                     const oy = Math.round((Math.random() * 2 - 1) * maxOffset);
                     n._targetX = n.originX + ox;
@@ -693,7 +693,7 @@ class CityScreen {
             n.pos_x += (dx / dist) * Math.min(speed, dist);
             n.pos_y += (dy / dist) * Math.min(speed, dist);
             n.direction = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-            n._walkAnimT = (n._walkAnimT || 0) + 1;
+            n._walkAnimT = (n._walkAnimT || 0) + (this._dt || 1);
             n.walkFrame = Math.floor((n._walkAnimT || 0) * 0.25) % 4;
         } else {
             if (nextState === 'idle') {
@@ -2123,11 +2123,12 @@ class CityScreen {
         return true;
     }
 
-    update() {
-        this._updateWeatherParticles();
+    update(dt) {
+        this._dt = dt || 1;
+        this._updateWeatherParticles(this._dt);
         this.updateWeatherHud();
         if (this.playerMoving) {
-            this.moveProgress += 0.04;
+            this.moveProgress += 0.04 * this._dt;
             if (this.moveProgress >= 1) {
                 this.moveProgress = 1;
                 this.playerMoving = false;
@@ -2144,15 +2145,16 @@ class CityScreen {
 
         Object.values(this.players).forEach(p => {
             if (p.moveProgress < 1) {
-                p.moveProgress += 0.15;
+                p.moveProgress += 0.15 * this._dt;
                 if (p.moveProgress > 1) p.moveProgress = 1;
             }
         });
 
         const targetX = this.playerX;
         const targetY = this.playerY;
-        this.cameraX += (targetX - this.cameraX) * 0.15;
-        this.cameraY += (targetY - this.cameraY) * 0.15;
+        const cl = Math.min(1, 0.15 * this._dt);
+        this.cameraX += (targetX - this.cameraX) * cl;
+        this.cameraY += (targetY - this.cameraY) * cl;
 
         this.nearestTeleport = null;
         for (const t of this.teleports) {
@@ -2209,8 +2211,8 @@ class CityScreen {
         if (!this._lastSync) this._lastSync = 0;
         this._lastSync++;
 
-        this.updateWildPokemon(0.016);
-        this.updateNpcPatrols(0.016);
+        this.updateWildPokemon(0.016 * this._dt);
+        this.updateNpcPatrols(0.016 * this._dt);
     }
 
     async syncPosition() {
@@ -2405,7 +2407,8 @@ class CityScreen {
         }
     }
 
-    _updateWeatherParticles() {
+    _updateWeatherParticles(dt) {
+        const f = dt || 1;
         const w = this.canvas.width;
         const h = this.canvas.height;
         const weather = this.getWeather();
@@ -2434,14 +2437,14 @@ class CityScreen {
 
         for (const p of this.weatherParticles) {
             if (weather === 'rain') {
-                p.x += p.wind;
-                p.y += p.speed;
+                p.x += p.wind * f;
+                p.y += p.speed * f;
                 if (p.y > h) { p.y = -p.len; p.x = Math.random() * w; }
                 if (p.x < -20) p.x = w + 10;
             } else {
-                p.wobble += p.wobbleSpeed;
-                p.x += Math.sin(p.wobble) * 0.8;
-                p.y += p.speed;
+                p.wobble += p.wobbleSpeed * f;
+                p.x += Math.sin(p.wobble) * 0.8 * f;
+                p.y += p.speed * f;
                 if (p.y > h + 10) { p.y = -10; p.x = Math.random() * w; }
             }
         }
@@ -2500,11 +2503,17 @@ class CityScreen {
         return { isNight, darkness, tint, sunAngle, dayPhase, nightPhase };
     }
 
-    loop() {
+    loop(timestamp) {
         if (!this.running) return;
-        this.update();
+        const now = timestamp || performance.now();
+        if (!this._lastFrameTime) this._lastFrameTime = now;
+        let dt = (now - this._lastFrameTime) / (1000 / 60);
+        this._lastFrameTime = now;
+        if (!Number.isFinite(dt) || dt < 0) dt = 0;
+        if (dt > 3) dt = 3;
+        this.update(dt);
         this.render();
-        requestAnimationFrame(() => this.loop());
+        requestAnimationFrame((ts) => this.loop(ts));
     }
 
     render() {
