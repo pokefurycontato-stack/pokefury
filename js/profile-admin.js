@@ -21,6 +21,7 @@ const PROFILE_ELEMENTS_META = [
   { key: 'title5',      label: 'Titulo 5' },
   { key: 'titlesMore',  label: 'Botao mais titulos (+)' },
   { key: 'benefits',    label: 'Beneficios' },
+  { key: 'friends',     label: 'Amigos' },
   { key: 'logout',      label: 'Sair da conta' },
   { key: 'switchChar',  label: 'Trocar de personagem' },
   { key: 'closeBtn',    label: 'Fechar perfil (X)' }
@@ -43,6 +44,7 @@ const PROFILE_DEFAULT_SIZE = {
   title5:      { w: 200, h: 24 },
   titlesMore:  { w: 40, h: 40 },
   benefits:    { w: 220, h: 300 },
+  friends:     { w: 160, h: 40 },
   logout:      { w: 160, h: 36 },
   switchChar:  { w: 160, h: 36 },
   closeBtn:    { w: 40, h: 40 }

@@ -97,6 +97,68 @@ class CityScreen {
                 }
             }
         });
+
+        const cityCanvas = document.getElementById('city-canvas');
+        if (cityCanvas) {
+            cityCanvas.addEventListener('click', (e) => this.handlePlayerClick(e));
+        }
+    }
+
+    handlePlayerClick(e) {
+        const canvas = this.canvas;
+        if (!canvas || !this.running) return;
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const camX = this.cameraX - canvas.width / 2;
+        const camY = this.cameraY - canvas.height / 2;
+        const ps = this.playerSize;
+
+        let hit = null, hitSx = 0, hitSy = 0;
+        for (const key of Object.keys(this.players)) {
+            const p = this.players[key];
+            if (!p || p.is_visible === false) continue;
+            const sx = (p.pos_x ?? 0) - camX;
+            const sy = (p.pos_y ?? 0) - camY;
+            if (cx >= sx - ps / 2 && cx <= sx + ps / 2 && cy >= sy - ps / 2 && cy <= sy + ps / 2) {
+                hit = p; hitSx = sx; hitSy = sy;
+                break;
+            }
+        }
+        if (!hit) { this.closePlayerContextMenu(); return; }
+        this.showPlayerContextMenu(hit, hitSx, hitSy);
+    }
+
+    showPlayerContextMenu(player, sx, sy) {
+        this.closePlayerContextMenu();
+        const canvas = this.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        const menu = document.createElement('div');
+        menu.className = 'player-context-menu';
+        menu.style.cssText = 'position:fixed;z-index:10060;background:#1c2333;border:1px solid rgba(255,255,255,0.15);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;';
+        const friendId = player.character_id;
+        menu.innerHTML = `<button data-action="add-friend" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Adicionar Amigo</button>`;
+        menu.style.left = (rect.left + sx * scaleX) + 'px';
+        menu.style.top = (rect.top + (sy - this.playerSize) * scaleY - 6) + 'px';
+        menu.style.transform = 'translateX(-50%)';
+        document.body.appendChild(menu);
+
+        menu.querySelector('[data-action="add-friend"]').addEventListener('click', async () => {
+            menu.remove();
+            if (friendId && window.pokefury?.friends) {
+                await window.pokefury.friends.addFriend(friendId);
+            }
+        });
+
+        const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', close); } };
+        setTimeout(() => document.addEventListener('click', close), 0);
+    }
+
+    closePlayerContextMenu() {
+        document.querySelectorAll('.player-context-menu').forEach(m => m.remove());
     }
 
     async open() {
@@ -386,6 +448,7 @@ class CityScreen {
 
         this.myPlayer = {
             user_id: this.authUserId,
+            character_id: window.GameData?.currentCharacterId || null,
             character_name: charName,
             skin_url: skinUrl,
             pos_x: this.playerX,
@@ -406,6 +469,7 @@ class CityScreen {
             await window.db.from('city_players').delete().eq('user_id', userId);
             await window.db.from('city_players').insert({
                 user_id: userId,
+                character_id: window.GameData?.currentCharacterId || null,
                 character_name: charName,
                 skin_url: skinUrl,
                 pos_x: this.playerX,

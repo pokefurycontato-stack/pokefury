@@ -21,6 +21,7 @@ const PROFILE_ELEMENTS = [
   { key: 'title5',      label: 'Titulo 5' },
   { key: 'titlesMore',  label: 'Botao mais titulos (+)' },
   { key: 'benefits',    label: 'Beneficios' },
+  { key: 'friends',     label: 'Amigos' },
   { key: 'logout',      label: 'Sair da conta' },
   { key: 'switchChar',  label: 'Trocar de personagem' },
   { key: 'closeBtn',    label: 'Fechar perfil (X)' }
@@ -240,6 +241,8 @@ class ProfileScreen {
       ? benefits.map(b => `<div class="pf-benefit"><span>${escapeHtml(b.label)}</span><span class="pf-benefit-time">${escapeHtml(b.remaining)}</span></div>`).join('')
       : '';
     addEl('benefits', `<div class="pf-benefits">${benefitHtml}</div>`);
+
+    addEl('friends', `<button onclick="window.pokefury.friends.open()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;color:#fff;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;text-shadow:0 1px 3px rgba(0,0,0,0.8);">Amigos</button>`);
 
     addEl('logout', `<button onclick="window.profileScreen.logout()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;"></button>`);
     addEl('switchChar', `<button onclick="window.profileScreen.switchCharacter()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;"></button>`);

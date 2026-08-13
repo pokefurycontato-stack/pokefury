@@ -21,6 +21,7 @@ import { EventManager } from './events.js';
 import { AFKManager } from './afk.js';
 import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
+import { FriendsSystem } from './friends.js';
 
 const SHINY_CHANCE = 128;
 
@@ -661,6 +662,10 @@ class PokeFuryGame {
             this.setupAfkPanel('city-');
             const typeChart = await loadTypeEffectiveness();
             this.afkManager.setTypeChart(typeChart);
+        }
+
+        if (!this.friends) {
+            this.friends = new FriendsSystem(this);
         }
 
 
