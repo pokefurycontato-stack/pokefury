@@ -465,6 +465,8 @@ class CityScreen {
                     existing.pos_y = p.pos_y;
                     existing.direction = p.direction;
                     existing.moveProgress = 0;
+                    existing.equipped_title = p.equipped_title;
+                    existing.equipped_title_id = p.equipped_title_id;
                 }
             } else if (payload.eventType === 'DELETE') {
                 delete this.players[payload.old?.user_id];
