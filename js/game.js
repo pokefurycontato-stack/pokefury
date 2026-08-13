@@ -3127,13 +3127,17 @@ class PokeFuryGame {
         team.forEach((p, i) => {
             const row = document.createElement('div');
             row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
+            const isSameItem = p.heldItemId === item.id;
+            const heldLabel = isSameItem
+                ? 'Este item está equipado neste pokemon'
+                : (p.heldItemId ? '📦 ' + (p.held_item_name || 'Item equipado') : 'Sem item');
             row.innerHTML = `
                 <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
                     <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.4);">${p.held_item ? '📦 ' + (p.held_item_name || 'Item equipado') : 'Sem item'}</div>
+                    <div style="font-size:9px;color:${isSameItem ? '#4ade80' : 'rgba(255,255,255,0.4)'};">${heldLabel}</div>
                 </div>
             `;
             row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
