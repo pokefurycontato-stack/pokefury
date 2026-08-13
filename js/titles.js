@@ -9,6 +9,39 @@
     _queue: [],
     _showing: false,
 
+    RARITY_MAP: {
+      trainer_beginner: 'common',
+      trainer_intermediate: 'uncommon',
+      trainer_senior: 'rare',
+      trainer_master: 'mythic',
+      collector_beginner: 'common',
+      collector_dedicated: 'uncommon',
+      collector_expert: 'rare',
+      collector_master: 'epic',
+      shiny_hunter: 'rare',
+      shiny_legend: 'epic'
+    },
+
+    RARITY_STYLE: {
+      common: { color: '#9ca3af', glow: 'none', label: 'Comum' },
+      uncommon: { color: '#4ade80', glow: 'none', label: 'Incomum' },
+      rare: { color: '#38bdf8', glow: '0 0 6px rgba(56,189,248,0.5)', label: 'Raro' },
+      epic: { color: '#c084fc', glow: '0 0 8px rgba(192,132,252,0.6)', label: 'Épico' },
+      legendary: { color: '#fbbf24', glow: '0 0 10px rgba(251,191,36,0.8)', label: 'Lendário' },
+      mythic: { color: '#ff4d6d', glow: '0 0 14px rgba(255,77,109,0.9)', label: 'Mítico' }
+    },
+
+    getRarity(titleId) {
+      if (this.RARITY_MAP[titleId]) return this.RARITY_MAP[titleId];
+      if (titleId && titleId.startsWith('megamaster_')) return 'mythic';
+      if (titleId && titleId.startsWith('master_')) return 'legendary';
+      return 'common';
+    },
+
+    getRarityStyle(titleId) {
+      return this.RARITY_STYLE[this.getRarity(titleId)] || this.RARITY_STYLE.common;
+    },
+
     // Fila de títulos a exibir (aguarda sair de batalha)
     queueAward(titles) {
       if (!titles || titles.length === 0) return;
@@ -43,8 +76,16 @@
       popup.querySelector('#title-award-ok').onclick = () => {
         popup.remove();
         this._showing = false;
+        this.refreshProfileTitles();
         this._processQueue();
       };
+    },
+
+    refreshProfileTitles() {
+      const screen = document.getElementById('profile-screen');
+      if (screen && !screen.classList.contains('hidden')) {
+        window.profileScreen?.render?.();
+      }
     },
 
     async openTitlesPopup() {
@@ -69,20 +110,32 @@
           <div style="padding:14px;overflow-y:auto;flex:1;">
             ${list.length === 0
               ? '<div style="color:rgba(255,255,255,0.4);text-align:center;padding:40px;">Nenhum título conquistado ainda.</div>'
-              : list.map(t => `
-                <div style="display:flex;align-items:center;gap:10px;background:#161b22;border:1px solid ${t.id === equippedId ? '#fbbf24' : '#30363d'};border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+              : list.map(t => {
+                  const style = window.Titles.getRarityStyle(t.id);
+                  const isEquipped = t.id === equippedId;
+                  return `
+                <div style="display:flex;align-items:center;gap:10px;background:#161b22;border:1px solid ${isEquipped ? style.color : '#30363d'};border-radius:8px;padding:10px 12px;margin-bottom:6px;">
                   <span style="font-size:20px;">🏅</span>
                   <div style="flex:1;min-width:0;">
-                    <div style="color:#fff;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.name)}</div>
-                    ${t.id === equippedId ? '<div style="color:#fbbf24;font-size:10px;">Equipado</div>' : ''}
+                    <div style="color:${style.color};font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:${style.glow};">${escapeHtml(t.name)}</div>
+                    <div style="color:rgba(255,255,255,0.4);font-size:10px;">${style.label}${isEquipped ? ' · Equipado' : ''}</div>
                   </div>
-                  ${t.id === equippedId
+                  ${isEquipped
                     ? '<button style="padding:6px 12px;border-radius:6px;border:none;background:#30363d;color:#999;font-size:11px;cursor:default;">EQUIPADO</button>'
-                    : `<button onclick="window.Titles.equipTitle('${t.id}')" style="padding:6px 14px;border-radius:6px;border:none;background:#fbbf24;color:#000;font-size:11px;font-weight:700;cursor:pointer;">EQUIPAR TÍTULO</button>`}
-                </div>`).join('')}
+                    : `<button onclick="window.Titles.equipTitle('${t.id}')" style="padding:6px 14px;border-radius:6px;border:none;background:${style.color};color:#000;font-size:11px;font-weight:700;cursor:pointer;">EQUIPAR TÍTULO</button>`}
+                </div>`;}).join('')}
           </div>
         </div>`;
       document.body.appendChild(overlay);
+    },
+
+    // Últimos N títulos (para os slots do perfil)
+    async loadLastTitles(count) {
+      const charId = window.GameData?.currentCharacterId;
+      if (!charId) return [];
+      const { data } = await window.db.rpc('get_earned_titles', { p_character_id: charId });
+      if (!Array.isArray(data)) return [];
+      return data.slice(0, count);
     },
 
     async equipTitle(titleId) {
@@ -90,7 +143,7 @@
       if (!charId) return;
       const { data, error } = await window.db.rpc('equip_title', { p_character_id: charId, p_title_id: titleId });
       if (error || data?.error) { alert('Erro ao equipar título'); return; }
-      document.getElementById('titles-overlay')?.remove();
+      this.refreshProfileTitles();
       this.openTitlesPopup();
     }
   };

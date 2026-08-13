@@ -164,6 +164,7 @@ class ProfileScreen {
     const spriteUrl = await this.resolveSpriteUrl();
     const benefits = this.getActiveBenefits();
     const currentRegion = this.regions[this.regionIndex]?.name || '';
+    const lastTitles = window.Titles ? await window.Titles.loadLastTitles(5) : [];
 
     const addEl = (key, innerHTML) => {
       const r = elems[key];
@@ -190,7 +191,15 @@ class ProfileScreen {
     addEl('badgesNext', `<button onclick="window.profileScreen.nextRegion()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;"></button>`);
 
     for (let i = 1; i <= 5; i++) {
-      addEl('title' + i, `<div class="pf-text pf-title-slot" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:500;"></div>`);
+      const t = lastTitles[i - 1];
+      let inner = '';
+      if (t) {
+        const style = window.Titles ? window.Titles.getRarityStyle(t.id) : { color: '#000', glow: 'none' };
+        inner = `<div class="pf-text pf-title-slot" style="display:flex;align-items:center;justify-content:center;height:100%;font-weight:700;font-size:11px;color:${style.color};text-shadow:${style.glow};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;">${escapeHtml(t.name)}</div>`;
+      } else {
+        inner = `<div class="pf-text pf-title-slot" style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(0,0,0,0.3);font-weight:500;"></div>`;
+      }
+      addEl('title' + i, inner);
     }
     addEl('titlesMore', `<button class="pf-btn" onclick="window.profileScreen.openTitles()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;color:#fff;font-size:16px;">+</button>`);
 
