@@ -1083,6 +1083,23 @@ class CityScreen {
         } catch (e) {}
     }
 
+    async updateEquippedTitle(titleId, titleName) {
+        this.myEquippedTitleId = titleId || null;
+        this.myEquippedTitle = titleName || null;
+        if (this.myPlayer) {
+            this.myPlayer.equipped_title = titleName || null;
+            this.myPlayer.equipped_title_id = titleId || null;
+        }
+        if (this.authUserId && this.authUserId !== 'local') {
+            try {
+                await window.db.from('city_players').update({
+                    equipped_title: titleName || null,
+                    equipped_title_id: titleId || null
+                }).eq('user_id', this.authUserId);
+            } catch (e) {}
+        }
+    }
+
     async syncRetroactiveTitles() {
         const charId = window.GameData?.currentCharacterId;
         if (!charId) return;

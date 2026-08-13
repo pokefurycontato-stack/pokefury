@@ -144,6 +144,10 @@
       if (!charId) return;
       const { data, error } = await window.db.rpc('equip_title', { p_character_id: charId, p_title_id: titleId });
       if (error || data?.error) { alert('Erro ao equipar título'); return; }
+      const titleName = data?.equipped || null;
+      if (window.cityScreen && typeof window.cityScreen.updateEquippedTitle === 'function') {
+        await window.cityScreen.updateEquippedTitle(titleId, titleName);
+      }
       this.refreshProfileTitles();
       this.openTitlesPopup();
     }
