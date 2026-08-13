@@ -163,6 +163,7 @@ class ProfileScreen {
   }
 
   async render() {
+    console.log('[Profile] render() called');
     const game = window.pokefury;
     const stage = document.getElementById('profile-stage');
     const bg = document.getElementById('profile-bg');
