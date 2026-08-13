@@ -5,64 +5,21 @@
 class PVPSystem {
     constructor(game) {
         this.game = game;
-        this.myTeams = [];
-        this.selectedTeamIndex = 0;
         this._subscription = null;
     }
 
     // ========================
-    //  TEAMS
+    //  CURRENT TEAM (time atual do jogador)
     // ========================
 
-    async loadTeams() {
-        const charId = this.game.currentCharacterId;
-        if (!charId) return;
-        const { data } = await window.db.from('pvp_teams')
+    async getCurrentTeamPokemon(characterId) {
+        if (!characterId) return [];
+        const { data, error } = await window.db.from('pokemon_team')
             .select('*')
-            .eq('character_id', charId)
-            .order('created_at');
-        this.myTeams = data || [];
-    }
-
-    async saveTeam(teamIndex, teamName, pokemonIds) {
-        const charId = this.game.currentCharacterId;
-        if (!charId) return false;
-
-        const { data: { session } } = await window.db.auth.getSession();
-        if (!session) {
-            console.error('[PVP] No active session');
-            return false;
-        }
-
-        const slots = {};
-        for (let i = 0; i < 6; i++) {
-            slots[`slot_${i + 1}`] = pokemonIds[i] || null;
-        }
-        const existing = this.myTeams[teamIndex];
-        if (existing) {
-            const { data, error } = await window.db.from('pvp_teams')
-                .update({ team_name: teamName, ...slots, updated_at: new Date().toISOString() })
-                .eq('id', existing.id)
-                .select();
-            if (error) console.error('[PVP] Update error:', error);
-            return !error;
-        } else {
-            const { data, error } = await window.db.from('pvp_teams')
-                .insert({ character_id: charId, team_name: teamName, ...slots })
-                .select()
-                .single();
-            if (error) {
-                console.error('[PVP] Insert error:', error);
-                return false;
-            }
-            if (data) this.myTeams.push(data);
-            return true;
-        }
-    }
-
-    async deleteTeam(teamId) {
-        await window.db.from('pvp_teams').delete().eq('id', teamId);
-        this.myTeams = this.myTeams.filter(t => t.id !== teamId);
+            .eq('character_id', characterId)
+            .order('slot', { ascending: true });
+        if (error) return [];
+        return data || [];
     }
 
     // ========================
@@ -88,7 +45,7 @@ class PVPSystem {
         });
     }
 
-    async sendChallenge(targetPlayerId, targetName, teamId, betSilver, betGold, betDiamonds) {
+    async sendChallenge(targetPlayerId, targetName, betSilver, betGold, betDiamonds) {
         const charId = this.game.currentCharacterId;
         const charName = this.game.playerName;
         if (!charId) return { error: 'No character' };
@@ -109,7 +66,6 @@ class PVPSystem {
             challenger_name: charName,
             challenged_id: targetPlayerId,
             challenged_name: targetName,
-            pvp_team_id: teamId,
             bet_silver: betSilver || 0,
             bet_gold: betGold || 0,
             bet_diamonds: betDiamonds || 0,
@@ -130,16 +86,16 @@ class PVPSystem {
             if (!challenge) return { error: 'Desafio não encontrado.' };
 
             const charId = this.game.currentCharacterId;
-            const { data: myTeams } = await window.db.from('pvp_teams')
-                .select('id, slot_1')
+            const { data: myTeam } = await window.db.from('pokemon_team')
+                .select('id')
                 .eq('character_id', charId);
-            const hasTeam = myTeams && myTeams.length > 0 && myTeams.some(t => t.slot_1);
+            const hasTeam = myTeam && myTeam.length > 0;
 
             if (!hasTeam) {
                 await window.db.from('pvp_challenges')
                     .update({ status: 'declined', responded_at: new Date().toISOString() })
                     .eq('id', challengeId);
-                return { error: 'Você precisa montar um time de pelo menos 1 pokémon antes de aceitar duelos!', noTeam: true };
+                return { error: 'Você precisa ter um time com pelo menos 1 pokémon antes de aceitar duelos!', noTeam: true };
             }
 
             if ((challenge.bet_silver || 0) > 0 || (challenge.bet_gold || 0) > 0 || (challenge.bet_diamonds || 0) > 0) {
@@ -199,76 +155,6 @@ class PVPSystem {
     // ========================
     //  PVP BATTLE
     // ========================
-
-    async initPVPBattle(challenge) {
-        const teamData = await this.loadTeamPokemon(challenge.pvp_team_id);
-        if (!teamData || teamData.length === 0) return null;
-
-        const myTeam = [];
-        for (const p of teamData) {
-            const pokemonData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
-            if (!pokemonData) continue;
-            const pokemon = await createPokemon(pokemonData, p.level, {
-                hp: p.iv_hp, attack: p.iv_attack, defense: p.iv_defense,
-                spAtk: p.iv_sp_atk, spDef: p.iv_sp_def, speed: p.iv_speed
-            }, {
-                hp: p.ev_hp, attack: p.ev_attack, defense: p.ev_defense,
-                spAtk: p.ev_sp_atk, spDef: p.ev_sp_def, speed: p.ev_speed
-            }, p.nature, p.is_shiny);
-            pokemon.currentHp = p.current_hp || pokemon.stats.hp;
-            if (p.moves && Array.isArray(p.moves)) {
-                const moveIds = p.moves.map(m => Number(m.id)).filter(Boolean);
-                if (moveIds.length > 0) {
-                    const { data: moveDetails } = await window.db.from('moves')
-                        .select('id, name, type, category, power, accuracy, pp')
-                        .in('id', moveIds);
-                    if (moveDetails) {
-                        const moveMap = {};
-                        moveDetails.forEach(m => { moveMap[m.id] = m; });
-                        pokemon.moves = p.moves.map(sm => {
-                            const full = moveMap[Number(sm.id)];
-                            if (!full) return null;
-                            return { id: full.id, name: full.name, type: full.type, category: full.category || 'physical', power: full.power || 0, accuracy: full.accuracy || 100, pp: full.pp || 35, currentPp: sm.pp ?? full.pp ?? 35 };
-                        }).filter(Boolean);
-                    }
-                }
-            }
-            myTeam.push(pokemon);
-        }
-
-        return myTeam;
-    }
-
-    async loadTeamPokemon(teamId) {
-        if (!teamId) return [];
-        const { data: team } = await window.db.from('pvp_teams').select('*').eq('id', teamId).single();
-        if (!team) return [];
-        const pokemonIds = [team.slot_1, team.slot_2, team.slot_3, team.slot_4, team.slot_5, team.slot_6].filter(Boolean);
-        if (pokemonIds.length === 0) return [];
-
-        let pokemonData = [];
-        const { data: teamPokemon } = await window.db.from('pokemon_team').select('*').in('id', pokemonIds);
-        if (teamPokemon) pokemonData.push(...teamPokemon);
-
-        const foundIds = new Set(pokemonData.map(p => p.id));
-        const missingIds = pokemonIds.filter(id => !foundIds.has(id));
-        if (missingIds.length > 0) {
-            const { data: pcPokemon } = await window.db.from('pokemon_pc').select('*').in('id', missingIds);
-            if (pcPokemon) pokemonData.push(...pcPokemon);
-        }
-
-        const stillMissing = pokemonIds.filter(id => !pokemonData.find(p => p.id === id));
-        if (stillMissing.length > 0) {
-            console.warn('[PVP] Some pokemon not found:', stillMissing.length, 'missing IDs');
-            const validSlots = ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'slot_6'];
-            const validIds = pokemonData.map(p => p.id);
-            const update = {};
-            validSlots.forEach((slot, i) => { update[slot] = validIds[i] || null; });
-            await window.db.from('pvp_teams').update(update).eq('id', teamId);
-        }
-
-        return pokemonData;
-    }
 }
 
 window.PVPSystem = PVPSystem;
