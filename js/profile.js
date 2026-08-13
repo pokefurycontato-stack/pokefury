@@ -277,7 +277,11 @@ class ProfileScreen {
         if (p && p.fainted) slot.style.opacity = '0.45';
 
         if (p) {
-          const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+          const fallbackUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+          let spriteUrl = fallbackUrl;
+          if (window.PokeAPI && p.id && p.id < 10000) {
+            spriteUrl = window.PokeAPI.getAnimatedFrontUrl(p.id);
+          }
           const hpPct = p.stats?.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
           const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
 
@@ -294,7 +298,7 @@ class ProfileScreen {
 
           slot.innerHTML = `
             <div style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);">
-                <img src="${spriteUrl}" style="width:44px;height:44px;image-rendering:pixelated;object-fit:contain" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">
+                <img src="${spriteUrl}" data-fallback="${fallbackUrl}" style="width:44px;height:44px;image-rendering:pixelated;object-fit:contain" alt="${p.name}" loading="lazy" onerror="if(this.dataset.fallback && this.src !== this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">
                 ${itemIconHtml}
             </div>
             <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
