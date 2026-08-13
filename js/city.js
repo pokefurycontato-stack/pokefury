@@ -167,6 +167,7 @@ class CityScreen {
             await this.loadPlayerSpawn();
             await this.loadLights();
             await this.loadMyEquippedTitle();
+            await this.syncRetroactiveTitles();
             await this.syncServerTime();
             await this.registerPlayer();
             if (LS) LS.setProgress(80);
@@ -1074,6 +1075,19 @@ class CityScreen {
         try {
             const { data } = await window.db.from('game_saves').select('equipped_title_name').eq('id', charId).maybeSingle();
             if (data) this.myEquippedTitle = data.equipped_title_name || null;
+        } catch (e) {}
+    }
+
+    async syncRetroactiveTitles() {
+        const charId = window.GameData?.currentCharacterId;
+        if (!charId) return;
+        if (this._retroTitlesDone) return;
+        this._retroTitlesDone = true;
+        try {
+            const { data } = await window.db.rpc('sync_titles_retroactive', { p_character_id: charId });
+            if (data?.awarded && data.awarded.length > 0) {
+                window.Titles?.queueAward(data.awarded);
+            }
         } catch (e) {}
     }
 
