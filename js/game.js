@@ -6700,9 +6700,7 @@ openEventsPanel() {
                     players.forEach(p => {
                         const row = document.createElement('div');
                         row.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.05);';
-                        const lastSeen = p.last_seen || p.updated_at;
-                        const isOnline = lastSeen && (Date.now() - new Date(lastSeen).getTime()) < 90000;
-                        const dot = `<span style="color:${isOnline ? '#4caf50' : '#f44336'};font-size:10px;margin-left:6px;">${isOnline ? '● online' : '● offline'}</span>`;
+                        const dot = `<span style="color:${p.is_online ? '#4caf50' : '#f44336'};font-size:10px;margin-left:6px;">${p.is_online ? '● online' : '● offline'}</span>`;
                         row.innerHTML = `<span style="color:#fff;font-weight:600;">${p.player_name}</span> <span style="color:rgba(255,255,255,0.4);">(${p.username})</span>${dot}`;
                         row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
                         row.addEventListener('mouseleave', () => row.style.background = 'transparent');
@@ -6725,13 +6723,7 @@ openEventsPanel() {
                     return;
                 }
 
-                const { data: lastActive } = await window.db.from('game_saves')
-                    .select('last_seen, updated_at')
-                    .eq('id', selectedTarget.id)
-                    .maybeSingle();
-
-                const lastSeen = lastActive?.last_seen || lastActive?.updated_at;
-                const isOnline = lastSeen && (Date.now() - new Date(lastSeen).getTime()) < 90000;
+                const { data: isOnline } = await window.db.rpc('is_character_online', { p_character_id: selectedTarget.id });
 
                 if (!isOnline) {
                     const proceed = await new Promise(resolve => {

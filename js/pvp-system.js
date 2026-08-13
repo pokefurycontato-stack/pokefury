@@ -25,11 +25,8 @@ class PVPSystem {
 
     async searchPlayers(query) {
         if (!query || query.length < 2) return [];
-        const { data: chars } = await window.db.from('game_saves')
-            .select('id, player_name, user_id, last_seen, updated_at')
-            .ilike('player_name', `%${query}%`)
-            .limit(10);
-        if (!chars || chars.length === 0) return [];
+        const { data: chars, error } = await window.db.rpc('search_players_online', { p_query: query });
+        if (error || !chars || chars.length === 0) return [];
 
         const userIds = [...new Set(chars.map(c => c.user_id))];
         const { data: profiles } = await window.db.from('profiles')
