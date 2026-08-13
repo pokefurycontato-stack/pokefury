@@ -2858,7 +2858,7 @@ class PokeFuryGame {
 
                 const fallbackUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
                 let spriteUrl = fallbackUrl;
-                if (window.PokeAPI && p.id && p.id < 10000) {
+                if (window.PokeAPI && p.id) {
                     spriteUrl = window.PokeAPI.getAnimatedFrontUrl(p.id);
                 }
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
