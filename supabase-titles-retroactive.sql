@@ -61,6 +61,20 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- Título "Começando a aventura" (todo personagem recebe)
+  IF NOT EXISTS(SELECT 1 FROM character_titles WHERE character_id = p_character_id AND title_id = 'adventure_begin') THEN
+    INSERT INTO character_titles (character_id, title_id, title_name) VALUES (p_character_id, 'adventure_begin', 'Comecando a aventura');
+    v_awarded := v_awarded || jsonb_build_object('id', 'adventure_begin', 'name', 'Comecando a aventura');
+  END IF;
+
+  -- Título "VIP" (se tiver boost VIP ativo)
+  IF EXISTS(SELECT 1 FROM character_boosts WHERE character_id = p_character_id AND boost_type = 'vip' AND expires_at > NOW()) THEN
+    IF NOT EXISTS(SELECT 1 FROM character_titles WHERE character_id = p_character_id AND title_id = 'vip') THEN
+      INSERT INTO character_titles (character_id, title_id, title_name) VALUES (p_character_id, 'vip', 'VIP');
+      v_awarded := v_awarded || jsonb_build_object('id', 'vip', 'name', 'VIP');
+    END IF;
+  END IF;
+
   -- Lendários e Megas (percorre todos os pokemons do time + PC)
   FOR v_poke IN
     SELECT pokemon_id FROM pokemon_team WHERE character_id = p_character_id AND pokemon_id IS NOT NULL

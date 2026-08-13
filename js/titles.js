@@ -17,9 +17,11 @@
       collector_beginner: 'common',
       collector_dedicated: 'uncommon',
       collector_expert: 'rare',
-      collector_master: 'epic',
-      shiny_hunter: 'rare',
-      shiny_legend: 'epic'
+      collector_master: 'legendary',
+      shiny_hunter: 'legendary',
+      shiny_legend: 'mythic',
+      adventure_begin: 'common',
+      vip: 'mythic'
     },
 
     RARITY_STYLE: {
