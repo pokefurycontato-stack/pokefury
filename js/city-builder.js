@@ -2318,14 +2318,6 @@ toggleVendorMode() {
                 if (sourceItems && sourceItems.length > 0 && currentIds.size === 0) {
                     return;
                 }
-                if (table === 'city_npcs') {
-                    const { data: profNpcs } = await window.db.from(table).select('id').eq('npc_type', 'professor');
-                    if (profNpcs) {
-                        for (const p of profNpcs) {
-                            if (!currentIds.has(p.id)) currentIds.add(p.id);
-                        }
-                    }
-                }
                 const existingIds = await fetchIds(table);
                 const staleIds = new Set([...existingIds].filter(id => !currentIds.has(id)));
                 await deleteIds(table, staleIds);
