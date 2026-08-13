@@ -6705,7 +6705,7 @@ openEventsPanel() {
                 if (!isOnline) {
                     const proceed = await new Promise(resolve => {
                         const overlay = document.createElement('div');
-                        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+                        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
                         overlay.innerHTML = `
                             <div style="background:rgba(15,20,35,0.97);border:1px solid rgba(255,193,7,0.3);border-radius:12px;padding:20px;max-width:350px;width:90%;text-align:center;">
                                 <div style="font-size:14px;color:#ffc107;margin-bottom:8px;">⚠️ Jogador pode estar offline</div>
