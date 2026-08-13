@@ -254,7 +254,7 @@ class ProfileScreen {
 
     const game = window.pokefury;
     const team = game?.playerTeam || [];
-    const sig = JSON.stringify(team.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted] : null));
+    const sig = JSON.stringify(team.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted, p.isShiny] : null));
     if (sig === this._teamSig && list.dataset.rendered === '1') {
       console.log('[Profile] renderTeam SKIP (unchanged)');
       return;

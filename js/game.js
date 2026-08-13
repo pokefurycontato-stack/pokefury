@@ -2798,7 +2798,7 @@ class PokeFuryGame {
         if (!list) return;
 
         // Evita recriar o DOM (e reiniciar GIFs) se nada mudou
-        const sig = JSON.stringify(this.playerTeam.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted] : null));
+        const sig = JSON.stringify(this.playerTeam.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted, p.isShiny] : null));
         if (sig === this._partyPanelSig && list.dataset.rendered === '1') return;
         this._partyPanelSig = sig;
         list.dataset.rendered = '1';
