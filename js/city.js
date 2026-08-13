@@ -427,7 +427,7 @@ class CityScreen {
             if (this._isVisible === false) {
                 this._isVisible = true;
                 if (this.authUserId && this.authUserId !== 'local') {
-                    window.db.from('city_players').update({ is_visible: true }).eq('user_id', this.authUserId).catch(() => {});
+                    window.db.from('city_players').update({ is_visible: true }).eq('user_id', this.authUserId).then(() => {}).catch(() => {});
                 }
             }
         };

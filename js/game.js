@@ -368,7 +368,7 @@ class PokeFuryGame {
         this._autoFarming = !!active;
         this.touchPresence();
         if (this.currentCharacterId && window.db && typeof window.db.rpc === 'function') {
-            window.db.rpc('set_auto_farming', { p_character_id: this.currentCharacterId, p_active: !!active }).catch(() => {});
+            window.db.rpc('set_auto_farming', { p_character_id: this.currentCharacterId, p_active: !!active }).then(() => {}).catch(() => {});
         }
     }
 
