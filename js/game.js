@@ -2852,9 +2852,7 @@ class PokeFuryGame {
                 const staticUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
                 let spriteUrl = staticUrl;
                 if (window.PokeAPI && p.id && p.id < 10000) {
-                    const cachedBlob = window.PokeAPI._gifBlobCache[window.PokeAPI.getAnimatedFrontUrl(p.id)];
-                    spriteUrl = cachedBlob || window.PokeAPI.getAnimatedFrontUrl(p.id) || staticUrl;
-                    if (!cachedBlob) window.PokeAPI.getGifBlobUrl(p.id).then(() => {});
+                    spriteUrl = window.PokeAPI.getAnimatedFrontUrl(p.id) || staticUrl;
                 }
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
                 const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
