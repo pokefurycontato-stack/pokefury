@@ -286,12 +286,11 @@ export class FriendsSystem {
 
     async addFriend(friendId) {
         const charId = this._me();
-        if (!charId) { this.toast('Erro ao adicionar amigo', 'error'); return false; }
-        const { data, error } = await window.db.rpc('add_friend', { p_character_id: charId, p_friend_character_id: friendId });
-        if (error) { this.toast('Erro ao adicionar amigo', 'error'); return false; }
+        if (!charId) { this.toast('Erro ao enviar convite', 'error'); return false; }
+        const { data, error } = await window.db.rpc('send_friend_request', { p_character_id: charId, p_friend_character_id: friendId });
+        if (error) { this.toast('Erro ao enviar convite', 'error'); return false; }
         if (data && data.error) { this.toast(data.error, 'error'); return false; }
-        this.toast('Amigo adicionado!', 'success');
-        await this.loadFriends();
+        this.toast('Convite de amizade enviado!', 'success');
         return true;
     }
 
@@ -308,6 +307,66 @@ export class FriendsSystem {
             if (box) box.innerHTML = '';
         }
         await this.loadFriends();
+    }
+
+    initRealtime() {
+        if (this._reqSubscription) return;
+        this._reqSubscription = window.db
+            .channel('friend-requests')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friend_requests' }, (payload) => {
+                const req = payload.new;
+                if (req && req.receiver_character_id === this._me() && req.status === 'pending') {
+                    this.showFriendRequestPopup(req);
+                }
+            })
+            .subscribe();
+        this.loadPendingFriendRequests();
+    }
+
+    async loadPendingFriendRequests() {
+        const me = this._me();
+        if (!me) return;
+        const { data } = await window.db.rpc('get_pending_friend_requests', { p_character_id: me });
+        (data || []).forEach(req => this.showFriendRequestPopup(req));
+    }
+
+    showFriendRequestPopup(req) {
+        if (!this._shownRequests) this._shownRequests = {};
+        if (this._shownRequests[req.id]) return;
+        this._shownRequests[req.id] = true;
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:10090;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#161b22;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:20px;width:min(360px,92vw);text-align:center;">
+                <div style="color:#fff;font-size:15px;font-weight:700;margin-bottom:6px;">👥 Convite de amizade</div>
+                <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:16px;"><b>${esc(req.sender_name || 'Jogador')}</b> te adicionou como amigo.</div>
+                <div style="display:flex;gap:8px;">
+                    <button data-act="accept" style="flex:1;padding:10px;background:linear-gradient(135deg,#4caf50,#388e3c);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">Aceitar</button>
+                    <button data-act="decline" style="flex:1;padding:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.7);cursor:pointer;">Negar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-act="accept"]').addEventListener('click', async () => {
+            overlay.remove();
+            await this.respondFriendRequest(req.id, true);
+        });
+        overlay.querySelector('[data-act="decline"]').addEventListener('click', async () => {
+            overlay.remove();
+            await this.respondFriendRequest(req.id, false);
+        });
+    }
+
+    async respondFriendRequest(requestId, accept) {
+        const { data, error } = await window.db.rpc('respond_friend_request', { p_request_id: requestId, p_accept: accept });
+        if (error || (data && data.error)) { this.toast('Erro ao responder convite', 'error'); return; }
+        if (accept) {
+            this.toast('Amizade aceita!', 'success');
+            await this.loadFriends();
+        } else {
+            this.toast('Convite recusado.', 'info');
+        }
     }
 
     toast(msg, type = 'info') {

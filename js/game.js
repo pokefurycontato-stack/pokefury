@@ -667,6 +667,7 @@ class PokeFuryGame {
         if (!this.friends) {
             this.friends = new FriendsSystem(this);
         }
+        this.friends.initRealtime();
 
 
         const adminPanel = document.getElementById('admin-panel');
