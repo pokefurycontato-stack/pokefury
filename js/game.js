@@ -339,17 +339,37 @@ class PokeFuryGame {
         try {
             this.stopHeartbeat();
         } catch (e) {}
-        const beat = () => {
-            try {
-                if (this.currentCharacterId && window.db && typeof window.db.rpc === 'function') {
-                    window.db.rpc('heartbeat_character', { p_character_id: this.currentCharacterId }).catch(() => {});
-                }
-            } catch (e) {}
-        };
-        beat();
+        this.touchPresence();
         try {
-            this._heartbeatTimer = setInterval(beat, 30000);
+            this._heartbeatTimer = setInterval(() => this.touchPresence(), 60000);
         } catch (e) {}
+    }
+
+    touchPresence() {
+        const now = Date.now();
+        if (this._lastPresenceTouch && now - this._lastPresenceTouch < 30000) return;
+        this._lastPresenceTouch = now;
+        if (!this.currentCharacterId || !window.db) return;
+        window.db.from('game_saves')
+            .update({ last_seen: new Date().toISOString() })
+            .eq('id', this.currentCharacterId)
+            .then(() => {}).catch(() => {});
+    }
+
+    setupPresenceListeners() {
+        if (this._presenceListenersBound) return;
+        this._presenceListenersBound = true;
+        ['click', 'keydown', 'pointerdown', 'touchstart', 'scroll', 'mousemove'].forEach(evt => {
+            window.addEventListener(evt, () => this.touchPresence(), { passive: true });
+        });
+    }
+
+    updateAutoFarmStatus(active) {
+        this._autoFarming = !!active;
+        this.touchPresence();
+        if (this.currentCharacterId && window.db && typeof window.db.rpc === 'function') {
+            window.db.rpc('set_auto_farming', { p_character_id: this.currentCharacterId, p_active: !!active }).catch(() => {});
+        }
     }
 
     stopHeartbeat() {
@@ -480,6 +500,7 @@ class PokeFuryGame {
         }
         this._starting = true;
         this.startHeartbeat();
+        this.setupPresenceListeners();
 
         try {
             const savedTeam = await window.GameData.getTeam();
@@ -6701,7 +6722,8 @@ openEventsPanel() {
                         const row = document.createElement('div');
                         row.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.05);';
                         const dot = `<span style="color:${p.is_online ? '#4caf50' : '#f44336'};font-size:10px;margin-left:6px;">${p.is_online ? '● online' : '● offline'}</span>`;
-                        row.innerHTML = `<span style="color:#fff;font-weight:600;">${p.player_name}</span> <span style="color:rgba(255,255,255,0.4);">(${p.username})</span>${dot}`;
+                        const farmBadge = p.is_auto_farming ? '<span style="color:#ff9800;font-size:9px;margin-left:4px;">🤖 AFK</span>' : '';
+                        row.innerHTML = `<span style="color:#fff;font-weight:600;">${p.player_name}</span> <span style="color:rgba(255,255,255,0.4);">(${p.username})</span>${dot}${farmBadge}`;
                         row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
                         row.addEventListener('mouseleave', () => row.style.background = 'transparent');
                         row.addEventListener('click', () => {

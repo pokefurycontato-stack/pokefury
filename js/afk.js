@@ -33,6 +33,9 @@ export class AFKManager {
             this._homePlayerX = this.game.overworld2d.player.x;
             this._homePlayerY = this.game.overworld2d.player.y;
         }
+        if (this.game && typeof this.game.updateAutoFarmStatus === 'function') {
+            this.game.updateAutoFarmStatus(true);
+        }
         this._loopTick();
     }
 
@@ -43,6 +46,9 @@ export class AFKManager {
         this._visitingCenter = false;
         this._centerStep = 0;
         if (this._loopTimer) { clearTimeout(this._loopTimer); this._loopTimer = null; }
+        if (this.game && typeof this.game.updateAutoFarmStatus === 'function') {
+            this.game.updateAutoFarmStatus(false);
+        }
     }
 
     async _loopTick() {
