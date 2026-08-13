@@ -249,9 +249,9 @@ BEGIN
     RETURN jsonb_build_object('error', 'Item not found');
   END IF;
 
-  INSERT INTO player_inventory (user_id, item_id, quantity)
-  VALUES (auth.uid(), p_item_id, p_quantity)
-  ON CONFLICT (user_id, item_id) DO UPDATE
+  INSERT INTO player_inventory (user_id, character_id, item_id, quantity)
+  VALUES (auth.uid(), p_character_id, p_item_id, p_quantity)
+  ON CONFLICT (character_id, item_id) DO UPDATE
   SET quantity = player_inventory.quantity + EXCLUDED.quantity
   WHERE player_inventory.quantity + EXCLUDED.quantity <= 9999;
 
@@ -289,7 +289,7 @@ BEGIN
 
   -- Lock and check current quantity
   SELECT quantity INTO v_current FROM player_inventory
-  WHERE user_id = auth.uid() AND item_id = p_item_id
+  WHERE character_id = p_character_id AND item_id = p_item_id
   FOR UPDATE;
 
   IF NOT FOUND OR v_current < p_quantity THEN
@@ -297,10 +297,10 @@ BEGIN
   END IF;
 
   IF v_current = p_quantity THEN
-    DELETE FROM player_inventory WHERE user_id = auth.uid() AND item_id = p_item_id;
+    DELETE FROM player_inventory WHERE character_id = p_character_id AND item_id = p_item_id;
   ELSE
     UPDATE player_inventory SET quantity = quantity - p_quantity
-    WHERE user_id = auth.uid() AND item_id = p_item_id;
+    WHERE character_id = p_character_id AND item_id = p_item_id;
   END IF;
 
   RETURN jsonb_build_object('success', true, 'item_id', p_item_id, 'quantity_removed', p_quantity);
@@ -340,7 +340,7 @@ BEGIN
   ) INTO v_result
   FROM player_inventory pi
   JOIN items i ON i.id = pi.item_id
-  WHERE pi.user_id = auth.uid() AND pi.quantity > 0;
+  WHERE pi.character_id = p_character_id AND pi.quantity > 0;
 
   RETURN COALESCE(v_result, '[]'::jsonb);
 END;
