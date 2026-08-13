@@ -4082,8 +4082,9 @@ openEventsPanel() {
             const q = input.value.trim().toLowerCase();
             if (q.length < 1) { results.style.display = 'none'; return; }
 
-            debounce = setTimeout(() => {
-                const matches = (window.ALL_ITEMS || []).filter(i => i.name.toLowerCase().includes(q)).slice(0, 10);
+            debounce = setTimeout(async () => {
+                const { data: dbItems } = await window.db.from('items').select('id, name').ilike('name', `%${q}%`).limit(10);
+                const matches = (dbItems || []).filter(i => (i.name || '').toLowerCase().includes(q)).slice(0, 10);
                 if (matches.length === 0) { results.style.display = 'none'; return; }
 
                 results.innerHTML = '';
