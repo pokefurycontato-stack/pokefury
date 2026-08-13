@@ -3019,14 +3019,17 @@ body {
 }
 
 @keyframes title-rainbow {
-  0% { color: #ff4d6d; text-shadow: 0 0 10px rgba(255,77,109,0.9); }
-  16% { color: #ff9a3c; text-shadow: 0 0 10px rgba(255,154,60,0.9); }
-  33% { color: #ffe14d; text-shadow: 0 0 10px rgba(255,225,77,0.9); }
-  50% { color: #4ade80; text-shadow: 0 0 10px rgba(74,222,128,0.9); }
-  66% { color: #38bdf8; text-shadow: 0 0 10px rgba(56,189,248,0.9); }
-  83% { color: #c084fc; text-shadow: 0 0 10px rgba(192,132,252,0.9); }
-  100% { color: #ff4d6d; text-shadow: 0 0 10px rgba(255,77,109,0.9); }
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
 }
 .title-rainbow {
+  color: #ff4d6d;
+  text-shadow: 0 0 10px rgba(255,77,109,0.9);
   animation: title-rainbow 2.5s linear infinite;
+}
+
+#profile-team-list img {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
 }
