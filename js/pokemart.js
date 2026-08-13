@@ -65,35 +65,23 @@ async function pmBuy(itemId) {
 
   const qtyInput = document.querySelector(`.pm-qty[data-id="${itemId}"]`);
   const qty = Math.max(1, Math.min(99, parseInt(qtyInput?.value || 1)));
-  const totalCost = item.price * qty;
 
-  const cur = await window.GameData.getCurrencies();
-  if (cur.silver < totalCost) {
-    alert(`Prata insuficiente! Necessário: ${totalCost}, disponível: ${cur.silver}`);
-    return;
-  }
-
-  // Spend silver via secure RPC
-  const { data, error } = await window.db.rpc('spend_currency', {
+  // Compra atômica: valida preço no servidor + desconta + adiciona item
+  const { data, error } = await window.db.rpc('buy_item', {
     p_character_id: window.GameData.currentCharacterId,
-    p_currency_type: 'silver',
-    p_amount: totalCost,
-    p_action: 'purchase',
-    p_description: `PokeMart: ${qty}x ${item.name}`,
-    p_created_by: null
+    p_item_id: itemId,
+    p_quantity: qty
   });
   if (error) {
     alert(`Erro ao processar pagamento: ${error.message}`);
     return;
   }
   if (data && data.error) {
-    alert(`Saldo insuficiente: ${data.error}`);
+    alert(data.error === 'Insufficient balance' ? 'Saldo insuficiente!' : `Erro: ${data.error}`);
     return;
   }
 
   document.getElementById('c-silver').textContent = (data.balance || 0).toLocaleString();
-
-  await window.GameData.addItem(item.id, qty);
 
   if (item.category === 'pokeball') {
     window.Titles?.recordStat?.('pokeballs_bought', qty);
@@ -101,7 +89,7 @@ async function pmBuy(itemId) {
     window.Titles?.recordStat?.('heal_items_bought', qty);
   }
 
-  alert(`Comprou ${qty}x ${item.name} por ${totalCost} Prata!`);
+  alert(`Comprou ${qty}x ${item.name} por ${data.total.toLocaleString()} Prata!`);
 }
 
 window.openPokeMart = function () {
