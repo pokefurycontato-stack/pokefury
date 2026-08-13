@@ -2065,6 +2065,7 @@ class PokeFuryGame {
                 await showBattleMessage('Equipe e PC lotados! Pokémon perdido.');
             }
             window.ProfessorQuests?.incrementProfessorQuestProgress?.('catch_pokemon', 1, this._currentBiome || null, enemyPokemon.id);
+            this.recordCaptureStat(enemyPokemon);
             return true;
         } else {
             await showBattleMessage(`O Pokémon escapou da ${itemData.name}!`);
@@ -2077,6 +2078,20 @@ class PokeFuryGame {
         const ballInv = inventory.find(inv => inv.items && inv.items.id === ballItemData.id && inv.quantity > 0);
         if (!ballInv) return false;
         return await this.attemptCapture(ballInv);
+    }
+
+    async recordCaptureStat(pokemon) {
+        try {
+            const { data } = await window.db.rpc('record_capture', {
+                p_character_id: this.currentCharacterId,
+                p_pokemon_id: pokemon.id || pokemon.pokemonId,
+                p_pokemon_name: pokemon.name || pokemon.species,
+                p_is_shiny: pokemon.isShiny || false
+            });
+            if (data?.awarded && data.awarded.length > 0) {
+                window.Titles?.queueAward(data.awarded);
+            }
+        } catch (e) {}
     }
 
     async endBattle(result) {
@@ -2188,6 +2203,9 @@ class PokeFuryGame {
             await this.refreshCurrencies();
             if (rewardData?.success) {
                 this.showToast(`+${rewardData.silver_earned || 0} Prata recebida!`, 'success');
+                if (rewardData.awarded_titles && rewardData.awarded_titles.length > 0) {
+                    window.Titles?.queueAward(rewardData.awarded_titles);
+                }
             }
         }
 

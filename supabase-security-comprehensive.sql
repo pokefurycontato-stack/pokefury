@@ -681,13 +681,21 @@ BEGIN
   -- Issue silver
   PERFORM add_currency(p_character_id, 'silver', v_silver, 'reward', 'Battle vs pokemon #' || p_enemy_pokemon_id);
 
-  RETURN jsonb_build_object(
-    'success', true,
-    'silver_earned', v_silver,
-    'base_exp', v_base_exp,
-    'enemy_id', p_enemy_pokemon_id,
-    'enemy_level', p_enemy_level
-  );
+  -- Registrar abate + verificar títulos (se existir a função record_wild_kill)
+  DECLARE
+    v_titles JSONB DEFAULT '[]'::jsonb;
+  BEGIN
+    SELECT COALESCE(kill_res->'awarded', '[]'::jsonb) INTO v_titles
+    FROM record_wild_kill(p_character_id) AS kill_res;
+    RETURN jsonb_build_object(
+      'success', true,
+      'silver_earned', v_silver,
+      'base_exp', v_base_exp,
+      'enemy_id', p_enemy_pokemon_id,
+      'enemy_level', p_enemy_level,
+      'awarded_titles', v_titles
+    );
+  END;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

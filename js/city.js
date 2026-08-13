@@ -166,6 +166,7 @@ class CityScreen {
             if (LS) LS.setProgress(72);
             await this.loadPlayerSpawn();
             await this.loadLights();
+            await this.loadMyEquippedTitle();
             await this.syncServerTime();
             await this.registerPlayer();
             if (LS) LS.setProgress(80);
@@ -388,7 +389,8 @@ class CityScreen {
             skin_url: skinUrl,
             pos_x: this.playerX,
             pos_y: this.playerY,
-            direction: this.playerDir
+            direction: this.playerDir,
+            equipped_title: this.myEquippedTitle || null
         };
 
         if (!userId) { return; }
@@ -402,7 +404,8 @@ class CityScreen {
                 skin_url: skinUrl,
                 pos_x: this.playerX,
                 pos_y: this.playerY,
-                direction: this.playerDir
+                direction: this.playerDir,
+                equipped_title: this.myEquippedTitle || null
             });
         } catch (e) {
         }
@@ -1062,6 +1065,15 @@ class CityScreen {
         try {
             const { data } = await window.db.from('city_lights').select('*');
             if (data) this.lights = data;
+        } catch (e) {}
+    }
+
+    async loadMyEquippedTitle() {
+        const charId = window.GameData?.currentCharacterId;
+        if (!charId) return;
+        try {
+            const { data } = await window.db.from('game_saves').select('equipped_title_name').eq('id', charId).maybeSingle();
+            if (data) this.myEquippedTitle = data.equipped_title_name || null;
         } catch (e) {}
     }
 
@@ -2585,6 +2597,17 @@ class CityScreen {
             ctx.shadowBlur = 4;
             ctx.fillText(p.character_name || '?', drawX + ps / 2, drawY - 8);
             ctx.shadowBlur = 0;
+
+            const title = p.isMe ? (this.myEquippedTitle || null) : (p.equipped_title || null);
+            if (title) {
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                ctx.shadowBlur = 3;
+                ctx.fillText(title, drawX + ps / 2, drawY - 20);
+                ctx.shadowBlur = 0;
+            }
         });
 
         ctx.restore();

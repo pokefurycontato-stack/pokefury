@@ -276,7 +276,7 @@ class ProfileScreen {
   }
 
   openTitles() {
-    // Sistema de títulos ainda não implementado
+    if (window.Titles) window.Titles.openTitlesPopup();
   }
 
   logout() {
