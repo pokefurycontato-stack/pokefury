@@ -212,8 +212,20 @@ class PremiumStore {
             return;
         }
 
+        // Shinyficador: perguntar quantidade
+        let quantity = 1;
+        if (product.name === 'Shinyficador') {
+            const input = prompt('Quantos Shinyficadores deseja comprar?', '1');
+            quantity = parseInt(input) || 0;
+            if (quantity < 1) {
+                this._showToast('Quantidade inválida!', 'error');
+                return;
+            }
+        }
+        const totalCost = product.price_diamonds * quantity;
+
         await this._getDiamonds();
-        if (this.diamonds < product.price_diamonds) {
+        if (this.diamonds < totalCost) {
             this._showToast('Diamantes insuficientes!', 'error');
             return;
         }
@@ -223,9 +235,9 @@ class PremiumStore {
             const { data, error } = await window.db.rpc('spend_currency', {
                 p_character_id: this.currentCharId,
                 p_currency_type: 'diamonds',
-                p_amount: product.price_diamonds,
+                p_amount: totalCost,
                 p_action: 'purchase',
-                p_description: `Purchase: ${product.name}`,
+                p_description: `Purchase: ${product.name} x${quantity}`,
                 p_created_by: null
             });
             if (error) throw error;
@@ -237,6 +249,27 @@ class PremiumStore {
         } catch (e) {
             console.error('[PremiumStore] diamond deduction failed:', e);
             this._showToast('Erro ao deduzir diamantes!', 'error');
+            return;
+        }
+
+        // Shinyficador: vai pro inventário
+        if (product.name === 'Shinyficador') {
+            const ok = await window.GameData.addItem(5000, quantity);
+            if (ok) {
+                this._showToast(`${quantity}x Shinyficador adicionado ao inventário!`, 'success');
+            } else {
+                await window.db.rpc('add_currency', {
+                    p_character_id: this.currentCharId,
+                    p_currency_type: 'diamonds',
+                    p_amount: totalCost,
+                    p_action: 'refund',
+                    p_description: 'Refund: Shinyficador - falha ao adicionar item',
+                    p_created_by: null
+                });
+                this.diamonds += totalCost;
+                if (window.game && window.game.refreshCurrencies) await window.game.refreshCurrencies();
+                this._showToast('Erro ao adicionar item!', 'error');
+            }
             return;
         }
 
@@ -264,12 +297,12 @@ class PremiumStore {
                 await window.db.rpc('add_currency', {
                     p_character_id: this.currentCharId,
                     p_currency_type: 'diamonds',
-                    p_amount: product.price_diamonds,
+                    p_amount: totalCost,
                     p_action: 'refund',
                     p_description: `Refund: ${product.name} - boost activation failed`,
                     p_created_by: null
                 });
-                this.diamonds += product.price_diamonds;
+                this.diamonds += totalCost;
                 if (window.game && window.game.refreshCurrencies) await window.game.refreshCurrencies();
                 this._showToast('Erro ao ativar boost!', 'error');
             }

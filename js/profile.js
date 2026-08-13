@@ -280,7 +280,7 @@ class ProfileScreen {
           const fallbackUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
           let spriteUrl = fallbackUrl;
           if (window.PokeAPI && p.id) {
-            spriteUrl = window.PokeAPI.getAnimatedFrontUrl(p.id);
+            spriteUrl = p.isShiny ? window.PokeAPI.getAnimatedFrontShinyUrl(p.id) : window.PokeAPI.getAnimatedFrontUrl(p.id);
           }
           const hpPct = p.stats?.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
           const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';

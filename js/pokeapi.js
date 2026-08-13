@@ -12,6 +12,10 @@ const PokeAPI = {
         return `${this.supabaseStorageUrl}/animated-front/${pokemonId}.gif`;
     },
 
+    getAnimatedFrontShinyUrl(pokemonId) {
+        return `${this.supabaseStorageUrl}/animated-front-shiny/${pokemonId}.gif`;
+    },
+
     _gifBlobCache: {},
 
     // Baixa o GIF e cria um Blob URL (cache local, evita revalidação do Supabase)

@@ -2859,7 +2859,7 @@ class PokeFuryGame {
                 const fallbackUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
                 let spriteUrl = fallbackUrl;
                 if (window.PokeAPI && p.id) {
-                    spriteUrl = window.PokeAPI.getAnimatedFrontUrl(p.id);
+                    spriteUrl = p.isShiny ? window.PokeAPI.getAnimatedFrontShinyUrl(p.id) : window.PokeAPI.getAnimatedFrontUrl(p.id);
                 }
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
                 const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
@@ -3068,7 +3068,7 @@ class PokeFuryGame {
             }
 
             const isEquipable = item.holdable || item.category === 'held' || item.category === 'mega_stone';
-            const isUsable = item.subcategory === 'exp' || item.effect === 'level_up';
+            const isUsable = item.subcategory === 'exp' || item.effect === 'level_up' || item.effect === 'make_shiny';
 
             if (isEquipable || isUsable) {
                 slot.style.cursor = 'pointer';
@@ -3323,6 +3323,24 @@ class PokeFuryGame {
             }
             if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} ganhou ${amount} EXP! Nv.${pokemon.level}`, 'success');
             else alert(`${pokemon.name} ganhou ${amount} EXP! Nv.${pokemon.level}`);
+        } else if (item.effect === 'make_shiny') {
+            if (pokemon.isShiny) {
+                this.showToast(`${pokemon.name} já é Shiny!`, 'warning');
+                await window.GameData.addItem(inv.item_id, 1);
+                return;
+            }
+            pokemon.isShiny = true;
+            const pokeData = await PokeAPI.ensurePokemon(pokemon.id);
+            if (pokeData?.shinySpriteUrls) {
+                pokemon.spriteUrls = {
+                    ...pokemon.spriteUrls,
+                    front: pokeData.shinySpriteUrls.front || pokeData.spriteUrls?.front || pokemon.spriteUrls.front,
+                    back: pokeData.shinySpriteUrls.back || pokeData.spriteUrls?.back || pokemon.spriteUrls.back
+                };
+                pokemon.shinySpriteUrls = pokeData.shinySpriteUrls;
+            }
+            if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} agora é Shiny!`, 'success');
+            else alert(`${pokemon.name} agora é Shiny!`);
         }
 
         await this.saveTeam();
