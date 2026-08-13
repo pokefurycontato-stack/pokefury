@@ -1104,6 +1104,17 @@ class CityScreen {
     }
 
     async loadPlayerSpawn() {
+        const charId = window.GameData?.currentCharacterId;
+        if (charId) {
+            try {
+                const { data: save } = await window.db.from('game_saves').select('city_pos_x, city_pos_y').eq('id', charId).maybeSingle();
+                if (save && save.city_pos_x != null && save.city_pos_y != null) {
+                    this.playerX = save.city_pos_x;
+                    this.playerY = save.city_pos_y;
+                    return;
+                }
+            } catch (e) {}
+        }
         try {
             const { data } = await window.db.from('city_player_spawn').select('pos_x, pos_y').limit(1).maybeSingle();
             if (data) {
@@ -2147,6 +2158,19 @@ class CityScreen {
                 direction: this.playerDir
             }).eq('user_id', this.authUserId);
         } catch (e) {}
+        this._saveLastCityPos();
+    }
+
+    _saveLastCityPos() {
+        const charId = window.GameData?.currentCharacterId;
+        if (!charId || !window.db) return;
+        const now = Date.now();
+        if (this._lastCityPosSave && now - this._lastCityPosSave < 10000) return;
+        this._lastCityPosSave = now;
+        window.db.from('game_saves').update({
+            city_pos_x: this.playerX,
+            city_pos_y: this.playerY
+        }).eq('id', charId).then(() => {}).catch(() => {});
     }
 
     serverNow() {
