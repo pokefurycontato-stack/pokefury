@@ -239,10 +239,22 @@ class ProfileScreen {
           const hpPct = p.stats?.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
           const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
 
+          let itemIconHtml = '';
+          if (p.heldItemId) {
+            const itemData = window.ALL_ITEMS ? window.ALL_ITEMS.find(it => it.id === p.heldItemId) : null;
+            const itemSprite = itemData?.sprite || '';
+            if (itemSprite) {
+              itemIconHtml = `<img src="${itemSprite}" style="position:absolute;bottom:0;right:0;width:16px;height:16px;border-radius:3px;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.3);object-fit:contain;z-index:2" title="${itemData?.name || 'Item equipado'}">`;
+            } else {
+              itemIconHtml = `<div style="position:absolute;bottom:0;right:0;width:16px;height:16px;border-radius:3px;background:rgba(233,69,96,0.8);display:flex;align-items:center;justify-content:center;font-size:9px;z-index:2" title="Item equipado">📦</div>`;
+            }
+          }
+
           slot.innerHTML = `
             <div style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);">
                 <img src="assets/pokeballsil.png" style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:22px;height:22px;opacity:0.3" alt="">
                 <img src="${spriteUrl}" style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:38px;height:38px;object-fit:contain" alt="${p.name}" onerror="this.style.display='none'">
+                ${itemIconHtml}
             </div>
             <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
                 <div style="font-family:Inter,sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name} <span style="opacity:0.4">Lv${p.level}</span></div>
