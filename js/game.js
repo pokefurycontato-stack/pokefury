@@ -2849,9 +2849,9 @@ class PokeFuryGame {
                     this.reorderTeam(fromIndex, actualTo, insertBefore);
                 };
 
-                const animatedUrl = (window.PokeAPI && p.id) ? window.PokeAPI.getAnimatedFrontUrl(p.id) : '';
                 const staticUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
-                const spriteUrl = animatedUrl || staticUrl;
+                const blobUrl = (window.PokeAPI && p.id && p.id < 10000) ? (window.PokeAPI._gifBlobCache[window.PokeAPI.getAnimatedFrontUrl(p.id)] || '') : '';
+                const spriteUrl = blobUrl || ((window.PokeAPI && p.id && p.id < 10000) ? window.PokeAPI.getAnimatedFrontUrl(p.id) : staticUrl) || staticUrl;
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
                 const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
                 const expNeeded = expForLevel(p.level + 1);
