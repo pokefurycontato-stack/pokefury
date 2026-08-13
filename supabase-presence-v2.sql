@@ -24,6 +24,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Online = alguma acao nos ultimos 5 minutos
+DROP FUNCTION IF EXISTS is_character_online(UUID);
 CREATE OR REPLACE FUNCTION is_character_online(p_character_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -36,6 +37,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
 -- Busca com status online + auto-farm calculados no servidor
+DROP FUNCTION IF EXISTS search_players_online(TEXT);
 CREATE OR REPLACE FUNCTION search_players_online(p_query TEXT)
 RETURNS TABLE (
   id UUID,
