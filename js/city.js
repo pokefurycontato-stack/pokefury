@@ -86,6 +86,17 @@ class CityScreen {
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             this.keys[e.key] = false;
         });
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.running) {
+                this.playerMoving = false;
+                this.moveProgress = 1;
+                this.keys = {};
+                if (window.pokefury?.afkManager) {
+                    window.pokefury.afkManager._cityPath = null;
+                    window.pokefury.afkManager._cityTargetId = null;
+                }
+            }
+        });
     }
 
     async open() {
