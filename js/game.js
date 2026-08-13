@@ -3139,12 +3139,25 @@ class PokeFuryGame {
             row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
             row.addEventListener('mouseleave', () => row.style.background = 'transparent');
             row.addEventListener('click', async () => {
-                const ok = await window.GameData.equipItem(p.dbId || p.id, item.id);
-                if (ok) {
+                const result = await window.GameData.equipItem(p.dbId || p.id, item.id);
+                if (result && result.ok) {
                     p.heldItemId = item.id;
                     p.held_item_name = item.name;
-                    if (typeof this.showToast === 'function') this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
-                    else alert(`${item.name} equipado em ${p.name}!`);
+                    if (result.swappedFrom) {
+                        // Remove o item do pokemon antigo localmente
+                        this.playerTeam.forEach(tp => {
+                            if (tp.name === result.swappedFrom || (tp.pokemon_name === result.swappedFrom)) {
+                                tp.heldItemId = null;
+                                tp.held_item_name = null;
+                            }
+                        });
+                        const msg = `Item trocado de ${result.swappedFrom} para ${p.name}!`;
+                        if (typeof this.showToast === 'function') this.showToast(msg, 'success');
+                        else alert(msg);
+                    } else {
+                        if (typeof this.showToast === 'function') this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
+                        else alert(`${item.name} equipado em ${p.name}!`);
+                    }
                 } else {
                     if (typeof this.showToast === 'function') this.showToast('Erro ao equipar item!', 'error');
                     else alert('Erro ao equipar item!');

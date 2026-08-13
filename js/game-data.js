@@ -94,28 +94,20 @@ const GameData = {
 
     async equipItem(pokemonId, itemId) {
         try {
-            const { data, error } = await window.db
-                .from('pokemon_team')
-                .update({ held_item_id: itemId })
-                .eq('id', pokemonId)
-                .select();
+            const { data, error } = await window.db.rpc('safe_equip_item', {
+                p_character_id: this.currentCharacterId,
+                p_pokemon_id: pokemonId,
+                p_item_id: itemId
+            });
             if (error) {
                 console.error('[GameData] equipItem error:', error.message, error.code);
-                if (error.message.includes('held_item_id') || error.code === '42703') {
-                    console.warn('[GameData] Column held_item_id missing, adding it...');
-                    await window.db.rpc('exec_sql', { sql: 'ALTER TABLE pokemon_team ADD COLUMN IF NOT EXISTS held_item_id INTEGER' }).catch(() => {});
-                    const { error: retryError } = await window.db
-                        .from('pokemon_team')
-                        .update({ held_item_id: itemId })
-                        .eq('id', pokemonId);
-                    return !retryError;
-                }
-                return false;
+                return { ok: false };
             }
-            return true;
+            if (data && data.error) return { ok: false };
+            return { ok: data?.success === true, swappedFrom: data?.swapped_from || null };
         } catch (e) {
             console.error('[GameData] equipItem exception:', e);
-            return false;
+            return { ok: false };
         }
     },
 
