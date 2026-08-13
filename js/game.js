@@ -2796,6 +2796,13 @@ class PokeFuryGame {
     updatePartyPanel(listEl, opts = {}) {
         const list = listEl || document.getElementById('party-list');
         if (!list) return;
+
+        // Evita recriar o DOM (e reiniciar GIFs) se nada mudou
+        const sig = JSON.stringify(this.playerTeam.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted] : null));
+        if (sig === this._partyPanelSig && list.dataset.rendered === '1') return;
+        this._partyPanelSig = sig;
+        list.dataset.rendered = '1';
+
         list.innerHTML = '';
 
         for (let i = 0; i < 6; i++) {
