@@ -78,7 +78,7 @@ async function pmBuy(itemId) {
     p_character_id: window.GameData.currentCharacterId,
     p_currency_type: 'silver',
     p_amount: totalCost,
-    p_action: 'shop_purchase',
+    p_action: 'purchase',
     p_description: `PokeMart: ${qty}x ${item.name}`,
     p_created_by: null
   });
