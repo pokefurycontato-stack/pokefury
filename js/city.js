@@ -391,7 +391,8 @@ class CityScreen {
             pos_x: this.playerX,
             pos_y: this.playerY,
             direction: this.playerDir,
-            equipped_title: this.myEquippedTitle || null
+            equipped_title: this.myEquippedTitle || null,
+            equipped_title_id: this.myEquippedTitleId || null
         };
 
         if (!userId) { return; }
@@ -406,7 +407,8 @@ class CityScreen {
                 pos_x: this.playerX,
                 pos_y: this.playerY,
                 direction: this.playerDir,
-                equipped_title: this.myEquippedTitle || null
+                equipped_title: this.myEquippedTitle || null,
+                equipped_title_id: this.myEquippedTitleId || null
             });
         } catch (e) {
         }
@@ -1073,8 +1075,11 @@ class CityScreen {
         const charId = window.GameData?.currentCharacterId;
         if (!charId) return;
         try {
-            const { data } = await window.db.from('game_saves').select('equipped_title_name').eq('id', charId).maybeSingle();
-            if (data) this.myEquippedTitle = data.equipped_title_name || null;
+            const { data } = await window.db.from('game_saves').select('equipped_title, equipped_title_name').eq('id', charId).maybeSingle();
+            if (data) {
+                this.myEquippedTitle = data.equipped_title_name || null;
+                this.myEquippedTitleId = data.equipped_title || null;
+            }
         } catch (e) {}
     }
 
@@ -2612,7 +2617,16 @@ class CityScreen {
 
             const title = p.isMe ? (this.myEquippedTitle || null) : (p.equipped_title || null);
             if (title) {
-                ctx.fillStyle = '#fbbf24';
+                const titleId = p.isMe ? (this.myEquippedTitleId || null) : (p.equipped_title_id || null);
+                const rarity = window.Titles ? window.Titles.getRarity(titleId) : 'common';
+                let color;
+                if (rarity === 'mythic') {
+                    const hue = (Date.now() / 12) % 360;
+                    color = `hsl(${hue}, 100%, 65%)`;
+                } else {
+                    color = (window.Titles && window.Titles.getRarityStyle(titleId)) ? window.Titles.getRarityStyle(titleId).color : '#fbbf24';
+                }
+                ctx.fillStyle = color;
                 ctx.font = 'bold 10px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.shadowColor = 'rgba(0,0,0,0.9)';

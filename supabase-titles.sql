@@ -68,6 +68,7 @@ ALTER TABLE game_saves ADD COLUMN IF NOT EXISTS equipped_title_name TEXT DEFAULT
 
 -- Título equipado exibido na cidade (realtime)
 ALTER TABLE city_players ADD COLUMN IF NOT EXISTS equipped_title TEXT DEFAULT NULL;
+ALTER TABLE city_players ADD COLUMN IF NOT EXISTS equipped_title_id TEXT DEFAULT NULL;
 
 -- ============================================================
 -- RPC: Registrar abate de pokemon selvagem + verificar títulos
