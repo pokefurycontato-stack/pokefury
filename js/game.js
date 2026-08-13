@@ -325,7 +325,6 @@ class PokeFuryGame {
         this.avatarUrl = save.avatar_url || null;
         this.trainerLevel = save.trainer_level || 1;
         this.trainerExp = save.trainer_exp || 0;
-        this.startHeartbeat();
 
         // Load boosts (VIP, shiny, exp, etc)
         if (window.boostsManager) {
@@ -480,6 +479,7 @@ class PokeFuryGame {
             return;
         }
         this._starting = true;
+        this.startHeartbeat();
 
         try {
             const savedTeam = await window.GameData.getTeam();

@@ -70,6 +70,7 @@ const GameData = {
     async updateSave(updates) {
         if (!this.currentCharacterId) return;
         updates.updated_at = new Date().toISOString();
+        updates.last_seen = new Date().toISOString();
         const { error } = await window.db
             .from('game_saves')
             .update(updates)

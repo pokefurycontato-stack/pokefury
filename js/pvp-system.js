@@ -14,10 +14,7 @@ class PVPSystem {
 
     async getCurrentTeamPokemon(characterId) {
         if (!characterId) return [];
-        const { data, error } = await window.db.from('pokemon_team')
-            .select('*')
-            .eq('character_id', characterId)
-            .order('slot', { ascending: true });
+        const { data, error } = await window.db.rpc('get_character_team', { p_character_id: characterId });
         if (error) return [];
         return data || [];
     }
@@ -86,9 +83,7 @@ class PVPSystem {
             if (!challenge) return { error: 'Desafio não encontrado.' };
 
             const charId = this.game.currentCharacterId;
-            const { data: myTeam } = await window.db.from('pokemon_team')
-                .select('id')
-                .eq('character_id', charId);
+            const myTeam = await this.getCurrentTeamPokemon(charId);
             const hasTeam = myTeam && myTeam.length > 0;
 
             if (!hasTeam) {
