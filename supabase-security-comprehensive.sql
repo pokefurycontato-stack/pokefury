@@ -628,7 +628,8 @@ CREATE OR REPLACE FUNCTION calculate_battle_reward(
   p_character_id UUID,
   p_enemy_pokemon_id INTEGER,
   p_enemy_level INTEGER,
-  p_win_streak INTEGER DEFAULT 0
+  p_win_streak INTEGER DEFAULT 0,
+  p_amulet_coin BOOLEAN DEFAULT false
 ) RETURNS JSONB AS $$
 DECLARE
   v_owner_user_id UUID;
@@ -674,6 +675,9 @@ BEGIN
 
   v_silver := FLOOR(v_silver * v_rarity_mult * v_streak_mult);
   IF v_silver < 1 THEN v_silver := 1; END IF;
+
+  -- Amulet Coin: dobra a prata
+  IF p_amulet_coin THEN v_silver := v_silver * 2; END IF;
 
   -- Base EXP calculation
   v_base_exp := FLOOR((p_enemy_level * 15) / 9);

@@ -583,8 +583,12 @@ export function awardExp(team, enemyLevel, activePokemon) {
 
         if (!isAttacker && !hasExpShare) continue;
 
+        let expGain = baseExp;
+        // Lucky Egg: +50% EXP
+        if (p.heldItemId === 219) expGain = Math.floor(expGain * 1.5);
+
         const prevLevel = p.level;
-        p.experience = (p.experience || 0) + baseExp;
+        p.experience = (p.experience || 0) + expGain;
 
         while (p.level < 100) {
             const needed = expForLevel(p.level + 1);
