@@ -2851,9 +2851,8 @@ class PokeFuryGame {
 
         // Evita recriar o DOM (e reiniciar GIFs) se nada mudou
         const sig = JSON.stringify(this.playerTeam.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted, p.isShiny] : null));
-        if (sig === this._partyPanelSig && list.dataset.rendered === '1') return;
-        this._partyPanelSig = sig;
-        list.dataset.rendered = '1';
+        if (list.dataset.sig === sig) return;
+        list.dataset.sig = sig;
 
         list.innerHTML = '';
 
@@ -3011,9 +3010,7 @@ class PokeFuryGame {
         const pokemon = this.playerTeam[fromIndex];
         if (!pokemon) return;
         this.playerTeam.splice(fromIndex, 1);
-        let newIndex = toIndex;
-        if (fromIndex < toIndex) newIndex = insertBefore ? toIndex : toIndex;
-        else newIndex = insertBefore ? toIndex : toIndex;
+        let newIndex;
         if (fromIndex < toIndex) {
             newIndex = insertBefore ? toIndex - 1 : toIndex;
         } else {
@@ -3022,6 +3019,8 @@ class PokeFuryGame {
         this.playerTeam.splice(newIndex, 0, pokemon);
         await this.saveTeam();
         this.updatePartyPanel();
+        const cityPartyList = document.getElementById('city-party-list');
+        if (cityPartyList) this.updatePartyPanel(cityPartyList);
         if (this.overworld2d) this.overworld2d.updateFollower();
     }
 
