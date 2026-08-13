@@ -52,6 +52,8 @@ class ProfileScreen {
     const screen = document.getElementById('profile-screen');
     if (!screen) return;
     screen.classList.remove('hidden');
+    // Pausa o render da cidade (evita repaint que reinicia os GIFs)
+    this._pauseCityForProfile();
     await this.loadConfig();
     await this.loadRegions();
     await this.render();
@@ -61,6 +63,24 @@ class ProfileScreen {
     this.isOpen = false;
     const screen = document.getElementById('profile-screen');
     if (screen) screen.classList.add('hidden');
+    this._resumeCityAfterProfile();
+  }
+
+  _pauseCityForProfile() {
+    const city = window.cityScreen;
+    if (city && city.running) {
+      this._cityWasRunning = true;
+      city.running = false;
+    }
+  }
+
+  _resumeCityAfterProfile() {
+    const city = window.cityScreen;
+    if (city && this._cityWasRunning && !city.running) {
+      city.running = true;
+      city.loop();
+    }
+    this._cityWasRunning = false;
   }
 
   async loadConfig() {
