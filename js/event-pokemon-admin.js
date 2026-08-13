@@ -237,10 +237,12 @@ class EventPokemonAdmin {
             const safeName = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
             status.textContent = 'Uploading sprites...';
-            const frontUrl = await this.uploadImage(this.frontFile, `event-pokemon/${safeName}_${timestamp}_front.png`);
+            const frontExt = (this.frontFile.name.split('.').pop() || 'png').toLowerCase();
+            const frontUrl = await this.uploadImage(this.frontFile, `event-pokemon/${safeName}_${timestamp}_front.${frontExt}`);
             let backUrl = frontUrl;
             if (this.backFile) {
-                backUrl = await this.uploadImage(this.backFile, `event-pokemon/${safeName}_${timestamp}_back.png`);
+                const backExt = (this.backFile.name.split('.').pop() || 'png').toLowerCase();
+                backUrl = await this.uploadImage(this.backFile, `event-pokemon/${safeName}_${timestamp}_back.${backExt}`);
             }
 
             const abilityIds = this.selectedAbilities.map(a => a.id);
