@@ -22,6 +22,13 @@ BEGIN
   SELECT gs.user_id INTO v_user_id FROM game_saves gs WHERE gs.id = p_character_id;
   IF NOT FOUND OR v_user_id != auth.uid() THEN RETURN jsonb_build_object('error', 'Not authorized'); END IF;
 
+  -- Correção: títulos de lendário gravados sem o prefixo "Mestre de "
+  UPDATE character_titles SET title_name = 'Mestre de ' || title_name
+  WHERE character_id = p_character_id
+    AND title_id LIKE 'master_%'
+    AND title_id NOT LIKE 'megamaster_%'
+    AND title_name NOT LIKE 'Mestre de %';
+
   SELECT COUNT(*) INTO v_total FROM (
     SELECT id FROM pokemon_team WHERE character_id = p_character_id
     UNION ALL
@@ -87,6 +94,7 @@ BEGIN
       -- É um lendário normal: "Mestre de {nome}"
       SELECT name INTO v_tname FROM pokemon WHERE id = v_poke.pokemon_id;
       v_tid := 'master_' || v_poke.pokemon_id::text;
+      v_tname := 'Mestre de ' || v_tname;
       IF NOT EXISTS(SELECT 1 FROM character_titles WHERE character_id = p_character_id AND title_id = v_tid) THEN
         INSERT INTO character_titles (character_id, title_id, title_name) VALUES (p_character_id, v_tid, v_tname);
         v_awarded := v_awarded || jsonb_build_object('id', v_tid, 'name', v_tname);
