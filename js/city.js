@@ -1198,6 +1198,7 @@ class CityScreen {
             : 'Seu time já está com a saúde perfeita, volte sempre que precisar.';
         if (needsHeal && game.healAllPokemon) {
             game.healAllPokemon();
+            window.Titles?.recordStat?.('nurse_heals', 1);
         }
         this.showNurseDialogue(msg);
     }

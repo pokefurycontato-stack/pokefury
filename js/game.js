@@ -2216,6 +2216,9 @@ class PokeFuryGame {
                     p.currentHp = 0;
                 }
             });
+            if (this.isWildBattle) {
+                window.Titles?.recordStat?.('wild_losses', 1);
+            }
         } else if (!result) {
             this._winStreak = 0;
         }

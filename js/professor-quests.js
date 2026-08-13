@@ -764,6 +764,7 @@ async function openPlayerQuestOverlay(npcId) {
             if (!msgs.length) msgs.push('Recompensa resgatada!');
             alert(msgs.join('\n'));
             await window.db.from('player_professor_quests').update({ status: 'claimed', updated_at: new Date().toISOString() }).eq('id', state.id);
+            window.Titles?.recordStat?.('quests_completed', 1);
             openPlayerQuestOverlay(npcId);
         };
     }

@@ -95,6 +95,12 @@ async function pmBuy(itemId) {
 
   await window.GameData.addItem(item.id, qty);
 
+  if (item.category === 'pokeball') {
+    window.Titles?.recordStat?.('pokeballs_bought', qty);
+  } else if (item.category === 'medicine' && (item.subcategory === 'heal' || item.subcategory === 'revive')) {
+    window.Titles?.recordStat?.('heal_items_bought', qty);
+  }
+
   alert(`Comprou ${qty}x ${item.name} por ${totalCost} Prata!`);
 }
 

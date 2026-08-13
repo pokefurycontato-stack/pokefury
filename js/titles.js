@@ -21,7 +21,23 @@
       shiny_hunter: 'legendary',
       shiny_legend: 'mythic',
       adventure_begin: 'common',
-      vip: 'mythic'
+      vip: 'mythic',
+      entendendo_mundo: 'uncommon',
+      sabio_treinamento: 'rare',
+      anciao_pleno: 'epic',
+      estou_azar: 'common',
+      hoje_nao_bom_dia: 'uncommon',
+      azarao_total: 'rare',
+      mestre_derrotado: 'epic',
+      visitante_centro: 'common',
+      amigo_joy: 'uncommon',
+      morador_centro: 'epic',
+      bolsos_cheios: 'uncommon',
+      estoque_renovado: 'rare',
+      almoxarifado_pokeballs: 'epic',
+      estoque_emergencia: 'uncommon',
+      hospital_ambulante: 'rare',
+      magnata_cura: 'epic'
     },
 
     RARITY_STYLE: {
@@ -89,6 +105,22 @@
       if (screen && !screen.classList.contains('hidden')) {
         window.profileScreen?.render?.();
       }
+    },
+
+    // Incrementa estatística e verifica títulos (server-side)
+    async recordStat(stat, amount = 1) {
+      const charId = window.GameData?.currentCharacterId;
+      if (!charId) return;
+      try {
+        const { data } = await window.db.rpc('record_stat', {
+          p_character_id: charId,
+          p_stat: stat,
+          p_amount: amount
+        });
+        if (data?.awarded && data.awarded.length > 0) {
+          this.queueAward(data.awarded);
+        }
+      } catch (e) {}
     },
 
     async openTitlesPopup() {
