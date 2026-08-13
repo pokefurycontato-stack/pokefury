@@ -1081,8 +1081,6 @@ class CityScreen {
     async syncRetroactiveTitles() {
         const charId = window.GameData?.currentCharacterId;
         if (!charId) return;
-        if (this._retroTitlesDone) return;
-        this._retroTitlesDone = true;
         try {
             const { data } = await window.db.rpc('sync_titles_retroactive', { p_character_id: charId });
             if (data?.awarded && data.awarded.length > 0) {
