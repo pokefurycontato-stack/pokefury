@@ -156,8 +156,7 @@ export class AFKManager {
 
         if (this._cityPath && this._cityPath.length > 0) {
             const dir = this._cityPath.shift();
-            city.keys[dir] = true;
-            setTimeout(() => { city.keys[dir] = false; }, 60);
+            this._moveCity(dir);
             return;
         }
 
@@ -165,16 +164,25 @@ export class AFKManager {
         if (path && path.length > 0) {
             this._cityPath = path;
             const dir = this._cityPath.shift();
-            city.keys[dir] = true;
-            setTimeout(() => { city.keys[dir] = false; }, 60);
+            this._moveCity(dir);
         } else {
             const dx = nearest.pos_x - city.playerX;
             const dy = nearest.pos_y - city.playerY;
             let fallbackDir = null;
             if (Math.abs(dx) > Math.abs(dy)) fallbackDir = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
             else fallbackDir = dy > 0 ? 'ArrowDown' : 'ArrowUp';
-            city.keys[fallbackDir] = true;
-            setTimeout(() => { city.keys[fallbackDir] = false; }, 60);
+            this._moveCity(fallbackDir);
+        }
+    }
+
+    _moveCity(dir) {
+        const city = window.cityScreen;
+        if (!city) return;
+        if (document.hidden) {
+            city.movePlayerDirectly(dir);
+        } else {
+            city.keys[dir] = true;
+            setTimeout(() => { city.keys[dir] = false; }, 60);
         }
     }
 

@@ -1876,6 +1876,34 @@ class CityScreen {
         }
     }
 
+    // Movimento direto (usado pelo auto farm em segundo plano, sem rAF)
+    movePlayerDirectly(dir) {
+        let dx = 0, dy = 0;
+        if (dir === 'ArrowUp') { dy = -1; this.playerDir = 'up'; }
+        else if (dir === 'ArrowDown') { dy = 1; this.playerDir = 'down'; }
+        else if (dir === 'ArrowLeft') { dx = -1; this.playerDir = 'left'; }
+        else if (dir === 'ArrowRight') { dx = 1; this.playerDir = 'right'; }
+        else return false;
+
+        const nx = this.playerX + dx * this.playerSpeed;
+        const ny = this.playerY + dy * this.playerSpeed;
+        if (this.checkCollision(nx, ny)) return false;
+
+        this.playerFromX = this.playerX;
+        this.playerFromY = this.playerY;
+        this.playerX = nx;
+        this.playerY = ny;
+        this.playerMoving = false;
+        this.moveProgress = 1;
+        if (this.myPlayer) {
+            this.myPlayer.pos_x = this.playerX;
+            this.myPlayer.pos_y = this.playerY;
+            this.myPlayer.direction = this.playerDir;
+        }
+        this.syncPosition();
+        return true;
+    }
+
     update() {
         this._updateWeatherParticles();
         this.updateWeatherHud();
