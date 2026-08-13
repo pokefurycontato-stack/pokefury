@@ -112,6 +112,17 @@ export class AFKManager {
         if (!city.currentBattleZone) return;
         if (city.playerMoving) return;
 
+        // Em segundo plano, verifica e inicia batalha manualmente (rAF pausado)
+        if (document.hidden) {
+            const nearby = city.checkNearbyBattleTrigger();
+            if (nearby) {
+                this._cityPath = null;
+                this._cityTargetId = null;
+                city.triggerVisiblePokemonBattle(nearby);
+                return;
+            }
+        }
+
         const playerPokemon = getFirstAlive(this.game.playerTeam);
         if (playerPokemon && this._allMovesExhausted(playerPokemon)) {
             this._cityPath = null;

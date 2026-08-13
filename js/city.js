@@ -776,6 +776,20 @@ class CityScreen {
         }
     }
 
+    // Verificação de batalha para auto farm em segundo plano (sem rAF)
+    checkNearbyBattleTrigger() {
+        if (this.wildPokemonCooldown > 0) { this.wildPokemonCooldown -= 1; return null; }
+        for (const p of this.wildPokemon) {
+            if (!p.active) continue;
+            const pd = Math.hypot(this.playerX - p.pos_x, this.playerY - p.pos_y);
+            if (pd < 38) {
+                this.wildPokemonCooldown = 1;
+                return p;
+            }
+        }
+        return null;
+    }
+
     async reshuffleWildPokemon(p) {
         const biome = p.biome || this.getSpawnZoneBiomeForPoint(p.point);
         const charId = window.GameData?.currentCharacterId;
