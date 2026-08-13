@@ -285,7 +285,9 @@ export class FriendsSystem {
     }
 
     async addFriend(friendId) {
-        const { data, error } = await window.db.rpc('add_friend', { p_character_id: this.charId, p_friend_character_id: friendId });
+        const charId = this._me();
+        if (!charId) { this.toast('Erro ao adicionar amigo', 'error'); return false; }
+        const { data, error } = await window.db.rpc('add_friend', { p_character_id: charId, p_friend_character_id: friendId });
         if (error) { this.toast('Erro ao adicionar amigo', 'error'); return false; }
         if (data && data.error) { this.toast(data.error, 'error'); return false; }
         this.toast('Amigo adicionado!', 'success');
@@ -294,7 +296,9 @@ export class FriendsSystem {
     }
 
     async removeFriend(friendId) {
-        const { data, error } = await window.db.rpc('remove_friend', { p_character_id: this.charId, p_friend_character_id: friendId });
+        const charId = this._me();
+        if (!charId) { this.toast('Erro ao remover amigo', 'error'); return; }
+        const { data, error } = await window.db.rpc('remove_friend', { p_character_id: charId, p_friend_character_id: friendId });
         if (error || (data && data.error)) { this.toast('Erro ao remover amigo', 'error'); return; }
         if (this.selectedFriendId === friendId) {
             this.selectedFriendId = null;
