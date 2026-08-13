@@ -16,6 +16,8 @@ const PokeAPI = {
 
     // Baixa o GIF e cria um Blob URL (cache local, evita revalidação do Supabase)
     async getGifBlobUrl(pokemonId) {
+        // Variantes/formas (IDs >= 10000) não têm GIF animado
+        if (!pokemonId || pokemonId >= 10000) return null;
         const gifUrl = this.getAnimatedFrontUrl(pokemonId);
         if (this._gifBlobCache[gifUrl]) return this._gifBlobCache[gifUrl];
         try {
