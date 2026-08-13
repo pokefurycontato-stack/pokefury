@@ -253,9 +253,12 @@ class ProfileScreen {
 
     const game = window.pokefury;
     const team = game?.playerTeam || [];
-    // Evita recriar o DOM (e reiniciar GIFs) se nada mudou
     const sig = JSON.stringify(team.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted] : null));
-    if (sig === this._teamSig && list.dataset.rendered === '1') return;
+    if (sig === this._teamSig && list.dataset.rendered === '1') {
+      console.log('[Profile] renderTeam SKIP (unchanged)');
+      return;
+    }
+    console.log('[Profile] renderTeam RENDER, sig changed:', sig !== this._teamSig ? 'yes' : 'no');
     this._teamSig = sig;
     list.dataset.rendered = '1';
 
