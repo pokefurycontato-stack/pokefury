@@ -12,6 +12,24 @@ const PokeAPI = {
         return `${this.supabaseStorageUrl}/animated-front/${pokemonId}.gif`;
     },
 
+    _gifBlobCache: {},
+
+    // Baixa o GIF e cria um Blob URL (cache local, evita revalidação do Supabase)
+    async getGifBlobUrl(pokemonId) {
+        const gifUrl = this.getAnimatedFrontUrl(pokemonId);
+        if (this._gifBlobCache[gifUrl]) return this._gifBlobCache[gifUrl];
+        try {
+            const resp = await fetch(gifUrl);
+            if (!resp.ok) return null;
+            const blob = await resp.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            this._gifBlobCache[gifUrl] = blobUrl;
+            return blobUrl;
+        } catch (e) {
+            return null;
+        }
+    },
+
     getBestSpriteUrl(pokemonData) {
         if (pokemonData.sprite_front) return pokemonData.sprite_front;
         if (pokemonData.id) return this.getAnimatedFrontUrl(pokemonData.id);
