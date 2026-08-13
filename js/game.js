@@ -2849,7 +2849,9 @@ class PokeFuryGame {
                     this.reorderTeam(fromIndex, actualTo, insertBefore);
                 };
 
-                const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+                const animatedUrl = (window.PokeAPI && p.id) ? window.PokeAPI.getAnimatedFrontUrl(p.id) : '';
+                const staticUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+                const spriteUrl = animatedUrl || staticUrl;
                 const hpPct = p.stats.hp > 0 ? (p.currentHp / p.stats.hp) * 100 : 0;
                 const hpColor = hpPct <= 25 ? '#f44336' : hpPct <= 50 ? '#ff9800' : '#4caf50';
                 const expNeeded = expForLevel(p.level + 1);
@@ -2869,7 +2871,7 @@ class PokeFuryGame {
                 slot.innerHTML = `
                     <div onclick="event.stopPropagation();window.pokefury.openPokemonInfo(${i})" style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);cursor:pointer" title="Ver detalhes">
                         <img src="assets/pokeballsil.png" style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:22px;height:22px;opacity:0.3" alt="">
-                        <img src="${spriteUrl}" style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:38px;height:38px;object-fit:contain" alt="${p.name}" onerror="this.style.display='none'">
+                        <img src="${spriteUrl}" data-static="${staticUrl}" style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:38px;height:38px;object-fit:contain" alt="${p.name}" onerror="if(this.dataset.static && this.src !== this.dataset.static){this.src=this.dataset.static;}else{this.style.display='none'}">
                         ${itemIconHtml}
                     </div>
                     <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
@@ -4473,11 +4475,12 @@ openEventsPanel() {
             const item = document.createElement('div');
             item.className = 'pokedex-item' + (this._pokedexSelected === p.id ? ' active' : '');
             const num = String(p.id).padStart(3, '0');
-            const sprite = p.sprite_official || p.sprite_home || `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${p.id}.png`;
+            const staticSprite = p.sprite_official || p.sprite_home || `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/home-front/${p.id}.png`;
+            const sprite = (window.PokeAPI && !p.variant) ? window.PokeAPI.getAnimatedFrontUrl(p.id) : staticSprite;
             const badge = p.variant && p.variant !== 'normal' ? `<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:${variantColors[p.variant] || '#666'};color:#fff;font-weight:700;margin-left:4px">${variantLabels[p.variant] || p.variant}</span>` : '';
             item.innerHTML = `
                 <span class="pokedex-item-num">#${num}</span>
-                <img class="pokedex-item-sprite" src="${sprite}" onerror="this.style.display='none'" loading="lazy">
+                <img class="pokedex-item-sprite" src="${sprite}" data-static="${staticSprite}" onerror="if(this.dataset.static && this.src !== this.dataset.static){this.src=this.dataset.static;}else{this.style.display='none'}" loading="lazy">
                 <span class="pokedex-item-name">${p.name}${badge}</span>
             `;
             item.onclick = () => this.selectPokedexPokemon(p.id);
