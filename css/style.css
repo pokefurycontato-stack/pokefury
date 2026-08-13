@@ -3027,9 +3027,3 @@ body {
   text-shadow: 0 0 10px rgba(255,77,109,0.9);
   animation: title-rainbow 2.5s linear infinite;
 }
-
-#profile-team-list img {
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-}
