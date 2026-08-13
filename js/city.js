@@ -1980,6 +1980,11 @@ class CityScreen {
             await game.overworld2d.setCurrentMap(firstMap);
         }
 
+        // Jogadores nao-admin permanecem na cidade: re-spawn imediato dos pokemons da nova regiao
+        if (!window.isAdmin) {
+            try { await this.spawnVisiblePokemon(); } catch (e) {}
+        }
+
         game.showTransitionBanner(`Viajando para ${regionName}...`);
     }
 
