@@ -72,6 +72,12 @@ class ProfileScreen {
       this._cityWasRunning = true;
       city.running = false;
     }
+    // Esconde os pokemons selvagens (GIFs) da cidade pra não reiniciar os GIFs do perfil
+    const wildLayer = document.getElementById('city-wild-pokemon-layer');
+    if (wildLayer) {
+      this._wildLayerDisplay = wildLayer.style.display;
+      wildLayer.style.display = 'none';
+    }
   }
 
   _resumeCityAfterProfile() {
@@ -81,6 +87,11 @@ class ProfileScreen {
       city.loop();
     }
     this._cityWasRunning = false;
+    const wildLayer = document.getElementById('city-wild-pokemon-layer');
+    if (wildLayer && this._wildLayerDisplay !== undefined) {
+      wildLayer.style.display = this._wildLayerDisplay;
+      this._wildLayerDisplay = undefined;
+    }
   }
 
   async loadConfig() {
