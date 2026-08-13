@@ -3103,7 +3103,7 @@ class PokeFuryGame {
         if (team.length === 0) { this.showToast('Nenhum Pokémon no time!', 'error'); return; }
 
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
 
         const popup = document.createElement('div');
         popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:16px;max-width:350px;width:90%;max-height:80vh;overflow-y:auto';
@@ -3166,7 +3166,7 @@ class PokeFuryGame {
         if (team.length === 0) { this.showToast('Nenhum Pokémon no time!', 'error'); return; }
 
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
 
         const popup = document.createElement('div');
         popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:12px;padding:16px;max-width:350px;width:90%;max-height:80vh;overflow-y:auto';
