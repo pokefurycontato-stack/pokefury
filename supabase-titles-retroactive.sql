@@ -81,10 +81,20 @@ BEGIN
           v_awarded := v_awarded || jsonb_build_object('id', v_tid, 'name', v_tname);
         END IF;
       END IF;
-      -- Se o base for lendário, também dá "Mestre de {base}"
       IF v_base IN (144,145,146,150,151,243,244,245,249,250,251,377,378,379,380,381,382,383,384,385,386,480,481,482,483,484,485,486,487,488,489,490,491,492,493,494,638,639,640,641,642,643,644,645,646,647,648,649,716,717,718,719,720,721,772,773,785,786,787,788,789,790,791,792,800,801,802,803,804,805,806,807,808,809,888,889,890,891,892,894,895,896,897,898,905,1001,1002,1003,1004,1007,1008,1009,1010,1014,1015,1016,1017,1020,1021,1022,1023,1024,1025) THEN
         v_tid := 'master_' || v_base::text;
         v_tname := 'Mestre de ' || v_base_name;
+        IF NOT EXISTS(SELECT 1 FROM character_titles WHERE character_id = p_character_id AND title_id = v_tid) THEN
+          INSERT INTO character_titles (character_id, title_id, title_name) VALUES (p_character_id, v_tid, v_tname);
+          v_awarded := v_awarded || jsonb_build_object('id', v_tid, 'name', v_tname);
+        END IF;
+      END IF;
+    ELSIF v_var = 'gmax' AND v_base IS NOT NULL THEN
+      -- É um G-Max: título "Mestre de {base} Gmax"
+      SELECT name INTO v_base_name FROM pokemon WHERE id = v_base;
+      IF v_base_name IS NOT NULL THEN
+        v_tid := 'gmaxmaster_' || v_poke.pokemon_id::text;
+        v_tname := 'Mestre de ' || v_base_name || ' Gmax';
         IF NOT EXISTS(SELECT 1 FROM character_titles WHERE character_id = p_character_id AND title_id = v_tid) THEN
           INSERT INTO character_titles (character_id, title_id, title_name) VALUES (p_character_id, v_tid, v_tname);
           v_awarded := v_awarded || jsonb_build_object('id', v_tid, 'name', v_tname);

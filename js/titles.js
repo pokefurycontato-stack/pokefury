@@ -34,6 +34,7 @@
     getRarity(titleId) {
       if (this.RARITY_MAP[titleId]) return this.RARITY_MAP[titleId];
       if (titleId && titleId.startsWith('megamaster_')) return 'mythic';
+      if (titleId && titleId.startsWith('gmaxmaster_')) return 'mythic';
       if (titleId && titleId.startsWith('master_')) return 'legendary';
       return 'common';
     },
