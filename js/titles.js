@@ -113,11 +113,12 @@
               : list.map(t => {
                   const style = window.Titles.getRarityStyle(t.id);
                   const isEquipped = t.id === equippedId;
+                  const isMythic = style.color === '#ff4d6d';
                   return `
                 <div style="display:flex;align-items:center;gap:10px;background:#161b22;border:1px solid ${isEquipped ? style.color : '#30363d'};border-radius:8px;padding:10px 12px;margin-bottom:6px;">
                   <span style="font-size:20px;">🏅</span>
                   <div style="flex:1;min-width:0;">
-                    <div style="color:${style.color};font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:${style.glow};">${escapeHtml(t.name)}</div>
+                    <div class="${isMythic ? 'title-rainbow' : ''}" style="color:${style.color};font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:${isMythic ? '' : style.glow};">${escapeHtml(t.name)}</div>
                     <div style="color:rgba(255,255,255,0.4);font-size:10px;">${style.label}${isEquipped ? ' · Equipado' : ''}</div>
                   </div>
                   ${isEquipped

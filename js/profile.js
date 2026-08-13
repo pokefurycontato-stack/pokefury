@@ -195,7 +195,8 @@ class ProfileScreen {
       let inner = '';
       if (t) {
         const style = window.Titles ? window.Titles.getRarityStyle(t.id) : { color: '#000', glow: 'none' };
-        inner = `<div class="pf-text pf-title-slot" style="display:flex;align-items:center;justify-content:center;height:100%;font-weight:700;font-size:11px;color:${style.color};text-shadow:${style.glow};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;">${escapeHtml(t.name)}</div>`;
+        const isMythic = style.color === '#ff4d6d';
+        inner = `<div class="pf-text pf-title-slot ${isMythic ? 'title-rainbow' : ''}" style="display:flex;align-items:center;justify-content:center;height:100%;font-weight:700;font-size:11px;color:${style.color};text-shadow:${isMythic ? '' : style.glow};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;">${escapeHtml(t.name)}</div>`;
       } else {
         inner = `<div class="pf-text pf-title-slot" style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(0,0,0,0.3);font-weight:500;"></div>`;
       }
