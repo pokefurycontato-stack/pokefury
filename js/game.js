@@ -4053,7 +4053,7 @@ openEventsPanel() {
             if (q.length < 1) { results.style.display = 'none'; return; }
 
             debounce = setTimeout(() => {
-                const matches = ITEMS_DATA.filter(i => i.name.toLowerCase().includes(q)).slice(0, 10);
+                const matches = (window.ALL_ITEMS || []).filter(i => i.name.toLowerCase().includes(q)).slice(0, 10);
                 if (matches.length === 0) { results.style.display = 'none'; return; }
 
                 results.innerHTML = '';
