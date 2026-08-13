@@ -497,8 +497,20 @@ class PremiumStore {
                 await this.openSkinShop();
             }
 
-            if (data.skin_type === 'player_skin' && window.game && window.game.overworld) {
-                await window.game.overworld.loadSprites();
+            if (data.skin_type === 'player_skin') {
+                const { data: skinData } = await window.db.rpc('get_equipped_skin', {
+                    p_character_id: this.currentCharId,
+                    p_skin_type: 'player_skin'
+                });
+                const spriteUrl = skinData && skinData.length > 0 && skinData[0].sprite_url
+                    ? skinData[0].sprite_url
+                    : null;
+                if (spriteUrl && window.cityScreen && typeof window.cityScreen.updateEquippedSkin === 'function') {
+                    await window.cityScreen.updateEquippedSkin(spriteUrl);
+                }
+                if (window.game && window.game.overworld) {
+                    await window.game.overworld.loadSprites();
+                }
             }
         } catch (e) {
             console.error('[PremiumStore] equip skin failed:', e);
@@ -522,6 +534,10 @@ class PremiumStore {
                 await this.openSkinInventory();
             }
 
+            if (window.cityScreen && typeof window.cityScreen.updateEquippedSkin === 'function') {
+                const gender = window.game?.playerGender === 'female' ? 'feminino' : 'masculino';
+                await window.cityScreen.updateEquippedSkin(`assets/perso_${gender}.webp`);
+            }
             if (window.game && window.game.overworld) {
                 await window.game.overworld.loadSprites();
             }

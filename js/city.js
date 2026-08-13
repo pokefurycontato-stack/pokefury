@@ -467,6 +467,13 @@ class CityScreen {
                     existing.moveProgress = 0;
                     existing.equipped_title = p.equipped_title;
                     existing.equipped_title_id = p.equipped_title_id;
+                    if (p.skin_url && p.skin_url !== existing.skin_url) {
+                        existing.skin_url = p.skin_url;
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.src = p.skin_url;
+                        existing._skinImg = img;
+                    }
                 }
             } else if (payload.eventType === 'DELETE') {
                 delete this.players[payload.old?.user_id];
@@ -1100,6 +1107,39 @@ class CityScreen {
                 }).eq('user_id', this.authUserId);
             } catch (e) {}
         }
+    }
+
+    async updateEquippedSkin(skinUrl) {
+        if (!skinUrl) return;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = skinUrl;
+        await new Promise(r => {
+            img.onload = r;
+            img.onerror = () => {
+                img.src = 'assets/perso_masculino.webp';
+                img.onload = r;
+                img.onerror = r;
+            };
+        });
+        this.playerSkinImg = img;
+        this.playerSpriteFrames = null;
+        const isSquare = img.naturalWidth > 50 && Math.abs(img.naturalWidth - img.naturalHeight) < 20;
+        if (isSquare) {
+            this.playerSpriteFrames = { frameW: img.naturalWidth / 4, frameH: img.naturalHeight / 4 };
+            this.playerSize = img.naturalWidth > 512 ? 64 : 48;
+        } else {
+            this.playerSize = 48;
+        }
+        if (this.myPlayer) {
+            this.myPlayer.skin_url = skinUrl;
+        }
+        if (this.authUserId && this.authUserId !== 'local') {
+            try {
+                await window.db.from('city_players').update({ skin_url: skinUrl }).eq('user_id', this.authUserId);
+            } catch (e) {}
+        }
+        this.render();
     }
 
     async syncRetroactiveTitles() {
