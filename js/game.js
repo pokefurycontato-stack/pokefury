@@ -177,6 +177,7 @@ class PokeFuryGame {
                     }
                 }
             } catch (e) {
+                console.error('[PokeFury] Auto-login error:', e);
             }
         }
     }
@@ -336,14 +337,20 @@ class PokeFuryGame {
     }
 
     startHeartbeat() {
-        this.stopHeartbeat();
-        if (this.currentCharacterId && window.db) {
-            window.db.rpc('heartbeat_character', { p_character_id: this.currentCharacterId }).catch(() => {});
-        }
-        this._heartbeatTimer = setInterval(() => {
-            if (!this.currentCharacterId || !window.db) return;
-            window.db.rpc('heartbeat_character', { p_character_id: this.currentCharacterId }).catch(() => {});
-        }, 30000);
+        try {
+            this.stopHeartbeat();
+        } catch (e) {}
+        const beat = () => {
+            try {
+                if (this.currentCharacterId && window.db && typeof window.db.rpc === 'function') {
+                    window.db.rpc('heartbeat_character', { p_character_id: this.currentCharacterId }).catch(() => {});
+                }
+            } catch (e) {}
+        };
+        beat();
+        try {
+            this._heartbeatTimer = setInterval(beat, 30000);
+        } catch (e) {}
     }
 
     stopHeartbeat() {
