@@ -16,7 +16,7 @@ BEGIN
   IF NOT FOUND OR v_user_id != auth.uid() THEN RETURN jsonb_build_object('error', 'Not authorized'); END IF;
 
   -- Verifica se o item já está equipado em outro pokemon do time
-  SELECT COALESCE(pokemon_name, species) INTO v_old_name FROM pokemon_team
+  SELECT species INTO v_old_name FROM pokemon_team
   WHERE character_id = p_character_id AND held_item_id = p_item_id AND id != p_pokemon_id
   LIMIT 1;
 
@@ -31,7 +31,7 @@ BEGIN
   WHERE id = p_pokemon_id AND character_id = p_character_id;
 
   -- Pega o nome do pokemon alvo
-  SELECT COALESCE(pokemon_name, species) INTO v_new_name FROM pokemon_team WHERE id = p_pokemon_id;
+  SELECT species INTO v_new_name FROM pokemon_team WHERE id = p_pokemon_id;
 
   RETURN jsonb_build_object('success', true, 'swapped_from', v_old_name, 'target', v_new_name);
 END;
