@@ -324,6 +324,7 @@ class PokeFuryGame {
         this.avatarUrl = save.avatar_url || null;
         this.trainerLevel = save.trainer_level || 1;
         this.trainerExp = save.trainer_exp || 0;
+        this.startHeartbeat();
 
         // Load boosts (VIP, shiny, exp, etc)
         if (window.boostsManager) {
@@ -332,6 +333,24 @@ class PokeFuryGame {
         }
 
         await this.startGame(save.starter_pokemon);
+    }
+
+    startHeartbeat() {
+        this.stopHeartbeat();
+        if (this.currentCharacterId && window.db) {
+            window.db.rpc('heartbeat_character', { p_character_id: this.currentCharacterId }).catch(() => {});
+        }
+        this._heartbeatTimer = setInterval(() => {
+            if (!this.currentCharacterId || !window.db) return;
+            window.db.rpc('heartbeat_character', { p_character_id: this.currentCharacterId }).catch(() => {});
+        }, 30000);
+    }
+
+    stopHeartbeat() {
+        if (this._heartbeatTimer) {
+            clearInterval(this._heartbeatTimer);
+            this._heartbeatTimer = null;
+        }
     }
 
     trainerExpForLevel(level) {
@@ -3523,6 +3542,7 @@ class PokeFuryGame {
     }
 
     switchCharacter() {
+        this.stopHeartbeat();
         this.currentCharacterId = null;
         window.GameData.setCurrentCharacter(null);
         document.getElementById('game-wrapper').classList.add('hidden');
@@ -6673,7 +6693,10 @@ openEventsPanel() {
                     players.forEach(p => {
                         const row = document.createElement('div');
                         row.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.05);';
-                        row.innerHTML = `<span style="color:#fff;font-weight:600;">${p.player_name}</span> <span style="color:rgba(255,255,255,0.4);">(${p.username})</span>`;
+                        const lastSeen = p.last_seen || p.updated_at;
+                        const isOnline = lastSeen && (Date.now() - new Date(lastSeen).getTime()) < 90000;
+                        const dot = `<span style="color:${isOnline ? '#4caf50' : '#f44336'};font-size:10px;margin-left:6px;">${isOnline ? '● online' : '● offline'}</span>`;
+                        row.innerHTML = `<span style="color:#fff;font-weight:600;">${p.player_name}</span> <span style="color:rgba(255,255,255,0.4);">(${p.username})</span>${dot}`;
                         row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
                         row.addEventListener('mouseleave', () => row.style.background = 'transparent');
                         row.addEventListener('click', () => {
@@ -6696,11 +6719,12 @@ openEventsPanel() {
                 }
 
                 const { data: lastActive } = await window.db.from('game_saves')
-                    .select('updated_at')
+                    .select('last_seen, updated_at')
                     .eq('id', selectedTarget.id)
                     .maybeSingle();
 
-                const isOnline = lastActive && (Date.now() - new Date(lastActive.updated_at).getTime()) < 300000;
+                const lastSeen = lastActive?.last_seen || lastActive?.updated_at;
+                const isOnline = lastSeen && (Date.now() - new Date(lastSeen).getTime()) < 90000;
 
                 if (!isOnline) {
                     const proceed = await new Promise(resolve => {

@@ -29,7 +29,7 @@ class PVPSystem {
     async searchPlayers(query) {
         if (!query || query.length < 2) return [];
         const { data: chars } = await window.db.from('characters')
-            .select('id, player_name, user_id')
+            .select('id, player_name, user_id, last_seen, updated_at')
             .ilike('player_name', `%${query}%`)
             .limit(10);
         if (!chars || chars.length === 0) return [];
