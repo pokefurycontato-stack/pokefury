@@ -219,10 +219,17 @@ class ProfileScreen {
   async renderTeam() {
     const list = document.getElementById('profile-team-list');
     if (!list) return;
+
+    const game = window.pokefury;
+    const team = game?.playerTeam || [];
+    // Evita recriar o DOM (e reiniciar GIFs) se nada mudou
+    const sig = JSON.stringify(team.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted] : null));
+    if (sig === this._teamSig && list.dataset.rendered === '1') return;
+    this._teamSig = sig;
+    list.dataset.rendered = '1';
+
     list.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:12px;text-align:center;">Carregando...</div>';
     try {
-      const game = window.pokefury;
-      const team = game?.playerTeam || [];
       if (!team.length) {
         list.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:12px;text-align:center;">Nenhum pokemon no time</div>';
         return;
