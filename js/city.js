@@ -140,7 +140,11 @@ class CityScreen {
         menu.className = 'player-context-menu';
         menu.style.cssText = 'position:fixed;z-index:10060;background:#1c2333;border:1px solid rgba(255,255,255,0.15);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;';
         const friendId = player.character_id;
-        menu.innerHTML = `<button data-action="add-friend" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Adicionar Amigo</button>`;
+        const name = player.character_name || 'Jogador';
+        menu.innerHTML = `
+            <button data-action="add-friend" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Adicionar Amigo</button>
+            <button data-action="private-msg" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar mensagem privada</button>
+        `;
         menu.style.left = (rect.left + sx * scaleX) + 'px';
         menu.style.top = (rect.top + (sy - this.playerSize) * scaleY - 6) + 'px';
         menu.style.transform = 'translateX(-50%)';
@@ -150,6 +154,13 @@ class CityScreen {
             menu.remove();
             if (friendId && window.pokefury?.friends) {
                 await window.pokefury.friends.addFriend(friendId);
+            }
+        });
+
+        menu.querySelector('[data-action="private-msg"]').addEventListener('click', () => {
+            menu.remove();
+            if (friendId) {
+                window.openPrivateChatWith(friendId, name);
             }
         });
 

@@ -199,6 +199,7 @@ export class FriendsSystem {
             await window.db.from('private_messages').insert({
                 sender_character_id: this.charId,
                 receiver_character_id: friendId,
+                sender_name: this._myName(),
                 content: text.substring(0, 300),
                 read: false
             });
