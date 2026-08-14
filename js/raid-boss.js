@@ -75,12 +75,15 @@ export class RaidBossManager {
     async recordDamage(raidId, damage) {
         const charId = window.GameData?.currentCharacterId;
         if (!charId) return null;
-        const { data } = await window.db.rpc('record_raid_damage', {
+        const { data, error } = await window.db.rpc('record_raid_damage', {
             p_raid_id: raidId,
             p_character_id: charId,
             p_character_name: this.game.playerName || 'Jogador',
             p_damage: damage
         });
+        if (error) { console.error('[RaidBoss] recordDamage error:', error); return null; }
+        if (data && data.error) { console.warn('[RaidBoss] recordDamage rpc error:', data.error); return data; }
+        await this.checkActiveBoss();
         return data;
     }
 

@@ -2554,7 +2554,7 @@ class CityScreen {
         if (!boss) return;
         if (this._raidRankEl) {
             if (this._raidRankTimer) return;
-            this._raidRankTimer = setInterval(() => this.renderRaidRank(boss), 5000);
+            this._raidRankTimer = setInterval(() => this.renderRaidRank(), 3000);
             return;
         }
         const el = document.createElement('div');
@@ -2562,12 +2562,14 @@ class CityScreen {
         el.style.cssText = 'position:fixed;top:90px;left:12px;z-index:900;background:rgba(10,10,20,0.92);border:1px solid rgba(233,69,96,0.4);border-radius:10px;padding:10px 12px;min-width:200px;max-height:60vh;overflow-y:auto;pointer-events:none;';
         this._raidRankEl = el;
         document.body.appendChild(el);
-        await this.renderRaidRank(boss);
-        this._raidRankTimer = setInterval(() => this.renderRaidRank(boss), 5000);
+        await this.renderRaidRank();
+        this._raidRankTimer = setInterval(() => this.renderRaidRank(), 3000);
     }
 
-    async renderRaidRank(boss) {
+    async renderRaidRank() {
         if (!this._raidRankEl) return;
+        const boss = this.getRaidBoss();
+        if (!boss) { this.hideRaidRank(); return; }
         const ranking = await window.pokefury?.raidBoss?.getRanking(boss.id) || [];
         const hpPct = boss.max_hp > 0 ? Math.max(0, (boss.current_hp / boss.max_hp) * 100) : 0;
         let rows = ranking.map((r, i) => {
