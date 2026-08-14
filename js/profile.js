@@ -376,7 +376,7 @@ class ProfileScreen {
     const badgeImgs = regionBadges.map(b => {
       const slug = BADGE_IMAGES[b.type];
       if (!slug) return '';
-      return `<img src="assets/ferramentas/insignia${slug}.png" title="${escapeHtml(b.badge_name)}" style="width:42px;height:42px;object-fit:contain;">`;
+      return `<img src="assets/ferramentas/insignia${slug}.png" title="${escapeHtml(b.badge_name)}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 4px 4px rgba(0,0,0,0.45));">`;
     }).join('');
     return `
       <div style="display:flex;flex-direction:column;height:100%;">
