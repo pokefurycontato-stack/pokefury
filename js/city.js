@@ -1395,7 +1395,9 @@ class CityScreen {
             if (sx + ps > -50 && sx < cw + 50 && sy + ps > -50 && sy < ch + 50) {
                 const img = this._gymNpcImg;
                 if (img && img.complete && img.naturalWidth) {
-                    ctx.drawImage(img, sx, sy, ps, ps);
+                    const frameW = img.naturalWidth / 4;
+                    const frameH = img.naturalHeight / 4;
+                    ctx.drawImage(img, 0, 0, frameW, frameH, sx, sy, ps, ps);
                 } else {
                     ctx.fillStyle = '#e94560';
                     ctx.fillRect(sx, sy, ps, ps);
