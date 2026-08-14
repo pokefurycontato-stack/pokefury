@@ -2507,7 +2507,7 @@ class PokeFuryGame {
             10036: 'Mega Rayquaza',
             13002: 'Calyrex Shadow Rider'
         };
-        const pool = [382, 383, 484, 487, 491, 10036, 13002];
+        const pool = [382, 383, 487, 10036, 13002];
         const id = pool[Math.floor(Math.random() * pool.length)];
         let name = BOSS_NAME_MAP[id] || 'Raid Boss';
         try {
