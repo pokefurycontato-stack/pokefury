@@ -51,7 +51,7 @@ export class RaidBossManager {
     }
 
     bossSpriteUrl(id) {
-        return `assets/bossraid/${id}.gif`;
+        return `assets/bossraid-transparent/${id}.gif`;
     }
 
     portalSpriteUrl() {

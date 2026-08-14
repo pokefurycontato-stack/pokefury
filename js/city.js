@@ -1306,10 +1306,8 @@ class CityScreen {
 
     drawRaidElements(ctx, camX, camY, cw, ch) {
         const boss = this.getRaidBoss();
-        if (!boss) { this.renderRaidDom(); return; }
 
-        // Nome do boss (label em cima do sprite DOM)
-        if (this.raidBoss) {
+        if (boss && this.raidBoss) {
             const s = this.raidBoss;
             const bs = 220;
             const bx = s.pos_x - camX - bs / 2;
@@ -1326,6 +1324,7 @@ class CityScreen {
             }
         }
 
+        // Portal de saida SEMPRE ativo (para nao prender jogadores na arena)
         if (this.raidExit) {
             const e = this.raidExit;
             const ex = e.pos_x - camX;
@@ -1360,7 +1359,7 @@ class CityScreen {
         layer.appendChild(this._raidPortalEl);
 
         this._raidBossEl = document.createElement('img');
-        this._raidBossEl.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;mix-blend-mode:multiply;';
+        this._raidBossEl.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;';
         layer.appendChild(this._raidBossEl);
 
         this._raidExitEl = document.createElement('img');
@@ -1371,7 +1370,8 @@ class CityScreen {
 
     renderRaidDom() {
         const boss = this.getRaidBoss();
-        if (!boss) {
+        const hasExit = !!this.raidExit;
+        if (!boss && !hasExit) {
             if (this._raidLayer) this._raidLayer.style.display = 'none';
             return;
         }
@@ -1389,7 +1389,7 @@ class CityScreen {
         const camX = this.cameraX - canvas.width / 2;
         const camY = this.cameraY - canvas.height / 2;
 
-        if (this.raidPortal && this._raidPortalEl) {
+        if (boss && this.raidPortal && this._raidPortalEl) {
             const p = this.raidPortal;
             const sx = p.pos_x - camX;
             const sy = p.pos_y - camY;
@@ -1401,9 +1401,11 @@ class CityScreen {
             el.style.top = (offsetY + sy * scaleY) + 'px';
             el.style.width = (w * scaleX) + 'px';
             el.style.height = (h * scaleY) + 'px';
+        } else if (this._raidPortalEl) {
+            this._raidPortalEl.style.display = 'none';
         }
 
-        if (this.raidBoss && this._raidBossEl) {
+        if (boss && this.raidBoss && this._raidBossEl) {
             const b = this.raidBoss;
             const bs = 220;
             const bx = b.pos_x - camX - bs / 2;
@@ -1418,6 +1420,8 @@ class CityScreen {
             el.style.top = (offsetY + by * scaleY) + 'px';
             el.style.width = (bs * scaleX) + 'px';
             el.style.height = (bs * scaleY) + 'px';
+        } else if (this._raidBossEl) {
+            this._raidBossEl.style.display = 'none';
         }
 
         if (this.raidExit && this._raidExitEl) {
@@ -2464,6 +2468,15 @@ class CityScreen {
         const boss = this.getRaidBoss();
         this.nearRaidPortal = false;
         this.nearRaidExit = false;
+
+        // Portal de saida SEMPRE ativo (para nao prender jogadores na arena)
+        if (this.raidExit) {
+            const e = this.raidExit;
+            if (Math.hypot(this.playerX - e.pos_x, this.playerY - e.pos_y) < 60) {
+                this.nearRaidExit = true;
+            }
+        }
+
         if (!boss) {
             this.hideRaidRank();
             return;
@@ -2475,13 +2488,6 @@ class CityScreen {
             const cy = p.pos_y + (p.height || 64) / 2;
             if (Math.hypot(this.playerX - cx, this.playerY - cy) < 80) {
                 this.nearRaidPortal = true;
-            }
-        }
-
-        if (this.raidExit) {
-            const e = this.raidExit;
-            if (Math.hypot(this.playerX - e.pos_x, this.playerY - e.pos_y) < 60) {
-                this.nearRaidExit = true;
             }
         }
 
