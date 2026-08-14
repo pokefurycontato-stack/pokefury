@@ -21,10 +21,9 @@ FROM (
       + FLOOR(((2*COALESCE(p.sp_atk,50) + COALESCE(pt2.iv_sp_atk,15) + FLOOR(COALESCE(pt2.ev_sp_atk,0)/4)) * pt2.level / 100) + 5)
       + FLOOR(((2*COALESCE(p.sp_def,50) + COALESCE(pt2.iv_sp_def,15) + FLOOR(COALESCE(pt2.ev_sp_def,0)/4)) * pt2.level / 100) + 5)
       + FLOOR(((2*COALESCE(p.speed,50) + COALESCE(pt2.iv_speed,15) + FLOOR(COALESCE(pt2.ev_speed,0)/4)) * pt2.level / 100) + 5)
-    )::INTEGER
-    + (COALESCE(pt2.iv_hp,15)+COALESCE(pt2.iv_attack,15)+COALESCE(pt2.iv_defense,15)+COALESCE(pt2.iv_sp_atk,15)+COALESCE(pt2.iv_sp_def,15)+COALESCE(pt2.iv_speed,15)) * 3
-    + (COALESCE(pt2.ev_hp,0)+COALESCE(pt2.ev_attack,0)+COALESCE(pt2.ev_defense,0)+COALESCE(pt2.ev_sp_atk,0)+COALESCE(pt2.ev_sp_def,0)+COALESCE(pt2.ev_speed,0)) * 0.5
-  )::INTEGER AS power
+      + (COALESCE(pt2.iv_hp,15)+COALESCE(pt2.iv_attack,15)+COALESCE(pt2.iv_defense,15)+COALESCE(pt2.iv_sp_atk,15)+COALESCE(pt2.iv_sp_def,15)+COALESCE(pt2.iv_speed,15)) * 3
+      + (COALESCE(pt2.ev_hp,0)+COALESCE(pt2.ev_attack,0)+COALESCE(pt2.ev_defense,0)+COALESCE(pt2.ev_sp_atk,0)+COALESCE(pt2.ev_sp_def,0)+COALESCE(pt2.ev_speed,0)) * 0.5
+    )::INTEGER AS power
   FROM pokemon_team pt2
   LEFT JOIN pokemon p ON p.id = pt2.pokemon_id
 ) sub
