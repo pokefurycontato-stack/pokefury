@@ -41,6 +41,16 @@ class CityScreen {
         this.wildPokemon = [];
         this.wildPokemonCooldown = 0;
 
+        this.raidPortal = null;
+        this.raidSpawn = null;
+        this.raidZones = [];
+        this.raidCooldownUntil = 0;
+        this._raidPortalImg = null;
+        this._raidExitImg = null;
+        this._raidBossImg = null;
+        this._raidRankEl = null;
+        this._raidRankTimer = null;
+
         this.bindEvents();
     }
 
@@ -69,7 +79,11 @@ class CityScreen {
             }
             if (e.key === 'e' || e.key === 'E') {
                 if (this.npcDialogueOpen) return;
-                if (this.nearestNpc) {
+                if (this.nearRaidPortal) {
+                    this.teleportToRaidArena();
+                } else if (this.nearRaidExit) {
+                    this.teleportOutOfRaid();
+                } else if (this.nearestNpc) {
                     this.handleNpcInteraction(this.nearestNpc);
                 } else if (this.nearestTeleport) {
                     this.showTeleportMenu(this.nearestTeleport);
@@ -206,6 +220,7 @@ class CityScreen {
             if (LS) LS.setProgress(40);
             await this.loadPlayerSpawn();
             await this.loadLights();
+            await this.loadRaidLayout();
             await this.syncServerTime();
             await this.registerPlayer();
             this.cameraX = this.playerX;
@@ -252,6 +267,7 @@ class CityScreen {
             if (LS) LS.setProgress(72);
             await this.loadPlayerSpawn();
             await this.loadLights();
+            await this.loadRaidLayout();
             await this.loadMyEquippedTitle();
             await this.syncRetroactiveTitles();
             await this.syncServerTime();
@@ -1219,6 +1235,112 @@ class CityScreen {
             if (data) this.lights = data;
         } catch (e) {}
     }
+
+    async loadRaidLayout() {
+        try {
+            const { data: portal } = await window.db.from('city_raid_portal').select('*').limit(1).maybeSingle();
+            this.raidPortal = portal || null;
+        } catch (e) { this.raidPortal = null; }
+        try {
+            const { data: spawn } = await window.db.from('city_raid_spawn').select('*').limit(1).maybeSingle();
+            this.raidSpawn = spawn || null;
+        } catch (e) { this.raidSpawn = null; }
+        try {
+            const { data: zones } = await window.db.from('city_raid_zones').select('*');
+            this.raidZones = zones || [];
+        } catch (e) { this.raidZones = []; }
+        this._ensureRaidImages();
+    }
+
+    _ensureRaidImages() {
+        const game = window.pokefury;
+        if (!game?.raidBoss) return;
+        if (!this._raidPortalImg) {
+            const img = new Image();
+            img.src = game.raidBoss.portalSpriteUrl();
+            this._raidPortalImg = img;
+        }
+        if (!this._raidExitImg) {
+            const img = new Image();
+            img.src = game.raidBoss.portalSpriteUrl();
+            this._raidExitImg = img;
+        }
+    }
+
+    getRaidBoss() {
+        return window.pokefury?.raidBoss?.activeBoss || null;
+    }
+
+    isInRaidZone() {
+        for (const z of this.raidZones) {
+            if (this.playerX >= z.pos_x && this.playerX <= z.pos_x + z.width &&
+                this.playerY >= z.pos_y && this.playerY <= z.pos_y + z.height) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    drawRaidElements(ctx, camX, camY, cw, ch) {
+        const boss = this.getRaidBoss();
+        if (!boss) return;
+
+        if (this.raidPortal && this._raidPortalImg) {
+            const p = this.raidPortal;
+            const sx = p.pos_x - camX;
+            const sy = p.pos_y - camY;
+            if (sx + (p.width || 64) > -50 && sx < cw + 50 && sy + (p.height || 64) > -50 && sy < ch + 50) {
+                const img = this._raidPortalImg;
+                if (img.complete && img.naturalWidth) {
+                    ctx.drawImage(img, sx, sy, p.width || 64, p.height || 64);
+                }
+            }
+        }
+
+        if (this.raidSpawn) {
+            const s = this.raidSpawn;
+            const bs = 220;
+            const bx = s.pos_x - camX - bs / 2;
+            const by = s.pos_y - camY - bs / 2;
+            if (bx + bs > -50 && bx < cw + 50 && by + bs > -50 && by < ch + 50) {
+                if (!this._raidBossImg || this._raidBossImgId !== boss.pokemon_id) {
+                    const img = new Image();
+                    img.src = window.pokefury.raidBoss.bossSpriteUrl(boss.pokemon_id);
+                    this._raidBossImg = img;
+                    this._raidBossImgId = boss.pokemon_id;
+                }
+                const bimg = this._raidBossImg;
+                if (bimg.complete && bimg.naturalWidth) {
+                    ctx.drawImage(bimg, bx, by, bs, bs);
+                }
+                ctx.textAlign = 'center';
+                ctx.font = 'bold 16px Inter, sans-serif';
+                ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+                ctx.lineWidth = 4;
+                const label = `Boss ${boss.boss_name} (Nv.${boss.level})`;
+                ctx.strokeText(label, s.pos_x - camX, by + bs + 22);
+                ctx.fillStyle = '#fff';
+                ctx.fillText(label, s.pos_x - camX, by + bs + 22);
+            }
+
+            if (this._raidExitImg) {
+                const ex = (s.pos_x - 140) - camX;
+                const ey = s.pos_y - camY;
+                const es = 48;
+                if (ex + es > -50 && ex < cw + 50 && ey + es > -50 && ey < ch + 50) {
+                    const img = this._raidExitImg;
+                    if (img.complete && img.naturalWidth) {
+                        ctx.drawImage(img, ex, ey, es, es);
+                    }
+                    ctx.textAlign = 'center';
+                    ctx.font = 'bold 10px Inter, sans-serif';
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText('Sair', ex + es / 2, ey - 4);
+                }
+            }
+        }
+    }
+
 
     async loadMyEquippedTitle() {
         const charId = window.GameData?.currentCharacterId;
@@ -2242,7 +2364,119 @@ class CityScreen {
 
         this.updateWildPokemon(0.016 * this._dt);
         this.updateNpcPatrols(0.016 * this._dt);
+        this.updateRaidInteraction();
     }
+
+    updateRaidInteraction() {
+        const boss = this.getRaidBoss();
+        this.nearRaidPortal = false;
+        this.nearRaidExit = false;
+        if (!boss) {
+            this.hideRaidRank();
+            return;
+        }
+
+        if (this.raidPortal) {
+            const p = this.raidPortal;
+            const cx = p.pos_x + (p.width || 64) / 2;
+            const cy = p.pos_y + (p.height || 64) / 2;
+            if (Math.hypot(this.playerX - cx, this.playerY - cy) < 80) {
+                this.nearRaidPortal = true;
+            }
+        }
+
+        if (this.raidSpawn) {
+            const s = this.raidSpawn;
+            const exitX = s.pos_x - 140 + 24;
+            const exitY = s.pos_y + 24;
+            if (Math.hypot(this.playerX - exitX, this.playerY - exitY) < 60) {
+                this.nearRaidExit = true;
+            }
+
+            if (Math.hypot(this.playerX - s.pos_x, this.playerY - s.pos_y) < 110 && boss.current_hp > 0) {
+                if (Date.now() >= this.raidCooldownUntil && window.pokefury && window.pokefury.state !== 'battle') {
+                    this.raidCooldownUntil = 0;
+                    window.pokefury.startRaidBossBattle();
+                }
+            }
+        }
+
+        if (this.isInRaidZone()) {
+            this.showRaidRank(boss);
+        } else {
+            this.hideRaidRank();
+        }
+    }
+
+    teleportToRaidArena() {
+        if (!this.raidSpawn) return;
+        this.playerX = this.raidSpawn.pos_x;
+        this.playerY = this.raidSpawn.pos_y;
+        this.playerFromX = this.playerX;
+        this.playerFromY = this.playerY;
+        this.cameraX = this.playerX;
+        this.cameraY = this.playerY;
+        this.syncPosition();
+        this.raidCooldownUntil = Date.now() + 2000;
+    }
+
+    teleportOutOfRaid() {
+        if (!this.raidPortal) return;
+        this.playerX = this.raidPortal.pos_x + (this.raidPortal.width || 64) / 2;
+        this.playerY = this.raidPortal.pos_y + (this.raidPortal.height || 64) + 60;
+        this.playerFromX = this.playerX;
+        this.playerFromY = this.playerY;
+        this.cameraX = this.playerX;
+        this.cameraY = this.playerY;
+        this.syncPosition();
+    }
+
+    async showRaidRank(boss) {
+        if (!boss) return;
+        if (this._raidRankEl) {
+            if (this._raidRankTimer) return;
+            this._raidRankTimer = setInterval(() => this.renderRaidRank(boss), 5000);
+            return;
+        }
+        const el = document.createElement('div');
+        el.id = 'raid-rank-panel';
+        el.style.cssText = 'position:fixed;top:90px;left:12px;z-index:900;background:rgba(10,10,20,0.92);border:1px solid rgba(233,69,96,0.4);border-radius:10px;padding:10px 12px;min-width:200px;max-height:60vh;overflow-y:auto;pointer-events:none;';
+        this._raidRankEl = el;
+        document.body.appendChild(el);
+        await this.renderRaidRank(boss);
+        this._raidRankTimer = setInterval(() => this.renderRaidRank(boss), 5000);
+    }
+
+    async renderRaidRank(boss) {
+        if (!this._raidRankEl) return;
+        const ranking = await window.pokefury?.raidBoss?.getRanking(boss.id) || [];
+        const hpPct = boss.max_hp > 0 ? Math.max(0, (boss.current_hp / boss.max_hp) * 100) : 0;
+        let rows = ranking.map((r, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+            const me = r.character_id === window.GameData?.currentCharacterId;
+            return `<div style="display:flex;gap:6px;padding:3px 0;font-size:11px;${me ? 'color:#e94560;font-weight:700;' : 'color:#fff;'}"><span style="min-width:20px;">${medal}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this.escapeHtml(r.character_name || '?')}</span><span>${Number(r.total_damage).toLocaleString()}</span></div>`;
+        }).join('');
+        if (!rows) rows = '<div style="color:rgba(255,255,255,0.4);font-size:11px;">Sem dano ainda</div>';
+        this._raidRankEl.innerHTML = `
+            <div style="color:#e94560;font-weight:800;font-size:12px;margin-bottom:6px;">RAID BOSS</div>
+            <div style="color:#fff;font-size:11px;margin-bottom:4px;">${this.escapeHtml(boss.boss_name)}</div>
+            <div style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:6px;"><div style="height:100%;width:${hpPct}%;background:linear-gradient(90deg,#e94560,#ff6b6b);"></div></div>
+            <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-bottom:6px;">HP ${Number(boss.current_hp).toLocaleString()} / ${Number(boss.max_hp).toLocaleString()}</div>
+            <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;">${rows}</div>
+        `;
+    }
+
+    hideRaidRank() {
+        if (this._raidRankEl) { this._raidRankEl.remove(); this._raidRankEl = null; }
+        if (this._raidRankTimer) { clearInterval(this._raidRankTimer); this._raidRankTimer = null; }
+    }
+
+    escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    }
+
 
     async syncPosition() {
         if (!this.myPlayer || this.authUserId === 'local') return;
@@ -2642,6 +2876,8 @@ class CityScreen {
             ctx.textAlign = 'center';
             ctx.fillText(t.name, sx + t.sign_width / 2, sy - 6);
         });
+
+        this.drawRaidElements(ctx, camX, camY, cw, ch);
 
         if (this.spawnZones.length > 0) {
             this.spawnZones.forEach((z, i) => {

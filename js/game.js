@@ -22,6 +22,7 @@ import { AFKManager } from './afk.js';
 import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
+import { RaidBossManager } from './raid-boss.js';
 
 const SHINY_CHANCE = 128;
 
@@ -133,6 +134,8 @@ class PokeFuryGame {
         this.currentRegionMaps = [];
         this._winStreak = 0;
         this._isRaidBattle = false;
+        this._inRaidBossBattle = false;
+        this._raidBossEntryHp = null;
 
         this.init();
     }
@@ -668,6 +671,14 @@ class PokeFuryGame {
             this.friends = new FriendsSystem(this);
         }
         this.friends.initRealtime();
+
+        if (!this.raidBoss) {
+            this.raidBoss = new RaidBossManager(this);
+        }
+        this.raidBoss.onBossSpawned = (boss) => {
+            this.showRaidBossSpawnPopup(boss);
+        };
+        this.raidBoss.init();
 
 
         const adminPanel = document.getElementById('admin-panel');
@@ -2296,6 +2307,7 @@ class PokeFuryGame {
             : null;
 
         const wasAlpha = !!(this.enemyTeam[0]?.isAlpha);
+        const raidBossFinalHp = this._inRaidBossBattle && this.enemyTeam[0] ? this.enemyTeam[0].currentHp : null;
 
         this.enemyTeam = [];
         this.updatePartyPanel();
@@ -2304,7 +2316,9 @@ class PokeFuryGame {
         if (this.overworld2d) this.overworld2d.show();
 
         if (result === 'lose') {
-            if (this._cityBattle && window.cityScreen) {
+            if (this._inRaidBossBattle) {
+                // Raid boss: nao volta ao centro pokemon (curado automaticamente)
+            } else if (this._cityBattle && window.cityScreen) {
                 window.cityScreen.teleportToCityPokemonCenter();
             } else {
                 await this.teleportToPokemonCenter();
@@ -2328,11 +2342,159 @@ class PokeFuryGame {
             }
         }
 
+        if (this._inRaidBossBattle) {
+            this._inRaidBossBattle = false;
+            const boss = this.raidBoss?.activeBoss;
+            const entryHp = this._raidBossEntryHp;
+            this._raidBossEntryHp = null;
+            if (boss && entryHp != null && raidBossFinalHp != null) {
+                const damage = Math.max(0, entryHp - raidBossFinalHp);
+                if (damage > 0) {
+                    const res = await this.raidBoss.recordDamage(boss.id, damage);
+                    if (res && res.defeated) {
+                        await this.showRaidBossDefeatedPopup();
+                    }
+                }
+            }
+            this.playerTeam.forEach(p => { p.currentHp = p.stats.hp; p.fainted = false; p.statusEffect = null; });
+            await this.saveTeam();
+            this.updatePartyPanel();
+            const cityList = document.getElementById('city-party-list');
+            if (cityList) this.updatePartyPanel(cityList);
+            if (window.cityScreen) window.cityScreen.raidCooldownUntil = Date.now() + 60000;
+        }
+
         if (wasAlpha && result === 'win') {
             await this.endAlphaBattle('win');
         }
         this._battleEnding = false;
         this._cityBattle = false;
+    }
+
+    async startRaidBossBattle() {
+        const boss = this.raidBoss?.activeBoss;
+        if (!boss || boss.current_hp <= 0) return;
+
+        hideBattlePokemonSprites();
+        if (!this.playerTeam || this.playerTeam.length === 0 || this.playerTeam.every(p => p.fainted)) return;
+
+        this.isWildBattle = true;
+        this._playerSpriteReady = false;
+        this._inRaidBossBattle = true;
+
+        const apiData = await PokeAPI.ensurePokemon(boss.pokemon_id);
+        const pokemon = await createPokemon(apiData, boss.level, null, null, null, false);
+        pokemon.isRaidBoss = true;
+        pokemon.maxHp = Number(boss.max_hp);
+        pokemon.currentHp = Number(boss.current_hp);
+        pokemon.stats.hp = Number(boss.max_hp);
+        pokemon.spriteUrls = { ...(pokemon.spriteUrls || {}), front: this.raidBoss.bossSpriteUrl(boss.pokemon_id) };
+
+        this._raidBossEntryHp = Number(boss.current_hp);
+
+        this.enemyTeam = [pokemon];
+
+        this._battleState = { weather: null, weatherTurns: 0, terrain: null, terrainTurns: 0, _neutralizingGas: false };
+        initFieldEffects({ _teamEffects: this._playerFieldEffects = {} });
+        initFieldEffects({ _teamEffects: this._enemyFieldEffects = {} });
+        this._playerFieldEffects._isPlayer = true;
+        this._enemyFieldEffects._isPlayer = false;
+
+        const activePlayer = getFirstAlive(this.playerTeam);
+
+        this.currentBattleBg = this.getNormalizedBattleBg();
+        if (this.currentBattleBg) {
+            await preloadBattleBgImage(this.currentBattleBg);
+            this.applyBattleNeonFromBg(this.currentBattleBg);
+        }
+        await this.loadWildBattleLayout();
+
+        this.state = 'battle';
+        this._turnLocked = true;
+        this._lastBattlePlayer = activePlayer;
+        this._lastBattleEnemy = pokemon;
+        if (this.overworld2d) this.overworld2d.hide();
+        this.battleStartTime = Date.now();
+        this.currentTurn = 1;
+        this._turnQueue = [];
+        this._playerUsedMoveThisTurn = false;
+
+        showScreen('battle-screen');
+        this.positionBattleScreen();
+
+        if (!this.weatherAnim) this.weatherAnim = new WeatherAnimations();
+        this.weatherAnim.setWeather(null);
+
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        initBattleUI(
+            () => this.onFight(),
+            () => this.onBag(),
+            () => this.onMega(),
+            () => this.onRun()
+        );
+
+        await Promise.all([
+            this.playPVPEntrance('player', activePlayer, true),
+            this.playPVPEntrance('enemy', pokemon, true)
+        ]);
+
+        await showBattleMessage(`BOSS ${boss.boss_name} apareceu!`, 2000);
+        await checkAbilityChange(activePlayer);
+        await checkAbilityChange(pokemon);
+        const playerEntry = processEntryAbilities(activePlayer, pokemon, this._battleState);
+        const enemyEntry = processEntryAbilities(pokemon, activePlayer, this._battleState);
+        for (const msg of [...playerEntry, ...enemyEntry]) {
+            await showBattleMessage(msg);
+        }
+        if (this.weatherAnim && this._battleState) {
+            this.weatherAnim.setWeather(this._battleState.weather);
+        }
+        this._turnLocked = false;
+
+        document.getElementById('location-name').textContent = `RAID BOSS ${boss.boss_name.toUpperCase()}!`;
+    }
+
+    async showRaidBossDefeatedPopup() {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:10100;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#161b22;border:2px solid #e94560;border-radius:16px;padding:24px;max-width:380px;width:90%;text-align:center;">
+                <div style="font-size:22px;font-weight:900;color:#e94560;">BOSS DERROTADO!</div>
+                <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:8px;">O Raid Boss foi derrotado!<br>As recompensas foram entregues automaticamente conforme o ranking de dano.</div>
+                <button id="raid-defeated-ok" style="margin-top:16px;width:100%;padding:10px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">OK</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#raid-defeated-ok').addEventListener('click', () => overlay.remove());
+    }
+
+    showRaidBossSpawnPopup(boss) {
+        const overlay = document.createElement('div');
+        overlay.id = 'raid-spawn-popup';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:10090;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;pointer-events:none;';
+        overlay.innerHTML = `
+            <div style="background:rgba(15,20,35,0.98);border:2px solid #e94560;border-radius:16px;padding:24px;max-width:420px;width:90%;text-align:center;box-shadow:0 0 40px rgba(233,69,96,0.4);">
+                <div style="font-size:24px;font-weight:900;color:#e94560;letter-spacing:2px;">RAID BOSS INICIANDO!</div>
+                <div style="color:#fff;font-size:15px;font-weight:700;margin-top:10px;">${this.escapeHtml ? this.escapeHtml(boss.boss_name) : boss.boss_name}</div>
+                <div style="color:rgba(255,255,255,0.7);font-size:13px;margin-top:6px;">Corra para o portal na cidade para enfrentar o boss!</div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        setTimeout(() => { if (overlay.parentElement) overlay.remove(); }, 5000);
+    }
+
+    async startRaidBossEvent() {
+        if (!window.isAdmin) return;
+        const pool = [382, 383, 484, 487, 491, 10036, 13002];
+        const id = pool[Math.floor(Math.random() * pool.length)];
+        let name = 'Raid Boss';
+        try {
+            const data = await PokeAPI.ensurePokemon(id);
+            if (data) name = data.name;
+        } catch (e) {}
+        const err = await this.raidBoss.spawnBoss(id, name);
+        if (err) { this.showToast(err, 'error'); }
+        else { this.showToast(`Raid Boss iniciado: ${name}!`, 'success'); }
     }
 
     async startAlphaBattle() {
@@ -3810,6 +3972,7 @@ openEventsPanel() {
                     <div style="display:flex;flex-direction:column;gap:8px;">
                         <button id="start-alpha-btn" ${active ? 'disabled' : ''} style="width:100%;padding:12px;background:${active ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#e94560,#c23152)'};border:1px solid rgba(233,69,96,0.3);border-radius:8px;color:${active ? 'rgba(255,255,255,0.3)' : '#fff'};font-size:13px;font-weight:700;cursor:${active ? 'not-allowed' : 'pointer'};">INICIAR ALPHA EVENT</button>
                         <button id="start-raid-btn" ${active ? 'disabled' : ''} style="width:100%;padding:12px;background:${active ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#4ecdc4,#2ab7ad)'};border:1px solid rgba(78,205,196,0.3);border-radius:8px;color:${active ? 'rgba(255,255,255,0.3)' : '#fff'};font-size:13px;font-weight:700;cursor:${active ? 'not-allowed' : 'pointer'};">INICIAR GLOBAL RAID</button>
+                        <button id="start-raid-boss-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#7b2ff7,#c23152);border:1px solid rgba(123,47,247,0.3);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">INICIAR RAID BOSS</button>
                         ${active ? `<button id="end-event-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#ff6b6b,#c0392b);border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">ENCERRAR EVENTO</button>` : ''}
                         ${active?.event_type === 'raid' && raidData ? `<button id="show-ranking-btn" style="width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">VER RANKING</button>` : ''}
                     </div>
@@ -3825,6 +3988,12 @@ openEventsPanel() {
                 await em.startRaidEvent();
                 overlay.remove();
             };
+            if (overlay.querySelector('#start-raid-boss-btn')) {
+                overlay.querySelector('#start-raid-boss-btn').onclick = async () => {
+                    overlay.remove();
+                    await window.pokefury.startRaidBossEvent();
+                };
+            }
             if (overlay.querySelector('#end-event-btn')) {
                 overlay.querySelector('#end-event-btn').onclick = async () => {
                     await em.endEvent();

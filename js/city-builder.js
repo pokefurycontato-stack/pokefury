@@ -88,6 +88,18 @@ class CityBuilder {
         this.spawnPoints = [];
         this.spawnPointSelectedIdx = -1;
 
+        this.raidPortalMode = false;
+        this.raidPortal = null;
+        this.raidSpawnMode = false;
+        this.raidSpawn = null;
+        this.raidZoneMode = false;
+        this.raidZones = [];
+        this.raidZoneDrawStart = null;
+        this.raidZoneDrawCurrent = null;
+        this.raidZoneSelectedIdx = -1;
+        this.raidZoneDragging = false;
+        this.raidZoneDragOffset = { x: 0, y: 0 };
+
         this.bindEvents();
     }
 
@@ -130,6 +142,12 @@ class CityBuilder {
         if (spawnPointBtn) spawnPointBtn.addEventListener('click', () => this.toggleSpawnPointMode());
         const battleZoneBtn = document.getElementById('cb-battle-zone-btn');
         if (battleZoneBtn) battleZoneBtn.addEventListener('click', () => this.toggleBattleZoneMode());
+        const raidPortalBtn = document.getElementById('cb-raid-portal-btn');
+        if (raidPortalBtn) raidPortalBtn.addEventListener('click', () => this.toggleRaidPortalMode());
+        const raidSpawnBtn = document.getElementById('cb-raid-spawn-btn');
+        if (raidSpawnBtn) raidSpawnBtn.addEventListener('click', () => this.toggleRaidSpawnMode());
+        const raidZoneBtn = document.getElementById('cb-raid-zone-btn');
+        if (raidZoneBtn) raidZoneBtn.addEventListener('click', () => this.toggleRaidZoneMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -1541,6 +1559,122 @@ toggleVendorMode() {
         }
     }
 
+    // ======================= RAID BOSS TOOLS =======================
+
+    toggleRaidPortalMode() {
+        this.raidPortalMode = !this.raidPortalMode;
+        this._resetOtherModes('cb-raid-portal-btn');
+        const btn = document.getElementById('cb-raid-portal-btn');
+        if (btn) btn.style.background = this.raidPortalMode ? '#7b2ff7' : 'rgba(255,255,255,0.15)';
+        this.canvas.style.cursor = this.raidPortalMode ? 'crosshair' : 'default';
+        this.render();
+    }
+
+    toggleRaidSpawnMode() {
+        this.raidSpawnMode = !this.raidSpawnMode;
+        this._resetOtherModes('cb-raid-spawn-btn');
+        const btn = document.getElementById('cb-raid-spawn-btn');
+        if (btn) btn.style.background = this.raidSpawnMode ? '#c23152' : 'rgba(255,255,255,0.15)';
+        this.canvas.style.cursor = this.raidSpawnMode ? 'crosshair' : 'default';
+        this.render();
+    }
+
+    toggleRaidZoneMode() {
+        this.raidZoneMode = !this.raidZoneMode;
+        this._resetOtherModes('cb-raid-zone-btn');
+        const btn = document.getElementById('cb-raid-zone-btn');
+        if (btn) btn.style.background = this.raidZoneMode ? '#e94560' : 'rgba(255,255,255,0.15)';
+        this.canvas.style.cursor = this.raidZoneMode ? 'crosshair' : 'default';
+        if (!this.raidZoneMode) { this.raidZoneDrawStart = null; this.raidZoneDrawCurrent = null; }
+        this.render();
+    }
+
+    _resetOtherModes(exceptId) {
+        this.collisionZoneMode = false;
+        this.teleportMode = false;
+        this.npcRegionMode = false;
+        this.spawnZoneMode = false;
+        this.battleZoneMode = false;
+        this.spawnPointMode = false;
+        this.raidPortalMode = false;
+        this.raidSpawnMode = false;
+        this.raidZoneMode = false;
+        this.selected = null;
+        ['cb-collision-zone-btn','cb-teleport-btn','cb-npc-region-btn','cb-spawn-zone-btn','cb-battle-zone-btn','cb-spawn-point-btn','cb-raid-portal-btn','cb-raid-spawn-btn','cb-raid-zone-btn'].forEach(id => {
+            const b = document.getElementById(id);
+            if (b) b.style.background = 'rgba(255,255,255,0.15)';
+        });
+    }
+
+    onRaidPortalMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        this.raidPortal = { pos_x: Math.round(w.x), pos_y: Math.round(w.y), width: 64, height: 64 };
+        this.render();
+    }
+
+    onRaidSpawnMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        this.raidSpawn = { pos_x: Math.round(w.x), pos_y: Math.round(w.y) };
+        this.render();
+    }
+
+    onRaidZoneMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        for (let i = this.raidZones.length - 1; i >= 0; i--) {
+            const z = this.raidZones[i];
+            if (w.x >= z.pos_x && w.x <= z.pos_x + z.width && w.y >= z.pos_y && w.y <= z.pos_y + z.height) {
+                this.raidZoneSelectedIdx = i;
+                this.raidZoneDragging = true;
+                this.raidZoneDragOffset = { x: w.x - z.pos_x, y: w.y - z.pos_y };
+                this.render();
+                return;
+            }
+        }
+        this.raidZoneSelectedIdx = -1;
+        this.raidZoneDrawStart = { x: w.x, y: w.y };
+        this.raidZoneDrawCurrent = { x: w.x, y: w.y };
+        this.render();
+    }
+
+    onRaidZoneMouseMove(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        if (this.raidZoneDragging && this.raidZoneSelectedIdx >= 0) {
+            const z = this.raidZones[this.raidZoneSelectedIdx];
+            z.pos_x = w.x - this.raidZoneDragOffset.x;
+            z.pos_y = w.y - this.raidZoneDragOffset.y;
+            this.render();
+        } else if (this.raidZoneDrawStart) {
+            this.raidZoneDrawCurrent = { x: w.x, y: w.y };
+            this.render();
+        }
+    }
+
+    onRaidZoneMouseUp(e) {
+        if (this.raidZoneDrawStart && this.raidZoneDrawCurrent) {
+            let x = this.raidZoneDrawStart.x;
+            let y = this.raidZoneDrawStart.y;
+            let w = this.raidZoneDrawCurrent.x - x;
+            let h = this.raidZoneDrawCurrent.y - y;
+            if (w < 0) { x += w; w = -w; }
+            if (h < 0) { y += h; h = -h; }
+            if (w > 4 && h > 4) {
+                this.raidZones.push({ pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h) });
+            }
+            this.raidZoneDrawStart = null;
+            this.raidZoneDrawCurrent = null;
+        }
+        this.raidZoneDragging = false;
+        this.render();
+    }
+
+    deleteSelectedRaidZone() {
+        if (this.raidZoneSelectedIdx >= 0) {
+            this.raidZones.splice(this.raidZoneSelectedIdx, 1);
+            this.raidZoneSelectedIdx = -1;
+            this.render();
+        }
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -1688,6 +1822,7 @@ toggleVendorMode() {
             if (this.npcRegionMode) { this.onNpcRegionMouseUp(e); return; }
             if (this.spawnZoneMode) { this.onSpawnZoneMouseUp(e); return; }
             if (this.battleZoneMode) { this.onBattleZoneMouseUp(e); return; }
+            if (this.raidZoneMode) { this.onRaidZoneMouseUp(e); return; }
             if (this.nurseMode) { this.onNpcRegionMouseUp(e); return; }
             if (this.professorMode) { this.onNpcRegionMouseUp(e); return; }
             if (this.narratorMode) { this.onNpcRegionMouseUp(e); return; }
@@ -1717,6 +1852,9 @@ toggleVendorMode() {
         if (this.spawnZoneMode) { this.onSpawnZoneMouseDown(e); return; }
         if (this.battleZoneMode) { this.onBattleZoneMouseDown(e); return; }
         if (this.spawnPointMode) { this.onSpawnPointMouseDown(e); return; }
+        if (this.raidPortalMode) { this.onRaidPortalMouseDown(e); return; }
+        if (this.raidSpawnMode) { this.onRaidSpawnMouseDown(e); return; }
+        if (this.raidZoneMode) { this.onRaidZoneMouseDown(e); return; }
         if (this.nurseMode) { this.onNurseMouseDown(e); return; }
         if (this.professorMode) { this.onProfessorMouseDown(e); return; }
         if (this.narratorMode) { this.onNarratorMouseDown(e); return; }
@@ -1821,6 +1959,7 @@ toggleVendorMode() {
         if (this.npcRegionMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.spawnZoneMode) { this.onSpawnZoneMouseMove(e); return; }
         if (this.battleZoneMode) { this.onBattleZoneMouseMove(e); return; }
+        if (this.raidZoneMode) { this.onRaidZoneMouseMove(e); return; }
         if (this.nurseMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.professorMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.narratorMode) { this.onNpcRegionMouseMove(e); return; }
@@ -2118,6 +2257,18 @@ toggleVendorMode() {
                     pos_x: p.pos_x, pos_y: p.pos_y
                 }));
             }
+            try {
+                const { data: rp } = await window.db.from('city_raid_portal').select('*').limit(1).maybeSingle();
+                if (rp) this.raidPortal = { id: rp.id, pos_x: rp.pos_x, pos_y: rp.pos_y, width: rp.width, height: rp.height };
+            } catch (e) {}
+            try {
+                const { data: rs } = await window.db.from('city_raid_spawn').select('*').limit(1).maybeSingle();
+                if (rs) this.raidSpawn = { id: rs.id, pos_x: rs.pos_x, pos_y: rs.pos_y };
+            } catch (e) {}
+            try {
+                const { data: rz } = await window.db.from('city_raid_zones').select('*').limit(5000);
+                if (rz) this.raidZones = rz.map(z => ({ id: z.id, pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height }));
+            } catch (e) {}
 
             if (this.assets.length === 0) {
                 const backupKey = 'city_backup_' + (this.currentCityId || 'default');
@@ -2253,6 +2404,14 @@ toggleVendorMode() {
                     pos_x: p.pos_x, pos_y: p.pos_y
                 }
             }));
+            const raidZoneToSave = this.raidZones.map(z => ({
+                source: z,
+                payload: {
+                    ...(z.id ? { id: z.id } : {}),
+                    pos_x: z.pos_x, pos_y: z.pos_y,
+                    width: z.width, height: z.height
+                }
+            }));
 
             const backup = {
                 assets: toSave,
@@ -2367,12 +2526,21 @@ toggleVendorMode() {
             const spawnIds = await syncTable('city_spawn_zones', spawnToSave);
             const spawnPointIds = await syncTable('city_spawn_points', spawnPointToSave);
 
+            if (this.raidPortal) {
+                await window.db.from('city_raid_portal').upsert({ id: this.raidPortal.id || 1, pos_x: this.raidPortal.pos_x, pos_y: this.raidPortal.pos_y, width: this.raidPortal.width || 64, height: this.raidPortal.height || 64 }, { onConflict: 'id' });
+            }
+            if (this.raidSpawn) {
+                await window.db.from('city_raid_spawn').upsert({ id: this.raidSpawn.id || 1, pos_x: this.raidSpawn.pos_x, pos_y: this.raidSpawn.pos_y }, { onConflict: 'id' });
+            }
+            const raidZoneIds = await syncTable('city_raid_zones', raidZoneToSave);
+
             await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
             await deleteMissingRows('city_teleports', tpIds, tpToSave);
             await deleteMissingRows('city_npcs', npcIds, npcToSave);
             await deleteMissingRows('city_battle_zones', bzIds, bzToSave);
             await deleteMissingRows('city_spawn_zones', spawnIds, spawnToSave);
             await deleteMissingRows('city_spawn_points', spawnPointIds, spawnPointToSave);
+            await deleteMissingRows('city_raid_zones', raidZoneIds, raidZoneToSave);
             status.textContent = 'Salvo!';
             setTimeout(() => { status.textContent = 'Salvar'; status.disabled = false; }, 2000);
         } catch (e) {
@@ -2797,6 +2965,55 @@ toggleVendorMode() {
         }
 
         this.renderPlayer(ctx);
+
+        if (this.raidPortal) {
+            ctx.fillStyle = 'rgba(123, 47, 247, 0.4)';
+            ctx.strokeStyle = '#7b2ff7';
+            ctx.lineWidth = 2 / this.zoom;
+            ctx.fillRect(this.raidPortal.pos_x, this.raidPortal.pos_y, this.raidPortal.width || 64, this.raidPortal.height || 64);
+            ctx.strokeRect(this.raidPortal.pos_x, this.raidPortal.pos_y, this.raidPortal.width || 64, this.raidPortal.height || 64);
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('Portal Raid', this.raidPortal.pos_x + (this.raidPortal.width || 64) / 2, this.raidPortal.pos_y - 6 / this.zoom);
+        }
+
+        if (this.raidSpawn) {
+            ctx.fillStyle = '#c23152';
+            ctx.beginPath();
+            ctx.arc(this.raidSpawn.pos_x, this.raidSpawn.pos_y, 10 / this.zoom, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('Spawn Raid', this.raidSpawn.pos_x, this.raidSpawn.pos_y - 12 / this.zoom);
+        }
+
+        if (this.raidZoneMode || this.raidZones.length > 0) {
+            this.raidZones.forEach((z, i) => {
+                const isSelected = i === this.raidZoneSelectedIdx;
+                ctx.fillStyle = isSelected ? 'rgba(255, 152, 0, 0.45)' : 'rgba(255, 152, 0, 0.25)';
+                ctx.strokeStyle = isSelected ? '#fff' : '#ff9800';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.strokeRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.fillStyle = '#ff9800';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('Zona Raid', z.pos_x + z.width / 2, z.pos_y - 6 / this.zoom);
+            });
+            if (this.raidZoneDrawStart && this.raidZoneDrawCurrent) {
+                let dx = Math.min(this.raidZoneDrawStart.x, this.raidZoneDrawCurrent.x);
+                let dy = Math.min(this.raidZoneDrawStart.y, this.raidZoneDrawCurrent.y);
+                let dw = Math.abs(this.raidZoneDrawCurrent.x - this.raidZoneDrawStart.x);
+                let dh = Math.abs(this.raidZoneDrawCurrent.y - this.raidZoneDrawStart.y);
+                ctx.fillStyle = 'rgba(255, 152, 0, 0.3)';
+                ctx.strokeStyle = '#ff9800';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(dx, dy, dw, dh);
+                ctx.strokeRect(dx, dy, dw, dh);
+            }
+        }
 
         // Lights (spots) - always show glow in builder (preview)
         for (const l of this.lights) {
