@@ -6357,6 +6357,97 @@ openEventsPanel() {
         this._selectedGymIndex = 0;
     }
 
+    async openGymLeadersPopup() {
+        this._gymDefeatedIds = new Set();
+        const charId = this.currentCharacterId;
+        if (charId) {
+            const { data: badges } = await window.db.from('character_gym_badges').select('gym_leader_id').eq('character_id', charId);
+            if (badges) badges.forEach(b => this._gymDefeatedIds.add(b.gym_leader_id));
+        }
+
+        const { data: regions } = await window.db.from('gym_regions').select('*').order('sort_order');
+        const { data: leaders } = await window.db.from('gym_leaders').select('*').order('gym_number');
+
+        let currentLeaderId = null;
+        for (const region of (regions || [])) {
+            const regionLeaders = (leaders || []).filter(l => l.region_id === region.id).sort((a, b) => a.gym_number - b.gym_number);
+            const undefeated = regionLeaders.find(l => !this._gymDefeatedIds.has(l.id));
+            if (undefeated) { currentLeaderId = undefeated.id; break; }
+        }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'gym-popup-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:10100;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#161b22;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:18px;width:min(500px,94vw);max-height:82vh;display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div style="color:#e94560;font-size:16px;font-weight:800;">LÍDERES DE GINÁSIO</div>
+                    <button id="gym-popup-close" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;">✕</button>
+                </div>
+                <div id="gym-popup-list" style="overflow-y:auto;flex:1;padding-right:4px;"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#gym-popup-close').onclick = () => this.closeGymLeadersPopup();
+
+        const list = overlay.querySelector('#gym-popup-list');
+        for (const region of (regions || [])) {
+            const regionLeaders = (leaders || []).filter(l => l.region_id === region.id).sort((a, b) => a.gym_number - b.gym_number);
+            if (regionLeaders.length === 0) continue;
+
+            const section = document.createElement('div');
+            section.style.marginBottom = '12px';
+            const header = document.createElement('div');
+            header.style.cssText = 'font-size:14px;font-weight:800;color:#38bdf8;margin-bottom:6px;';
+            header.textContent = region.name;
+            section.appendChild(header);
+
+            for (const leader of regionLeaders) {
+                const defeated = this._gymDefeatedIds.has(leader.id);
+                const isCurrent = leader.id === currentLeaderId;
+                const locked = !defeated && !isCurrent;
+
+                const row = document.createElement('div');
+                row.style.cssText = `display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;margin-bottom:4px;background:${isCurrent ? 'rgba(233,69,96,0.18)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isCurrent ? 'rgba(233,69,96,0.4)' : 'transparent'};${locked || defeated ? 'opacity:0.45;' : ''}${isCurrent ? 'cursor:pointer;' : 'cursor:default;'}`;
+
+                let statusHtml;
+                if (defeated) statusHtml = '<span style="font-size:20px;">✅</span>';
+                else if (locked) statusHtml = '<span style="color:rgba(255,255,255,0.4);font-size:16px;">🔒</span>';
+                else statusHtml = '<span style="color:#ffd700;font-size:16px;">⚔️</span>';
+
+                row.innerHTML = `
+                    ${leader.sprite_url ? `<img src="${leader.sprite_url}" style="width:40px;height:40px;object-fit:contain;background:rgba(255,255,255,0.08);border-radius:50%;">` : `<div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>`}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:700;color:#fff;">${leader.name}</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.5);">Tipo: ${leader.type || '?'}</div>
+                    </div>
+                    ${statusHtml}
+                `;
+
+                if (isCurrent) {
+                    row.addEventListener('click', () => this.challengeGymLeader(leader));
+                }
+                section.appendChild(row);
+            }
+            list.appendChild(section);
+        }
+    }
+
+    closeGymLeadersPopup() {
+        document.getElementById('gym-popup-overlay')?.remove();
+    }
+
+    challengeGymLeader(leader) {
+        this._currentGymLeader = leader;
+        this.closeGymLeadersPopup();
+        if (window.cityScreen) {
+            window.cityScreen.teleportToGymType(leader.type);
+            this.showToast(`Vá até a arena do ginásio de ${leader.type} e aperte E para desafiar!`, 'info');
+        } else {
+            this.enterGymMap(leader);
+        }
+    }
+
     async loadGymRegions() {
         const { data: regions, error } = await window.db
             .from('gym_regions')

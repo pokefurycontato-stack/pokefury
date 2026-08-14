@@ -1702,7 +1702,7 @@ class CityScreen {
 
         simBtn.onclick = () => {
             this.closeNpcDialogue();
-            window.pokefury?.openGymLeaders();
+            window.pokefury?.openGymLeadersPopup();
         };
         naoBtn.onclick = () => {
             this.closeNpcDialogue();
