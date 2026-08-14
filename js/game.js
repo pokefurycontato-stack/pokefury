@@ -2519,6 +2519,13 @@ class PokeFuryGame {
         else { this.showToast(`Raid Boss iniciado: ${name}!`, 'success'); }
     }
 
+    async cancelRaidBossEvent() {
+        if (!window.isAdmin) return;
+        const err = await this.raidBoss.cancelBoss();
+        if (err) { this.showToast(err, 'error'); }
+        else { this.showToast('Raid Boss cancelada.', 'info'); }
+    }
+
     getRaidBossMoveset(pokemonId) {
         const BOSS_MOVESETS = {
             382: ['Water Spout', 'Origin Pulse', 'Thunder', 'Ice Beam'],
@@ -3983,6 +3990,7 @@ openEventsPanel() {
             const { data: events } = await window.db.from('game_events').select('*').order('created_at', { ascending: false }).limit(10);
             const active = events?.find(e => e.status === 'active');
             const raidData = active?.event_type === 'raid' ? (await window.db.from('raid_events').select('*').eq('event_id', active.id).limit(1)).data?.[0] : null;
+            const raidBossActive = this.raidBoss?.activeBoss || null;
 
             let activeSection = '';
             if (active) {
@@ -3997,6 +4005,14 @@ openEventsPanel() {
                 `;
             }
 
+            const raidBossSection = raidBossActive ? `
+                <div style="background:rgba(123,47,247,0.12);border:1px solid #7b2ff766;border-radius:8px;padding:12px;margin-bottom:12px;">
+                    <div style="color:#a78bfa;font-size:13px;font-weight:700;">RAID BOSS ATIVO</div>
+                    <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:4px;">${raidBossActive.boss_name}</div>
+                    <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:2px;">HP: ${Number(raidBossActive.current_hp).toLocaleString()} / ${Number(raidBossActive.max_hp).toLocaleString()}</div>
+                </div>
+            ` : '';
+
             overlay.innerHTML = `
                 <div style="background:rgba(15,20,35,0.98);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:24px;max-width:420px;width:90%;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -4004,10 +4020,12 @@ openEventsPanel() {
                         <button id="events-close-btn" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;">✕</button>
                     </div>
                     ${activeSection}
+                    ${raidBossSection}
                     <div style="display:flex;flex-direction:column;gap:8px;">
                         <button id="start-alpha-btn" ${active ? 'disabled' : ''} style="width:100%;padding:12px;background:${active ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#e94560,#c23152)'};border:1px solid rgba(233,69,96,0.3);border-radius:8px;color:${active ? 'rgba(255,255,255,0.3)' : '#fff'};font-size:13px;font-weight:700;cursor:${active ? 'not-allowed' : 'pointer'};">INICIAR ALPHA EVENT</button>
                         <button id="start-raid-btn" ${active ? 'disabled' : ''} style="width:100%;padding:12px;background:${active ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#4ecdc4,#2ab7ad)'};border:1px solid rgba(78,205,196,0.3);border-radius:8px;color:${active ? 'rgba(255,255,255,0.3)' : '#fff'};font-size:13px;font-weight:700;cursor:${active ? 'not-allowed' : 'pointer'};">INICIAR GLOBAL RAID</button>
-                        <button id="start-raid-boss-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#7b2ff7,#c23152);border:1px solid rgba(123,47,247,0.3);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">INICIAR RAID BOSS</button>
+                        <button id="start-raid-boss-btn" ${raidBossActive ? 'disabled' : ''} style="width:100%;padding:12px;background:${raidBossActive ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#7b2ff7,#c23152)'};border:1px solid rgba(123,47,247,0.3);border-radius:8px;color:${raidBossActive ? 'rgba(255,255,255,0.3)' : '#fff'};font-size:13px;font-weight:700;cursor:${raidBossActive ? 'not-allowed' : 'pointer'};">INICIAR RAID BOSS</button>
+                        ${raidBossActive ? `<button id="cancel-raid-boss-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#ff6b6b,#c0392b);border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">CANCELAR RAID BOSS</button>` : ''}
                         ${active ? `<button id="end-event-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#ff6b6b,#c0392b);border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">ENCERRAR EVENTO</button>` : ''}
                         ${active?.event_type === 'raid' && raidData ? `<button id="show-ranking-btn" style="width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">VER RANKING</button>` : ''}
                     </div>
@@ -4027,6 +4045,12 @@ openEventsPanel() {
                 overlay.querySelector('#start-raid-boss-btn').onclick = async () => {
                     overlay.remove();
                     await window.pokefury.startRaidBossEvent();
+                };
+            }
+            if (overlay.querySelector('#cancel-raid-boss-btn')) {
+                overlay.querySelector('#cancel-raid-boss-btn').onclick = async () => {
+                    overlay.remove();
+                    await window.pokefury.cancelRaidBossEvent();
                 };
             }
             if (overlay.querySelector('#end-event-btn')) {

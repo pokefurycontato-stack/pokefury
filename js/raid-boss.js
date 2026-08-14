@@ -65,6 +65,13 @@ export class RaidBossManager {
         return null;
     }
 
+    async cancelBoss() {
+        const { data, error } = await window.db.rpc('cancel_raid_boss');
+        if (error || (data && data.error)) return data?.error || 'Erro';
+        this.activeBoss = null;
+        return null;
+    }
+
     async recordDamage(raidId, damage) {
         const charId = window.GameData?.currentCharacterId;
         if (!charId) return null;
