@@ -98,7 +98,7 @@ class CityScreen {
             if (e.key === 'e' || e.key === 'E') {
                 if (this.npcDialogueOpen) return;
                 if (this.nearGymNpc) {
-                    window.pokefury?.openGymLeaders();
+                    this.showGymNpcDialogue();
                 } else if (this.inActiveGymZone) {
                     window.pokefury?.startGymLeaderBattleDirect();
                 } else if (this.nearRaidPortal) {
@@ -1389,9 +1389,9 @@ class CityScreen {
 
     drawGymElements(ctx, camX, camY, cw, ch) {
         if (this.gymNpc) {
-            const sx = this.gymNpc.pos_x - camX;
-            const sy = this.gymNpc.pos_y - camY;
             const ps = 56;
+            const sx = this.gymNpc.pos_x - camX - ps / 2;
+            const sy = this.gymNpc.pos_y - camY - ps / 2;
             if (sx + ps > -50 && sx < cw + 50 && sy + ps > -50 && sy < ch + 50) {
                 const img = this._gymNpcImg;
                 if (img && img.complete && img.naturalWidth) {
@@ -1679,6 +1679,37 @@ class CityScreen {
     closeTeleportMenu() {
         const popup = document.getElementById('city-teleport-popup');
         if (popup) popup.classList.add('hidden');
+    }
+
+    showGymNpcDialogue() {
+        const overlay = document.getElementById('city-npc-dialogue-overlay');
+        const msg = document.getElementById('city-npc-dialogue-msg');
+        const simBtn = document.getElementById('city-npc-dialogue-sim');
+        const naoBtn = document.getElementById('city-npc-dialogue-nao');
+        const okBtn = document.getElementById('city-npc-dialogue-ok');
+        const icon = document.getElementById('city-npc-dialogue-icon');
+        if (!overlay || !msg || !simBtn || !naoBtn) return;
+
+        if (icon) icon.textContent = '🏟️';
+        if (okBtn) { okBtn.style.display = 'none'; okBtn.onclick = null; }
+        simBtn.style.display = '';
+        naoBtn.style.display = '';
+
+        const charName = this.myPlayer?.character_name || 'Treinador';
+        msg.textContent = `Olá ${charName}, aqui você mostra seu verdadeiro valor como Treinador Pokémon. Apenas os mais valentes desafiam os melhores dos melhores. Você está preparado?`;
+
+        this.npcDialogueOpen = true;
+
+        simBtn.onclick = () => {
+            this.closeNpcDialogue();
+            window.pokefury?.openGymLeaders();
+        };
+        naoBtn.onclick = () => {
+            this.closeNpcDialogue();
+        };
+
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
     }
 
     showNpcDialogue(npc) {
@@ -3284,6 +3315,19 @@ class CityScreen {
             ctx.font = 'bold 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('Pressione E para entrar na raid', sx, sy + 1);
+        }
+
+        if (this.nearGymNpc && this.gymNpc) {
+            const sx = this.gymNpc.pos_x - camX;
+            const sy = this.gymNpc.pos_y - camY - 50;
+            ctx.fillStyle = 'rgba(233, 69, 96, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(sx - 70, sy - 14, 140, 22, 6);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Pressione E para interagir', sx, sy + 1);
         }
 
         if (this.nearRaidExit && this.raidExit) {
