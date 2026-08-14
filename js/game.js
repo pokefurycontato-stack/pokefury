@@ -2389,11 +2389,12 @@ class PokeFuryGame {
             this._isGymBattle = false;
             if (result === 'win' && this._currentGymLeader) {
                 await this.awardGymBadge(this._currentGymLeader);
-            }
-            this._currentGymLeader = null;
-            // Volta para a frente do NPC de ginásios (nao fica preso na arena)
-            if (window.cityScreen) {
-                window.cityScreen.teleportToGymNpc();
+                this._currentGymLeader = null;
+                if (window.cityScreen) {
+                    window.cityScreen.teleportToGymNpc();
+                }
+            } else {
+                this._currentGymLeader = null;
             }
         }
         this._battleEnding = false;
@@ -6981,6 +6982,7 @@ openEventsPanel() {
         if (pokemonData) {
             this._currentBiome = null;
             this._isGymBattle = true;
+            this._cityBattle = true;
             await this.startBattleWithPokemon(
                 pokemonData.id,
                 level,
