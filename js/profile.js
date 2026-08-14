@@ -45,6 +45,7 @@ class ProfileScreen {
     this.bgNatural = { w: 1, h: 1 };
     this.regions = [];
     this.regionIndex = 0;
+    this._gymBadges = [];
   }
 
   async open() {
@@ -108,7 +109,7 @@ class ProfileScreen {
       elements: {
         sprite: {x:40,y:40,w:120,h:120}, name: {x:40,y:180,w:200,h:32}, level: {x:40,y:216,w:120,h:28},
         silver: {x:40,y:260,w:160,h:26}, gold: {x:40,y:292,w:160,h:26}, diamond: {x:40,y:324,w:160,h:26},
-        badges: {x:40,y:380,w:260,h:120}, badgesPrev: {x:34,y:430,w:40,h:40}, badgesNext: {x:266,y:430,w:40,h:40},
+        badges: {x:40,y:330,w:260,h:120}, badgesPrev: {x:34,y:380,w:40,h:40}, badgesNext: {x:266,y:380,w:40,h:40},
         title1: {x:340,y:380,w:200,h:24}, title2: {x:340,y:406,w:200,h:24}, title3: {x:340,y:432,w:200,h:24},
         title4: {x:340,y:458,w:200,h:24}, title5: {x:340,y:484,w:200,h:24},
         titlesMore: {x:560,y:380,w:40,h:40}, benefits: {x:340,y:40,w:220,h:300},
@@ -220,12 +221,14 @@ class ProfileScreen {
     const currentRegion = this.regions[this.regionIndex]?.name || '';
     const lastTitles = window.Titles ? await window.Titles.loadLastTitles(5) : [];
     const gymBadges = await this.loadGymBadges();
+    this._gymBadges = gymBadges;
 
     const addEl = (key, innerHTML) => {
       const r = elems[key];
       if (!r) return;
       const d = document.createElement('div');
       d.className = 'pf-el';
+      d.dataset.key = key;
       d.innerHTML = innerHTML;
       d.style.left = (r.x / this.bgNatural.w * 100) + '%';
       d.style.top = (r.y / this.bgNatural.h * 100) + '%';
@@ -242,28 +245,7 @@ class ProfileScreen {
     addEl('diamond', `<div class="pf-text pf-currency pf-diamond" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;">${(cur.diamonds || 0).toLocaleString('pt-BR')}</div>`);
 
     const regionBadges = gymBadges.filter(b => b.region_name === currentRegion);
-    let badgesHtml = '';
-    if (regionBadges.length > 0) {
-      const BADGE_IMAGES = {
-        'Normal':'normal','Fire':'fogo','Water':'agua','Grass':'grama','Electric':'eletrico','Ice':'gelo',
-        'Fighting':'lutador','Poison':'poison','Ground':'terra','Flying':'voador','Psychic':'psiquico','Bug':'inseto',
-        'Rock':'pedra','Ghost':'fantasma','Dragon':'dragao','Dark':'dark','Steel':'iron','Fairy':'fada'
-      };
-      const badgeImgs = regionBadges.map(b => {
-        const slug = BADGE_IMAGES[b.type];
-        if (!slug) return '';
-        return `<img src="assets/ferramentas/insignia${slug}.png" title="${escapeHtml(b.badge_name)}" style="width:42px;height:42px;object-fit:contain;">`;
-      }).join('');
-      badgesHtml = `
-        <div style="display:flex;flex-direction:column;height:100%;">
-          <div style="text-align:center;color:#000;font-weight:700;font-size:12px;padding:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(currentRegion)}</div>
-          <div style="flex:1;display:grid;grid-template-columns:repeat(4, 1fr);align-items:center;justify-items:center;row-gap:2px;">${badgeImgs}</div>
-        </div>
-      `;
-    } else {
-      badgesHtml = `<div class="pf-text" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:600;">${escapeHtml(currentRegion)}</div>`;
-    }
-    addEl('badges', badgesHtml);
+    addEl('badges', this.buildBadgesHtml(currentRegion, regionBadges));
     addEl('badgesPrev', `<button onclick="window.profileScreen.prevRegion()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;"></button>`);
     addEl('badgesNext', `<button onclick="window.profileScreen.nextRegion()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;"></button>`);
 
@@ -372,21 +354,45 @@ class ProfileScreen {
   prevRegion() {
     if (this.regions.length === 0) return;
     this.regionIndex = (this.regionIndex - 1 + this.regions.length) % this.regions.length;
-    this.render();
+    this.renderBadges();
   }
 
   nextRegion() {
     if (this.regions.length === 0) return;
     this.regionIndex = (this.regionIndex + 1) % this.regions.length;
-    this.render();
+    this.renderBadges();
   }
 
-  updateBadges() {
+  buildBadgesHtml(regionName, regionBadges) {
+    if (!regionBadges || regionBadges.length === 0) {
+      return `<div class="pf-text" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:600;">${escapeHtml(regionName)}</div>`;
+    }
+    const BADGE_IMAGES = {
+      'Normal':'normal','Fire':'fogo','Water':'agua','Grass':'grama','Electric':'eletrico','Ice':'gelo',
+      'Fighting':'lutador','Poison':'poison','Ground':'terra','Flying':'voador','Psychic':'psiquico','Bug':'inseto',
+      'Rock':'pedra','Ghost':'fantasma','Dragon':'dragao','Dark':'dark','Steel':'iron','Fairy':'fada'
+    };
+    const badgeImgs = regionBadges.map(b => {
+      const slug = BADGE_IMAGES[b.type];
+      if (!slug) return '';
+      return `<img src="assets/ferramentas/insignia${slug}.png" title="${escapeHtml(b.badge_name)}" style="width:42px;height:42px;object-fit:contain;">`;
+    }).join('');
+    return `
+      <div style="display:flex;flex-direction:column;height:100%;">
+        <div style="text-align:center;color:#000;font-weight:700;font-size:12px;padding:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(regionName)}</div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(4, 1fr);align-items:center;justify-items:center;row-gap:2px;">${badgeImgs}</div>
+      </div>
+    `;
+  }
+
+  renderBadges() {
     const els = document.getElementById('profile-elements');
     if (!els) return;
-    const badgeEls = els.querySelectorAll('.pf-badges');
+    const el = els.querySelector('[data-key="badges"]');
+    if (!el) return;
     const regionName = this.regions[this.regionIndex]?.name || '';
-    badgeEls.forEach(el => { el.textContent = regionName; });
+    const regionBadges = (this._gymBadges || []).filter(b => b.region_name === regionName);
+    el.innerHTML = this.buildBadgesHtml(regionName, regionBadges);
   }
 
   openTitles() {
