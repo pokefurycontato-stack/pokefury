@@ -144,6 +144,7 @@ class CityScreen {
         menu.innerHTML = `
             <button data-action="add-friend" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Adicionar Amigo</button>
             <button data-action="private-msg" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar mensagem privada</button>
+            <button data-action="pvp" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar pedido de PVP</button>
         `;
         menu.style.left = (rect.left + sx * scaleX) + 'px';
         menu.style.top = (rect.top + (sy - this.playerSize) * scaleY - 6) + 'px';
@@ -161,6 +162,18 @@ class CityScreen {
             menu.remove();
             if (friendId) {
                 window.openPrivateChatWith(friendId, name);
+            }
+        });
+
+        menu.querySelector('[data-action="pvp"]').addEventListener('click', async () => {
+            menu.remove();
+            if (friendId && window.pokefury?.pvp) {
+                const result = await window.pokefury.pvp.sendChallenge(friendId, name, 0, 0, 0);
+                if (result.error) {
+                    window.pokefury.showToast(result.error, 'error');
+                } else {
+                    window.pokefury.showToast(`Desafio enviado para ${name}!`, 'success');
+                }
             }
         });
 
