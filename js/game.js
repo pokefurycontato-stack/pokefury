@@ -23,6 +23,7 @@ import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
 import { RaidBossManager } from './raid-boss.js';
+import { MusicManager } from './music.js';
 
 const SHINY_CHANCE = 128;
 
@@ -136,6 +137,7 @@ class PokeFuryGame {
         this._isRaidBattle = false;
         this._inRaidBossBattle = false;
         this._raidBossEntryHp = null;
+        this.music = new MusicManager();
 
         this.init();
     }
@@ -679,6 +681,18 @@ class PokeFuryGame {
             this.showRaidBossSpawnPopup(boss);
         };
         this.raidBoss.init();
+
+        this.music.playBackground();
+        this.setupMusicControls();
+        if (!this._musicWatcher) {
+            this._musicWatcher = setInterval(() => {
+                if (this.state === 'battle') {
+                    if (this.music.current !== 'battle') this.music.playBattle();
+                } else {
+                    if (this.music.current !== 'background') this.music.playBackground();
+                }
+            }, 500);
+        }
 
 
         const adminPanel = document.getElementById('admin-panel');
@@ -3787,6 +3801,26 @@ class PokeFuryGame {
         if (this.overworld2d) this.overworld2d.hide();
         this.state = 'idle';
         loadCharacterScreen();
+    }
+
+    setupMusicControls() {
+        const btn = document.getElementById('music-toggle-btn');
+        if (!btn) return;
+        const wrap = document.getElementById('music-volume-wrap');
+        const slider = document.getElementById('music-volume-slider');
+        if (slider) slider.value = Math.round(this.music.volume * 100);
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            if (wrap) wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+        };
+        if (slider) {
+            slider.oninput = () => {
+                const v = parseInt(slider.value, 10) / 100;
+                this.music.setVolume(v);
+                if (btn) btn.textContent = v <= 0 ? '🔇' : '🔊';
+            };
+        }
+        if (btn) btn.textContent = this.music.volume <= 0 ? '🔇' : '🔊';
     }
 
     setupAdminButtons() {
