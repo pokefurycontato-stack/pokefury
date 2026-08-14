@@ -682,7 +682,7 @@ class PokeFuryGame {
         };
         this.raidBoss.init();
 
-        this.music.playBackground();
+        this.music.init();
         this.setupMusicControls();
         if (!this._musicWatcher) {
             this._musicWatcher = setInterval(() => {
