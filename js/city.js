@@ -1588,13 +1588,18 @@ class CityScreen {
             return `assets/perso_${gender}.webp`;
         }
         if (!window.PokeAPI || !entry.pokemon_id) return '';
-        const id = entry.pokemon_id;
-        if (id < 10000) {
-            return entry.is_shiny
-                ? window.PokeAPI.getAnimatedFrontShinyUrl(id)
-                : window.PokeAPI.getAnimatedFrontUrl(id);
+        return entry.is_shiny
+            ? window.PokeAPI.getAnimatedFrontShinyUrl(entry.pokemon_id)
+            : window.PokeAPI.getAnimatedFrontUrl(entry.pokemon_id);
+    }
+
+    getRankFallbackUrl(entry) {
+        if (!entry) return '';
+        if (entry.is_shiny) {
+            return entry.sprite_front_shiny || entry.sprite_home_shiny || entry.sprite_official_shiny ||
+                   entry.sprite_front || entry.sprite_home || entry.sprite_official || '';
         }
-        return entry.sprite_home || entry.sprite_official || '';
+        return entry.sprite_front || entry.sprite_home || entry.sprite_official || '';
     }
 
     ensureRankLayer() {
@@ -1673,9 +1678,14 @@ class CityScreen {
             const wpx = size * scaleX;
             const hpx = size * scaleY;
             const src = entry ? this.getRankSpriteUrl(entry, sp.rank_type) : '';
+            el._entry = entry;
             if (src && el._imgSrc !== src) {
-                el._img.src = src;
                 el._imgSrc = src;
+                el._img.src = src;
+                el._img.onerror = () => {
+                    const fb = this.getRankFallbackUrl(el._entry);
+                    if (fb && el._img.src !== fb) el._img.src = fb;
+                };
             }
             el._wrap.style.width = wpx + 'px';
             el._wrap.style.height = hpx + 'px';
@@ -1692,9 +1702,11 @@ class CityScreen {
             if (sp.rank_type === 'trainer') {
                 el._line1.textContent = entry ? entry.player_name : `${sp.position}º -`;
                 el._line2.textContent = entry ? `Treinador Nv.${entry.trainer_level}` : '';
+                el._line1.style.font = 'bold 11px Inter,sans-serif';
             } else {
                 el._line1.textContent = entry ? `${entry.species} Nv.${entry.level}` : `${sp.position}º -`;
                 el._line2.textContent = entry ? entry.player_name : '';
+                el._line1.style.font = 'bold 9px Inter,sans-serif';
             }
 
             const left = offsetX + (sx - size / 2) * scaleX;

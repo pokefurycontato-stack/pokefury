@@ -48,7 +48,8 @@ CREATE OR REPLACE FUNCTION get_rank_power()
 RETURNS TABLE (
   rank_pos INT, pokemon_id INT, species TEXT, level INT,
   power BIGINT, is_shiny BOOLEAN, character_id UUID, player_name TEXT,
-  base_pokemon_id INT, sprite_home TEXT, sprite_official TEXT
+  base_pokemon_id INT, sprite_home TEXT, sprite_official TEXT,
+  sprite_front TEXT, sprite_front_shiny TEXT, sprite_home_shiny TEXT, sprite_official_shiny TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -58,7 +59,8 @@ BEGIN
     COALESCE(pt.power,0)::BIGINT, COALESCE(pt.is_shiny,false),
     pt.character_id, COALESCE(gs.player_name,'???'),
     COALESCE(p.base_pokemon_id, pt.pokemon_id),
-    p.sprite_home, p.sprite_official
+    p.sprite_home, p.sprite_official,
+    p.sprite_front, p.sprite_front_shiny, p.sprite_home_shiny, p.sprite_official_shiny
   FROM pokemon_team pt
   JOIN game_saves gs ON gs.id = pt.character_id
   LEFT JOIN pokemon p ON p.id = pt.pokemon_id
@@ -72,7 +74,8 @@ CREATE OR REPLACE FUNCTION get_rank_iv()
 RETURNS TABLE (
   rank_pos INT, pokemon_id INT, species TEXT, level INT,
   iv_total INT, is_shiny BOOLEAN, character_id UUID, player_name TEXT,
-  base_pokemon_id INT, sprite_home TEXT, sprite_official TEXT
+  base_pokemon_id INT, sprite_home TEXT, sprite_official TEXT,
+  sprite_front TEXT, sprite_front_shiny TEXT, sprite_home_shiny TEXT, sprite_official_shiny TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -82,7 +85,8 @@ BEGIN
     (pt.iv_hp+pt.iv_attack+pt.iv_defense+pt.iv_sp_atk+pt.iv_sp_def+pt.iv_speed)::INT,
     COALESCE(pt.is_shiny,false), pt.character_id, COALESCE(gs.player_name,'???'),
     COALESCE(p.base_pokemon_id, pt.pokemon_id),
-    p.sprite_home, p.sprite_official
+    p.sprite_home, p.sprite_official,
+    p.sprite_front, p.sprite_front_shiny, p.sprite_home_shiny, p.sprite_official_shiny
   FROM pokemon_team pt
   JOIN game_saves gs ON gs.id = pt.character_id
   LEFT JOIN pokemon p ON p.id = pt.pokemon_id
