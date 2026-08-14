@@ -44,6 +44,7 @@ DROP POLICY IF EXISTS "city_rank_spawns_all" ON city_rank_spawns;
 CREATE POLICY "city_rank_spawns_all" ON city_rank_spawns FOR ALL USING (true);
 
 -- RPC: top 3 poder
+DROP FUNCTION IF EXISTS get_rank_power();
 CREATE OR REPLACE FUNCTION get_rank_power()
 RETURNS TABLE (
   rank_pos INT, pokemon_id INT, species TEXT, level INT,
@@ -70,6 +71,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- RPC: top 3 iv (desempate: capturado primeiro)
+DROP FUNCTION IF EXISTS get_rank_iv();
 CREATE OR REPLACE FUNCTION get_rank_iv()
 RETURNS TABLE (
   rank_pos INT, pokemon_id INT, species TEXT, level INT,
