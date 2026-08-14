@@ -123,6 +123,14 @@ export class Chat {
                 this.channel = tab.dataset.channel;
                 if (this.channel === 'global') this.unreadGlobal = 0;
                 if (this.channel === 'trade') this.unreadTrade = 0;
+                if (this.channel === 'private') {
+                    for (const id in this.privateChats) this.privateChats[id].unread = 0;
+                    if (!this.activePrivateId) {
+                        const first = Object.keys(this.privateChats)[0];
+                        if (first) { this.activePrivateId = first; this.loadPrivateMessages(first); }
+                    }
+                    this.renderPrivateList();
+                }
                 this.togglePrivateView(this.channel === 'private');
                 this.updateBadges();
                 this.loadMessages();
@@ -394,20 +402,29 @@ export class Chat {
                 const m = payload.new;
                 if (!m) return;
                 const myId = this._charId();
-                if (!myId || m.receiver_character_id !== myId) return;
-                const senderId = m.sender_character_id;
-                if (!this.privateChats[senderId]) {
-                    this.privateChats[senderId] = { name: m.sender_name || 'Jogador', unread: 0 };
+                if (!myId) return;
+
+                if (m.receiver_character_id === myId) {
+                    const senderId = m.sender_character_id;
+                    if (!this.privateChats[senderId]) {
+                        this.privateChats[senderId] = { name: m.sender_name || 'Jogador', unread: 0 };
+                    }
+                    this.privateChats[senderId].unread++;
+                    if (senderId === this.activePrivateId) {
+                        this.appendPrivateMessage(m);
+                        const box = document.getElementById(this.prefix + 'private-messages');
+                        if (box) box.scrollTop = box.scrollHeight;
+                    }
+                    this.renderPrivateList();
+                    this.updateBadges();
+                    this.savePrivateChats();
+                } else if (m.sender_character_id === myId) {
+                    if (m.receiver_character_id === this.activePrivateId) {
+                        this.appendPrivateMessage(m);
+                        const box = document.getElementById(this.prefix + 'private-messages');
+                        if (box) box.scrollTop = box.scrollHeight;
+                    }
                 }
-                this.privateChats[senderId].unread++;
-                if (senderId === this.activePrivateId) {
-                    this.appendPrivateMessage(m);
-                    const box = document.getElementById(this.prefix + 'private-messages');
-                    if (box) box.scrollTop = box.scrollHeight;
-                }
-                this.renderPrivateList();
-                this.updateBadges();
-                this.savePrivateChats();
             })
             .subscribe();
     }
