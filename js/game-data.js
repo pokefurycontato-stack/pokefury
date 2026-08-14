@@ -154,7 +154,8 @@ const GameData = {
                 happiness: pokemon.happiness ?? 70,
                 is_shiny: pokemon.isShiny || false,
                 is_mega: pokemon.isMega || false,
-                held_item_id: pokemon.heldItemId || null
+                held_item_id: pokemon.heldItemId || null,
+                power: window.calculatePokemonPower ? window.calculatePokemonPower(pokemon) : 0
             };
             if (pokemon.dbId) insert.id = pokemon.dbId;
             return insert;
@@ -225,7 +226,8 @@ const GameData = {
             happiness: pokemon.happiness ?? 70,
             is_shiny: pokemon.isShiny || false,
             is_mega: pokemon.isMega || false,
-            held_item_id: pokemon.heldItemId || null
+            held_item_id: pokemon.heldItemId || null,
+            power: window.calculatePokemonPower ? window.calculatePokemonPower(pokemon) : 0
         };
         const { data, error } = await window.db
             .from('pokemon_team')

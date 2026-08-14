@@ -68,6 +68,9 @@ class CityScreen {
         this.nearGymNpc = false;
         this.nearGymTeleportType = null;
         this._gymNpcImg = null;
+        this.rankSpawns = [];
+        this._rankLayer = null;
+        this._rankEls = {};
 
         this.bindEvents();
     }
@@ -225,6 +228,8 @@ class CityScreen {
         const game = window.pokefury;
         if (!game) return;
         if (this.running) return; // ja está aberta — evita re-spawn e loop duplicado
+
+        if (window.rankSystem) window.rankSystem.start();
 
         document.getElementById('city-screen').classList.remove('hidden');
         window.cityModeActive = true;
@@ -1332,6 +1337,10 @@ class CityScreen {
             img.src = 'assets/ferramentas/npcginasios.png';
             this._gymNpcImg = img;
         }
+        try {
+            const { data: rs } = await window.db.from('city_rank_spawns').select('*');
+            this.rankSpawns = rs || [];
+        } catch (e) { this.rankSpawns = []; }
     }
 
     getRaidBoss() {
@@ -1570,6 +1579,134 @@ class CityScreen {
             el.style.width = (es * scaleX) + 'px';
             el.style.height = (es * scaleY) + 'px';
         }
+    }
+
+    getRankSpriteUrl(entry, type) {
+        if (type === 'trainer') {
+            if (entry.sprite_url) return entry.sprite_url;
+            const gender = entry.player_gender === 'female' ? 'feminino' : 'masculino';
+            return `assets/perso_${gender}.webp`;
+        }
+        if (!window.PokeAPI || !entry.pokemon_id) return '';
+        const id = entry.pokemon_id;
+        if (id < 10000) {
+            return entry.is_shiny
+                ? window.PokeAPI.getAnimatedFrontShinyUrl(id)
+                : window.PokeAPI.getAnimatedFrontUrl(id);
+        }
+        return entry.sprite_home || entry.sprite_official || '';
+    }
+
+    ensureRankLayer() {
+        if (this._rankLayer) return;
+        const wrap = document.getElementById('city-canvas-wrap');
+        if (!wrap) return;
+        const layer = document.createElement('div');
+        layer.id = 'city-rank-layer';
+        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:5;';
+        wrap.appendChild(layer);
+        this._rankLayer = layer;
+    }
+
+    renderRankDom() {
+        if (!this.rankSpawns.length) {
+            if (this._rankLayer) this._rankLayer.style.display = 'none';
+            return;
+        }
+        this.ensureRankLayer();
+        if (!this._rankLayer) return;
+        this._rankLayer.style.display = '';
+
+        const rs = window.rankSystem;
+        const data = rs ? rs.data : { power: [], iv: [], trainer: [] };
+
+        const canvas = this.canvas;
+        const canvasRect = canvas.getBoundingClientRect();
+        const wrapRect = this._rankLayer.getBoundingClientRect();
+        const scaleX = canvasRect.width / canvas.width;
+        const scaleY = canvasRect.height / canvas.height;
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
+        const camX = this.cameraX - canvas.width / 2;
+        const camY = this.cameraY - canvas.height / 2;
+
+        const seen = {};
+        this.rankSpawns.forEach(sp => {
+            const key = `${sp.rank_type}-${sp.position}`;
+            seen[key] = true;
+            const list = data[sp.rank_type] || [];
+            const entry = list[sp.position - 1];
+
+            let el = this._rankEls[key];
+            if (!el) {
+                el = document.createElement('div');
+                el.style.cssText = 'position:absolute;display:flex;flex-direction:column;align-items:center;pointer-events:none;';
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'overflow:hidden;';
+                const img = document.createElement('img');
+                img.style.cssText = 'image-rendering:pixelated;display:block;';
+                wrap.appendChild(img);
+                const line1 = document.createElement('div');
+                line1.style.cssText = 'color:#fff;font:bold 11px Inter,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,0.9);white-space:nowrap;';
+                const line2 = document.createElement('div');
+                line2.style.cssText = 'color:rgba(255,255,255,0.85);font:10px Inter,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,0.9);white-space:nowrap;';
+                el.appendChild(wrap);
+                el.appendChild(line1);
+                el.appendChild(line2);
+                el._wrap = wrap;
+                el._img = img;
+                el._line1 = line1;
+                el._line2 = line2;
+                this._rankLayer.appendChild(el);
+                this._rankEls[key] = el;
+            }
+
+            const sx = sp.pos_x - camX;
+            const sy = sp.pos_y - camY;
+            if (sx + 80 < -50 || sx > canvas.width + 50 || sy + 100 < -50 || sy > canvas.height + 50) {
+                el.style.display = 'none';
+                return;
+            }
+            el.style.display = 'flex';
+
+            const size = sp.rank_type === 'trainer' ? 56 : 64;
+            const wpx = size * scaleX;
+            const hpx = size * scaleY;
+            const src = entry ? this.getRankSpriteUrl(entry, sp.rank_type) : '';
+            if (src && el._imgSrc !== src) {
+                el._img.src = src;
+                el._imgSrc = src;
+            }
+            el._wrap.style.width = wpx + 'px';
+            el._wrap.style.height = hpx + 'px';
+            if (sp.rank_type === 'trainer') {
+                el._img.style.width = (wpx * 4) + 'px';
+                el._img.style.height = (hpx * 4) + 'px';
+                el._img.style.marginLeft = '0px';
+                el._img.style.marginTop = '0px';
+            } else {
+                el._img.style.width = wpx + 'px';
+                el._img.style.height = hpx + 'px';
+            }
+
+            if (sp.rank_type === 'trainer') {
+                el._line1.textContent = entry ? entry.player_name : `${sp.position}º -`;
+                el._line2.textContent = entry ? `Treinador Nv.${entry.trainer_level}` : '';
+            } else {
+                el._line1.textContent = entry ? `${entry.species} Nv.${entry.level}` : `${sp.position}º -`;
+                el._line2.textContent = entry ? entry.player_name : '';
+            }
+
+            const left = offsetX + (sx - size / 2) * scaleX;
+            const top = offsetY + (sy - size / 2) * scaleY;
+            el.style.left = left + 'px';
+            el.style.top = top + 'px';
+            el.style.width = wpx + 'px';
+        });
+
+        Object.keys(this._rankEls).forEach(key => {
+            if (!seen[key]) this._rankEls[key].style.display = 'none';
+        });
     }
 
 
@@ -3185,6 +3322,7 @@ class CityScreen {
 
         this.drawRaidElements(ctx, camX, camY, cw, ch);
         this.drawGymElements(ctx, camX, camY, cw, ch);
+        this.renderRankDom();
 
         if (this.spawnZones.length > 0) {
             this.spawnZones.forEach((z, i) => {

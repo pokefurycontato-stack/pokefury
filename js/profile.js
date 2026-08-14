@@ -327,7 +327,7 @@ class ProfileScreen {
           }
 
           slot.innerHTML = `
-            <div style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);">
+            <div onclick="event.stopPropagation();window.pokefury.openPokemonInfo(${i})" style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);cursor:pointer;" title="Ver detalhes">
                 <img src="${spriteUrl}" data-fallback="${fallbackUrl}" style="width:44px;height:44px;image-rendering:pixelated;object-fit:contain" alt="${p.name}" loading="lazy" onerror="if(this.dataset.fallback && this.src !== this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">
                 ${itemIconHtml}
             </div>

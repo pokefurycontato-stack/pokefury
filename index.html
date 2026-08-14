@@ -813,14 +813,14 @@
     <script src="js/items-data.js"></script>
     <script src="js/pokemart.js"></script>
     <script src="js/worldmap.js"></script>
-    <script src="js/game-data.js?v=20260815c"></script>
+    <script src="js/game-data.js?v=20260815d"></script>
     <script src="js/pokeapi.js?v=20260808g"></script>
     <script src="js/auth.js?v=20260808g"></script>
     <script type="module" src="js/data.js"></script>
-    <script type="module" src="js/utils.js"></script>
+    <script type="module" src="js/utils.js?v=20260815a"></script>
     <script type="module" src="js/battle.js"></script>
     <script type="module" src="js/ui.js?v=20260808g"></script>
-    <script type="module" src="js/game.js?v=20260815c"></script>
+    <script type="module" src="js/game.js?v=20260815d"></script>
     <script type="module" src="js/afk.js"></script>
     <script src="js/pvp-system.js"></script>
     <script type="module">
@@ -1317,6 +1317,7 @@
                 <button id="cb-raid-exit-btn" title="Portal de saida da arena" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🚪 Saida Raid</button>
                 <button id="cb-raid-zone-btn" title="Zona do Raid Boss (ranking lateral)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🔥 Zona Raid</button>
                 <button id="cb-gym-btn" title="Ginásios (zonas e teleportes por elemento)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🏟️ Ginásios</button>
+                <button id="cb-rank-btn" title="Rank (top 3 poder, iv e treinadores)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🏆 Rank</button>
                 <button id="cb-preview-btn" title="Preview do jogador" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">👁️</button>
                 <button id="cb-save-btn" style="padding:6px 14px;border:none;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
                 <button id="cb-close-btn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
@@ -1337,6 +1338,11 @@
             <div id="cb-gym-panel" style="display:none;width:320px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
                 <button id="cb-gym-npc-btn" style="width:100%;padding:8px;margin-bottom:8px;border:none;border-radius:6px;background:#e94560;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">👤 Adicionar NPC de Ginásios</button>
                 <div id="cb-gym-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+            <!-- Sidebar de rank (substitui a sidebar de assets) -->
+            <div id="cb-rank-panel" style="display:none;width:220px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
+                <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Ranking</div>
+                <div id="cb-rank-list" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
             <!-- Canvas do editor -->
             <div id="cb-canvas-wrap" style="flex:1;position:relative;overflow:hidden;background:#1a1a2e;">
@@ -1445,10 +1451,11 @@
     <script src="js/boosts.js"></script>
     <script src="js/event-pokemon-admin.js"></script>
     <script src="js/loading-screen.js"></script>
-    <script src="js/city.js?v=20260810j"></script>
+    <script src="js/rank.js?v=1"></script>
+    <script src="js/city.js?v=20260815a"></script>
     <script src="js/professor-quests.js?v=20260815c"></script>
-    <script src="js/city-builder.js?v=20260810a"></script>
-    <script src="js/profile.js?v=20260815n"></script>
+    <script src="js/city-builder.js?v=20260815a"></script>
+    <script src="js/profile.js?v=20260815o"></script>
     <script src="js/profile-admin.js?v=20260815a"></script>
     <script src="js/auction.js?v=1"></script>
     <script src="js/titles.js?v=1"></script>

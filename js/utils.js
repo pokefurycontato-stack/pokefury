@@ -91,6 +91,52 @@ export function calculateStat(base, level, iv = 31) {
     return Math.floor(((2 * base + iv) * level / 100) + 5);
 }
 
+// ============================================================
+// TOTAL POWER (Poder Total)
+// ============================================================
+const NATURE_BOOST = {
+    lonely: 'attack', brave: 'attack', adamant: 'attack', naughty: 'attack',
+    bold: 'defense', relaxed: 'defense', impish: 'defense', lax: 'defense',
+    timid: 'speed', hasty: 'speed', jolly: 'speed', naive: 'speed',
+    modest: 'spAtk', mild: 'spAtk', quiet: 'spAtk', rash: 'spAtk',
+    calm: 'spDef', gentle: 'spDef', sassy: 'spDef', careful: 'spDef'
+};
+
+export function getHighestBaseStat(baseStats) {
+    if (!baseStats) return null;
+    const order = ['hp', 'attack', 'defense', 'spAtk', 'spDef', 'speed'];
+    let best = 'hp';
+    let bestVal = -1;
+    for (const s of order) {
+        const v = baseStats[s] || 0;
+        if (v > bestVal) { bestVal = v; best = s; }
+    }
+    return best;
+}
+
+export function sumStatObject(obj) {
+    if (!obj) return 0;
+    return (obj.hp || 0) + (obj.attack || 0) + (obj.defense || 0) +
+           (obj.spAtk || 0) + (obj.spDef || 0) + (obj.speed || 0);
+}
+
+export function calculatePokemonPower(pokemon) {
+    if (!pokemon) return 0;
+    const statSum = sumStatObject(pokemon.stats);
+    const ivSum = sumStatObject(pokemon.ivs);
+    const evSum = sumStatObject(pokemon.evs);
+    let natureBonus = 0;
+    const boostStat = NATURE_BOOST[pokemon.nature];
+    if (boostStat && pokemon.baseStats && getHighestBaseStat(pokemon.baseStats) === boostStat) {
+        natureBonus = 150;
+    }
+    return Math.round(statSum + ivSum * 3 + evSum * 0.5 + natureBonus);
+}
+
+if (typeof window !== 'undefined') {
+    window.calculatePokemonPower = calculatePokemonPower;
+}
+
 export function getEffectiveness(chart, attackType, defenderTypes) {
     let multiplier = 1;
     for (const defType of defenderTypes) {

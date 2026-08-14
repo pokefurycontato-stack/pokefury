@@ -113,6 +113,10 @@ class CityBuilder {
         this.gymZoneDrawStart = null;
         this.gymZoneDrawCurrent = null;
 
+        this.rankMode = false;
+        this.rankSpawns = [];
+        this.activeRankPlace = null;
+
         this.bindEvents();
     }
 
@@ -169,6 +173,8 @@ class CityBuilder {
         if (gymBtn) gymBtn.addEventListener('click', () => this.toggleGymMode());
         const gymNpcBtn = document.getElementById('cb-gym-npc-btn');
         if (gymNpcBtn) gymNpcBtn.addEventListener('click', () => this.setGymNpcMode());
+        const rankBtn = document.getElementById('cb-rank-btn');
+        if (rankBtn) rankBtn.addEventListener('click', () => this.toggleRankMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -1742,7 +1748,12 @@ toggleVendorMode() {
         if (btn) btn.style.background = this.gymMode ? '#e94560' : 'rgba(255,255,255,0.15)';
         const assetsPanel = document.getElementById('cb-assets-panel');
         const gymPanel = document.getElementById('cb-gym-panel');
+        const rankPanel = document.getElementById('cb-rank-panel');
         if (this.gymMode) {
+            this.rankMode = false;
+            const rankBtn = document.getElementById('cb-rank-btn');
+            if (rankBtn) rankBtn.style.background = 'rgba(255,255,255,0.15)';
+            if (rankPanel) rankPanel.style.display = 'none';
             if (assetsPanel) assetsPanel.style.display = 'none';
             if (gymPanel) gymPanel.style.display = 'block';
             this.renderGymList();
@@ -1821,6 +1832,77 @@ toggleVendorMode() {
             this.gymZoneDrawStart = null;
             this.gymZoneDrawCurrent = null;
         }
+        this.render();
+    }
+
+    toggleRankMode() {
+        this._resetOtherModes();
+        this.rankMode = !this.rankMode;
+        if (this.rankMode) this.gymMode = false;
+        const btn = document.getElementById('cb-rank-btn');
+        if (btn) btn.style.background = this.rankMode ? '#e94560' : 'rgba(255,255,255,0.15)';
+        const gymBtn = document.getElementById('cb-gym-btn');
+        if (gymBtn) gymBtn.style.background = this.gymMode ? '#e94560' : 'rgba(255,255,255,0.15)';
+        const assetsPanel = document.getElementById('cb-assets-panel');
+        const gymPanel = document.getElementById('cb-gym-panel');
+        const rankPanel = document.getElementById('cb-rank-panel');
+        if (this.rankMode) {
+            if (assetsPanel) assetsPanel.style.display = 'none';
+            if (gymPanel) gymPanel.style.display = 'none';
+            if (rankPanel) rankPanel.style.display = 'block';
+            this.renderRankList();
+        } else {
+            if (assetsPanel) assetsPanel.style.display = 'block';
+            if (rankPanel) rankPanel.style.display = 'none';
+            this.activeRankPlace = null;
+        }
+        this.canvas.style.cursor = this.rankMode ? 'crosshair' : 'default';
+        this.render();
+    }
+
+    renderRankList() {
+        const list = document.getElementById('cb-rank-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const sections = [
+            { type: 'power', label: '1. Poder de Pokémon', icon: '💪' },
+            { type: 'iv', label: '2. IV de Pokémon', icon: '✨' },
+            { type: 'trainer', label: '3. Treinadores', icon: '👤' }
+        ];
+        sections.forEach(sec => {
+            const title = document.createElement('div');
+            title.textContent = `${sec.icon} ${sec.label}`;
+            title.style.cssText = 'color:#fff;font-size:12px;font-weight:700;margin-top:4px;';
+            list.appendChild(title);
+
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:4px;margin-bottom:6px;';
+            [1, 2, 3].forEach(pos => {
+                const b = document.createElement('button');
+                b.textContent = `${pos}º`;
+                const isActive = this.activeRankPlace && this.activeRankPlace.type === sec.type && this.activeRankPlace.position === pos;
+                const placed = this.rankSpawns.some(s => s.rank_type === sec.type && s.position === pos);
+                b.style.cssText = `flex:1;padding:8px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;color:#fff;background:${isActive ? '#e94560' : (placed ? '#22c55e' : 'rgba(255,255,255,0.08)')};`;
+                b.onclick = () => {
+                    this.activeRankPlace = { type: sec.type, position: pos };
+                    this.renderRankList();
+                };
+                row.appendChild(b);
+            });
+            list.appendChild(row);
+        });
+        const hint = document.createElement('div');
+        hint.textContent = 'Clique no 1º/2º/3º e depois clique no mapa para posicionar o sprite.';
+        hint.style.cssText = 'color:rgba(255,255,255,0.4);font-size:10px;line-height:1.4;margin-top:6px;';
+        list.appendChild(hint);
+    }
+
+    onRankMouseDown(e) {
+        if (!this.activeRankPlace) return;
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        const { type, position } = this.activeRankPlace;
+        this.rankSpawns = this.rankSpawns.filter(s => !(s.rank_type === type && s.position === position));
+        this.rankSpawns.push({ rank_type: type, position, pos_x: Math.round(w.x), pos_y: Math.round(w.y) });
         this.render();
     }
 
@@ -1973,6 +2055,7 @@ toggleVendorMode() {
             if (this.battleZoneMode) { this.onBattleZoneMouseUp(e); return; }
             if (this.raidZoneMode) { this.onRaidZoneMouseUp(e); return; }
             if (this.gymMode) { this.onGymMouseUp(e); return; }
+            if (this.rankMode) return;
             if (this.nurseMode) { this.onNpcRegionMouseUp(e); return; }
             if (this.professorMode) { this.onNpcRegionMouseUp(e); return; }
             if (this.narratorMode) { this.onNpcRegionMouseUp(e); return; }
@@ -2008,6 +2091,7 @@ toggleVendorMode() {
         if (this.raidExitMode) { this.onRaidExitMouseDown(e); return; }
         if (this.raidZoneMode) { this.onRaidZoneMouseDown(e); return; }
         if (this.gymMode) { this.onGymMouseDown(e); return; }
+        if (this.rankMode) { this.onRankMouseDown(e); return; }
         if (this.nurseMode) { this.onNurseMouseDown(e); return; }
         if (this.professorMode) { this.onProfessorMouseDown(e); return; }
         if (this.narratorMode) { this.onNarratorMouseDown(e); return; }
@@ -2114,6 +2198,7 @@ toggleVendorMode() {
         if (this.battleZoneMode) { this.onBattleZoneMouseMove(e); return; }
         if (this.raidZoneMode) { this.onRaidZoneMouseMove(e); return; }
         if (this.gymMode) { this.onGymMouseMove(e); return; }
+        if (this.rankMode) return;
         if (this.nurseMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.professorMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.narratorMode) { this.onNpcRegionMouseMove(e); return; }
@@ -2443,6 +2528,10 @@ toggleVendorMode() {
                 const { data: gn } = await window.db.from('city_gym_npc').select('*').limit(1).maybeSingle();
                 if (gn) this.gymNpc = { id: gn.id, pos_x: gn.pos_x, pos_y: gn.pos_y };
             } catch (e) {}
+            try {
+                const { data: rk } = await window.db.from('city_rank_spawns').select('*');
+                if (rk) this.rankSpawns = rk.map(r => ({ id: r.id, rank_type: r.rank_type, position: r.position, pos_x: r.pos_x, pos_y: r.pos_y }));
+            } catch (e) {}
 
             if (this.assets.length === 0) {
                 const backupKey = 'city_backup_' + (this.currentCityId || 'default');
@@ -2724,6 +2813,11 @@ toggleVendorMode() {
             for (const type in this.gymTeleports) {
                 const t = this.gymTeleports[type];
                 await window.db.from('city_gym_teleports').upsert({ ...(t.id ? { id: t.id } : {}), gym_type: type, pos_x: t.pos_x, pos_y: t.pos_y }, { onConflict: 'gym_type' });
+            }
+
+            await window.db.from('city_rank_spawns').delete().in('rank_type', ['power', 'iv', 'trainer']);
+            for (const r of this.rankSpawns) {
+                await window.db.from('city_rank_spawns').insert({ rank_type: r.rank_type, position: r.position, pos_x: r.pos_x, pos_y: r.pos_y });
             }
 
             await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
@@ -3217,6 +3311,20 @@ toggleVendorMode() {
                 ctx.fillRect(dx, dy, dw, dh);
                 ctx.strokeRect(dx, dy, dw, dh);
             }
+        }
+
+        if (this.rankMode || this.rankSpawns.length > 0) {
+            const rankLabels = { power: 'Poder', iv: 'IV', trainer: 'Treinador' };
+            this.rankSpawns.forEach(r => {
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(r.pos_x, r.pos_y, 10 / this.zoom, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${11 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(`${rankLabels[r.rank_type]} ${r.position}º`, r.pos_x, r.pos_y - 12 / this.zoom);
+            });
         }
 
         if (this.raidPortal) {

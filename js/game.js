@@ -1,5 +1,5 @@
 import { TYPE_COLORS, STARTER_IDS, TOTAL_POKEMON } from './data.js';
-import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTurnEnd, processHeldItemOnHit, checkQuickClaw, processLifeOrbRecoil, getChoiceLockedMove, setChoiceLock, clearChoiceLock, getPokemonItemEffect } from './utils.js';
+import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTurnEnd, processHeldItemOnHit, checkQuickClaw, processLifeOrbRecoil, getChoiceLockedMove, setChoiceLock, clearChoiceLock, getPokemonItemEffect, calculatePokemonPower } from './utils.js';
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import { getEffectiveMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd, activateTerastal } from './battle-mechanics.js';
 import {
@@ -5278,7 +5278,19 @@ openEventsPanel() {
             </div>
             <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:12px">
                 <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">Poder Total</div>
-                <div style="font-size:20px;font-weight:700;color:#58a6ff">0</div>
+                <div style="font-size:20px;font-weight:700;color:#58a6ff">${calculatePokemonPower(p)}</div>
+            </div>
+            <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:12px">
+                <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:6px">Movimentos</div>
+                ${(p.moves || []).map(m => {
+                    const moveColors = { fire:'#F08030', water:'#6890F0', grass:'#78C850', electric:'#F8D030', ice:'#98D8D8', fighting:'#C03028', poison:'#A040A0', ground:'#E0C068', flying:'#A890F0', psychic:'#F85888', bug:'#A8B820', rock:'#B8A038', ghost:'#705898', dragon:'#7038F8', dark:'#705848', steel:'#B8B8D0', fairy:'#EE99AC', normal:'#A8A878' };
+                    const catIcon = m.category === 'special' ? '✨' : m.category === 'status' ? '🔧' : '⚔️';
+                    return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+                        <span style="display:inline-block;min-width:52px;text-align:center;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:${moveColors[m.type] || '#68a090'}">${(m.type||'').toUpperCase()}</span>
+                        <span style="flex:1;font-size:12px;color:#c9d1d9;font-weight:500">${m.name} ${catIcon}</span>
+                        <span style="font-size:10px;color:rgba(255,255,255,0.5)">${m.power ? 'Pw '+m.power : '—'} · PP ${m.currentPp ?? m.pp}/${m.pp}</span>
+                    </div>`;
+                }).join('') || '<div style="color:rgba(255,255,255,0.4);font-size:12px">Sem movimentos</div>'}
             </div>
             ${currentStats ? `
             <div style="background:#0d1117;border-radius:6px;padding:8px;margin-bottom:8px">
