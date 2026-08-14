@@ -2507,7 +2507,7 @@ class PokeFuryGame {
             10036: 'Mega Rayquaza',
             13002: 'Calyrex Shadow Rider'
         };
-        const pool = [382, 487, 10036, 13002];
+        const pool = [382, 487, 10036, 13002, 716, 13007];
         const id = pool[Math.floor(Math.random() * pool.length)];
         let name = BOSS_NAME_MAP[id] || 'Raid Boss';
         try {
@@ -2529,12 +2529,11 @@ class PokeFuryGame {
     getRaidBossMoveset(pokemonId) {
         const BOSS_MOVESETS = {
             382: ['Water Spout', 'Origin Pulse', 'Thunder', 'Ice Beam'],
-            383: ['Precipice Blades', 'Earthquake', 'Heat Crash', 'Stone Edge'],
-            484: ['Spacial Rend', 'Hydro Pump', 'Draco Meteor', 'Fire Blast'],
             487: ['Shadow Force', 'Shadow Ball', 'Draco Meteor', 'Aura Sphere'],
-            491: ['Dark Pulse', 'Dark Void', 'Ice Beam', 'Thunder'],
             10036: ['Dragon Ascent', 'Extreme Speed', 'Dragon Claw', 'V-create'],
-            13002: ['Astral Barrage', 'Psychic', 'Shadow Ball', 'Pollen Puff']
+            13002: ['Astral Barrage', 'Psychic', 'Shadow Ball', 'Pollen Puff'],
+            716: ['Geomancy', 'Moonblast', 'Thunder', 'Horn Leech'],
+            13007: ['Roar of Time', 'Draco Meteor', 'Earth Power', 'Flamethrower']
         };
         return BOSS_MOVESETS[pokemonId] || null;
     }
