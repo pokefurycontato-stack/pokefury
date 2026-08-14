@@ -2705,6 +2705,17 @@ class CityScreen {
         this.syncPosition();
     }
 
+    teleportToGymNpc() {
+        if (!this.gymNpc) return;
+        this.playerX = this.gymNpc.pos_x;
+        this.playerY = this.gymNpc.pos_y + 70;
+        this.playerFromX = this.playerX;
+        this.playerFromY = this.playerY;
+        this.cameraX = this.playerX;
+        this.cameraY = this.playerY;
+        this.syncPosition();
+    }
+
     teleportToRaidArena() {
         if (!this.raidSpawn) return;
         this.playerX = this.raidSpawn.pos_x;

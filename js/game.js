@@ -2391,6 +2391,10 @@ class PokeFuryGame {
                 await this.awardGymBadge(this._currentGymLeader);
             }
             this._currentGymLeader = null;
+            // Volta para a frente do NPC de ginásios (nao fica preso na arena)
+            if (window.cityScreen) {
+                window.cityScreen.teleportToGymNpc();
+            }
         }
         this._battleEnding = false;
         this._cityBattle = false;
