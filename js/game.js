@@ -1338,7 +1338,7 @@ class PokeFuryGame {
             await showBattleMessage(`Usou ${itemData.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
             this.updatePartyPanel();
         } else if (itemData.category === 'pokeball') {
-            if (enemyPokemon.isAlpha || enemyPokemon.isRaidBoss) {
+            if (enemyPokemon.isAlpha || enemyPokemon.isRaidBoss || enemyPokemon.isGymLeader) {
                 await showBattleMessage('Não é possível capturar este Pokémon!');
                 return;
             }
@@ -1677,7 +1677,7 @@ class PokeFuryGame {
 
                     if (isTeamFainted(this.enemyTeam)) {
                         await showBattleMessage('Você venceu a batalha!');
-                        const isBoss = defender.isAlpha || defender.isRaidBoss;
+                        const isBoss = defender.isAlpha || defender.isRaidBoss || defender.isGymLeader;
                         if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen) {
                             const captured = await this.showCapturePrompt();
                             this.endBattle('win');
@@ -1767,7 +1767,7 @@ class PokeFuryGame {
             if (isTeamFainted(this.enemyTeam)) {
                 await showBattleMessage('Você venceu a batalha!');
                 const defeated = this.enemyTeam[0];
-                const isBoss = defeated?.isAlpha || defeated?.isRaidBoss;
+                const isBoss = defeated?.isAlpha || defeated?.isRaidBoss || defeated?.isGymLeader;
                 if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen) {
                     await this.showCapturePrompt();
                 }
@@ -6989,6 +6989,7 @@ openEventsPanel() {
                 null,
                 `${leader.name} - Líder de Ginásio`
             );
+            if (this.enemyTeam[0]) this.enemyTeam[0].isGymLeader = true;
         }
     }
 

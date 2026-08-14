@@ -135,8 +135,9 @@ class ProfileScreen {
     try {
       const { data: badges } = await window.db
         .from('character_gym_badges')
-        .select('gym_leader_id, gym_leaders(badge_name, gym_number, type, region_id, gym_regions(name, sort_order))')
-        .eq('character_id', charId);
+        .select('gym_leader_id, defeated_at, gym_leaders(badge_name, gym_number, type, region_id, gym_regions(name, sort_order))')
+        .eq('character_id', charId)
+        .order('defeated_at', { ascending: true });
       return (badges || []).map(b => {
         const leader = b.gym_leaders;
         return {
