@@ -60,6 +60,8 @@ class CityScreen {
         this._raidBossW = 220;
         this._raidBossH = 220;
         this._teleportPortalImg = null;
+        this._teleportLayer = null;
+        this._teleportEls = [];
 
         this.bindEvents();
     }
@@ -364,6 +366,11 @@ class CityScreen {
             this._raidPortalEl = null;
             this._raidBossEl = null;
             this._raidExitEl = null;
+        }
+        if (this._teleportLayer) {
+            this._teleportLayer.remove();
+            this._teleportLayer = null;
+            this._teleportEls = [];
         }
         this.hideRaidRank();
         if (this.channel) {
@@ -1384,6 +1391,56 @@ class CityScreen {
         } else {
             this._raidBossH = maxDim;
             this._raidBossW = Math.round(maxDim * (nw / nh));
+        }
+    }
+
+    renderTeleportDom() {
+        if (!this._teleportLayer) {
+            const wrap = document.getElementById('city-canvas-wrap');
+            if (!wrap) return;
+            const layer = document.createElement('div');
+            layer.id = 'city-teleport-layer';
+            layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:4;';
+            wrap.appendChild(layer);
+            this._teleportLayer = layer;
+        }
+        const layer = this._teleportLayer;
+        const canvas = this.canvas;
+        const canvasRect = canvas.getBoundingClientRect();
+        const wrapRect = layer.getBoundingClientRect();
+        const scaleX = canvasRect.width / canvas.width;
+        const scaleY = canvasRect.height / canvas.height;
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
+        const camX = this.cameraX - canvas.width / 2;
+        const camY = this.cameraY - canvas.height / 2;
+
+        while (this._teleportEls.length < this.teleports.length) {
+            const el = document.createElement('img');
+            el.src = 'assets/ferramentas/portal2.gif';
+            el.style.cssText = 'position:absolute;pointer-events:none;display:none;';
+            layer.appendChild(el);
+            this._teleportEls.push(el);
+        }
+
+        this.teleports.forEach((t, i) => {
+            const el = this._teleportEls[i];
+            if (!el) return;
+            const sx = t.sign_x - camX;
+            const sy = t.sign_y - camY;
+            if (sx + t.sign_width < -50 || sx > canvas.width + 50 || sy + t.sign_height < -50 || sy > canvas.height + 50) {
+                el.style.display = 'none';
+                return;
+            }
+            el.style.display = 'block';
+            el.style.left = (offsetX + sx * scaleX) + 'px';
+            el.style.top = (offsetY + sy * scaleY) + 'px';
+            el.style.width = (t.sign_width * scaleX) + 'px';
+            el.style.height = (t.sign_height * scaleY) + 'px';
+        });
+
+        for (let i = this.teleports.length; i < this._teleportEls.length; i++) {
+            this._teleportEls[i].style.display = 'none';
         }
     }
 
@@ -2988,26 +3045,12 @@ class CityScreen {
             const sx = t.sign_x - camX;
             const sy = t.sign_y - camY;
             if (sx + t.sign_width < -50 || sx > cw + 50 || sy + t.sign_height < -50 || sy > ch + 50) return;
-
-            if (!this._teleportPortalImg) {
-                this._teleportPortalImg = new Image();
-                this._teleportPortalImg.src = 'assets/ferramentas/portal2.gif';
-            }
-            const pimg = this._teleportPortalImg;
-            if (pimg && pimg.complete && pimg.naturalWidth) {
-                ctx.drawImage(pimg, sx, sy, t.sign_width, t.sign_height);
-            } else {
-                ctx.fillStyle = 'rgba(139, 92, 246, 0.35)';
-                ctx.strokeStyle = '#8b5cf6';
-                ctx.lineWidth = 2;
-                ctx.fillRect(sx, sy, t.sign_width, t.sign_height);
-                ctx.strokeRect(sx, sy, t.sign_width, t.sign_height);
-            }
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 10px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(t.name, sx + t.sign_width / 2, sy - 6);
         });
+        this.renderTeleportDom();
 
         this.drawRaidElements(ctx, camX, camY, cw, ch);
 
