@@ -2390,6 +2390,24 @@ class PokeFuryGame {
         pokemon.stats.hp = Number(boss.max_hp);
         pokemon.spriteUrls = { ...(pokemon.spriteUrls || {}), front: this.raidBoss.bossSpriteUrl(boss.pokemon_id) };
 
+        const moveset = this.getRaidBossMoveset(boss.pokemon_id);
+        if (moveset && moveset.length) {
+            try {
+                const { data: moveRows } = await window.db.from('moves')
+                    .select('id, name, type, category, power, accuracy, pp')
+                    .in('name', moveset);
+                if (moveRows && moveRows.length) {
+                    const byName = {};
+                    moveRows.forEach(m => { byName[m.name] = m; });
+                    const loaded = moveset.filter(n => byName[n]).map(n => {
+                        const m = byName[n];
+                        return { id: m.id, name: m.name, type: m.type, category: m.category || 'physical', power: m.power || 0, accuracy: m.accuracy || 100, pp: m.pp || 35, currentPp: m.pp || 35 };
+                    });
+                    if (loaded.length > 0) pokemon.moves = loaded;
+                }
+            } catch (e) {}
+        }
+
         this._raidBossEntryHp = Number(boss.current_hp);
 
         this.enemyTeam = [pokemon];
@@ -2499,6 +2517,19 @@ class PokeFuryGame {
         const err = await this.raidBoss.spawnBoss(id, name);
         if (err) { this.showToast(err, 'error'); }
         else { this.showToast(`Raid Boss iniciado: ${name}!`, 'success'); }
+    }
+
+    getRaidBossMoveset(pokemonId) {
+        const BOSS_MOVESETS = {
+            382: ['Water Spout', 'Origin Pulse', 'Thunder', 'Ice Beam'],
+            383: ['Precipice Blades', 'Earthquake', 'Heat Crash', 'Stone Edge'],
+            484: ['Spacial Rend', 'Hydro Pump', 'Draco Meteor', 'Fire Blast'],
+            487: ['Shadow Force', 'Shadow Ball', 'Draco Meteor', 'Aura Sphere'],
+            491: ['Dark Pulse', 'Dark Void', 'Ice Beam', 'Thunder'],
+            10036: ['Dragon Ascent', 'Extreme Speed', 'Dragon Claw', 'V-create'],
+            13002: ['Astral Barrage', 'Psychic', 'Shadow Ball', 'Pollen Puff']
+        };
+        return BOSS_MOVESETS[pokemonId] || null;
     }
 
     async startAlphaBattle() {
