@@ -1333,7 +1333,7 @@ class CityScreen {
             const e = this.raidExit;
             const ex = e.pos_x - camX;
             const ey = e.pos_y - camY;
-            const es = 64 * 6;
+            const es = 48;
             if (ex + es > -50 && ex < cw + 50 && ey + es > -50 && ey < ch + 50) {
                 ctx.textAlign = 'center';
                 ctx.font = 'bold 10px Inter, sans-serif';
@@ -1411,8 +1411,8 @@ class CityScreen {
             const p = this.raidPortal;
             const sx = p.pos_x - camX;
             const sy = p.pos_y - camY;
-            const w = (p.width || 64) * 6;
-            const h = (p.height || 64) * 6;
+            const w = (p.width || 64) * 3;
+            const h = (p.height || 64) * 3;
             const el = this._raidPortalEl;
             el.style.display = 'block';
             el.style.left = (offsetX + sx * scaleX) + 'px';
@@ -1447,7 +1447,7 @@ class CityScreen {
             const e = this.raidExit;
             const sx = e.pos_x - camX;
             const sy = e.pos_y - camY;
-            const es = 64 * 6;
+            const es = 48;
             const el = this._raidExitEl;
             el.style.display = 'block';
             el.style.left = (offsetX + sx * scaleX) + 'px';
@@ -2491,7 +2491,7 @@ class CityScreen {
         // Portal de saida SEMPRE ativo (para nao prender jogadores na arena)
         if (this.raidExit) {
             const e = this.raidExit;
-            if (Math.hypot(this.playerX - e.pos_x, this.playerY - e.pos_y) < 160) {
+            if (Math.hypot(this.playerX - e.pos_x, this.playerY - e.pos_y) < 60) {
                 this.nearRaidExit = true;
             }
         }
@@ -3124,6 +3124,34 @@ class CityScreen {
             ctx.font = 'bold 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(label, sx, sy + 1);
+        }
+
+        if (this.nearRaidPortal && this.raidPortal) {
+            const p = this.raidPortal;
+            const sx = p.pos_x - camX + (p.width || 64) / 2;
+            const sy = p.pos_y - camY - 24;
+            ctx.fillStyle = 'rgba(123, 47, 247, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(sx - 70, sy - 14, 140, 22, 6);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Pressione E para entrar na raid', sx, sy + 1);
+        }
+
+        if (this.nearRaidExit && this.raidExit) {
+            const e = this.raidExit;
+            const sx = e.pos_x - camX;
+            const sy = e.pos_y - camY - 24;
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(sx - 60, sy - 14, 120, 22, 6);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Pressione E para sair', sx, sy + 1);
         }
 
         const allPlayers = [];
