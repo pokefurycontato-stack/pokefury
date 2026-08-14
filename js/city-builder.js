@@ -104,6 +104,15 @@ class CityBuilder {
         this.raidZoneDragging = false;
         this.raidZoneDragOffset = { x: 0, y: 0 };
 
+        this.gymMode = false;
+        this.gymZones = {};
+        this.gymTeleports = {};
+        this.gymNpc = null;
+        this.activeGymType = null;
+        this.gymPlaceMode = 'zone';
+        this.gymZoneDrawStart = null;
+        this.gymZoneDrawCurrent = null;
+
         this.bindEvents();
     }
 
@@ -156,6 +165,10 @@ class CityBuilder {
         if (raidExitBtn) raidExitBtn.addEventListener('click', () => this.toggleRaidExitMode());
         const raidZoneBtn = document.getElementById('cb-raid-zone-btn');
         if (raidZoneBtn) raidZoneBtn.addEventListener('click', () => this.toggleRaidZoneMode());
+        const gymBtn = document.getElementById('cb-gym-btn');
+        if (gymBtn) gymBtn.addEventListener('click', () => this.toggleGymMode());
+        const gymNpcBtn = document.getElementById('cb-gym-npc-btn');
+        if (gymNpcBtn) gymNpcBtn.addEventListener('click', () => this.setGymNpcMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -1720,6 +1733,97 @@ toggleVendorMode() {
         }
     }
 
+    // ======================= GINASIOS =======================
+
+    toggleGymMode() {
+        this.gymMode = !this.gymMode;
+        this._resetOtherModes();
+        const btn = document.getElementById('cb-gym-btn');
+        if (btn) btn.style.background = this.gymMode ? '#e94560' : 'rgba(255,255,255,0.15)';
+        const assetsPanel = document.getElementById('cb-assets-panel');
+        const gymPanel = document.getElementById('cb-gym-panel');
+        if (this.gymMode) {
+            if (assetsPanel) assetsPanel.style.display = 'none';
+            if (gymPanel) gymPanel.style.display = 'block';
+            this.renderGymList();
+        } else {
+            if (assetsPanel) assetsPanel.style.display = 'block';
+            if (gymPanel) gymPanel.style.display = 'none';
+            this.activeGymType = null;
+            this.gymPlaceMode = 'zone';
+        }
+        this.canvas.style.cursor = this.gymMode ? 'crosshair' : 'default';
+        this.render();
+    }
+
+    renderGymList() {
+        const list = document.getElementById('cb-gym-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const ELEMENTS = ['Normal','Fire','Water','Grass','Electric','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
+        for (const el of ELEMENTS) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:4px;align-items:center;';
+            const zoneBtn = document.createElement('button');
+            zoneBtn.textContent = `Zona ${el}`;
+            zoneBtn.style.cssText = `flex:1;padding:6px;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;background:${this.activeGymType === el && this.gymPlaceMode === 'zone' ? '#e94560' : 'rgba(255,255,255,0.08)'};color:#fff;`;
+            zoneBtn.onclick = () => { this.activeGymType = el; this.gymPlaceMode = 'zone'; this.renderGymList(); };
+            const tpBtn = document.createElement('button');
+            tpBtn.textContent = `Teleporte ${el}`;
+            tpBtn.style.cssText = `flex:1;padding:6px;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;background:${this.activeGymType === el && this.gymPlaceMode === 'teleport' ? '#38bdf8' : 'rgba(255,255,255,0.08)'};color:#fff;`;
+            tpBtn.onclick = () => { this.activeGymType = el; this.gymPlaceMode = 'teleport'; this.renderGymList(); };
+            row.appendChild(zoneBtn);
+            row.appendChild(tpBtn);
+            list.appendChild(row);
+        }
+    }
+
+    setGymNpcMode() {
+        this.activeGymType = null;
+        this.gymPlaceMode = 'npc';
+        this.renderGymList();
+    }
+
+    onGymMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        if (this.gymPlaceMode === 'npc') {
+            this.gymNpc = { pos_x: Math.round(w.x), pos_y: Math.round(w.y) };
+            this.render();
+            return;
+        }
+        if (!this.activeGymType) return;
+        if (this.gymPlaceMode === 'zone') {
+            this.gymZoneDrawStart = { x: w.x, y: w.y };
+            this.gymZoneDrawCurrent = { x: w.x, y: w.y };
+        } else if (this.gymPlaceMode === 'teleport') {
+            this.gymTeleports[this.activeGymType] = { pos_x: Math.round(w.x), pos_y: Math.round(w.y) };
+        }
+        this.render();
+    }
+
+    onGymMouseMove(e) {
+        if (this.gymPlaceMode === 'zone' && this.gymZoneDrawStart) {
+            const w = this.screenToWorld(e.clientX, e.clientY);
+            this.gymZoneDrawCurrent = { x: w.x, y: w.y };
+            this.render();
+        }
+    }
+
+    onGymMouseUp() {
+        if (this.gymZoneDrawStart && this.gymZoneDrawCurrent) {
+            let x = this.gymZoneDrawStart.x, y = this.gymZoneDrawStart.y;
+            let w = this.gymZoneDrawCurrent.x - x, h = this.gymZoneDrawCurrent.y - y;
+            if (w < 0) { x += w; w = -w; }
+            if (h < 0) { y += h; h = -h; }
+            if (w > 4 && h > 4 && this.activeGymType) {
+                this.gymZones[this.activeGymType] = { pos_x: Math.round(x), pos_y: Math.round(y), width: Math.round(w), height: Math.round(h) };
+            }
+            this.gymZoneDrawStart = null;
+            this.gymZoneDrawCurrent = null;
+        }
+        this.render();
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -1868,6 +1972,7 @@ toggleVendorMode() {
             if (this.spawnZoneMode) { this.onSpawnZoneMouseUp(e); return; }
             if (this.battleZoneMode) { this.onBattleZoneMouseUp(e); return; }
             if (this.raidZoneMode) { this.onRaidZoneMouseUp(e); return; }
+            if (this.gymMode) { this.onGymMouseUp(e); return; }
             if (this.nurseMode) { this.onNpcRegionMouseUp(e); return; }
             if (this.professorMode) { this.onNpcRegionMouseUp(e); return; }
             if (this.narratorMode) { this.onNpcRegionMouseUp(e); return; }
@@ -1902,6 +2007,7 @@ toggleVendorMode() {
         if (this.raidBossMode) { this.onRaidBossMouseDown(e); return; }
         if (this.raidExitMode) { this.onRaidExitMouseDown(e); return; }
         if (this.raidZoneMode) { this.onRaidZoneMouseDown(e); return; }
+        if (this.gymMode) { this.onGymMouseDown(e); return; }
         if (this.nurseMode) { this.onNurseMouseDown(e); return; }
         if (this.professorMode) { this.onProfessorMouseDown(e); return; }
         if (this.narratorMode) { this.onNarratorMouseDown(e); return; }
@@ -2007,6 +2113,7 @@ toggleVendorMode() {
         if (this.spawnZoneMode) { this.onSpawnZoneMouseMove(e); return; }
         if (this.battleZoneMode) { this.onBattleZoneMouseMove(e); return; }
         if (this.raidZoneMode) { this.onRaidZoneMouseMove(e); return; }
+        if (this.gymMode) { this.onGymMouseMove(e); return; }
         if (this.nurseMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.professorMode) { this.onNpcRegionMouseMove(e); return; }
         if (this.narratorMode) { this.onNpcRegionMouseMove(e); return; }
@@ -2324,6 +2431,18 @@ toggleVendorMode() {
                 const { data: rz } = await window.db.from('city_raid_zones').select('*').limit(5000);
                 if (rz) this.raidZones = rz.map(z => ({ id: z.id, pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height }));
             } catch (e) {}
+            try {
+                const { data: gz } = await window.db.from('city_gym_zones').select('*');
+                if (gz) { this.gymZones = {}; gz.forEach(z => { this.gymZones[z.gym_type] = { id: z.id, pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height }; }); }
+            } catch (e) {}
+            try {
+                const { data: gt } = await window.db.from('city_gym_teleports').select('*');
+                if (gt) { this.gymTeleports = {}; gt.forEach(t => { this.gymTeleports[t.gym_type] = { id: t.id, pos_x: t.pos_x, pos_y: t.pos_y }; }); }
+            } catch (e) {}
+            try {
+                const { data: gn } = await window.db.from('city_gym_npc').select('*').limit(1).maybeSingle();
+                if (gn) this.gymNpc = { id: gn.id, pos_x: gn.pos_x, pos_y: gn.pos_y };
+            } catch (e) {}
 
             if (this.assets.length === 0) {
                 const backupKey = 'city_backup_' + (this.currentCityId || 'default');
@@ -2594,6 +2713,18 @@ toggleVendorMode() {
                 await window.db.from('city_raid_exit').upsert({ id: this.raidExit.id || 1, pos_x: this.raidExit.pos_x, pos_y: this.raidExit.pos_y }, { onConflict: 'id' });
             }
             const raidZoneIds = await syncTable('city_raid_zones', raidZoneToSave);
+
+            if (this.gymNpc) {
+                await window.db.from('city_gym_npc').upsert({ id: this.gymNpc.id || 1, pos_x: this.gymNpc.pos_x, pos_y: this.gymNpc.pos_y }, { onConflict: 'id' });
+            }
+            for (const type in this.gymZones) {
+                const z = this.gymZones[type];
+                await window.db.from('city_gym_zones').upsert({ ...(z.id ? { id: z.id } : {}), gym_type: type, pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height }, { onConflict: 'gym_type' });
+            }
+            for (const type in this.gymTeleports) {
+                const t = this.gymTeleports[type];
+                await window.db.from('city_gym_teleports').upsert({ ...(t.id ? { id: t.id } : {}), gym_type: type, pos_x: t.pos_x, pos_y: t.pos_y }, { onConflict: 'gym_type' });
+            }
 
             await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
             await deleteMissingRows('city_teleports', tpIds, tpToSave);
@@ -3040,6 +3171,53 @@ toggleVendorMode() {
         }
 
         this.renderPlayer(ctx);
+
+        if (this.gymMode || Object.keys(this.gymZones).length > 0 || Object.keys(this.gymTeleports).length > 0 || this.gymNpc) {
+            for (const type in this.gymZones) {
+                const z = this.gymZones[type];
+                ctx.fillStyle = 'rgba(233, 69, 96, 0.25)';
+                ctx.strokeStyle = '#e94560';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.strokeRect(z.pos_x, z.pos_y, z.width, z.height);
+                ctx.fillStyle = '#e94560';
+                ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('Ginásio ' + type, z.pos_x + z.width / 2, z.pos_y - 6 / this.zoom);
+            }
+            for (const type in this.gymTeleports) {
+                const t = this.gymTeleports[type];
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(t.pos_x, t.pos_y, 8 / this.zoom, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${11 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('Teleporte ' + type, t.pos_x, t.pos_y - 10 / this.zoom);
+            }
+            if (this.gymNpc) {
+                ctx.fillStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.arc(this.gymNpc.pos_x, this.gymNpc.pos_y, 10 / this.zoom, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${11 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('NPC Ginásios', this.gymNpc.pos_x, this.gymNpc.pos_y - 12 / this.zoom);
+            }
+            if (this.gymZoneDrawStart && this.gymZoneDrawCurrent) {
+                let dx = Math.min(this.gymZoneDrawStart.x, this.gymZoneDrawCurrent.x);
+                let dy = Math.min(this.gymZoneDrawStart.y, this.gymZoneDrawCurrent.y);
+                let dw = Math.abs(this.gymZoneDrawCurrent.x - this.gymZoneDrawStart.x);
+                let dh = Math.abs(this.gymZoneDrawCurrent.y - this.gymZoneDrawStart.y);
+                ctx.fillStyle = 'rgba(233, 69, 96, 0.3)';
+                ctx.strokeStyle = '#e94560';
+                ctx.lineWidth = 2 / this.zoom;
+                ctx.fillRect(dx, dy, dw, dh);
+                ctx.strokeRect(dx, dy, dw, dh);
+            }
+        }
 
         if (this.raidPortal) {
             ctx.fillStyle = 'rgba(123, 47, 247, 0.4)';

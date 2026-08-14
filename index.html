@@ -1316,6 +1316,7 @@
                 <button id="cb-raid-boss-btn" title="Posicao do Boss na arena" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🐉 Boss Raid</button>
                 <button id="cb-raid-exit-btn" title="Portal de saida da arena" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🚪 Saida Raid</button>
                 <button id="cb-raid-zone-btn" title="Zona do Raid Boss (ranking lateral)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🔥 Zona Raid</button>
+                <button id="cb-gym-btn" title="Ginásios (zonas e teleportes por elemento)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🏟️ Ginásios</button>
                 <button id="cb-preview-btn" title="Preview do jogador" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">👁️</button>
                 <button id="cb-save-btn" style="padding:6px 14px;border:none;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
                 <button id="cb-close-btn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
@@ -1331,6 +1332,11 @@
             <div id="cb-assets-panel" style="width:180px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
                 <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Assets</div>
                 <div id="cb-assets-list"></div>
+            </div>
+            <!-- Sidebar de ginasios -->
+            <div id="cb-gym-panel" style="display:none;width:320px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
+                <button id="cb-gym-npc-btn" style="width:100%;padding:8px;margin-bottom:8px;border:none;border-radius:6px;background:#e94560;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">👤 Adicionar NPC de Ginásios</button>
+                <div id="cb-gym-list" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
             <!-- Canvas do editor -->
             <div id="cb-canvas-wrap" style="flex:1;position:relative;overflow:hidden;background:#1a1a2e;">
