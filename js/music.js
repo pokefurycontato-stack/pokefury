@@ -16,9 +16,11 @@ export class MusicManager {
         this.backgroundAudio = new Audio('assets/musicas/musicafundo1.MP3');
         this.backgroundAudio.loop = true;
         this.backgroundAudio.volume = this.volume;
+        this.backgroundAudio.onerror = () => console.error('[Music] fundo load error:', this.backgroundAudio.error?.code || this.backgroundAudio.error?.message);
         this.battleAudio = new Audio('assets/musicas/musicabatalha.MP3');
         this.battleAudio.loop = true;
         this.battleAudio.volume = this.volume;
+        this.battleAudio.onerror = () => console.error('[Music] batalha load error:', this.battleAudio.error?.code || this.battleAudio.error?.message);
         this._bindStart();
     }
 
@@ -39,7 +41,7 @@ export class MusicManager {
     _play(audio) {
         if (this.volume <= 0) return;
         audio.volume = this.volume;
-        audio.play().catch(() => {});
+        audio.play().then(() => console.log('[Music] tocando:', audio.src)).catch(e => console.warn('[Music] play error:', e.message));
     }
 
     playBackground() {
