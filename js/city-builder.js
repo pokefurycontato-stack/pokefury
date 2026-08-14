@@ -2921,11 +2921,25 @@ toggleVendorMode() {
             this.teleports.forEach((t, i) => {
                 const isSelected = i === this.teleportSelectedIdx;
 
-                ctx.fillStyle = isSelected ? 'rgba(139, 92, 246, 0.5)' : 'rgba(139, 92, 246, 0.3)';
-                ctx.strokeStyle = isSelected ? '#fff' : '#8b5cf6';
-                ctx.lineWidth = 2 / this.zoom;
-                ctx.fillRect(t.sign_x, t.sign_y, t.sign_width, t.sign_height);
-                ctx.strokeRect(t.sign_x, t.sign_y, t.sign_width, t.sign_height);
+                if (!this._teleportPortalImg) {
+                    this._teleportPortalImg = new Image();
+                    this._teleportPortalImg.src = 'assets/ferramentas/portal2.gif';
+                }
+                const pimg = this._teleportPortalImg;
+                if (pimg && pimg.complete && pimg.naturalWidth) {
+                    ctx.drawImage(pimg, t.sign_x, t.sign_y, t.sign_width, t.sign_height);
+                    if (isSelected) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2 / this.zoom;
+                        ctx.strokeRect(t.sign_x, t.sign_y, t.sign_width, t.sign_height);
+                    }
+                } else {
+                    ctx.fillStyle = isSelected ? 'rgba(139, 92, 246, 0.5)' : 'rgba(139, 92, 246, 0.3)';
+                    ctx.strokeStyle = isSelected ? '#fff' : '#8b5cf6';
+                    ctx.lineWidth = 2 / this.zoom;
+                    ctx.fillRect(t.sign_x, t.sign_y, t.sign_width, t.sign_height);
+                    ctx.strokeRect(t.sign_x, t.sign_y, t.sign_width, t.sign_height);
+                }
 
                 ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
                 ctx.strokeStyle = '#22c55e';

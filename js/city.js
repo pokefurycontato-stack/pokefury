@@ -59,6 +59,7 @@ class CityScreen {
         this._raidBossImgId = null;
         this._raidBossW = 220;
         this._raidBossH = 220;
+        this._teleportPortalImg = null;
 
         this.bindEvents();
     }
@@ -2987,11 +2988,21 @@ class CityScreen {
             const sx = t.sign_x - camX;
             const sy = t.sign_y - camY;
             if (sx + t.sign_width < -50 || sx > cw + 50 || sy + t.sign_height < -50 || sy > ch + 50) return;
-            ctx.fillStyle = 'rgba(139, 92, 246, 0.35)';
-            ctx.strokeStyle = '#8b5cf6';
-            ctx.lineWidth = 2;
-            ctx.fillRect(sx, sy, t.sign_width, t.sign_height);
-            ctx.strokeRect(sx, sy, t.sign_width, t.sign_height);
+
+            if (!this._teleportPortalImg) {
+                this._teleportPortalImg = new Image();
+                this._teleportPortalImg.src = 'assets/ferramentas/portal2.gif';
+            }
+            const pimg = this._teleportPortalImg;
+            if (pimg && pimg.complete && pimg.naturalWidth) {
+                ctx.drawImage(pimg, sx, sy, t.sign_width, t.sign_height);
+            } else {
+                ctx.fillStyle = 'rgba(139, 92, 246, 0.35)';
+                ctx.strokeStyle = '#8b5cf6';
+                ctx.lineWidth = 2;
+                ctx.fillRect(sx, sy, t.sign_width, t.sign_height);
+                ctx.strokeRect(sx, sy, t.sign_width, t.sign_height);
+            }
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 10px Inter, sans-serif';
             ctx.textAlign = 'center';
