@@ -244,17 +244,15 @@ class ProfileScreen {
     const regionBadges = gymBadges.filter(b => b.region_name === currentRegion);
     let badgesHtml = '';
     if (regionBadges.length > 0) {
-      const BADGE_ORDER = ['Normal','Fire','Water','Grass','Electric','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
-      const COLS = 3, ROWS = 6;
-      const dispW = 60, dispH = 20;
-      badgesHtml = `<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;height:100%;">` + regionBadges.map(b => {
-        const idx = BADGE_ORDER.indexOf(b.type);
-        if (idx < 0) return '';
-        const col = Math.floor(idx / ROWS);
-        const row = idx % ROWS;
-        const x = -(col * dispW);
-        const y = -(row * dispH);
-        return `<div title="${escapeHtml(b.badge_name)}" style="width:${dispW}px;height:${dispH}px;background-image:url('assets/ferramentas/insignias.png');background-size:${COLS*dispW}px ${ROWS*dispH}px;background-position:${x}px ${y}px;flex-shrink:0;"></div>`;
+      const BADGE_IMAGES = {
+        'Normal':'normal','Fire':'fogo','Water':'agua','Grass':'grama','Electric':'eletrico','Ice':'gelo',
+        'Fighting':'lutador','Poison':'poison','Ground':'terra','Flying':'voador','Psychic':'psiquico','Bug':'inseto',
+        'Rock':'pedra','Ghost':'fantasma','Dragon':'dragao','Dark':'dark','Steel':'iron','Fairy':'fada'
+      };
+      badgesHtml = `<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px;height:100%;">` + regionBadges.map(b => {
+        const slug = BADGE_IMAGES[b.type];
+        if (!slug) return '';
+        return `<img src="assets/ferramentas/insignia${slug}.png" title="${escapeHtml(b.badge_name)}" style="width:38px;height:38px;object-fit:contain;flex-shrink:0;">`;
       }).join('') + `</div>`;
     } else {
       badgesHtml = `<div class="pf-text" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:600;">${escapeHtml(currentRegion)}</div>`;
