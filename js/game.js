@@ -2505,7 +2505,8 @@ class PokeFuryGame {
         if (!window.isAdmin) return;
         const BOSS_NAME_MAP = {
             10036: 'Mega Rayquaza',
-            13002: 'Calyrex Shadow Rider'
+            13002: 'Calyrex Shadow Rider',
+            13007: 'Black Kyurem'
         };
         const pool = [382, 487, 10036, 13002, 716, 13007];
         const id = pool[Math.floor(Math.random() * pool.length)];
@@ -2533,7 +2534,7 @@ class PokeFuryGame {
             10036: ['Dragon Ascent', 'Extreme Speed', 'Dragon Claw', 'V-create'],
             13002: ['Astral Barrage', 'Psychic', 'Shadow Ball', 'Pollen Puff'],
             716: ['Geomancy', 'Moonblast', 'Thunder', 'Horn Leech'],
-            13007: ['Roar of Time', 'Draco Meteor', 'Earth Power', 'Flamethrower']
+            13007: ['Freeze Shock', 'Fusion Bolt', 'Outrage', 'Earth Power']
         };
         return BOSS_MOVESETS[pokemonId] || null;
     }
