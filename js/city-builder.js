@@ -1562,8 +1562,9 @@ toggleVendorMode() {
     // ======================= RAID BOSS TOOLS =======================
 
     toggleRaidPortalMode() {
-        this.raidPortalMode = !this.raidPortalMode;
-        this._resetOtherModes('cb-raid-portal-btn');
+        const wasOn = this.raidPortalMode;
+        this._resetOtherModes();
+        this.raidPortalMode = !wasOn;
         const btn = document.getElementById('cb-raid-portal-btn');
         if (btn) btn.style.background = this.raidPortalMode ? '#7b2ff7' : 'rgba(255,255,255,0.15)';
         this.canvas.style.cursor = this.raidPortalMode ? 'crosshair' : 'default';
@@ -1571,8 +1572,9 @@ toggleVendorMode() {
     }
 
     toggleRaidSpawnMode() {
-        this.raidSpawnMode = !this.raidSpawnMode;
-        this._resetOtherModes('cb-raid-spawn-btn');
+        const wasOn = this.raidSpawnMode;
+        this._resetOtherModes();
+        this.raidSpawnMode = !wasOn;
         const btn = document.getElementById('cb-raid-spawn-btn');
         if (btn) btn.style.background = this.raidSpawnMode ? '#c23152' : 'rgba(255,255,255,0.15)';
         this.canvas.style.cursor = this.raidSpawnMode ? 'crosshair' : 'default';
@@ -1580,8 +1582,9 @@ toggleVendorMode() {
     }
 
     toggleRaidZoneMode() {
-        this.raidZoneMode = !this.raidZoneMode;
-        this._resetOtherModes('cb-raid-zone-btn');
+        const wasOn = this.raidZoneMode;
+        this._resetOtherModes();
+        this.raidZoneMode = !wasOn;
         const btn = document.getElementById('cb-raid-zone-btn');
         if (btn) btn.style.background = this.raidZoneMode ? '#e94560' : 'rgba(255,255,255,0.15)';
         this.canvas.style.cursor = this.raidZoneMode ? 'crosshair' : 'default';
@@ -1589,7 +1592,7 @@ toggleVendorMode() {
         this.render();
     }
 
-    _resetOtherModes(exceptId) {
+    _resetOtherModes() {
         this.collisionZoneMode = false;
         this.teleportMode = false;
         this.npcRegionMode = false;
