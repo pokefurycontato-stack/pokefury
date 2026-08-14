@@ -249,11 +249,17 @@ class ProfileScreen {
         'Fighting':'lutador','Poison':'poison','Ground':'terra','Flying':'voador','Psychic':'psiquico','Bug':'inseto',
         'Rock':'pedra','Ghost':'fantasma','Dragon':'dragao','Dark':'dark','Steel':'iron','Fairy':'fada'
       };
-      badgesHtml = `<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px;height:100%;">` + regionBadges.map(b => {
+      const badgeImgs = regionBadges.map(b => {
         const slug = BADGE_IMAGES[b.type];
         if (!slug) return '';
-        return `<img src="assets/ferramentas/insignia${slug}.png" title="${escapeHtml(b.badge_name)}" style="width:38px;height:38px;object-fit:contain;flex-shrink:0;">`;
-      }).join('') + `</div>`;
+        return `<img src="assets/ferramentas/insignia${slug}.png" title="${escapeHtml(b.badge_name)}" style="width:42px;height:42px;object-fit:contain;">`;
+      }).join('');
+      badgesHtml = `
+        <div style="display:flex;flex-direction:column;height:100%;">
+          <div style="text-align:center;color:#000;font-weight:700;font-size:12px;padding:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(currentRegion)}</div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(4, 1fr);align-items:center;justify-items:center;row-gap:2px;">${badgeImgs}</div>
+        </div>
+      `;
     } else {
       badgesHtml = `<div class="pf-text" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:600;">${escapeHtml(currentRegion)}</div>`;
     }
