@@ -272,7 +272,7 @@ export class Chat {
         const menu = document.createElement('div');
         menu.className = 'chat-name-menu';
         menu.style.cssText = 'position:fixed;z-index:10070;background:#1c2333;border:1px solid rgba(255,255,255,0.15);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;';
-        menu.innerHTML = `<button data-action="pm" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Mandar mensagem privada</button>`;
+        menu.innerHTML = `<button data-action="pm" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Enviar mensagem privada</button>`;
         menu.style.left = e.clientX + 'px';
         menu.style.top = e.clientY + 'px';
         document.body.appendChild(menu);
