@@ -57,6 +57,8 @@ class CityScreen {
         this._raidBossEl = null;
         this._raidExitEl = null;
         this._raidBossImgId = null;
+        this._raidBossW = 220;
+        this._raidBossH = 220;
 
         this.bindEvents();
     }
@@ -1306,21 +1308,23 @@ class CityScreen {
 
     drawRaidElements(ctx, camX, camY, cw, ch) {
         const boss = this.getRaidBoss();
+        this._updateRaidBossSize();
 
         if (boss && this.raidBoss) {
             const s = this.raidBoss;
-            const bs = 220;
-            const bx = s.pos_x - camX - bs / 2;
-            const by = s.pos_y - camY - bs / 2;
-            if (bx + bs > -50 && bx < cw + 50 && by + bs > -50 && by < ch + 50) {
+            const bw = this._raidBossW;
+            const bh = this._raidBossH;
+            const bx = s.pos_x - camX - bw / 2;
+            const by = s.pos_y - camY - bh / 2;
+            if (bx + bw > -50 && bx < cw + 50 && by + bh > -50 && by < ch + 50) {
                 ctx.textAlign = 'center';
                 ctx.font = 'bold 16px Inter, sans-serif';
                 ctx.strokeStyle = 'rgba(0,0,0,0.85)';
                 ctx.lineWidth = 4;
                 const label = `Boss ${boss.boss_name} (Nv.${boss.level})`;
-                ctx.strokeText(label, s.pos_x - camX, by + bs + 22);
+                ctx.strokeText(label, s.pos_x - camX, by + bh + 22);
                 ctx.fillStyle = '#fff';
-                ctx.fillText(label, s.pos_x - camX, by + bs + 22);
+                ctx.fillText(label, s.pos_x - camX, by + bh + 22);
             }
         }
 
@@ -1368,6 +1372,20 @@ class CityScreen {
         layer.appendChild(this._raidExitEl);
     }
 
+    _updateRaidBossSize() {
+        const el = this._raidBossEl;
+        const nw = (el && el.naturalWidth) ? el.naturalWidth : 220;
+        const nh = (el && el.naturalHeight) ? el.naturalHeight : 220;
+        const maxDim = 350;
+        if (nw >= nh) {
+            this._raidBossW = maxDim;
+            this._raidBossH = Math.round(maxDim * (nh / nw));
+        } else {
+            this._raidBossH = maxDim;
+            this._raidBossW = Math.round(maxDim * (nw / nh));
+        }
+    }
+
     renderRaidDom() {
         const boss = this.getRaidBoss();
         const hasExit = !!this.raidExit;
@@ -1407,9 +1425,10 @@ class CityScreen {
 
         if (boss && this.raidBoss && this._raidBossEl) {
             const b = this.raidBoss;
-            const bs = 220;
-            const bx = b.pos_x - camX - bs / 2;
-            const by = b.pos_y - camY - bs / 2;
+            const bw = this._raidBossW;
+            const bh = this._raidBossH;
+            const bx = b.pos_x - camX - bw / 2;
+            const by = b.pos_y - camY - bh / 2;
             const el = this._raidBossEl;
             if (this._raidBossImgId !== boss.pokemon_id) {
                 el.src = window.pokefury.raidBoss.bossSpriteUrl(boss.pokemon_id);
@@ -1418,8 +1437,8 @@ class CityScreen {
             el.style.display = 'block';
             el.style.left = (offsetX + bx * scaleX) + 'px';
             el.style.top = (offsetY + by * scaleY) + 'px';
-            el.style.width = (bs * scaleX) + 'px';
-            el.style.height = (bs * scaleY) + 'px';
+            el.style.width = (bw * scaleX) + 'px';
+            el.style.height = (bh * scaleY) + 'px';
         } else if (this._raidBossEl) {
             this._raidBossEl.style.display = 'none';
         }
