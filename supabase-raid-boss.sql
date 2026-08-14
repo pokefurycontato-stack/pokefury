@@ -54,6 +54,20 @@ CREATE TABLE IF NOT EXISTS city_raid_zones (
   height REAL NOT NULL
 );
 
+-- 4c. Posicao do boss na arena
+CREATE TABLE IF NOT EXISTS city_raid_boss (
+  id INTEGER PRIMARY KEY,
+  pos_x REAL NOT NULL,
+  pos_y REAL NOT NULL
+);
+
+-- 4d. Posicao do portal de saida da arena
+CREATE TABLE IF NOT EXISTS city_raid_exit (
+  id INTEGER PRIMARY KEY,
+  pos_x REAL NOT NULL,
+  pos_y REAL NOT NULL
+);
+
 -- 5. RLS (leitura publica do estado; escrita via RPC)
 ALTER TABLE raid_bosses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "raid_bosses_select" ON raid_bosses;

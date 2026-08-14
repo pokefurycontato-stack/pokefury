@@ -92,6 +92,10 @@ class CityBuilder {
         this.raidPortal = null;
         this.raidSpawnMode = false;
         this.raidSpawn = null;
+        this.raidBossMode = false;
+        this.raidBoss = null;
+        this.raidExitMode = false;
+        this.raidExit = null;
         this.raidZoneMode = false;
         this.raidZones = [];
         this.raidZoneDrawStart = null;
@@ -146,6 +150,10 @@ class CityBuilder {
         if (raidPortalBtn) raidPortalBtn.addEventListener('click', () => this.toggleRaidPortalMode());
         const raidSpawnBtn = document.getElementById('cb-raid-spawn-btn');
         if (raidSpawnBtn) raidSpawnBtn.addEventListener('click', () => this.toggleRaidSpawnMode());
+        const raidBossBtn = document.getElementById('cb-raid-boss-btn');
+        if (raidBossBtn) raidBossBtn.addEventListener('click', () => this.toggleRaidBossMode());
+        const raidExitBtn = document.getElementById('cb-raid-exit-btn');
+        if (raidExitBtn) raidExitBtn.addEventListener('click', () => this.toggleRaidExitMode());
         const raidZoneBtn = document.getElementById('cb-raid-zone-btn');
         if (raidZoneBtn) raidZoneBtn.addEventListener('click', () => this.toggleRaidZoneMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
@@ -1581,6 +1589,26 @@ toggleVendorMode() {
         this.render();
     }
 
+    toggleRaidBossMode() {
+        const wasOn = this.raidBossMode;
+        this._resetOtherModes();
+        this.raidBossMode = !wasOn;
+        const btn = document.getElementById('cb-raid-boss-btn');
+        if (btn) btn.style.background = this.raidBossMode ? '#f59e0b' : 'rgba(255,255,255,0.15)';
+        this.canvas.style.cursor = this.raidBossMode ? 'crosshair' : 'default';
+        this.render();
+    }
+
+    toggleRaidExitMode() {
+        const wasOn = this.raidExitMode;
+        this._resetOtherModes();
+        this.raidExitMode = !wasOn;
+        const btn = document.getElementById('cb-raid-exit-btn');
+        if (btn) btn.style.background = this.raidExitMode ? '#22c55e' : 'rgba(255,255,255,0.15)';
+        this.canvas.style.cursor = this.raidExitMode ? 'crosshair' : 'default';
+        this.render();
+    }
+
     toggleRaidZoneMode() {
         const wasOn = this.raidZoneMode;
         this._resetOtherModes();
@@ -1601,9 +1629,11 @@ toggleVendorMode() {
         this.spawnPointMode = false;
         this.raidPortalMode = false;
         this.raidSpawnMode = false;
+        this.raidBossMode = false;
+        this.raidExitMode = false;
         this.raidZoneMode = false;
         this.selected = null;
-        ['cb-collision-zone-btn','cb-teleport-btn','cb-npc-region-btn','cb-spawn-zone-btn','cb-battle-zone-btn','cb-spawn-point-btn','cb-raid-portal-btn','cb-raid-spawn-btn','cb-raid-zone-btn'].forEach(id => {
+        ['cb-collision-zone-btn','cb-teleport-btn','cb-npc-region-btn','cb-spawn-zone-btn','cb-battle-zone-btn','cb-spawn-point-btn','cb-raid-portal-btn','cb-raid-spawn-btn','cb-raid-boss-btn','cb-raid-exit-btn','cb-raid-zone-btn'].forEach(id => {
             const b = document.getElementById(id);
             if (b) b.style.background = 'rgba(255,255,255,0.15)';
         });
@@ -1618,6 +1648,18 @@ toggleVendorMode() {
     onRaidSpawnMouseDown(e) {
         const w = this.screenToWorld(e.clientX, e.clientY);
         this.raidSpawn = { pos_x: Math.round(w.x), pos_y: Math.round(w.y) };
+        this.render();
+    }
+
+    onRaidBossMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        this.raidBoss = { pos_x: Math.round(w.x), pos_y: Math.round(w.y) };
+        this.render();
+    }
+
+    onRaidExitMouseDown(e) {
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        this.raidExit = { pos_x: Math.round(w.x), pos_y: Math.round(w.y) };
         this.render();
     }
 
@@ -1857,6 +1899,8 @@ toggleVendorMode() {
         if (this.spawnPointMode) { this.onSpawnPointMouseDown(e); return; }
         if (this.raidPortalMode) { this.onRaidPortalMouseDown(e); return; }
         if (this.raidSpawnMode) { this.onRaidSpawnMouseDown(e); return; }
+        if (this.raidBossMode) { this.onRaidBossMouseDown(e); return; }
+        if (this.raidExitMode) { this.onRaidExitMouseDown(e); return; }
         if (this.raidZoneMode) { this.onRaidZoneMouseDown(e); return; }
         if (this.nurseMode) { this.onNurseMouseDown(e); return; }
         if (this.professorMode) { this.onProfessorMouseDown(e); return; }
@@ -2269,6 +2313,14 @@ toggleVendorMode() {
                 if (rs) this.raidSpawn = { id: rs.id, pos_x: rs.pos_x, pos_y: rs.pos_y };
             } catch (e) {}
             try {
+                const { data: rb } = await window.db.from('city_raid_boss').select('*').limit(1).maybeSingle();
+                if (rb) this.raidBoss = { id: rb.id, pos_x: rb.pos_x, pos_y: rb.pos_y };
+            } catch (e) {}
+            try {
+                const { data: rx } = await window.db.from('city_raid_exit').select('*').limit(1).maybeSingle();
+                if (rx) this.raidExit = { id: rx.id, pos_x: rx.pos_x, pos_y: rx.pos_y };
+            } catch (e) {}
+            try {
                 const { data: rz } = await window.db.from('city_raid_zones').select('*').limit(5000);
                 if (rz) this.raidZones = rz.map(z => ({ id: z.id, pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height }));
             } catch (e) {}
@@ -2534,6 +2586,12 @@ toggleVendorMode() {
             }
             if (this.raidSpawn) {
                 await window.db.from('city_raid_spawn').upsert({ id: this.raidSpawn.id || 1, pos_x: this.raidSpawn.pos_x, pos_y: this.raidSpawn.pos_y }, { onConflict: 'id' });
+            }
+            if (this.raidBoss) {
+                await window.db.from('city_raid_boss').upsert({ id: this.raidBoss.id || 1, pos_x: this.raidBoss.pos_x, pos_y: this.raidBoss.pos_y }, { onConflict: 'id' });
+            }
+            if (this.raidExit) {
+                await window.db.from('city_raid_exit').upsert({ id: this.raidExit.id || 1, pos_x: this.raidExit.pos_x, pos_y: this.raidExit.pos_y }, { onConflict: 'id' });
             }
             const raidZoneIds = await syncTable('city_raid_zones', raidZoneToSave);
 
@@ -2990,6 +3048,28 @@ toggleVendorMode() {
             ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
             ctx.textAlign = 'center';
             ctx.fillText('Spawn Raid', this.raidSpawn.pos_x, this.raidSpawn.pos_y - 12 / this.zoom);
+        }
+
+        if (this.raidBoss) {
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(this.raidBoss.pos_x, this.raidBoss.pos_y, 12 / this.zoom, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('Boss Raid', this.raidBoss.pos_x, this.raidBoss.pos_y - 14 / this.zoom);
+        }
+
+        if (this.raidExit) {
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.arc(this.raidExit.pos_x, this.raidExit.pos_y, 10 / this.zoom, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${12 / this.zoom}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('Saida Raid', this.raidExit.pos_x, this.raidExit.pos_y - 12 / this.zoom);
         }
 
         if (this.raidZoneMode || this.raidZones.length > 0) {

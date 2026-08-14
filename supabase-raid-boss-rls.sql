@@ -13,3 +13,11 @@ CREATE POLICY "city_raid_spawn_all" ON city_raid_spawn FOR ALL USING (true);
 ALTER TABLE city_raid_zones ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "city_raid_zones_all" ON city_raid_zones;
 CREATE POLICY "city_raid_zones_all" ON city_raid_zones FOR ALL USING (true);
+
+ALTER TABLE city_raid_boss ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "city_raid_boss_all" ON city_raid_boss;
+CREATE POLICY "city_raid_boss_all" ON city_raid_boss FOR ALL USING (true);
+
+ALTER TABLE city_raid_exit ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "city_raid_exit_all" ON city_raid_exit;
+CREATE POLICY "city_raid_exit_all" ON city_raid_exit FOR ALL USING (true);

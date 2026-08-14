@@ -43,6 +43,8 @@ class CityScreen {
 
         this.raidPortal = null;
         this.raidSpawn = null;
+        this.raidBoss = null;
+        this.raidExit = null;
         this.raidZones = [];
         this.raidCooldownUntil = 0;
         this._raidPortalImg = null;
@@ -1246,6 +1248,14 @@ class CityScreen {
             this.raidSpawn = spawn || null;
         } catch (e) { this.raidSpawn = null; }
         try {
+            const { data: boss } = await window.db.from('city_raid_boss').select('*').limit(1).maybeSingle();
+            this.raidBoss = boss || null;
+        } catch (e) { this.raidBoss = null; }
+        try {
+            const { data: exit } = await window.db.from('city_raid_exit').select('*').limit(1).maybeSingle();
+            this.raidExit = exit || null;
+        } catch (e) { this.raidExit = null; }
+        try {
             const { data: zones } = await window.db.from('city_raid_zones').select('*');
             this.raidZones = zones || [];
         } catch (e) { this.raidZones = []; }
@@ -1297,8 +1307,8 @@ class CityScreen {
             }
         }
 
-        if (this.raidSpawn) {
-            const s = this.raidSpawn;
+        if (this.raidBoss) {
+            const s = this.raidBoss;
             const bs = 220;
             const bx = s.pos_x - camX - bs / 2;
             const by = s.pos_y - camY - bs / 2;
@@ -1322,21 +1332,22 @@ class CityScreen {
                 ctx.fillStyle = '#fff';
                 ctx.fillText(label, s.pos_x - camX, by + bs + 22);
             }
+        }
 
-            if (this._raidExitImg) {
-                const ex = (s.pos_x - 140) - camX;
-                const ey = s.pos_y - camY;
-                const es = 48;
-                if (ex + es > -50 && ex < cw + 50 && ey + es > -50 && ey < ch + 50) {
-                    const img = this._raidExitImg;
-                    if (img.complete && img.naturalWidth) {
-                        ctx.drawImage(img, ex, ey, es, es);
-                    }
-                    ctx.textAlign = 'center';
-                    ctx.font = 'bold 10px Inter, sans-serif';
-                    ctx.fillStyle = '#fff';
-                    ctx.fillText('Sair', ex + es / 2, ey - 4);
+        if (this.raidExit && this._raidExitImg) {
+            const e = this.raidExit;
+            const ex = e.pos_x - camX;
+            const ey = e.pos_y - camY;
+            const es = 48;
+            if (ex + es > -50 && ex < cw + 50 && ey + es > -50 && ey < ch + 50) {
+                const img = this._raidExitImg;
+                if (img.complete && img.naturalWidth) {
+                    ctx.drawImage(img, ex, ey, es, es);
                 }
+                ctx.textAlign = 'center';
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Sair', ex + es / 2, ey - 4);
             }
         }
     }
@@ -2385,15 +2396,16 @@ class CityScreen {
             }
         }
 
-        if (this.raidSpawn) {
-            const s = this.raidSpawn;
-            const exitX = s.pos_x - 140 + 24;
-            const exitY = s.pos_y + 24;
-            if (Math.hypot(this.playerX - exitX, this.playerY - exitY) < 60) {
+        if (this.raidExit) {
+            const e = this.raidExit;
+            if (Math.hypot(this.playerX - e.pos_x, this.playerY - e.pos_y) < 60) {
                 this.nearRaidExit = true;
             }
+        }
 
-            if (Math.hypot(this.playerX - s.pos_x, this.playerY - s.pos_y) < 110 && boss.current_hp > 0) {
+        if (this.raidBoss) {
+            const b = this.raidBoss;
+            if (Math.hypot(this.playerX - b.pos_x, this.playerY - b.pos_y) < 110 && boss.current_hp > 0) {
                 if (Date.now() >= this.raidCooldownUntil && window.pokefury && window.pokefury.state !== 'battle') {
                     this.raidCooldownUntil = 0;
                     window.pokefury.startRaidBossBattle();
