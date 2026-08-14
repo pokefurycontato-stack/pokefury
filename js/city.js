@@ -1333,7 +1333,7 @@ class CityScreen {
             const e = this.raidExit;
             const ex = e.pos_x - camX;
             const ey = e.pos_y - camY;
-            const es = 48;
+            const es = 64 * 3;
             if (ex + es > -50 && ex < cw + 50 && ey + es > -50 && ey < ch + 50) {
                 ctx.textAlign = 'center';
                 ctx.font = 'bold 10px Inter, sans-serif';
@@ -1447,7 +1447,7 @@ class CityScreen {
             const e = this.raidExit;
             const sx = e.pos_x - camX;
             const sy = e.pos_y - camY;
-            const es = 48;
+            const es = 64 * 3;
             const el = this._raidExitEl;
             el.style.display = 'block';
             el.style.left = (offsetX + sx * scaleX) + 'px';
