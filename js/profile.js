@@ -134,7 +134,7 @@ class ProfileScreen {
     try {
       const { data: badges } = await window.db
         .from('character_gym_badges')
-        .select('gym_leader_id, gym_leaders(badge_name, gym_number, type, region_id), gym_leaders!inner(gym_regions(name, sort_order))')
+        .select('gym_leader_id, gym_leaders(badge_name, gym_number, type, region_id, gym_regions(name, sort_order))')
         .eq('character_id', charId);
       return (badges || []).map(b => {
         const leader = b.gym_leaders;
@@ -245,16 +245,16 @@ class ProfileScreen {
     let badgesHtml = '';
     if (regionBadges.length > 0) {
       const BADGE_ORDER = ['Normal','Fire','Water','Grass','Electric','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
-      const badgeW = 1536 / 3;
-      const badgeH = 1024 / 6;
+      const COLS = 3, ROWS = 6;
+      const dispW = 60, dispH = 20;
       badgesHtml = `<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;height:100%;">` + regionBadges.map(b => {
         const idx = BADGE_ORDER.indexOf(b.type);
         if (idx < 0) return '';
-        const col = Math.floor(idx / 6);
-        const row = idx % 6;
-        const x = -(col * badgeW);
-        const y = -Math.round(row * badgeH);
-        return `<img src="assets/ferramentas/insignias.png" title="${escapeHtml(b.badge_name)}" style="width:64px;height:40px;object-fit:none;object-position:${x}px ${y}px;">`;
+        const col = Math.floor(idx / ROWS);
+        const row = idx % ROWS;
+        const x = -(col * dispW);
+        const y = -(row * dispH);
+        return `<div title="${escapeHtml(b.badge_name)}" style="width:${dispW}px;height:${dispH}px;background-image:url('assets/ferramentas/insignias.png');background-size:${COLS*dispW}px ${ROWS*dispH}px;background-position:${x}px ${y}px;flex-shrink:0;"></div>`;
       }).join('') + `</div>`;
     } else {
       badgesHtml = `<div class="pf-text" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:600;">${escapeHtml(currentRegion)}</div>`;
@@ -368,13 +368,13 @@ class ProfileScreen {
   prevRegion() {
     if (this.regions.length === 0) return;
     this.regionIndex = (this.regionIndex - 1 + this.regions.length) % this.regions.length;
-    this.updateBadges();
+    this.render();
   }
 
   nextRegion() {
     if (this.regions.length === 0) return;
     this.regionIndex = (this.regionIndex + 1) % this.regions.length;
-    this.updateBadges();
+    this.render();
   }
 
   updateBadges() {
