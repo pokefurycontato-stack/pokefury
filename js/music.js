@@ -9,6 +9,7 @@ export class MusicManager {
         this.volume = parseFloat(localStorage.getItem('pokefury_music_volume') || '0.6');
         this.current = 'background';
         this.started = false;
+        this._boundStart = false;
     }
 
     init() {
@@ -16,32 +17,28 @@ export class MusicManager {
         this.backgroundAudio = new Audio('assets/musicas/musicafundo1.MP3');
         this.backgroundAudio.loop = true;
         this.backgroundAudio.volume = this.volume;
-        this.backgroundAudio.onerror = () => console.error('[Music] fundo load error:', this.backgroundAudio.error?.code || this.backgroundAudio.error?.message);
+        this.backgroundAudio.addEventListener('playing', () => { this.started = true; });
         this.battleAudio = new Audio('assets/musicas/musicabatalha.MP3');
         this.battleAudio.loop = true;
         this.battleAudio.volume = this.volume;
-        this.battleAudio.onerror = () => console.error('[Music] batalha load error:', this.battleAudio.error?.code || this.battleAudio.error?.message);
         this._bindStart();
     }
 
     _bindStart() {
         if (this._boundStart) return;
+        this._boundStart = true;
         const start = () => {
             if (this.started) return;
-            this.started = true;
             this.playBackground();
-            document.removeEventListener('click', start);
-            document.removeEventListener('keydown', start);
         };
-        this._boundStart = true;
-        document.addEventListener('click', start);
-        document.addEventListener('keydown', start);
+        ['pointerdown', 'click', 'touchend'].forEach(ev => document.addEventListener(ev, start));
     }
 
     _play(audio) {
         if (this.volume <= 0) return;
         audio.volume = this.volume;
-        audio.play().then(() => console.log('[Music] tocando:', audio.src)).catch(e => console.warn('[Music] play error:', e.message));
+        const p = audio.play();
+        if (p && p.catch) p.catch(() => {});
     }
 
     playBackground() {
