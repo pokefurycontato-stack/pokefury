@@ -128,6 +128,26 @@ class ProfileScreen {
     } catch (e) { /* sem regiões */ }
   }
 
+  async loadGymBadges() {
+    const charId = window.GameData?.currentCharacterId;
+    if (!charId || !window.db) return [];
+    try {
+      const { data: badges } = await window.db
+        .from('character_gym_badges')
+        .select('gym_leader_id, gym_leaders(badge_name, gym_number, region_id), gym_leaders!inner(gym_regions(name, sort_order))')
+        .eq('character_id', charId);
+      return (badges || []).map(b => {
+        const leader = b.gym_leaders;
+        return {
+          badge_name: leader?.badge_name || '',
+          gym_number: leader?.gym_number || 0,
+          region_name: leader?.gym_regions?.name || '',
+          region_sort: leader?.gym_regions?.sort_order || 0
+        };
+      });
+    } catch (e) { return []; }
+  }
+
   async resolveSpriteUrl() {
     const game = window.pokefury;
     if (game?.avatarUrl) return game.avatarUrl;
@@ -198,6 +218,7 @@ class ProfileScreen {
     const benefits = this.getActiveBenefits();
     const currentRegion = this.regions[this.regionIndex]?.name || '';
     const lastTitles = window.Titles ? await window.Titles.loadLastTitles(5) : [];
+    const gymBadges = await this.loadGymBadges();
 
     const addEl = (key, innerHTML) => {
       const r = elems[key];
@@ -219,7 +240,18 @@ class ProfileScreen {
     addEl('gold', `<div class="pf-text pf-currency pf-gold" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;">${(cur.gold || 0).toLocaleString('pt-BR')}</div>`);
     addEl('diamond', `<div class="pf-text pf-currency pf-diamond" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;">${(cur.diamonds || 0).toLocaleString('pt-BR')}</div>`);
 
-    addEl('badges', `<div class="pf-text pf-badges" style="display:flex;align-items:flex-start;justify-content:center;padding-top:4px;height:100%;color:#000;font-weight:600;">${escapeHtml(currentRegion)}</div>`);
+    const regionBadges = gymBadges.filter(b => b.region_name === currentRegion);
+    let badgesHtml = '';
+    if (regionBadges.length > 0) {
+      badgesHtml = `<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;height:100%;">` + regionBadges.map(b => {
+        const col = Math.max(0, (b.gym_number - 1));
+        const row = Math.max(0, b.region_sort || 0);
+        return `<img src="assets/ferramentas/insignias.png" title="${escapeHtml(b.badge_name)}" style="width:64px;height:40px;object-fit:none;object-position:-${col * 192}px -${row * 128}px;image-rendering:auto;">`;
+      }).join('') + `</div>`;
+    } else {
+      badgesHtml = `<div class="pf-text" style="display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:600;">${escapeHtml(currentRegion)}</div>`;
+    }
+    addEl('badges', badgesHtml);
     addEl('badgesPrev', `<button onclick="window.profileScreen.prevRegion()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;"></button>`);
     addEl('badgesNext', `<button onclick="window.profileScreen.nextRegion()" style="width:100%;height:100%;background:none;border:none;cursor:pointer;"></button>`);
 
