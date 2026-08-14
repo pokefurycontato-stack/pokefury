@@ -62,6 +62,12 @@ class CityScreen {
         this._teleportPortalImg = null;
         this._teleportLayer = null;
         this._teleportEls = [];
+        this.gymNpc = null;
+        this.gymZones = {};
+        this.gymTeleports = {};
+        this.nearGymNpc = false;
+        this.nearGymTeleportType = null;
+        this._gymNpcImg = null;
 
         this.bindEvents();
     }
@@ -91,7 +97,11 @@ class CityScreen {
             }
             if (e.key === 'e' || e.key === 'E') {
                 if (this.npcDialogueOpen) return;
-                if (this.nearRaidPortal) {
+                if (this.nearGymNpc) {
+                    window.pokefury?.openGymLeaders();
+                } else if (this.inActiveGymZone) {
+                    window.pokefury?.startGymLeaderBattleDirect();
+                } else if (this.nearRaidPortal) {
                     this.teleportToRaidArena();
                 } else if (this.nearRaidExit) {
                     this.teleportOutOfRaid();
@@ -233,6 +243,7 @@ class CityScreen {
             await this.loadPlayerSpawn();
             await this.loadLights();
             await this.loadRaidLayout();
+            await this.loadGymLayout();
             await this.syncServerTime();
             await this.registerPlayer();
             this.cameraX = this.playerX;
@@ -280,6 +291,7 @@ class CityScreen {
             await this.loadPlayerSpawn();
             await this.loadLights();
             await this.loadRaidLayout();
+            await this.loadGymLayout();
             await this.loadMyEquippedTitle();
             await this.syncRetroactiveTitles();
             await this.syncServerTime();
@@ -1300,6 +1312,28 @@ class CityScreen {
         }
     }
 
+    async loadGymLayout() {
+        try {
+            const { data: gn } = await window.db.from('city_gym_npc').select('*').limit(1).maybeSingle();
+            this.gymNpc = gn || null;
+        } catch (e) { this.gymNpc = null; }
+        try {
+            const { data: gz } = await window.db.from('city_gym_zones').select('*');
+            this.gymZones = {};
+            (gz || []).forEach(z => { this.gymZones[z.gym_type] = { pos_x: z.pos_x, pos_y: z.pos_y, width: z.width, height: z.height }; });
+        } catch (e) { this.gymZones = {}; }
+        try {
+            const { data: gt } = await window.db.from('city_gym_teleports').select('*');
+            this.gymTeleports = {};
+            (gt || []).forEach(t => { this.gymTeleports[t.gym_type] = { pos_x: t.pos_x, pos_y: t.pos_y }; });
+        } catch (e) { this.gymTeleports = {}; }
+        if (!this._gymNpcImg) {
+            const img = new Image();
+            img.src = 'assets/ferramentas/npcginasios.png';
+            this._gymNpcImg = img;
+        }
+    }
+
     getRaidBoss() {
         return window.pokefury?.raidBoss?.activeBoss || null;
     }
@@ -1351,6 +1385,27 @@ class CityScreen {
         }
 
         this.renderRaidDom();
+    }
+
+    drawGymElements(ctx, camX, camY, cw, ch) {
+        if (this.gymNpc) {
+            const sx = this.gymNpc.pos_x - camX;
+            const sy = this.gymNpc.pos_y - camY;
+            const ps = 56;
+            if (sx + ps > -50 && sx < cw + 50 && sy + ps > -50 && sy < ch + 50) {
+                const img = this._gymNpcImg;
+                if (img && img.complete && img.naturalWidth) {
+                    ctx.drawImage(img, sx, sy, ps, ps);
+                } else {
+                    ctx.fillStyle = '#e94560';
+                    ctx.fillRect(sx, sy, ps, ps);
+                }
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 11px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Líderes de Ginásio', sx + ps / 2, sy - 6);
+            }
+        }
     }
 
     ensureRaidLayer() {
@@ -2539,6 +2594,7 @@ class CityScreen {
         this.updateWildPokemon(0.016 * this._dt);
         this.updateNpcPatrols(0.016 * this._dt);
         this.updateRaidInteraction();
+        this.updateGymInteraction();
     }
 
     updateRaidInteraction() {
@@ -2583,6 +2639,37 @@ class CityScreen {
         } else {
             this.hideRaidRank();
         }
+    }
+
+    updateGymInteraction() {
+        this.nearGymNpc = false;
+        this.inActiveGymZone = false;
+        if (this.gymNpc) {
+            const n = this.gymNpc;
+            if (Math.hypot(this.playerX - n.pos_x, this.playerY - n.pos_y) < 70) {
+                this.nearGymNpc = true;
+            }
+        }
+        const game = window.pokefury;
+        const leaderType = game?._currentGymLeader?.type || null;
+        if (leaderType && this.gymZones[leaderType]) {
+            const z = this.gymZones[leaderType];
+            if (this.playerX >= z.pos_x && this.playerX <= z.pos_x + z.width && this.playerY >= z.pos_y && this.playerY <= z.pos_y + z.height) {
+                this.inActiveGymZone = true;
+            }
+        }
+    }
+
+    teleportToGymType(gymType) {
+        const tp = this.gymTeleports[gymType];
+        if (!tp) return;
+        this.playerX = tp.pos_x;
+        this.playerY = tp.pos_y;
+        this.playerFromX = this.playerX;
+        this.playerFromY = this.playerY;
+        this.cameraX = this.playerX;
+        this.cameraY = this.playerY;
+        this.syncPosition();
     }
 
     teleportToRaidArena() {
@@ -3053,6 +3140,7 @@ class CityScreen {
         this.renderTeleportDom();
 
         this.drawRaidElements(ctx, camX, camY, cw, ch);
+        this.drawGymElements(ctx, camX, camY, cw, ch);
 
         if (this.spawnZones.length > 0) {
             this.spawnZones.forEach((z, i) => {
@@ -3208,6 +3296,19 @@ class CityScreen {
             ctx.font = 'bold 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('Pressione E para sair', sx, sy + 1);
+        }
+
+        if (this.inActiveGymZone) {
+            const cx = this.canvas.width / 2;
+            const cy = this.canvas.height - 80;
+            ctx.fillStyle = 'rgba(233, 69, 96, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(cx - 130, cy - 16, 260, 30, 8);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('APERTE E PARA DESAFIAR O LÍDER', cx, cy + 5);
         }
 
         const allPlayers = [];

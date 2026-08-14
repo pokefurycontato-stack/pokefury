@@ -137,6 +137,8 @@ class PokeFuryGame {
         this._isRaidBattle = false;
         this._inRaidBossBattle = false;
         this._raidBossEntryHp = null;
+        this._isGymBattle = false;
+        this._currentGymLeader = null;
         this.music = new MusicManager();
         this.music.init();
 
@@ -2382,8 +2384,39 @@ class PokeFuryGame {
         if (wasAlpha && result === 'win') {
             await this.endAlphaBattle('win');
         }
+
+        if (this._isGymBattle) {
+            this._isGymBattle = false;
+            if (result === 'win' && this._currentGymLeader) {
+                await this.awardGymBadge(this._currentGymLeader);
+            }
+            this._currentGymLeader = null;
+        }
         this._battleEnding = false;
         this._cityBattle = false;
+    }
+
+    async awardGymBadge(leader) {
+        const charId = this.currentCharacterId;
+        if (!charId || !leader) return;
+        try {
+            const { data: existing } = await window.db.from('character_gym_badges')
+                .select('id').eq('character_id', charId).eq('gym_leader_id', leader.id).limit(1);
+            if (existing && existing.length > 0) return;
+            await window.db.from('character_gym_badges').insert({ character_id: charId, gym_leader_id: leader.id });
+            const silver = (leader.gym_number || 1) * 2000;
+            await window.db.rpc('add_currency', {
+                p_character_id: charId,
+                p_currency_type: 'silver',
+                p_amount: silver,
+                p_action: 'reward',
+                p_description: `Insígnia do ginásio (${leader.name})`,
+                p_created_by: window.GameData?.userId || null
+            });
+            this.showToast(`Você venceu ${leader.name}! +${silver.toLocaleString()} prata e a Insígnia ${leader.badge_name || ''}!`, 'success');
+        } catch (e) {
+            console.error('[Gym] award badge error:', e);
+        }
     }
 
     async startRaidBossBattle() {
@@ -6308,9 +6341,9 @@ openEventsPanel() {
         if (charId) {
             const { data: badges } = await window.db
                 .from('character_gym_badges')
-                .select('leader_id')
+                .select('gym_leader_id')
                 .eq('character_id', charId);
-            if (badges) badges.forEach(b => this._gymDefeatedIds.add(b.leader_id));
+            if (badges) badges.forEach(b => this._gymDefeatedIds.add(b.gym_leader_id));
         }
 
         await this.loadGymRegions();
@@ -6726,7 +6759,12 @@ openEventsPanel() {
 
         this._currentGymLeader = leader;
         this.closeGymLeaders();
-        await this.enterGymMap(leader);
+        if (window.cityScreen) {
+            window.cityScreen.teleportToGymType(leader.type);
+            this.showToast(`Vá até a arena do ginásio de ${leader.type} e aperte E para desafiar!`, 'info');
+        } else {
+            await this.enterGymMap(leader);
+        }
     }
 
     async enterGymMap(leader) {
@@ -6847,6 +6885,7 @@ openEventsPanel() {
         const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
         if (pokemonData) {
             this._currentBiome = null;
+            this._isGymBattle = true;
             await this.startBattleWithPokemon(
                 pokemonData.id,
                 level,
