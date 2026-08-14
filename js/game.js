@@ -2485,12 +2485,16 @@ class PokeFuryGame {
 
     async startRaidBossEvent() {
         if (!window.isAdmin) return;
+        const BOSS_NAME_MAP = {
+            10036: 'Mega Rayquaza',
+            13002: 'Calyrex Shadow Rider'
+        };
         const pool = [382, 383, 484, 487, 491, 10036, 13002];
         const id = pool[Math.floor(Math.random() * pool.length)];
-        let name = 'Raid Boss';
+        let name = BOSS_NAME_MAP[id] || 'Raid Boss';
         try {
             const data = await PokeAPI.ensurePokemon(id);
-            if (data) name = data.name;
+            if (data && data.name) name = data.name;
         } catch (e) {}
         const err = await this.raidBoss.spawnBoss(id, name);
         if (err) { this.showToast(err, 'error'); }
