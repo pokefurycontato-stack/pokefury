@@ -1,6 +1,10 @@
 -- Update gym leader sprite_url (Galar + Hisui + Paldea)
 -- Padrão: sprites/gym-leaders/{Nome}.png (upload dos sprites no bucket)
 
+-- Faltantes do meio (Hoenn / Kalos)
+UPDATE gym_leaders SET sprite_url = 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/gym-leaders/Tate_and_Liza.png' WHERE name = 'Tate and Liza';
+UPDATE gym_leaders SET sprite_url = 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/gym-leaders/Grant.png' WHERE name = 'Grant';
+
 -- GALAR
 UPDATE gym_leaders SET sprite_url = 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/gym-leaders/Milo.png' WHERE name = 'Milo';
 UPDATE gym_leaders SET sprite_url = 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/gym-leaders/Nessa.png' WHERE name = 'Nessa';
