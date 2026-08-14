@@ -138,6 +138,7 @@ class PokeFuryGame {
         this._inRaidBossBattle = false;
         this._raidBossEntryHp = null;
         this.music = new MusicManager();
+        this.music.init();
 
         this.init();
     }
