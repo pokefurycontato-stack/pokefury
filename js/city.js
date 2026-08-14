@@ -52,6 +52,11 @@ class CityScreen {
         this._raidBossImg = null;
         this._raidRankEl = null;
         this._raidRankTimer = null;
+        this._raidLayer = null;
+        this._raidPortalEl = null;
+        this._raidBossEl = null;
+        this._raidExitEl = null;
+        this._raidBossImgId = null;
 
         this.bindEvents();
     }
@@ -350,6 +355,14 @@ class CityScreen {
             this.wildPokemonLayer = null;
         }
         this.wildPokemon = [];
+        if (this._raidLayer) {
+            this._raidLayer.remove();
+            this._raidLayer = null;
+            this._raidPortalEl = null;
+            this._raidBossEl = null;
+            this._raidExitEl = null;
+        }
+        this.hideRaidRank();
         if (this.channel) {
             this.channel.unsubscribe();
             this.channel = null;
@@ -1293,36 +1306,15 @@ class CityScreen {
 
     drawRaidElements(ctx, camX, camY, cw, ch) {
         const boss = this.getRaidBoss();
-        if (!boss) return;
+        if (!boss) { this.renderRaidDom(); return; }
 
-        if (this.raidPortal && this._raidPortalImg) {
-            const p = this.raidPortal;
-            const sx = p.pos_x - camX;
-            const sy = p.pos_y - camY;
-            if (sx + (p.width || 64) > -50 && sx < cw + 50 && sy + (p.height || 64) > -50 && sy < ch + 50) {
-                const img = this._raidPortalImg;
-                if (img.complete && img.naturalWidth) {
-                    ctx.drawImage(img, sx, sy, p.width || 64, p.height || 64);
-                }
-            }
-        }
-
+        // Nome do boss (label em cima do sprite DOM)
         if (this.raidBoss) {
             const s = this.raidBoss;
             const bs = 220;
             const bx = s.pos_x - camX - bs / 2;
             const by = s.pos_y - camY - bs / 2;
             if (bx + bs > -50 && bx < cw + 50 && by + bs > -50 && by < ch + 50) {
-                if (!this._raidBossImg || this._raidBossImgId !== boss.pokemon_id) {
-                    const img = new Image();
-                    img.src = window.pokefury.raidBoss.bossSpriteUrl(boss.pokemon_id);
-                    this._raidBossImg = img;
-                    this._raidBossImgId = boss.pokemon_id;
-                }
-                const bimg = this._raidBossImg;
-                if (bimg.complete && bimg.naturalWidth) {
-                    ctx.drawImage(bimg, bx, by, bs, bs);
-                }
                 ctx.textAlign = 'center';
                 ctx.font = 'bold 16px Inter, sans-serif';
                 ctx.strokeStyle = 'rgba(0,0,0,0.85)';
@@ -1334,21 +1326,111 @@ class CityScreen {
             }
         }
 
-        if (this.raidExit && this._raidExitImg) {
+        if (this.raidExit) {
             const e = this.raidExit;
             const ex = e.pos_x - camX;
             const ey = e.pos_y - camY;
             const es = 48;
             if (ex + es > -50 && ex < cw + 50 && ey + es > -50 && ey < ch + 50) {
-                const img = this._raidExitImg;
-                if (img.complete && img.naturalWidth) {
-                    ctx.drawImage(img, ex, ey, es, es);
-                }
                 ctx.textAlign = 'center';
                 ctx.font = 'bold 10px Inter, sans-serif';
                 ctx.fillStyle = '#fff';
                 ctx.fillText('Sair', ex + es / 2, ey - 4);
             }
+        }
+
+        this.renderRaidDom();
+    }
+
+    ensureRaidLayer() {
+        if (this._raidLayer) return;
+        const wrap = document.getElementById('city-canvas-wrap');
+        if (!wrap) return;
+        const layer = document.createElement('div');
+        layer.id = 'city-raid-layer';
+        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:6;';
+        wrap.appendChild(layer);
+        this._raidLayer = layer;
+
+        const game = window.pokefury;
+        if (!game?.raidBoss) return;
+        this._raidPortalEl = document.createElement('img');
+        this._raidPortalEl.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;';
+        this._raidPortalEl.src = game.raidBoss.portalSpriteUrl();
+        layer.appendChild(this._raidPortalEl);
+
+        this._raidBossEl = document.createElement('img');
+        this._raidBossEl.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;mix-blend-mode:multiply;';
+        layer.appendChild(this._raidBossEl);
+
+        this._raidExitEl = document.createElement('img');
+        this._raidExitEl.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;';
+        this._raidExitEl.src = game.raidBoss.portalSpriteUrl();
+        layer.appendChild(this._raidExitEl);
+    }
+
+    renderRaidDom() {
+        const boss = this.getRaidBoss();
+        if (!boss) {
+            if (this._raidLayer) this._raidLayer.style.display = 'none';
+            return;
+        }
+        this.ensureRaidLayer();
+        if (!this._raidLayer) return;
+        this._raidLayer.style.display = '';
+
+        const canvas = this.canvas;
+        const canvasRect = canvas.getBoundingClientRect();
+        const wrapRect = this._raidLayer.getBoundingClientRect();
+        const scaleX = canvasRect.width / canvas.width;
+        const scaleY = canvasRect.height / canvas.height;
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
+        const camX = this.cameraX - canvas.width / 2;
+        const camY = this.cameraY - canvas.height / 2;
+
+        if (this.raidPortal && this._raidPortalEl) {
+            const p = this.raidPortal;
+            const sx = p.pos_x - camX;
+            const sy = p.pos_y - camY;
+            const w = (p.width || 64) * 3;
+            const h = (p.height || 64) * 3;
+            const el = this._raidPortalEl;
+            el.style.display = 'block';
+            el.style.left = (offsetX + sx * scaleX) + 'px';
+            el.style.top = (offsetY + sy * scaleY) + 'px';
+            el.style.width = (w * scaleX) + 'px';
+            el.style.height = (h * scaleY) + 'px';
+        }
+
+        if (this.raidBoss && this._raidBossEl) {
+            const b = this.raidBoss;
+            const bs = 220;
+            const bx = b.pos_x - camX - bs / 2;
+            const by = b.pos_y - camY - bs / 2;
+            const el = this._raidBossEl;
+            if (this._raidBossImgId !== boss.pokemon_id) {
+                el.src = window.pokefury.raidBoss.bossSpriteUrl(boss.pokemon_id);
+                this._raidBossImgId = boss.pokemon_id;
+            }
+            el.style.display = 'block';
+            el.style.left = (offsetX + bx * scaleX) + 'px';
+            el.style.top = (offsetY + by * scaleY) + 'px';
+            el.style.width = (bs * scaleX) + 'px';
+            el.style.height = (bs * scaleY) + 'px';
+        }
+
+        if (this.raidExit && this._raidExitEl) {
+            const e = this.raidExit;
+            const sx = e.pos_x - camX;
+            const sy = e.pos_y - camY;
+            const es = 48;
+            const el = this._raidExitEl;
+            el.style.display = 'block';
+            el.style.left = (offsetX + sx * scaleX) + 'px';
+            el.style.top = (offsetY + sy * scaleY) + 'px';
+            el.style.width = (es * scaleX) + 'px';
+            el.style.height = (es * scaleY) + 'px';
         }
     }
 
