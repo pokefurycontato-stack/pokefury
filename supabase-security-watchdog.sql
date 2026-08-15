@@ -59,7 +59,7 @@ $$ LANGUAGE sql SECURITY DEFINER;
 -- 3. log_security_event (rate limit 30/min/jogador; anti-spoof de character)
 -- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION log_security_event(
-  p_character_id uuid DEFAULT NULL,
+  p_character_id uuid,
   p_event_type text,
   p_function_name text DEFAULT NULL,
   p_detail jsonb DEFAULT '{}'::jsonb,
