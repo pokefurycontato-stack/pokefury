@@ -469,7 +469,7 @@ export function showBattleMessage(message, autoHideMs = 0) {
     });
 }
 
-export function showMoveSelection(moves, onSelect) {
+export function showMoveSelection(moves, onSelect, onCancel = null) {
     const moveSelection = $('#move-selection');
     const moveButtons = $('#move-buttons');
     const battleActions = $('#battle-actions');
@@ -498,6 +498,7 @@ export function showMoveSelection(moves, onSelect) {
 
     $('#btn-back').onclick = () => {
         hideMoveSelection();
+        if (onCancel) onCancel();
     };
 }
 
@@ -899,7 +900,7 @@ export function initBattleUI(onFight, onBag, onSwitch, onRun) {
     });
 }
 
-export function showBagSelection(items, onSelect) {
+export function showBagSelection(items, onSelect, onCancel = null) {
     const moveSelection = $('#move-selection');
     const moveButtons = $('#move-buttons');
     const battleActions = $('#battle-actions');
@@ -928,6 +929,7 @@ export function showBagSelection(items, onSelect) {
 
     $('#btn-back').onclick = () => {
         hideMoveSelection();
+        if (onCancel) onCancel();
     };
 }
 

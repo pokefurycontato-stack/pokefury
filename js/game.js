@@ -1241,6 +1241,8 @@ class PokeFuryGame {
                 updateBattleUI(this.playerTeam, this.enemyTeam);
             }
             this._turnLocked = false;
+        }, () => {
+            this._turnLocked = false;
         });
     }
 
@@ -1367,6 +1369,8 @@ class PokeFuryGame {
 
         showBagSelection(usableItems, async (item) => {
             await this.useItemInBattle(item);
+            this._turnLocked = false;
+        }, () => {
             this._turnLocked = false;
         });
     }
