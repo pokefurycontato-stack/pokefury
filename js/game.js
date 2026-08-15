@@ -2899,13 +2899,19 @@ class PokeFuryGame {
             const oldDbId = pokemon.dbId;
             const oldLevel = pokemon.level;
             const oldExp = pokemon.experience || 0;
+            const oldMoves = pokemon.moves;
             const oldIvs = pokemon.ivs;
             const oldEvs = pokemon.evs;
             const oldNature = pokemon.nature;
             const oldShiny = pokemon.isShiny;
+            const oldHeldItemId = pokemon.heldItemId;
+            const oldStatusEffect = pokemon.statusEffect;
 
             Object.assign(pokemon, await createPokemon(newPokemonData, oldLevel, oldIvs, oldEvs, oldNature, oldShiny));
             pokemon.experience = oldExp;
+            pokemon.moves = oldMoves;
+            pokemon.heldItemId = oldHeldItemId;
+            pokemon.statusEffect = oldStatusEffect;
             pokemon.currentHp = pokemon.stats.hp;
             pokemon.dbId = oldDbId;
 
