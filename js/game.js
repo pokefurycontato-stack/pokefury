@@ -2885,7 +2885,6 @@ class PokeFuryGame {
             evolutions = data;
         } catch (e) { return false; }
         if (!evolutions || evolutions.length === 0) {
-            console.log('[Evo] sem evolucoes para', pokemon.id, pokemon.name);
             return false;
         }
 
