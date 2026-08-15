@@ -302,6 +302,7 @@ class PokeFuryGame {
                 console.log('[PC] trash drop, pcId =', pcId);
                 if (!pcId) return;
                 const p = (this._pcBoxPokemon || []).find(x => x.id === pcId);
+                console.log('[PC] trash drop found p =', !!p, '| box has', (this._pcBoxPokemon || []).length, 'pokemon');
                 if (p) this.openDeletePCModal(p);
             };
         }
@@ -3985,7 +3986,15 @@ class PokeFuryGame {
     }
 
     openDeletePCModal(boxPokemon) {
+        console.log('[PC] openDeletePCModal called for', boxPokemon?.species, boxPokemon?.id);
         this._deletePendingPc = boxPokemon;
+        const modal = document.getElementById('pc-delete-modal');
+        console.log('[PC] modal element =', !!modal);
+        if (!modal) return;
+        if (modal.parentElement && modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+        modal.style.zIndex = '960';
         const msg = document.getElementById('pc-delete-msg');
         if (msg) {
             msg.textContent = `Tem certeza que quer DELETAR permanentemente ${boxPokemon.nickname || boxPokemon.species} (Nv.${boxPokemon.level})? Escreva "DELETE" na caixa abaixo para confirmar.`;
@@ -3994,7 +4003,8 @@ class PokeFuryGame {
         if (input) input.value = '';
         const confirmBtn = document.getElementById('pc-delete-confirm');
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.style.opacity = '0.5'; }
-        document.getElementById('pc-delete-modal').classList.remove('hidden');
+        modal.classList.remove('hidden');
+        console.log('[PC] modal hidden removed, now hidden?', modal.classList.contains('hidden'));
     }
 
     closeDeletePCModal() {
