@@ -10,7 +10,7 @@ import {
     VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
-import { Overworld2D } from './overworld.js';
+import { Overworld2D } from './overworld.js?v=20260816b';
 import { MapEditor } from './map-editor.js';
 import { RegionManager } from './region-manager.js';
 import { MapZoneEditor } from './zone-editor.js';

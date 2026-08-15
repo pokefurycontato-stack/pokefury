@@ -1668,6 +1668,8 @@ class CityScreen {
                 el._img.style.width = wpx + 'px';
                 el._img.style.height = hpx + 'px';
             }
+            const adj = entry ? (window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(entry.pokemon_id) : null) : null;
+            el._img.style.transform = adj ? `scale(${adj.scaleX}, ${adj.scaleY})` : '';
 
             if (sp.rank_type === 'trainer') {
                 el._line1.textContent = entry ? entry.player_name : `${sp.position}º -`;
