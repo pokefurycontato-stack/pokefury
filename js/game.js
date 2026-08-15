@@ -2276,10 +2276,7 @@ class PokeFuryGame {
                             await showBattleMessage(`${p.name} não aprendeu ${newMove.name}.`);
                         }
                     }
-                    const abilityName = await checkAbilityChange(p);
-                    if (abilityName) {
-                        await showBattleMessage(`${p.name} agora tem a habilidade ${abilityName}!`);
-                    }
+                    await checkAbilityChange(p);
                 }
             }
             await this.checkEvolutions();
@@ -3725,8 +3722,7 @@ class PokeFuryGame {
                         }
                     }
                 }
-                const abilityName = await checkAbilityChange(pokemon);
-                if (abilityName) this.showToast(`${pokemon.name} agora tem a habilidade ${abilityName}!`, 'success');
+                await checkAbilityChange(pokemon);
             }
             await this.checkEvolutions();
         } catch (e) {

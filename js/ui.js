@@ -939,39 +939,41 @@ const TYPE_COLORS_MOVELEARN = {
 
 export function showMoveLearnPopup(pokemon, newMove, currentMoves) {
     return new Promise(resolve => {
-        const popup = $('#move-learn-popup');
-        const nameEl = $('#learn-pokemon-name');
-        const msgEl = $('#learn-msg');
-        const infoEl = $('#learn-move-info');
-        const btnsEl = $('#learn-buttons');
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.72);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
 
-        popup.classList.remove('hidden');
-        nameEl.textContent = pokemon.name;
-        msgEl.textContent = `quer aprender ${newMove.name}!`;
+        const box = document.createElement('div');
+        box.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:24px;max-width:420px;width:90%;text-align:center;max-height:80vh;overflow-y:auto;';
 
         const typeColor = TYPE_COLORS_MOVELEARN[newMove.type] || '#686868';
         const catLabel = newMove.category === 'status' ? 'Status' : newMove.category === 'special' ? 'Especial' : 'Físico';
         const powerText = newMove.power > 0 ? newMove.power : '—';
-        infoEl.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;">
-                <span style="background:${typeColor};color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;">${newMove.type}</span>
-                <span style="color:rgba(255,255,255,0.6);font-size:11px;">${catLabel}</span>
-            </div>
-            <div style="color:#fff;font-size:14px;font-weight:600;">${newMove.name}</div>
-            <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;">Poder: ${powerText} | Precisão: ${newMove.accuracy || '—'}</div>
-        `;
 
-        btnsEl.innerHTML = '';
+        box.innerHTML = `
+            <div style="color:#e94560;font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:8px;">${pokemon.name}</div>
+            <div style="color:#fff;font-size:16px;font-weight:600;margin-bottom:12px;">quer aprender ${newMove.name}!</div>
+            <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;">
+                    <span style="background:${typeColor};color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;">${newMove.type}</span>
+                    <span style="color:rgba(255,255,255,0.6);font-size:11px;">${catLabel}</span>
+                </div>
+                <div style="color:#fff;font-size:14px;font-weight:600;">${newMove.name}</div>
+                <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;">Poder: ${powerText} | Precisão: ${newMove.accuracy || '—'}</div>
+            </div>
+            <div id="ml-buttons"></div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        const btnsEl = box.querySelector('#ml-buttons');
+
+        const close = (result) => { overlay.remove(); resolve(result); };
 
         if (currentMoves.length < 4) {
             const teachBtn = document.createElement('button');
-            teachBtn.className = 'action-btn';
-            teachBtn.style.cssText = 'width:100%;margin-bottom:8px;';
             teachBtn.textContent = 'ENSINAR';
-            teachBtn.addEventListener('click', () => {
-                popup.classList.add('hidden');
-                resolve({ teach: true, replaceIndex: -1 });
-            });
+            teachBtn.style.cssText = 'width:100%;margin-bottom:8px;padding:10px 14px;border:none;border-radius:8px;background:#e94560;color:#fff;font-size:13px;font-weight:700;cursor:pointer;';
+            teachBtn.addEventListener('click', () => close({ teach: true, replaceIndex: -1 }));
             btnsEl.appendChild(teachBtn);
         } else {
             const subMsg = document.createElement('div');
@@ -981,28 +983,20 @@ export function showMoveLearnPopup(pokemon, newMove, currentMoves) {
 
             currentMoves.forEach((m, idx) => {
                 const btn = document.createElement('button');
-                btn.className = 'action-btn';
-                btn.style.cssText = 'width:100%;margin-bottom:6px;text-align:left;padding:10px 14px;';
+                btn.style.cssText = 'width:100%;margin-bottom:6px;text-align:left;padding:10px 14px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.04);color:#fff;cursor:pointer;';
                 const mTypeColor = TYPE_COLORS_MOVELEARN[m.type] || '#686868';
                 const mCat = m.category === 'status' ? 'Status' : m.category === 'special' ? 'Esp' : 'Fís';
                 const mPow = m.power > 0 ? m.power : '—';
                 btn.innerHTML = `<span style="color:${mTypeColor};font-weight:700;text-transform:uppercase;font-size:11px;">[${m.type}]</span> <span style="color:#fff;font-weight:600;">${m.name}</span> <span style="color:rgba(255,255,255,0.4);font-size:11px;">${mCat} | Poder: ${mPow}</span>`;
-                btn.addEventListener('click', () => {
-                    popup.classList.add('hidden');
-                    resolve({ teach: true, replaceIndex: idx });
-                });
+                btn.addEventListener('click', () => close({ teach: true, replaceIndex: idx }));
                 btnsEl.appendChild(btn);
             });
         }
 
         const skipBtn = document.createElement('button');
-        skipBtn.className = 'action-btn';
-        skipBtn.style.cssText = 'width:100%;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);';
         skipBtn.textContent = 'NÃO ENSINAR';
-        skipBtn.addEventListener('click', () => {
-            popup.classList.add('hidden');
-            resolve({ teach: false });
-        });
+        skipBtn.style.cssText = 'width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.6);font-size:13px;cursor:pointer;';
+        skipBtn.addEventListener('click', () => close({ teach: false }));
         btnsEl.appendChild(skipBtn);
     });
 }
