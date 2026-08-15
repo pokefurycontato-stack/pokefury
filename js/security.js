@@ -8,7 +8,7 @@ import { executeTurn } from './battle.js';
 import { calculateDamage } from './utils.js';
 
 const INTERVAL_MS = 5000;
-const BAN_POLL_MS = 60000;
+const BAN_POLL_MS = 15000;
 const DEVICE_POLL_MS = 30000;
 
 const WATCHDOG = {
@@ -186,13 +186,19 @@ async function pollBanStatus() {
             .catch(() => ({ data: null }));
         if (data && data.success) {
             // Logout forçado pelo admin (desconectar, não banir).
-            // Compara com o início da sessão: só desloga se o logout
-            // do admin for MAIS NOVO que quando a sessão começou.
-            const flMs = data.force_logout_at ? new Date(data.force_logout_at).getTime() : 0;
-            const sessionStart = WATCHDOG._sessionStartMs || 0;
-            if (flMs > 0 && flMs > sessionStart) {
+            // Detecta quando force_logout_at MUDA em relação ao último
+            // valor visto (persistido), sem depender de relógio.
+            const fl = data.force_logout_at || null;
+            if (fl && WATCHDOG._flSeen !== null && WATCHDOG._flSeen !== fl) {
                 forceLocalLogout();
                 return;
+            }
+            if (fl !== null) {
+                if (WATCHDOG._flSeen === null) {
+                    // Primeira leitura: adota o valor atual (só reage a mudanças futuras)
+                    WATCHDOG._flSeen = fl;
+                    try { localStorage.setItem('pf_fl_seen', fl); } catch (e) {}
+                }
             }
             if (data.is_banned || data.device_banned) {
                 if (data.device_banned && !data.is_banned) {
@@ -245,22 +251,24 @@ function setup() {
     // Checagem periódica de integridade
     setInterval(checkIntegrity, INTERVAL_MS);
 
-    // Marca o início da sessão: reinicia sempre que o usuário
-    // autentica (login/troca de conta), para o logout forçado
-    // só valer para desconexões feitas DEPOIS do login.
-    const markSessionStart = () => {
-        WATCHDOG._sessionStartMs = Date.now();
-    };
+    // Carrega o último force_logout_at visto (persistido), para que
+    // uma página recarregada não reaja a um logout antigo.
+    try {
+        const seen = localStorage.getItem('pf_fl_seen');
+        if (seen) WATCHDOG._flSeen = seen;
+    } catch (e) {}
+
+    // Reinicia a detecção em cada novo login/troca de conta
     if (window.db && window.db.auth) {
         try {
             window.db.auth.onAuthStateChange((event) => {
-                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
-                    markSessionStart();
+                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                    WATCHDOG._flSeen = null;
+                    try { localStorage.removeItem('pf_fl_seen'); } catch (e) {}
                 }
             });
         } catch (e) {}
     }
-    markSessionStart();
 
     // Checa quando o jogador volta para a aba (provável momento de edição)
     document.addEventListener('visibilitychange', () => {
