@@ -1079,6 +1079,8 @@ class CityScreen {
             el.style.top = (offsetY + (sy - sz) * scaleY) + 'px';
             el.style.width = (sz * scaleX) + 'px';
             el.style.height = (sz * scaleY) + 'px';
+            const adj = window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(p.encounter.pokemon_id) : null;
+            el.style.transform = adj ? `scale(${adj.scaleX}, ${adj.scaleY})` : '';
         }
     }
 

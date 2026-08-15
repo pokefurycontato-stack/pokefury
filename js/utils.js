@@ -600,3 +600,13 @@ export function getPokemonScale(pokemon) {
     const t = Math.log(1 + h / 5) / Math.log(1 + 50 / 5);
     return Math.max(min, Math.min(max, min + t * (max - min)));
 }
+
+// Ajuste de sprite por pokemon (regras visuais exclusivas).
+// Retorna { scaleX, scaleY } ou null. Ex: Kyogre sempre mais largo que alto.
+export function getPokemonSpriteAdjust(pokemonId) {
+    const id = Number(pokemonId);
+    if (id === 382) return { scaleX: 1.6, scaleY: 1 };    // Kyogre: sempre mais largo que alto
+    if (id === 23) return { scaleX: 0.5, scaleY: 0.5 };    // Ekans: metade do tamanho
+    return null;
+}
+if (typeof window !== 'undefined') { window.getPokemonSpriteAdjust = getPokemonSpriteAdjust; }

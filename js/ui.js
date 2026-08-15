@@ -1,5 +1,5 @@
 import { TYPE_COLORS } from './data.js';
-import { getPokemonScale } from './utils.js';
+import { getPokemonScale, getPokemonSpriteAdjust } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -785,8 +785,10 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     const isWildFullscreen = document.getElementById('wild-fullscreen');
     const fixedSize = isWildFullscreen ? Math.round(240 * sizeScale) : 120;
     const maxDim = Math.round(fixedSize * Math.min(sx, sy));
+    const adj = getPokemonSpriteAdjust(pokemon.id);
     el.style.width = Math.round(maxDim) + 'px';
     el.style.height = Math.round(maxDim) + 'px';
+    el.style.transform = adj ? `scale(${adj.scaleX}, ${adj.scaleY})` : '';
     if (document.getElementById('pvp-fullscreen') || document.getElementById('wild-fullscreen')) {
         // PVP positions are floor anchors: the saved point is the feet/shadow.
         el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
