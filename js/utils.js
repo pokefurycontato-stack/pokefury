@@ -610,3 +610,59 @@ export function getPokemonSpriteAdjust(pokemonId) {
     return null;
 }
 if (typeof window !== 'undefined') { window.getPokemonSpriteAdjust = getPokemonSpriteAdjust; }
+
+// Aplica as regras de sprite GLOBALMENTE: toda vez que um <img> com sprite de pokemon
+// for adicionado ao DOM (rank, perfil, PC, party, shiny, etc.), o ajuste é aplicado.
+// Não sobrescreve transform já definido pelo app (ex: batalha, pokemon seguindo, hovers).
+(function autoApplyPokemonSpriteAdjust() {
+    if (typeof window === 'undefined' || window.__pokemonSpriteAdjustObserver) return;
+
+    const RULES = {
+        382: 'scale(1.6, 1)',   // Kyogre: sempre mais largo que alto
+        23: 'scale(0.5, 0.5)'   // Ekans: metade do tamanho
+    };
+
+    function pokemonIdFromSrc(src) {
+        if (!src) return null;
+        const m = String(src).match(/\/(\d{1,5})\.(?:gif|png|webp|jpg|jpeg)/i);
+        return m ? Number(m[1]) : null;
+    }
+
+    function applyTo(img) {
+        if (!img || img.tagName !== 'IMG') return;
+        const src = img.currentSrc || img.getAttribute('src') || img.src;
+        const id = pokemonIdFromSrc(src);
+        const target = RULES[id];
+        const had = img.dataset.spriteAdjust;
+        if (target) {
+            const cur = img.style.transform;
+            if (!cur || cur === 'none') {
+                img.style.transform = target;
+                img.dataset.spriteAdjust = target;
+            }
+        } else if (had) {
+            if (!img.style.transform || img.style.transform === had) img.style.transform = '';
+            delete img.dataset.spriteAdjust;
+        }
+    }
+
+    const observer = new MutationObserver(mutations => {
+        for (const m of mutations) {
+            if (m.type === 'attributes' && m.target && m.target.tagName === 'IMG') {
+                applyTo(m.target);
+                continue;
+            }
+            if (m.type !== 'childList') continue;
+            for (const node of m.addedNodes) {
+                if (node.tagName === 'IMG') applyTo(node);
+                else if (node.querySelectorAll) node.querySelectorAll('img').forEach(applyTo);
+            }
+        }
+    });
+
+    if (document.body) {
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+        document.querySelectorAll('img').forEach(applyTo);
+        window.__pokemonSpriteAdjustObserver = observer;
+    }
+})();
