@@ -7,7 +7,7 @@ import {
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
-    VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride
+    showTargetSelection, VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js?v=20260816b';
@@ -1359,24 +1359,31 @@ class PokeFuryGame {
         if (this._turnLocked) return;
         this._turnLocked = true;
         const items = await window.GameData.getInventory();
-        const usableItems = items.filter(inv => inv.items && inv.items.usable_in_battle && inv.items.category !== 'pokeball');
+        const usableItems = items.filter(inv => inv.items
+            && inv.items.usable_in_battle
+            && inv.items.category === 'medicine'
+            && (inv.items.subcategory === 'heal' || inv.items.subcategory === 'status'));
 
         if (usableItems.length === 0) {
-            await showBattleMessage('Mochila vazia!');
+            await showBattleMessage('Nenhum item medicinal disponível!');
             this._turnLocked = false;
             return;
         }
 
         showBagSelection(usableItems, async (item) => {
-            await this.useItemInBattle(item);
-            this._turnLocked = false;
+            showTargetSelection(this.playerTeam, `Usar ${item.items.name} em qual Pokémon?`, async (targetIdx) => {
+                await this.useItemInBattle(item, this.playerTeam[targetIdx]);
+                this._turnLocked = false;
+            }, () => {
+                this._turnLocked = false;
+            });
         }, () => {
             this._turnLocked = false;
         });
     }
 
-    async useItemInBattle(item) {
-        const playerPokemon = getFirstAlive(this.playerTeam);
+    async useItemInBattle(item, targetPokemon) {
+        const playerPokemon = targetPokemon || getFirstAlive(this.playerTeam);
         const enemyPokemon = getFirstAlive(this.enemyTeam);
         if (!playerPokemon || !enemyPokemon) return;
         const itemData = item.items;
@@ -1388,7 +1395,30 @@ class PokeFuryGame {
                 ? playerPokemon.stats.hp
                 : itemData.effect_value;
             playerPokemon.currentHp = Math.min(playerPokemon.stats.hp, playerPokemon.currentHp + heal);
-            await showBattleMessage(`Usou ${itemData.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
+            await showBattleMessage(`Usou ${itemData.name} em ${playerPokemon.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
+            if (itemData.effect === 'heal_full_status') {
+                playerPokemon.statusEffect = null;
+                await showBattleMessage(`${playerPokemon.name} foi curado de todos os problemas!`);
+            }
+            this.updatePartyPanel();
+        } else if (itemData.subcategory === 'status') {
+            const effect = itemData.effect;
+            const current = playerPokemon.statusEffect;
+            const cures = {
+                cure_poison: ['poison', 'toxic'],
+                cure_paralyze: ['paralyze'],
+                cure_sleep: ['sleep'],
+                cure_burn: ['burn'],
+                cure_freeze: ['freeze'],
+                cure_all_status: ['poison', 'toxic', 'paralyze', 'sleep', 'burn', 'freeze']
+            };
+            const applicable = (cures[effect] || []).includes(current);
+            if (applicable) {
+                playerPokemon.statusEffect = null;
+                await showBattleMessage(`${playerPokemon.name} foi curado!`);
+            } else {
+                await showBattleMessage(`${itemData.name} não teve efeito em ${playerPokemon.name}.`);
+            }
             this.updatePartyPanel();
         } else if (itemData.category === 'pokeball') {
             if (enemyPokemon.isAlpha || enemyPokemon.isRaidBoss || enemyPokemon.isGymLeader) {
@@ -1414,8 +1444,6 @@ class PokeFuryGame {
             } else {
                 await showBattleMessage(`O Pokemon escapou da ${itemData.name}!`);
             }
-        } else if (itemData.effect && itemData.effect.startsWith('cure_')) {
-            await showBattleMessage(`${playerPokemon.name} foi curado de status!`);
         }
 
         drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());

@@ -567,12 +567,70 @@ export function showSwitchPokemonSelection(team, activeIndex, onSelect, onCancel
     });
 }
 
+export function showTargetSelection(team, title, onSelect, onCancel = null) {
+    const overlay = document.createElement('div');
+    overlay.id = 'battle-target-selection';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);pointer-events:auto';
+
+    const popup = document.createElement('div');
+    popup.style.cssText = 'background:rgba(15,20,35,0.97);border:1px solid rgba(78,205,196,0.35);border-radius:12px;padding:16px;max-width:350px;width:90%;max-height:80vh;overflow-y:auto';
+
+    popup.innerHTML = `
+        <div style="text-align:center;margin-bottom:12px;">
+            <div style="color:#4ecdc4;font-size:14px;font-weight:700;">${title || 'Usar item em qual Pokémon?'}</div>
+            <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:2px;">Escolha um Pokémon do seu time</div>
+        </div>
+        <div id="target-team-list"></div>
+        <div style="text-align:center;margin-top:12px;">
+            <button id="target-cancel" style="padding:8px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;font-family:Inter">Voltar</button>
+        </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    const teamList = popup.querySelector('#target-team-list');
+    team.forEach((p, i) => {
+        if (p.fainted) return;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
+        row.innerHTML = `
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
+                <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
+                <div style="width:100%;height:5px;background:rgba(0,0,0,0.4);border-radius:3px;overflow:hidden;margin-top:3px;">
+                    <div style="height:100%;width:${(p.currentHp / p.stats.hp) * 100}%;background:${p.currentHp > p.stats.hp * 0.5 ? '#4caf50' : '#ff9800'};border-radius:3px;"></div>
+                </div>
+                <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:1px;">HP ${p.currentHp}/${p.stats.hp}${p.statusEffect ? ` · <span style="color:#fbbf24;">${p.statusEffect}</span>` : ''}</div>
+            </div>
+        `;
+        row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
+        row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+        row.addEventListener('click', () => {
+            overlay.remove();
+            onSelect(i);
+        });
+        teamList.appendChild(row);
+    });
+
+    popup.querySelector('#target-cancel').addEventListener('click', () => {
+        overlay.remove();
+        onCancel?.();
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+            onCancel?.();
+        }
+    });
+}
+
 export function updateHpBar(pokemon) {
     const hpPercent = (pokemon.currentHp / pokemon.stats.hp) * 100;
     return `${pokemon.name}: ${pokemon.currentHp}/${pokemon.stats.hp} HP (${hpPercent.toFixed(0)}%)`;
-}
-
-export function showEffectivenessText(effectiveness) {
+}export function showEffectivenessText(effectiveness) {
     if (effectiveness > 1) return 'Super efetivo!';
     if (effectiveness < 1 && effectiveness > 0) return 'Não é muito efetivo...';
     if (effectiveness === 0) return 'Não afetou o oponente!';
