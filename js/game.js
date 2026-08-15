@@ -1388,19 +1388,25 @@ class PokeFuryGame {
         if (!playerPokemon || !enemyPokemon) return;
         const itemData = item.items;
 
-        await window.GameData.removeItem(item.item_id, 1);
+        let consumed = false;
 
         if (itemData.subcategory === 'heal') {
             const heal = itemData.effect === 'heal_full' || itemData.effect === 'heal_full_status'
                 ? playerPokemon.stats.hp
                 : itemData.effect_value;
-            playerPokemon.currentHp = Math.min(playerPokemon.stats.hp, playerPokemon.currentHp + heal);
-            await showBattleMessage(`Usou ${itemData.name} em ${playerPokemon.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
-            if (itemData.effect === 'heal_full_status') {
-                playerPokemon.statusEffect = null;
-                await showBattleMessage(`${playerPokemon.name} foi curado de todos os problemas!`);
+            const hadStatus = itemData.effect === 'heal_full_status' && !!playerPokemon.statusEffect;
+            if (playerPokemon.currentHp < playerPokemon.stats.hp || hadStatus) {
+                consumed = true;
+                playerPokemon.currentHp = Math.min(playerPokemon.stats.hp, playerPokemon.currentHp + heal);
+                await showBattleMessage(`Usou ${itemData.name} em ${playerPokemon.name}! HP: ${playerPokemon.currentHp}/${playerPokemon.stats.hp}`);
+                if (hadStatus) {
+                    playerPokemon.statusEffect = null;
+                    await showBattleMessage(`${playerPokemon.name} foi curado de todos os problemas!`);
+                }
+                this.updatePartyPanel();
+            } else {
+                await showBattleMessage(`HP de ${playerPokemon.name} já está cheio.`);
             }
-            this.updatePartyPanel();
         } else if (itemData.subcategory === 'status') {
             const effect = itemData.effect;
             const current = playerPokemon.statusEffect;
@@ -1414,10 +1420,12 @@ class PokeFuryGame {
             };
             const applicable = (cures[effect] || []).includes(current);
             if (applicable) {
+                consumed = true;
                 playerPokemon.statusEffect = null;
                 await showBattleMessage(`${playerPokemon.name} foi curado!`);
             } else {
                 await showBattleMessage(`${itemData.name} não teve efeito em ${playerPokemon.name}.`);
+                return;
             }
             this.updatePartyPanel();
         } else if (itemData.category === 'pokeball') {
@@ -1427,6 +1435,7 @@ class PokeFuryGame {
             }
             const catchRate = this.calculateCatchRate(enemyPokemon, itemData);
             const caught = Math.random() < catchRate;
+            consumed = true;
             if (caught) {
                 await showBattleMessage(`Capturou ${enemyPokemon.name}!`);
                 const added = await window.GameData.addPokemonToTeam(enemyPokemon);
@@ -1445,6 +1454,8 @@ class PokeFuryGame {
                 await showBattleMessage(`O Pokemon escapou da ${itemData.name}!`);
             }
         }
+
+        if (consumed) await window.GameData.removeItem(item.item_id, 1);
 
         drawBattleScene(this.ctx, this.canvas, playerPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
         updateBattleUI(this.playerTeam, this.enemyTeam);
