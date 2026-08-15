@@ -1182,7 +1182,13 @@ class CityScreen {
                 counts[id] = (counts[id] || 0) + 1;
             }
             const filtered = pool.filter(e => (counts[e.pokemon_id] || 0) < 2);
-            if (filtered.length > 0) pool = filtered;
+            // Todas as especies ja atingiram o limite (2 de cada): o ponto fica vazio, sem repeticao
+            if (filtered.length === 0) return null;
+            // Se so sobraram raridades ultra-raras (lendario/inicial), a zona esta saturada:
+            // NAO forca o spawn do lendario — ponto fica vazio para preservar o spawn rate absoluto
+            const hasNormal = filtered.some(e => (TIER_WEIGHT[e.rarity] ?? 1) >= 1);
+            if (!hasNormal) return null;
+            pool = filtered;
         }
 
         const getWeight = (e) => {
