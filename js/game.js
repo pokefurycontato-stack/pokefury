@@ -900,7 +900,10 @@ class PokeFuryGame {
         let pokemon = null;
 
         if (this.currentMap) {
-            const encounters = await this.regionManager.loadMapEncounters(this.currentMap.id);
+            let encounters = await this.regionManager.loadMapEncounters(this.currentMap.id);
+            if (window.SpawnFilter) {
+                try { encounters = await window.SpawnFilter.filterEncounters(encounters, this.currentMap?.name); } catch (e) {}
+            }
             if (encounters.length > 0) {
                 // Rarity tier spawn rates (configurable)
                 const TIER_RATES = { common: 58.998, uncommon: 25, rare: 12, legendary: 0.001, inicial: 0.001 };
@@ -940,7 +943,16 @@ class PokeFuryGame {
 
         if (!pokemon) {
             const includeVariants = Math.random() < 0.15;
-            const result = await PokeAPI.getRandomWildPokemon(minLevel, maxLevel, includeVariants);
+            let result = await PokeAPI.getRandomWildPokemon(minLevel, maxLevel, includeVariants);
+            if (window.SpawnFilter) {
+                const biomeUnlocked = await window.SpawnFilter.isBiomeUnlocked(this.currentMap?.name);
+                if (!biomeUnlocked) {
+                    let guard = 0;
+                    while (await window.SpawnFilter.isEvolution(result.pokemon.id) && guard++ < 20) {
+                        result = await PokeAPI.getRandomWildPokemon(minLevel, maxLevel, includeVariants);
+                    }
+                }
+            }
             const isShiny = Math.random() < (1 / getShinyChance());
             pokemon = await createPokemon(result.pokemon, result.level, null, null, null, isShiny);
         }
@@ -4159,6 +4171,31 @@ openEventsPanel() {
             const active = events?.find(e => e.status === 'active');
             const raidData = active?.event_type === 'raid' ? (await window.db.from('raid_events').select('*').eq('event_id', active.id).limit(1)).data?.[0] : null;
             const raidBossActive = this.raidBoss?.activeBoss || null;
+            const { data: evoEvents } = await window.db.from('game_events').select('*').eq('event_type', 'evo').eq('status', 'active');
+            const unlockedBiomes = new Set((evoEvents || []).map(e => String(e.config?.biome || '').trim().toLowerCase()));
+
+            const biomes = window.CITY_SPAWN_BIOMES || ['Floresta', 'Montanha', 'Torre', 'Industrial', 'Penhasco', 'Praia', 'Vulcao', 'Geleira'];
+            let evoSection = '';
+            if (biomes.length > 0) {
+                const rows = biomes.map(b => {
+                    const key = String(b).trim().toLowerCase();
+                    const unlocked = unlockedBiomes.has(key);
+                    return `
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border:1px solid ${unlocked ? 'rgba(76,175,80,0.45)' : 'rgba(255,255,255,0.1)'};border-radius:8px;background:${unlocked ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)'};">
+                            <div style="flex:1;min-width:0;">
+                                <div style="color:#fff;font-size:12px;font-weight:700;">${b}</div>
+                                <div style="color:${unlocked ? '#4caf50' : 'rgba(255,255,255,0.4)'};font-size:10px;font-weight:600;">${unlocked ? 'EVOLUÇÕES LIBERADAS' : 'EVOLUÇÕES BLOQUEADAS'}</div>
+                            </div>
+                            <button data-evo-toggle="${b}" style="flex-shrink:0;padding:7px 12px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff;background:${unlocked ? 'linear-gradient(135deg,#ff6b6b,#c0392b)' : 'linear-gradient(135deg,#4caf50,#2e7d32)'};">${unlocked ? 'BLOQUEAR' : 'LIBERAR'}</button>
+                        </div>`;
+                }).join('');
+                evoSection = `
+                    <div style="margin-top:16px;">
+                        <div style="color:#f59e0b;font-size:13px;font-weight:800;margin-bottom:8px;">🌿 EVOLUÇÕES NO SPAWN (por bioma)</div>
+                        <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;padding-right:4px;">${rows}</div>
+                        <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:8px;">Sem evento: só a 1ª forma spawna. Libere um bioma para as evoluções aparecerem naquela zona.</div>
+                    </div>`;
+            }
 
             let activeSection = '';
             if (active) {
@@ -4197,6 +4234,7 @@ openEventsPanel() {
                         ${active ? `<button id="end-event-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#ff6b6b,#c0392b);border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">ENCERRAR EVENTO</button>` : ''}
                         ${active?.event_type === 'raid' && raidData ? `<button id="show-ranking-btn" style="width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">VER RANKING</button>` : ''}
                     </div>
+                    ${evoSection}
                 </div>
             `;
 
@@ -4233,6 +4271,32 @@ openEventsPanel() {
                     em.showRaidRankingPopup();
                 };
             }
+            overlay.querySelectorAll('[data-evo-toggle]').forEach(btn => {
+                btn.onclick = async () => {
+                    const biome = btn.dataset.evoToggle;
+                    const key = String(biome).trim().toLowerCase();
+                    const user = (await window.db.auth.getUser()).data.user;
+                    const toEnd = (evoEvents || []).filter(e => String(e.config?.biome || '').trim().toLowerCase() === key);
+                    if (toEnd.length > 0) {
+                        for (const ev of toEnd) {
+                            await window.db.from('game_events').update({
+                                status: 'ended',
+                                ended_at: new Date().toISOString()
+                            }).eq('id', ev.id);
+                        }
+                    } else {
+                        await window.db.from('game_events').insert({
+                            event_type: 'evo',
+                            status: 'active',
+                            config: { biome: biome },
+                            started_by: user.id,
+                            started_at: new Date().toISOString()
+                        });
+                    }
+                    if (window.SpawnFilter?.invalidate) window.SpawnFilter.invalidate();
+                    render();
+                };
+            });
         };
 
         render();

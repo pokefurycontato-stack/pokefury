@@ -1,4 +1,5 @@
 const CITY_SPAWN_BIOMES = ['Floresta', 'Montanha', 'Torre', 'Industrial', 'Penhasco', 'Praia', 'Vulcao', 'Geleira'];
+window.CITY_SPAWN_BIOMES = CITY_SPAWN_BIOMES;
 
 class CityBuilder {
     constructor() {

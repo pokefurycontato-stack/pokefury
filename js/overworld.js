@@ -677,7 +677,18 @@ export class Overworld2D {
         this.pokemonFollowPos.y = Math.round(this.pokemonFollowRenderPos.y);
     }
 
+    async filterOverworldEncounters(encounters) {
+        if (window.SpawnFilter) {
+            try {
+                return await window.SpawnFilter.filterEncounters(encounters, this.game?.currentMap?.name);
+            } catch (e) {
+            }
+        }
+        return encounters;
+    }
+
     async spawnMapPokemon(encounters) {
+        encounters = await this.filterOverworldEncounters(encounters);
         this.mapPokemonEntities = [];
         this.mapPokemonEncounters = encounters || [];
         if (encounters.length === 0) return;
@@ -733,7 +744,7 @@ export class Overworld2D {
         const db = window.db;
         const charId = this.game.currentCharacterId;
         if (!db || !charId) {
-            const encounters = await this.game.regionManager.loadMapEncounters(mapId);
+            const encounters = await this.filterOverworldEncounters(await this.game.regionManager.loadMapEncounters(mapId));
             this.spawnMapPokemon(encounters);
             return;
         }
@@ -755,12 +766,12 @@ export class Overworld2D {
                 active: row.active,
                 respawnTimer: row.respawn_timer || 0
             }));
-            this.mapPokemonEncounters = await this.game.regionManager.loadMapEncounters(mapId);
+            this.mapPokemonEncounters = await this.filterOverworldEncounters(await this.game.regionManager.loadMapEncounters(mapId));
             return;
         }
 
         // No saved entities — spawn fresh and save to DB
-        const encounters = await this.game.regionManager.loadMapEncounters(mapId);
+        const encounters = await this.filterOverworldEncounters(await this.game.regionManager.loadMapEncounters(mapId));
         this.mapPokemonEncounters = encounters;
         this.mapPokemonEntities = [];
 

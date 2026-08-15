@@ -826,6 +826,16 @@ class CityScreen {
         return encounters;
     }
 
+    async filterSpawnEncounters(encounters, biome) {
+        if (window.SpawnFilter) {
+            try {
+                return await window.SpawnFilter.filterEncounters(encounters, biome);
+            } catch (e) {
+            }
+        }
+        return encounters;
+    }
+
     async spawnVisiblePokemon() {
         if (this.wildPokemonLayer) this.wildPokemonLayer.remove();
         this.wildPokemonLayer = null;
@@ -870,7 +880,7 @@ class CityScreen {
             }
 
             if (!encounter) {
-                const encounters = await this.resolveSpawnEncounters(biome);
+                const encounters = await this.filterSpawnEncounters(await this.resolveSpawnEncounters(biome), biome);
                 if (!encounters || encounters.length === 0) continue;
                 const currentIds = this.wildPokemon.map(p => p.encounter?.pokemon_id).filter(Boolean);
                 encounter = this.chooseWeightedEncounter(encounters, currentIds);
@@ -979,7 +989,7 @@ class CityScreen {
         if (!encounter) {
             let encounters = [];
             try {
-                encounters = await this.resolveSpawnEncounters(biome);
+                encounters = await this.filterSpawnEncounters(await this.resolveSpawnEncounters(biome), biome);
             } catch (e) {
             }
             const currentIds = this.wildPokemon.map(wp => wp.encounter?.pokemon_id).filter(Boolean);
@@ -1123,6 +1133,8 @@ class CityScreen {
                 { pokemon_name: 'Zubat', pokemon_id: 41, weight: 60, sprite_url: null, rarity: 'common' }
             ];
         }
+
+        encounters = await this.filterSpawnEncounters(encounters, zone.biome || (game.currentMap?.name || null));
 
         const encounter = this.chooseWeightedEncounter(encounters);
         if (!encounter) return;
