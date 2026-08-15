@@ -745,50 +745,8 @@ class CityScreen {
 
     updateNpcPatrols(dt) {
         for (const n of this.npcs) {
-            if (n.npc_type !== 'nurse' && n.npc_type !== 'professor' && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'banker') continue;
-            const step = 32;            // 1 tile = 1 passo
-            const maxOffset = 2 * step; // até 2 passos para cada lado
-            if (n.patrolState === 'idle') {
-                n._idleT = (n._idleT || 0) - dt;
-                n.direction = 'down';
-                n.walkFrame = 0;
-                if (n._idleT <= 0 && Math.random() < 0.04 * (this._dt || 1)) {
-                    const ox = Math.round((Math.random() * 2 - 1) * maxOffset);
-                    const oy = Math.round((Math.random() * 2 - 1) * maxOffset);
-                    n._targetX = n.originX + ox;
-                    n._targetY = n.originY + oy;
-                    n.patrolState = 'walk';
-                }
-            } else if (n.patrolState === 'walk') {
-                this._walkNurseToward(n, n._targetX, n._targetY, 20 * dt, 'return');
-            } else if (n.patrolState === 'return') {
-                this._walkNurseToward(n, n.originX, n.originY, 24 * dt, 'idle');
-            }
-        }
-    }
-
-    _walkNurseToward(n, tx, ty, speed, nextState) {
-        const dx = tx - n.pos_x;
-        const dy = ty - n.pos_y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > 1) {
-            n.pos_x += (dx / dist) * Math.min(speed, dist);
-            n.pos_y += (dy / dist) * Math.min(speed, dist);
-            n.direction = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-            n._walkAnimT = (n._walkAnimT || 0) + (this._dt || 1);
-            n.walkFrame = Math.floor((n._walkAnimT || 0) * 0.25) % 4;
-        } else {
-            if (nextState === 'idle') {
-                n.pos_x = n.originX;
-                n.pos_y = n.originY;
-                n.direction = 'down';
-                n.walkFrame = 0;
-                n._idleT = 1 + Math.random() * 2;
-            } else {
-                n.pos_x = tx;
-                n.pos_y = ty;
-            }
-            n.patrolState = nextState;
+            n.direction = 'down';
+            n.walkFrame = 0;
         }
     }
 
@@ -1402,6 +1360,10 @@ class CityScreen {
             const sx = this.gymNpc.pos_x - camX - ps / 2;
             const sy = this.gymNpc.pos_y - camY - ps / 2;
             if (sx + ps > -50 && sx < cw + 50 && sy + ps > -50 && sy < ch + 50) {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(sx + ps / 2, sy + ps - 2, ps / 3, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
                 const img = this._gymNpcImg;
                 if (img && img.complete && img.naturalWidth) {
                     const frameW = img.naturalWidth / 4;
@@ -1644,13 +1606,19 @@ class CityScreen {
 
             let el = this._rankEls[key];
             if (!el) {
+                const isTrainer = sp.rank_type === 'trainer';
                 el = document.createElement('div');
                 el.style.cssText = 'position:absolute;display:flex;flex-direction:column;align-items:center;pointer-events:none;';
                 const wrap = document.createElement('div');
-                wrap.style.cssText = 'overflow:hidden;';
+                wrap.style.cssText = (isTrainer ? 'overflow:hidden;' : '') + 'position:relative;';
                 const img = document.createElement('img');
-                img.style.cssText = 'image-rendering:pixelated;display:block;';
+                img.style.cssText = 'image-rendering:pixelated;display:block;position:relative;z-index:2;' + (isTrainer ? '' : 'filter:drop-shadow(0 7px 5px rgba(0,0,0,0.5));');
                 wrap.appendChild(img);
+                if (isTrainer) {
+                    const shadowEl = document.createElement('div');
+                    shadowEl.style.cssText = 'position:absolute;left:50%;bottom:1px;transform:translateX(-50%);width:58%;height:9px;border-radius:50%;background:rgba(0,0,0,0.38);filter:blur(1.5px);';
+                    wrap.appendChild(shadowEl);
+                }
                 const line1 = document.createElement('div');
                 line1.style.cssText = 'color:#fff;font:bold 11px Inter,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,0.9);white-space:nowrap;';
                 const line2 = document.createElement('div');
