@@ -1514,7 +1514,8 @@ class PokeFuryGame {
                     continue;
                 }
 
-                const result = await executeTurn(attacker, defender, move, this._battleState);
+                const isBoss = attacker.isAlpha || attacker.isRaidBoss || attacker.isGymLeader;
+                const result = await executeTurn(attacker, defender, move, this._battleState, (!isPlayer && this.isWildBattle && !isBoss) ? 0.75 : 1);
                 if (attacker.currentHp <= 0) attacker.fainted = true;
                 if (defender.currentHp <= 0) defender.fainted = true;
 
@@ -1805,7 +1806,8 @@ class PokeFuryGame {
         const move = getAIMove(enemyPokemon);
 
         if (move) {
-            const result = await executeTurn(enemyPokemon, playerPokemon, move, this._battleState);
+            const isBoss = enemyPokemon.isAlpha || enemyPokemon.isRaidBoss || enemyPokemon.isGymLeader;
+            const result = await executeTurn(enemyPokemon, playerPokemon, move, this._battleState, this.isWildBattle && !isBoss ? 0.75 : 1);
 
             enemyPokemon.moves.forEach(m => {
                 if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);

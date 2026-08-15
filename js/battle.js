@@ -193,7 +193,7 @@ export function getFirstAlive(team) {
     return team.find(p => !p.fainted);
 }
 
-export async function executeTurn(attacker, defender, move, battleState) {
+export async function executeTurn(attacker, defender, move, battleState, damageMultiplier = 1) {
     if (!attacker || !defender || !move) {
         return { attacker, defender, move, damage: 0, effectiveness: 1, critical: false, missed: true, fainted: false };
     }
@@ -307,6 +307,10 @@ export async function executeTurn(attacker, defender, move, battleState) {
         damage = applyWeatherDamageModifier(attacker, move, damage, battleState);
         damage = applyTerrainDamageModifier(attacker, defender, move, damage, battleState);
         damage = applyScreenReduction(defender, move, damage);
+    }
+
+    if (damageMultiplier !== 1 && damage > 0) {
+        damage = Math.max(1, Math.floor(damage * damageMultiplier));
     }
 
     if (defender._substituteHp > 0) {
