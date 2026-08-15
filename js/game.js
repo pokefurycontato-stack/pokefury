@@ -410,23 +410,17 @@ class PokeFuryGame {
         if (window.boostsManager && window.boostsManager.isActive('exp_trainer')) {
             exp *= 2;
         }
+        const res = await window.GameData.gainTrainerExp(exp);
+        if (res && res.level != null) {
+            const leveled = res.level > this.trainerLevel;
+            this.trainerLevel = res.level;
+            this.trainerExp = res.experience;
+            this.updateTrainerLevelUI();
+            return leveled;
+        }
         this.trainerExp += exp;
-        let leveled = false;
-        while (this.trainerLevel < 100 && this.trainerExp >= this.trainerExpForLevel(this.trainerLevel)) {
-            this.trainerExp -= this.trainerExpForLevel(this.trainerLevel);
-            this.trainerLevel++;
-            leveled = true;
-        }
-        if (this.trainerLevel >= 100) {
-            this.trainerLevel = 100;
-            this.trainerExp = 0;
-        }
         this.updateTrainerLevelUI();
-        if (leveled) {
-            this.saveTrainerLevel();
-        } else {
-            this.saveTrainerExp();
-        }
+        return false;
     }
 
     updateTrainerLevelUI() {
@@ -567,7 +561,9 @@ class PokeFuryGame {
                 }
             } else {
                 const pokemonData = await PokeAPI.ensurePokemon(starterSpecies);
-                this.playerTeam = [await createPokemon(pokemonData, 5)];
+                const starter = await createPokemon(pokemonData, 5);
+                const added = await window.GameData.addPokemonToTeam(starter);
+                this.playerTeam = [starter];
             }
 
             this.updatePartyPanel();
@@ -1426,10 +1422,15 @@ class PokeFuryGame {
                 const megaPokemon = await createPokemon(megaData, playerPokemon.level, playerPokemon.ivs, playerPokemon.evs, playerPokemon.nature, playerPokemon.isShiny);
                 megaPokemon.isMega = true;
                 megaPokemon.heldItemId = playerPokemon.heldItemId;
+                megaPokemon.dbId = playerPokemon.dbId;
                 megaPokemon.currentHp = Math.min(megaPokemon.stats.hp, playerPokemon.currentHp + (megaPokemon.stats.hp - oldStats.hp));
 
                 const idx = this.playerTeam.indexOf(playerPokemon);
                 if (idx >= 0) this.playerTeam[idx] = megaPokemon;
+
+                if (playerPokemon.dbId) {
+                    await window.GameData.megaEvolve(playerPokemon.dbId, megaId);
+                }
 
                 await preloadBattleSprites(megaPokemon, getFirstAlive(this.enemyTeam));
                 drawBattleScene(this.ctx, this.canvas, megaPokemon, getFirstAlive(this.enemyTeam), this.currentBattleBg, this.getBattleClipRect());
@@ -2227,12 +2228,29 @@ class PokeFuryGame {
 
             for (const p of this.playerTeam) {
                 if (p.fainted) continue;
+                const isAttacker = p === activePokemon;
+                const hasExpShare = p.heldItemId === 99;
+                if (!isAttacker && !hasExpShare) continue;
+
+                let baseExp = Math.floor((enemyLevel * 15) / 9);
+                if (window.boostsManager && window.boostsManager.isActive('exp_pokemon')) baseExp *= 2;
+                let expGain = baseExp;
+                if (p.heldItemId === 219) expGain = Math.floor(expGain * 1.5);
+
                 const prevLevel = p.level;
-                const levelMsgs = awardExp([p], enemyLevel, p === activePokemon ? p : null);
-                for (const msg of levelMsgs) {
-                    await showBattleMessage(msg);
+                const res = p.dbId ? await window.GameData.grantExp(p.dbId, expGain) : null;
+                if (res && res.level != null) {
+                    p.level = res.level;
+                    p.experience = res.experience;
+                    if (res.stats_hp != null) {
+                        p.stats = { hp: res.stats_hp, attack: res.stats_attack, defense: res.stats_defense, spAtk: res.stats_sp_atk, spDef: res.stats_sp_def, speed: res.stats_speed };
+                    }
+                } else {
+                    const levelMsgs = awardExp([p], enemyLevel, isAttacker ? p : null);
+                    for (const msg of levelMsgs) await showBattleMessage(msg);
                 }
                 if (p.level > prevLevel) {
+                    await showBattleMessage(`${p.name} subiu para Nv. ${p.level}!`);
                     const learnableMoves = await learnLevelUpMoves(p, prevLevel, p.level);
                     for (const newMove of learnableMoves) {
                         await showBattleMessage(`${p.name} quer aprender ${newMove.name}!`);
@@ -2873,6 +2891,7 @@ class PokeFuryGame {
                     const newPokemonData = await PokeAPI.ensurePokemon(evo.to_pokemon_id);
                     if (!newPokemonData) continue;
 
+                    const oldDbId = pokemon.dbId;
                     const oldLevel = pokemon.level;
                     const oldExp = pokemon.experience || 0;
                     const oldMoves = pokemon.moves;
@@ -2884,6 +2903,11 @@ class PokeFuryGame {
                     Object.assign(pokemon, await createPokemon(newPokemonData, oldLevel, oldIvs, oldEvs, oldNature, oldShiny));
                     pokemon.experience = oldExp;
                     pokemon.currentHp = pokemon.stats.hp;
+                    pokemon.dbId = oldDbId;
+
+                    if (oldDbId) {
+                        await window.GameData.evolve(oldDbId, evo.to_pokemon_id);
+                    }
 
                     await showBattleMessage(`${pokemon.name} evoluiu para ${newPokemonData.name}!`);
                     break;
@@ -3605,29 +3629,51 @@ class PokeFuryGame {
         if (!removed) { console.error('Erro ao usar item!'); return; }
 
         if (item.effect === 'level_up') {
-            pokemon.level = Math.min(100, pokemon.level + 1);
-            pokemon.experience = 0;
-            if (pokemon.baseStats) {
-                const { calculateAllStats } = await import('./utils.js');
-                const newStats = calculateAllStats(pokemon.baseStats, pokemon.level, pokemon.ivs, pokemon.evs, pokemon.nature);
-                const hpDiff = newStats.hp - pokemon.stats.hp;
-                pokemon.stats = newStats;
-                pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
-            }
-            if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} subiu para Nv.${pokemon.level}!`, 'success');
-            else alert(`${pokemon.name} subiu para Nv.${pokemon.level}!`);
-        } else if (item.effect && item.effect.startsWith('exp_')) {
-            const amount = item.effect_value || 100;
-            pokemon.experience = (pokemon.experience || 0) + amount;
-            const { calculateAllStats } = await import('./utils.js');
-            while (pokemon.experience >= this.getExpForNext(pokemon.level) && pokemon.level < 100) {
-                pokemon.experience -= this.getExpForNext(pokemon.level);
-                pokemon.level++;
+            const prevLevel = pokemon.level;
+            const res = pokemon.dbId ? await window.GameData.levelUp(pokemon.dbId) : null;
+            if (res && res.level != null) {
+                pokemon.level = res.level;
+                pokemon.experience = 0;
+                if (res.stats_hp != null) {
+                    const oldMaxHp = pokemon.stats.hp;
+                    pokemon.stats = { hp: res.stats_hp, attack: res.stats_attack, defense: res.stats_defense, spAtk: res.stats_sp_atk, spDef: res.stats_sp_def, speed: res.stats_speed };
+                    pokemon.currentHp = Math.max(0, Math.min(pokemon.stats.hp, pokemon.currentHp + (pokemon.stats.hp - oldMaxHp)));
+                }
+            } else {
+                pokemon.level = Math.min(100, pokemon.level + 1);
+                pokemon.experience = 0;
                 if (pokemon.baseStats) {
                     const newStats = calculateAllStats(pokemon.baseStats, pokemon.level, pokemon.ivs, pokemon.evs, pokemon.nature);
                     const hpDiff = newStats.hp - pokemon.stats.hp;
                     pokemon.stats = newStats;
                     pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
+                }
+            }
+            if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} subiu para Nv.${pokemon.level}!`, 'success');
+            else alert(`${pokemon.name} subiu para Nv.${pokemon.level}!`);
+        } else if (item.effect && item.effect.startsWith('exp_')) {
+            const amount = item.effect_value || 100;
+            const prevLevel = pokemon.level;
+            const res = pokemon.dbId ? await window.GameData.grantExp(pokemon.dbId, amount) : null;
+            if (res && res.level != null) {
+                pokemon.level = res.level;
+                pokemon.experience = res.experience;
+                if (res.stats_hp != null) {
+                    const oldMaxHp = pokemon.stats.hp;
+                    pokemon.stats = { hp: res.stats_hp, attack: res.stats_attack, defense: res.stats_defense, spAtk: res.stats_sp_atk, spDef: res.stats_sp_def, speed: res.stats_speed };
+                    pokemon.currentHp = Math.max(0, Math.min(pokemon.stats.hp, pokemon.currentHp + (pokemon.stats.hp - oldMaxHp)));
+                }
+            } else {
+                pokemon.experience = (pokemon.experience || 0) + amount;
+                while (pokemon.experience >= this.getExpForNext(pokemon.level) && pokemon.level < 100) {
+                    pokemon.experience -= this.getExpForNext(pokemon.level);
+                    pokemon.level++;
+                    if (pokemon.baseStats) {
+                        const newStats = calculateAllStats(pokemon.baseStats, pokemon.level, pokemon.ivs, pokemon.evs, pokemon.nature);
+                        const hpDiff = newStats.hp - pokemon.stats.hp;
+                        pokemon.stats = newStats;
+                        pokemon.currentHp = Math.max(0, Math.min(newStats.hp, pokemon.currentHp + hpDiff));
+                    }
                 }
             }
             if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} ganhou ${amount} EXP! Nv.${pokemon.level}`, 'success');
@@ -3638,6 +3684,7 @@ class PokeFuryGame {
                 await window.GameData.addItem(inv.item_id, 1);
                 return;
             }
+            const ok = pokemon.dbId ? await window.GameData.makeShiny(pokemon.dbId) : false;
             pokemon.isShiny = true;
             const pokeData = await PokeAPI.ensurePokemon(pokemon.id);
             if (pokeData?.shinySpriteUrls) {
@@ -3816,16 +3863,15 @@ class PokeFuryGame {
             }
         }
 
-        pokemon.dbId = boxData.id;
-        pokemon.nickname = boxData.nickname || pokemon.nickname;
-        this.playerTeam.push(pokemon);
-        const saved = await this.saveTeam();
-        if (!saved) {
-            this.playerTeam.pop();
+        const result = await window.GameData.withdrawPokemon(boxData.id);
+        if (!result) {
             this.showToast('Não foi possível mover o Pokémon. Ele continua no PC.', 'error');
             return;
         }
-        await window.GameData.deleteBoxPokemon(boxData.id);
+        pokemon.dbId = result.id;
+        pokemon.nickname = boxData.nickname || pokemon.nickname;
+        this.playerTeam.push(pokemon);
+        await this.saveTeam();
         this.updatePartyPanel();
         this.renderPCBox();
         if (this.overworld2d) this.overworld2d.updateFollower();

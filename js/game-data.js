@@ -124,69 +124,27 @@ const GameData = {
             return false;
         }
 
-        const inserts = pokemonList.map((pokemon, i) => {
-            const insert = {
-                user_id: this.userId,
-                character_id: this.currentCharacterId,
-                species: pokemon.species,
-                nickname: pokemon.nickname || pokemon.name,
-                level: pokemon.level,
+        const payload = pokemonList
+            .map((pokemon, i) => ({
+                id: pokemon.dbId || null,
                 current_hp: pokemon.currentHp,
-                max_hp: pokemon.stats.hp,
-                experience: pokemon.experience || 0,
-                moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
-                is_active: i === 0,
-                slot: i + 1,
-                pokemon_id: pokemon.id || null,
-                iv_hp: pokemon.ivs?.hp ?? 15,
-                iv_attack: pokemon.ivs?.attack ?? 15,
-                iv_defense: pokemon.ivs?.defense ?? 15,
-                iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
-                iv_sp_def: pokemon.ivs?.spDef ?? 15,
-                iv_speed: pokemon.ivs?.speed ?? 15,
-                ev_hp: pokemon.evs?.hp ?? 0,
-                ev_attack: pokemon.evs?.attack ?? 0,
-                ev_defense: pokemon.evs?.defense ?? 0,
-                ev_sp_atk: pokemon.evs?.spAtk ?? 0,
-                ev_sp_def: pokemon.evs?.spDef ?? 0,
-                ev_speed: pokemon.evs?.speed ?? 0,
-                nature: pokemon.nature || 'hardy',
-                happiness: pokemon.happiness ?? 70,
-                is_shiny: pokemon.isShiny || false,
-                is_mega: pokemon.isMega || false,
+                fainted: !!pokemon.fainted,
+                status_effect: pokemon.statusEffect || null,
+                moves: (pokemon.moves || []).map(m => ({ id: m.id, pp: m.currentPp })),
                 held_item_id: pokemon.heldItemId || null,
-                power: window.calculatePokemonPower ? window.calculatePokemonPower(pokemon) : 0
-            };
-            if (pokemon.dbId) insert.id = pokemon.dbId;
-            return insert;
+                slot: i + 1
+            }))
+            .filter(p => p.id);
+
+        const { error } = await window.db.rpc('secure_save_team', {
+            p_character_id: this.currentCharacterId,
+            p_team: payload
         });
 
-        const { data: saved, error } = await window.db
-            .from('pokemon_team')
-            .upsert(inserts, { onConflict: 'id' })
-            .select();
-
-        if (error || !saved || saved.length !== inserts.length) {
-            console.error('[GameData] Team save failed; existing rows were preserved:', error || 'incomplete response');
+        if (error) {
+            console.error('[GameData] secure_save_team error:', error);
             return false;
         }
-
-        const savedIds = saved.map(row => row.id).filter(Boolean);
-        if (savedIds.length > 0) {
-            const { error: cleanupError } = await window.db.from('pokemon_team').delete()
-                .eq('character_id', this.currentCharacterId)
-                .not('id', 'in', `(${savedIds.join(',')})`);
-            if (cleanupError) console.error('[GameData] Old team cleanup failed:', cleanupError);
-        }
-
-        if (saved) {
-            for (let i = 0; i < pokemonList.length && i < saved.length; i++) {
-                if (saved[i] && !pokemonList[i].dbId) {
-                    pokemonList[i].dbId = saved[i].id;
-                }
-            }
-        }
-
         return true;
     },
 
@@ -197,44 +155,92 @@ const GameData = {
             return pcResult ? 'pc' : false;
         }
 
-        const insertData = {
-            user_id: this.userId,
-            character_id: this.currentCharacterId,
-            species: pokemon.species,
-            nickname: pokemon.nickname || pokemon.name,
-            level: pokemon.level,
-            current_hp: pokemon.currentHp,
-            max_hp: pokemon.stats.hp,
-            moves: pokemon.moves.map(m => ({ id: m.id, pp: m.currentPp })),
-            is_active: false,
-            slot: team.length + 1,
-            pokemon_id: pokemon.id || null,
-            iv_hp: pokemon.ivs?.hp ?? 15,
-            iv_attack: pokemon.ivs?.attack ?? 15,
-            iv_defense: pokemon.ivs?.defense ?? 15,
-            iv_sp_atk: pokemon.ivs?.spAtk ?? 15,
-            iv_sp_def: pokemon.ivs?.spDef ?? 15,
-            iv_speed: pokemon.ivs?.speed ?? 15,
-            ev_hp: pokemon.evs?.hp ?? 0,
-            ev_attack: pokemon.evs?.attack ?? 0,
-            ev_defense: pokemon.evs?.defense ?? 0,
-            ev_sp_atk: pokemon.evs?.spAtk ?? 0,
-            ev_sp_def: pokemon.evs?.spDef ?? 0,
-            ev_speed: pokemon.evs?.speed ?? 0,
-            nature: pokemon.nature || 'hardy',
-            status_effect: pokemon.statusEffect || null,
-            happiness: pokemon.happiness ?? 70,
-            is_shiny: pokemon.isShiny || false,
-            is_mega: pokemon.isMega || false,
-            held_item_id: pokemon.heldItemId || null,
-            power: window.calculatePokemonPower ? window.calculatePokemonPower(pokemon) : 0
+        const { data, error } = await window.db.rpc('secure_capture_pokemon', {
+            p_character_id: this.currentCharacterId,
+            p_pokemon_id: pokemon.id,
+            p_level: pokemon.level,
+            p_is_shiny: !!pokemon.isShiny,
+            p_moves: (pokemon.moves || []).map(m => ({ id: m.id, pp: m.currentPp }))
+        });
+
+        if (error || !data || data.error) {
+            console.error('[AddToTeam] secure_capture_pokemon error:', error || data?.error);
+            return false;
+        }
+
+        pokemon.dbId = data.id;
+        pokemon.level = data.level;
+        pokemon.ivs = {
+            hp: data.iv_hp, attack: data.iv_attack, defense: data.iv_defense,
+            spAtk: data.iv_sp_atk, spDef: data.iv_sp_def, speed: data.iv_speed
         };
-        const { data, error } = await window.db
-            .from('pokemon_team')
-            .insert(insertData)
-            .select();
-        if (error) { console.error('[AddToTeam] INSERT ERROR:', error); return false; }
+        pokemon.nature = data.nature;
+        pokemon.stats = {
+            hp: data.stats_hp, attack: data.stats_attack, defense: data.stats_defense,
+            spAtk: data.stats_sp_atk, spDef: data.stats_sp_def, speed: data.stats_speed
+        };
+        pokemon.currentHp = data.stats_hp;
         return 'team';
+    },
+
+    async grantExp(pokemonDbId, amount) {
+        if (!this.currentCharacterId || !pokemonDbId) return null;
+        const { data, error } = await window.db.rpc('secure_grant_exp', {
+            p_character_id: this.currentCharacterId,
+            p_pokemon_team_id: pokemonDbId,
+            p_amount: amount
+        });
+        if (error) { console.error('[GameData] secure_grant_exp error:', error); return null; }
+        return data;
+    },
+
+    async levelUp(pokemonDbId) {
+        if (!this.currentCharacterId || !pokemonDbId) return null;
+        const { data, error } = await window.db.rpc('secure_level_up', {
+            p_character_id: this.currentCharacterId,
+            p_pokemon_team_id: pokemonDbId
+        });
+        if (error) { console.error('[GameData] secure_level_up error:', error); return null; }
+        return data;
+    },
+
+    async makeShiny(pokemonDbId) {
+        if (!this.currentCharacterId || !pokemonDbId) return false;
+        const { error } = await window.db.rpc('secure_make_shiny', {
+            p_character_id: this.currentCharacterId,
+            p_pokemon_team_id: pokemonDbId
+        });
+        return !error;
+    },
+
+    async evolve(pokemonDbId, toPokemonId) {
+        if (!this.currentCharacterId || !pokemonDbId) return false;
+        const { error } = await window.db.rpc('secure_evolve', {
+            p_character_id: this.currentCharacterId,
+            p_pokemon_team_id: pokemonDbId,
+            p_to_pokemon_id: toPokemonId
+        });
+        return !error;
+    },
+
+    async megaEvolve(pokemonDbId, toPokemonId) {
+        if (!this.currentCharacterId || !pokemonDbId) return false;
+        const { error } = await window.db.rpc('secure_mega_evolve', {
+            p_character_id: this.currentCharacterId,
+            p_pokemon_team_id: pokemonDbId,
+            p_to_pokemon_id: toPokemonId
+        });
+        return !error;
+    },
+
+    async gainTrainerExp(amount) {
+        if (!this.currentCharacterId) return null;
+        const { data, error } = await window.db.rpc('secure_gain_trainer_exp', {
+            p_character_id: this.currentCharacterId,
+            p_amount: amount
+        });
+        if (error) { console.error('[GameData] secure_gain_trainer_exp error:', error); return null; }
+        return data;
     },
 
     async autoStorePokemonToPC(pokemon) {
