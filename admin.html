@@ -232,6 +232,73 @@
             loadEvents();
         }
 
+        function fmtDur(seconds) {
+            if (seconds == null || isNaN(seconds)) return '—';
+            if (seconds < 0) seconds = 0;
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) return h + 'h ' + m + 'm';
+            if (m > 0) return m + 'm ' + s + 's';
+            return s + 's';
+        }
+
+        let onlineTimer = null;
+
+        async function loadOnline() {
+            const list = document.getElementById('online-list');
+            if (!list) return;
+            try {
+                const { data } = await window.db.rpc('get_online_players');
+                if (data && data.success) {
+                    const players = data.players || [];
+                    list.innerHTML = players.length
+                        ? players.map(p => {
+                            const idle = p.idle_seconds;
+                            const idleColor = idle > 300 ? '#fbbf24' : idle > 420 ? '#e94560' : 'rgba(255,255,255,0.5)';
+                            return `<tr>
+                                <td>${esc(p.email || '—')}</td>
+                                <td><strong>${esc(p.player_name || '—')}</strong></td>
+                                <td class="time">${fmtDur(p.connected_seconds)}</td>
+                                <td class="time" style="color:${idleColor}">${fmtDur(idle)}</td>
+                                <td>
+                                    <button class="btn-ban ban" onclick="forceLogoutPlayer('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')">Desconectar</button>
+                                </td>
+                            </tr>`;
+                        }).join('')
+                        : '<tr><td colspan="5" class="empty">Nenhum jogador online agora.</td></tr>';
+                } else {
+                    list.innerHTML = '<tr><td colspan="5" class="empty">Erro: ' + esc((data && data.error) || 'sem resposta') + '</td></tr>';
+                }
+            } catch (e) {
+                list.innerHTML = '<tr><td colspan="5" class="empty">Falha ao carregar jogadores online.</td></tr>';
+            }
+        }
+
+        function toggleOnlinePanel() {
+            const panel = document.getElementById('online-panel');
+            if (!panel) return;
+            const showing = !panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', showing);
+            if (showing) {
+                if (onlineTimer) { clearInterval(onlineTimer); onlineTimer = null; }
+            } else {
+                loadOnline();
+                if (onlineTimer) clearInterval(onlineTimer);
+                onlineTimer = setInterval(loadOnline, 5000);
+            }
+        }
+
+        async function forceLogoutPlayer(userId, name) {
+            if (!confirm('Deseja desconectar ' + name + '?\nIsso encerra a sessão dele(a). Não é banimento — ele pode entrar novamente.')) return;
+            const { data, error } = await window.db.rpc('force_logout', { p_user_id: userId });
+            if (error || !data || !data.success) {
+                alert('Falha ao desconectar. ' + (error ? error.message : (data && data.error) || 'desconhecido'));
+                return;
+            }
+            loadOnline();
+        }
+
         async function toggleBan(userId, banned, username) {
             const label = banned ? 'banir' : 'desbanir';
             if (!confirm(`Deseja ${label} o jogador ${username || userId}?`)) return;
@@ -304,6 +371,7 @@
                             </div>
                             <div class="toolbar">
                                 <button onclick="loadEvents()">Atualizar</button>
+                                <button onclick="toggleOnlinePanel()">🟢 Contas conectadas</button>
                                 <button onclick="toggleDevicePanel()">📵 Dispositivos banidos</button>
                                 <select id="filter-type" onchange="currentFilter=this.value;loadEvents()">
                                     <option value="all">Todos os eventos</option>
@@ -314,6 +382,18 @@
                                     <option value="anomaly">anomaly</option>
                                 </select>
                                 <span class="updated" id="updated-at"></span>
+                            </div>
+                            <div id="online-panel" class="hidden" style="padding:0 22px 12px;">
+                                <div class="card">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>E-mail</th><th>Personagem</th><th>Conectado há</th><th>Inativo há</th><th>Ação</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                    <div id="online-list" style="max-height:200px;overflow-y:auto;"></div>
+                                </div>
                             </div>
                             <div id="device-panel" class="hidden" style="padding:0 22px 12px;">
                                 <div class="card">

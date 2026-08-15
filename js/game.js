@@ -396,6 +396,10 @@ class PokeFuryGame {
         if (this._lastPresenceTouch && now - this._lastPresenceTouch < 30000) return;
         this._lastPresenceTouch = now;
         if (!this.currentCharacterId || !window.db) return;
+        if (typeof window.db.rpc === 'function') {
+            window.db.rpc('register_connected', { p_character_id: this.currentCharacterId })
+                .then(() => {}).catch(() => {});
+        }
         window.db.from('game_saves')
             .update({ last_seen: new Date().toISOString() })
             .eq('id', this.currentCharacterId)

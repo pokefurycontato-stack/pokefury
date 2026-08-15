@@ -19,6 +19,7 @@ const WATCHDOG = {
     _bannedShown: false,
     _deviceHash: null,
     _deviceRegistered: false,
+    _forceLogoutSeen: null,
 };
 
 function computeDeviceHash() {
@@ -183,14 +184,46 @@ async function pollBanStatus() {
             .rpc('get_my_ban_status', { p_device_hash: deviceHash })
             .then(r => r)
             .catch(() => ({ data: null }));
-        if (data && data.success && (data.is_banned || data.device_banned)) {
-            if (data.device_banned && !data.is_banned) {
-                showBanned('Este dispositivo foi banido por violação das regras. Se você acha que isso é um erro, entre em contato com o suporte.');
-            } else {
-                showBanned();
+        if (data && data.success) {
+            // Logout forçado pelo admin (desconectar, não banir).
+            // Compara com o início da sessão: só desloga se o logout
+            // do admin for MAIS NOVO que quando a sessão começou.
+            const flMs = data.force_logout_at ? new Date(data.force_logout_at).getTime() : 0;
+            const sessionStart = WATCHDOG._sessionStartMs || 0;
+            if (flMs > 0 && flMs > sessionStart) {
+                forceLocalLogout();
+                return;
+            }
+            if (data.is_banned || data.device_banned) {
+                if (data.device_banned && !data.is_banned) {
+                    showBanned('Este dispositivo foi banido por violação das regras. Se você acha que isso é um erro, entre em contato com o suporte.');
+                } else {
+                    showBanned();
+                }
             }
         }
     } catch (e) { /* sem sessão ou erro de rede: ignora */ }
+}
+
+function forceLocalLogout() {
+    if (WATCHDOG._bannedShown) return;
+    WATCHDOG._bannedShown = true;
+    try { if (window.db) window.db.auth.signOut().catch(() => {}); } catch (e) {}
+    try { localStorage.clear(); } catch (e) {}
+    try {
+        const overlay = document.createElement('div');
+        overlay.id = 'force-logout-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(10,10,15,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;font-family:Inter,sans-serif;text-align:center;padding:24px;';
+        overlay.innerHTML =
+            '<div style="font-size:44px;">🔌</div>' +
+            '<div style="font-size:22px;font-weight:800;color:#60a5fa;">Sessão desconectada</div>' +
+            '<div style="font-size:14px;color:rgba(255,255,255,0.7);max-width:420px;">Um administrador desconectou esta conta. Você pode entrar novamente quando quiser.</div>' +
+            '<button id="fl-reload" style="margin-top:12px;padding:10px 28px;border:none;border-radius:8px;background:#e94560;color:#fff;font-weight:700;cursor:pointer;">Voltar para o início</button>';
+        document.body.appendChild(overlay);
+        document.getElementById('fl-reload').addEventListener('click', () => { location.href = '/'; });
+    } catch (e) {
+        location.href = '/';
+    }
 }
 
 function onRpcError(error, fnLabel) {
@@ -211,6 +244,23 @@ function onRpcError(error, fnLabel) {
 function setup() {
     // Checagem periódica de integridade
     setInterval(checkIntegrity, INTERVAL_MS);
+
+    // Marca o início da sessão: reinicia sempre que o usuário
+    // autentica (login/troca de conta), para o logout forçado
+    // só valer para desconexões feitas DEPOIS do login.
+    const markSessionStart = () => {
+        WATCHDOG._sessionStartMs = Date.now();
+    };
+    if (window.db && window.db.auth) {
+        try {
+            window.db.auth.onAuthStateChange((event) => {
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
+                    markSessionStart();
+                }
+            });
+        } catch (e) {}
+    }
+    markSessionStart();
 
     // Checa quando o jogador volta para a aba (provável momento de edição)
     document.addEventListener('visibilitychange', () => {
