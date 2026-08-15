@@ -273,6 +273,32 @@ class PokeFuryGame {
             pcArrowRight.addEventListener('click', () => this.navigatePC(1));
         }
 
+        const pcTrash = document.getElementById('pc-trash');
+        if (pcTrash) {
+            pcTrash.ondragover = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                pcTrash.style.background = 'rgba(233,69,96,0.35)';
+                pcTrash.style.borderColor = '#e94560';
+                pcTrash.style.transform = 'scale(1.08)';
+            };
+            pcTrash.ondragleave = () => {
+                pcTrash.style.background = 'rgba(0,0,0,0.25)';
+                pcTrash.style.borderColor = 'rgba(233,69,96,0.5)';
+                pcTrash.style.transform = '';
+            };
+            pcTrash.ondrop = (e) => {
+                e.preventDefault();
+                pcTrash.style.background = 'rgba(0,0,0,0.25)';
+                pcTrash.style.borderColor = 'rgba(233,69,96,0.5)';
+                pcTrash.style.transform = '';
+                const pcId = e.dataTransfer.getData('text/pc-pokemon-id');
+                if (!pcId) return;
+                const p = (this._pcBoxPokemon || []).find(x => x.id === pcId);
+                if (p) this.openDeletePCModal(p);
+            };
+        }
+
         const gymLeadersBtn = document.getElementById('btn-gym-leaders');
         if (gymLeadersBtn) {
             gymLeadersBtn.addEventListener('click', () => this.openGymLeaders());
@@ -3780,6 +3806,7 @@ class PokeFuryGame {
         slotsContainer.innerHTML = '';
 
         const boxPokemon = await window.GameData.getBoxPokemon(boxNum);
+        this._pcBoxPokemon = boxPokemon;
         const countEl = document.getElementById('pc-header').querySelector('div:last-child');
         if (countEl) countEl.textContent = `${boxPokemon.length}/30 Pokemon`;
 
@@ -3800,6 +3827,14 @@ class PokeFuryGame {
                 slot.style.borderColor = p.is_shiny ? '#ffd700' : 'rgba(255,255,255,0.2)';
 
                 slot.onclick = () => this.withdrawFromPC(p);
+
+                slot.draggable = true;
+                slot.ondragstart = (e) => {
+                    e.dataTransfer.setData('text/pc-pokemon-id', p.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    slot.style.opacity = '0.35';
+                };
+                slot.ondragend = () => { slot.style.opacity = '1'; };
 
                 slot.ondragover = (e) => { e.preventDefault(); slot.style.background = 'rgba(233,69,96,0.3)'; };
                 slot.ondragleave = () => { slot.style.background = 'rgba(0,0,0,0.4)'; };
@@ -3936,6 +3971,47 @@ class PokeFuryGame {
         this.updatePartyPanel();
         this.renderPCBox();
         if (this.overworld2d) this.overworld2d.updateFollower();
+    }
+
+    openDeletePCModal(boxPokemon) {
+        this._deletePendingPc = boxPokemon;
+        const msg = document.getElementById('pc-delete-msg');
+        if (msg) {
+            msg.textContent = `Tem certeza que quer DELETAR permanentemente ${boxPokemon.nickname || boxPokemon.species} (Nv.${boxPokemon.level})? Escreva "DELETE" na caixa abaixo para confirmar.`;
+        }
+        const input = document.getElementById('pc-delete-input');
+        if (input) input.value = '';
+        const confirmBtn = document.getElementById('pc-delete-confirm');
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.style.opacity = '0.5'; }
+        document.getElementById('pc-delete-modal').classList.remove('hidden');
+    }
+
+    closeDeletePCModal() {
+        document.getElementById('pc-delete-modal').classList.add('hidden');
+        this._deletePendingPc = null;
+    }
+
+    onDeletePCInput(input) {
+        const confirmBtn = document.getElementById('pc-delete-confirm');
+        if (!confirmBtn) return;
+        const ok = (input.value || '').trim().toUpperCase() === 'DELETE';
+        confirmBtn.disabled = !ok;
+        confirmBtn.style.opacity = ok ? '1' : '0.5';
+    }
+
+    async confirmDeletePC() {
+        const input = document.getElementById('pc-delete-input');
+        if (!input || (input.value || '').trim().toUpperCase() !== 'DELETE') return;
+        const p = this._deletePendingPc;
+        if (!p) { this.closeDeletePCModal(); return; }
+        const ok = await window.GameData.deleteBoxPokemon(p.id);
+        this.closeDeletePCModal();
+        if (ok) {
+            this.showToast(`${p.nickname || p.species} foi deletado permanentemente.`, 'success');
+            this.renderPCBox();
+        } else {
+            this.showToast('Não foi possível deletar o Pokémon. Tente novamente.', 'error');
+        }
     }
 
     switchCharacter() {

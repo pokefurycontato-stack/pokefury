@@ -368,13 +368,37 @@
                                 <span id="pc-box-name" style="color:#fff;font-family:Inter;font-size:14px;font-weight:700;">Box 1</span>
                                 <div style="color:rgba(255,255,255,0.5);font-family:Inter;font-size:11px;">0/30</div>
                             </div>
-                            <div id="pc-box-area" style="position:relative;width:420px;height:320px;">
-                                <img src="assets/boxpkm.png" style="width:100%;height:100%;image-rendering:auto;" alt="PC Box">
-                                <div id="pc-slots" style="position:absolute;top:calc(18% + 30px);left:10%;width:80%;height:calc(72% - 30px);display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(5,1fr);gap:3px;"></div>
-                                <div id="pc-arrow-left" style="position:absolute;top:0;left:0;width:12%;height:18%;cursor:pointer;display:flex;align-items:center;justify-content:center;"></div>
-                                <div id="pc-arrow-right" style="position:absolute;top:0;right:0;width:12%;height:18%;cursor:pointer;display:flex;align-items:center;justify-content:center;"></div>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div id="pc-box-area" style="position:relative;width:420px;height:320px;">
+                                    <img src="assets/boxpkm.png" style="width:100%;height:100%;image-rendering:auto;" alt="PC Box">
+                                    <div id="pc-slots" style="position:absolute;top:calc(18% + 30px);left:10%;width:80%;height:calc(72% - 30px);display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(5,1fr);gap:3px;"></div>
+                                    <div id="pc-arrow-left" style="position:absolute;top:0;left:0;width:12%;height:18%;cursor:pointer;display:flex;align-items:center;justify-content:center;"></div>
+                                    <div id="pc-arrow-right" style="position:absolute;top:0;right:0;width:12%;height:18%;cursor:pointer;display:flex;align-items:center;justify-content:center;"></div>
+                                </div>
+                                <div id="pc-trash" title="Arraste um Pokémon do PC até aqui para deletá-lo" style="width:72px;height:72px;border-radius:12px;background:rgba(0,0,0,0.25);border:1px dashed rgba(233,69,96,0.5);display:flex;align-items:center;justify-content:center;color:#e94560;cursor:pointer;transition:background 0.15s,transform 0.15s,border-color 0.15s;flex-shrink:0;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                </div>
                             </div>
                             <div id="pc-party-bar" style="width:100%;margin-top:8px;padding:6px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;"></div>
+                        </div>
+                    </div>
+
+                    <!-- PC Delete Confirmation Modal -->
+                    <div id="pc-delete-modal" class="hidden" style="position:fixed;inset:0;z-index:960;display:flex;align-items:center;justify-content:center;">
+                        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);" onclick="window.pokefury.closeDeletePCModal()"></div>
+                        <div style="position:relative;width:440px;max-width:92vw;background:#151a22;border:1px solid rgba(233,69,96,0.45);border-radius:14px;padding:22px 24px;font-family:Inter,sans-serif;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,0.55);">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                                <div style="width:36px;height:36px;border-radius:8px;background:rgba(233,69,96,0.15);display:flex;align-items:center;justify-content:center;color:#e94560;flex-shrink:0;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                </div>
+                                <div style="font-size:16px;font-weight:800;color:#e94560;">Deletar Pokémon</div>
+                            </div>
+                            <div id="pc-delete-msg" style="font-size:13px;line-height:1.6;color:rgba(255,255,255,0.85);margin-bottom:14px;"></div>
+                            <input id="pc-delete-input" type="text" autocomplete="off" spellcheck="false" placeholder="Digite DELETE" oninput="window.pokefury.onDeletePCInput(this)" style="width:100%;box-sizing:border-box;padding:11px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#fff;font-family:Inter;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;outline:none;" />
+                            <div style="display:flex;gap:10px;margin-top:16px;">
+                                <button onclick="window.pokefury.closeDeletePCModal()" style="flex:1;padding:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#ccc;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter;">Cancelar</button>
+                                <button id="pc-delete-confirm" disabled onclick="window.pokefury.confirmDeletePC()" style="flex:1;padding:10px;background:#e94560;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:Inter;opacity:0.5;">Confirmar</button>
+                            </div>
                         </div>
                     </div>
 
@@ -821,7 +845,7 @@
     <script type="module" src="js/utils.js?v=20260816f"></script>
     <script type="module" src="js/battle.js?v=20260816g"></script>
     <script type="module" src="js/ui.js?v=20260816b"></script>
-    <script type="module" src="js/game.js?v=20260816j"></script>
+    <script type="module" src="js/game.js?v=20260816k"></script>
     <script type="module" src="js/security.js?v=20260816h"></script>
     <script type="module" src="js/afk.js"></script>
     <script src="js/pvp-system.js"></script>

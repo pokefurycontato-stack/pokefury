@@ -495,11 +495,12 @@ const GameData = {
     async deleteBoxPokemon(boxId) {
         if (!this.currentCharacterId) return false;
         try {
-            const { error } = await window.db.rpc('safe_delete_pc_pokemon', {
+            const { data, error } = await window.db.rpc('safe_delete_pc_pokemon', {
                 p_character_id: this.currentCharacterId,
                 p_pokemon_pc_id: boxId
             });
-            return !error;
+            if (error || !data || data.error) return false;
+            return data.success === true;
         } catch (e) { return false; }
     },
 };
