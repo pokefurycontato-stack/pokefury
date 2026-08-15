@@ -3142,7 +3142,7 @@ class PokeFuryGame {
         if (!list) return;
 
         // Evita recriar o DOM (e reiniciar GIFs) se nada mudou
-        const sig = JSON.stringify(this.playerTeam.map(p => p ? [p.id, p.currentHp, p.heldItemId, p.level, p.fainted, p.isShiny] : null));
+        const sig = JSON.stringify(this.playerTeam.map(p => p ? [p.id, p.currentHp, p.experience, p.heldItemId, p.level, p.fainted, p.isShiny] : null));
         if (list.dataset.sig === sig) return;
         list.dataset.sig = sig;
 
@@ -3294,6 +3294,9 @@ class PokeFuryGame {
         if (healed > 0) {
             await this.saveTeam();
             this.updatePartyPanel();
+            const cityPartyList = document.getElementById('city-party-list');
+            if (cityPartyList) this.updatePartyPanel(cityPartyList);
+            if (this.overworld2d) this.overworld2d.updateFollower();
             this.showTransitionBanner('Seus Pokemon foram curados!');
         }
     }

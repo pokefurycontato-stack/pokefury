@@ -661,7 +661,7 @@ if (typeof window !== 'undefined') { window.getPokemonSpriteAdjust = getPokemonS
     });
 
     if (document.body) {
-        observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style'] });
         document.querySelectorAll('img').forEach(applyTo);
         window.__pokemonSpriteAdjustObserver = observer;
     }
