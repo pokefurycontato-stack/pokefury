@@ -255,23 +255,32 @@
                     list.innerHTML = players.length
                         ? players.map(p => {
                             const idle = p.idle_seconds;
-                            const idleColor = idle > 300 ? '#fbbf24' : idle > 420 ? '#e94560' : 'rgba(255,255,255,0.5)';
+                            const idleBadge = idle > 420 ? `<span class="badge server_reject" style="background:rgba(233,69,96,0.25);color:#ff6b81;">${fmtDur(idle)}</span>`
+                                          : idle > 300 ? `<span class="badge rate_limit" style="background:rgba(245,158,11,0.25);color:#fbbf24;">${fmtDur(idle)}</span>`
+                                          : `<span class="badge other" style="background:rgba(34,197,94,0.2);color:#4ade80;">${fmtDur(idle)}</span>`;
                             return `<tr>
-                                <td>${esc(p.email || '—')}</td>
-                                <td><strong>${esc(p.player_name || '—')}</strong></td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#e94560,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">${esc((p.player_name || '?').charAt(0).toUpperCase())}</div>
+                                        <div>
+                                            <div style="font-weight:700;color:#fff;">${esc(p.player_name || '—')}</div>
+                                            <div style="font-size:11px;color:rgba(255,255,255,0.4);">${esc(p.email || '—')}</div>
+                                        </div>
+                                    </div>
+                                </td>
                                 <td class="time">${fmtDur(p.connected_seconds)}</td>
-                                <td class="time" style="color:${idleColor}">${fmtDur(idle)}</td>
+                                <td>${idleBadge}</td>
                                 <td>
                                     <button class="btn-ban ban" onclick="forceLogoutPlayer('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')">Desconectar</button>
                                 </td>
                             </tr>`;
                         }).join('')
-                        : '<tr><td colspan="5" class="empty">Nenhum jogador online agora.</td></tr>';
+                        : '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhum jogador online agora.</td></tr>';
                 } else {
-                    list.innerHTML = '<tr><td colspan="5" class="empty">Erro: ' + esc((data && data.error) || 'sem resposta') + '</td></tr>';
+                    list.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Erro: ' + esc((data && data.error) || 'sem resposta') + '</td></tr>';
                 }
             } catch (e) {
-                list.innerHTML = '<tr><td colspan="5" class="empty">Falha ao carregar jogadores online.</td></tr>';
+                list.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Falha ao carregar jogadores online.</td></tr>';
             }
         }
 
@@ -335,7 +344,7 @@
             }).join('');
 
             const listEl = document.getElementById('event-list');
-            if (listEl) listEl.innerHTML = rows || '<div class="empty">Nenhum evento registrado.</div>';
+            if (listEl) listEl.innerHTML = rows || '<tr><td colspan="6" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhum evento registrado.</td></tr>';
         }
 
         function switchView(view) {
@@ -385,38 +394,44 @@
                             </div>
                             <div id="online-panel" class="hidden" style="padding:0 22px 12px;">
                                 <div class="card">
+                                    <div style="max-height:260px;overflow-y:auto;">
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>E-mail</th><th>Personagem</th><th>Conectado há</th><th>Inativo há</th><th>Ação</th>
+                                                <th>Jogador</th><th>Conectado há</th><th>Inativo há</th><th>Ação</th>
                                             </tr>
                                         </thead>
+                                        <tbody id="online-list"></tbody>
                                     </table>
-                                    <div id="online-list" style="max-height:200px;overflow-y:auto;"></div>
+                                    </div>
                                 </div>
                             </div>
                             <div id="device-panel" class="hidden" style="padding:0 22px 12px;">
                                 <div class="card">
+                                    <div style="max-height:260px;overflow-y:auto;">
                                     <table>
                                         <thead>
                                             <tr>
                                                 <th>Desde</th><th>Dispositivo</th><th>Motivo</th><th>Usuários</th><th>Ação</th>
                                             </tr>
                                         </thead>
+                                        <tbody id="device-list"></tbody>
                                     </table>
-                                    <div id="device-list" style="max-height:200px;overflow-y:auto;"></div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="sec-body">
                                 <div class="card">
+                                    <div style="max-height:calc(100vh - 210px);overflow-y:auto;">
                                     <table>
                                         <thead>
                                             <tr>
                                                 <th>Data</th><th>Jogador</th><th>Tipo</th><th>Função</th><th>Detalhe</th><th>Ação</th>
                                             </tr>
                                         </thead>
+                                        <tbody id="event-list"></tbody>
                                     </table>
-                                    <div id="event-list" style="max-height:calc(100vh - 210px);overflow-y:auto;"></div>
+                                    </div>
                                 </div>
                             </div>
                         </section>
