@@ -702,7 +702,8 @@ class CityScreen {
         try {
             const { data, error } = await window.db.from('city_npcs').select('*').limit(5000);
             if (error) throw error;
-            this.npcs = (data || []).map(n => ({
+            // Aviadora (region_selector) removida: regioes unificadas, sem viagem entre regioes
+            this.npcs = (data || []).filter(n => n.npc_type !== 'region_selector').map(n => ({
                 id: n.id, npc_type: n.npc_type, name: n.name,
                 pos_x: n.pos_x, pos_y: n.pos_y,
                 width: n.width, height: n.height,
@@ -808,19 +809,17 @@ class CityScreen {
         if (!game || !game.regionManager) return [];
         let encounters = [];
         try {
-            let mapId = null;
             if (biome) {
-                const region = game.currentRegion;
-                if (region) {
-                    const maps = await game.regionManager.loadRegionMaps(region.id);
-                    const biomeMap = (maps || []).find(m =>
-                        String(m.name || '').trim().toLowerCase() === String(biome).trim().toLowerCase()
-                    );
-                    if (biomeMap) mapId = biomeMap.id;
+                // Todas as regioes unificadas: todos os mapas com o nome do bioma
+                const biomeMaps = await game.regionManager.loadMapsByBiome(biome);
+                for (const m of (biomeMaps || [])) {
+                    const list = await game.regionManager.loadMapEncounters(m.id);
+                    encounters = encounters.concat(list || []);
                 }
             }
-            if (!mapId) mapId = game.currentMap?.id;
-            if (mapId) encounters = await game.regionManager.loadMapEncounters(mapId);
+            if ((!encounters || encounters.length === 0) && game.currentMap?.id) {
+                encounters = await game.regionManager.loadMapEncounters(game.currentMap.id);
+            }
         } catch (e) {
         }
         return encounters;
@@ -1118,26 +1117,16 @@ class CityScreen {
 
         let encounters = [];
         try {
-            let mapId = null;
             if (zone.biome) {
-                // Resolve o mapa do bioma na regiao atual do treinador
-                const region = game.currentRegion;
-                if (region && game.regionManager) {
-                    const maps = await game.regionManager.loadRegionMaps(region.id);
-                    const biomeMap = (maps || []).find(m =>
-                        String(m.name || '').trim().toLowerCase() === String(zone.biome).trim().toLowerCase()
-                    );
-                    if (biomeMap) {
-                        mapId = biomeMap.id;
-                    } else {
-                    }
+                // Todas as regioes unificadas: todos os mapas com o nome do bioma
+                const biomeMaps = await game.regionManager.loadMapsByBiome(zone.biome);
+                for (const m of (biomeMaps || [])) {
+                    const list = await game.regionManager.loadMapEncounters(m.id);
+                    encounters = encounters.concat(list || []);
                 }
             }
-            if (!mapId) {
-                mapId = game.currentMap?.id;
-            }
-            if (mapId && game.regionManager) {
-                encounters = await game.regionManager.loadMapEncounters(mapId);
+            if ((!encounters || encounters.length === 0) && game.currentMap?.id) {
+                encounters = await game.regionManager.loadMapEncounters(game.currentMap.id);
             }
         } catch (e) {
         }

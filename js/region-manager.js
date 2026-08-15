@@ -44,6 +44,13 @@ export class RegionManager {
         return this.encounters;
     }
 
+    async loadMapsByBiome(biome) {
+        const { data, error } = await this.db.from('region_maps')
+            .select('*').ilike('name', biome).order('sort_order');
+        if (error) throw error;
+        return data || [];
+    }
+
     async listMapImages() {
         try {
             const { data, error } = await this.db.storage.from('sprites').list('maps');
