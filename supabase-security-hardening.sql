@@ -190,7 +190,7 @@ DROP FUNCTION IF EXISTS secure_save_team(UUID, JSONB);
 CREATE OR REPLACE FUNCTION secure_save_team(p_character_id UUID, p_team JSONB) RETURNS JSONB AS $$
 DECLARE
   v_user_id UUID; v_row RECORD; v_el JSONB; v_pid UUID;
-  v_poke RECORD; v_max_hp INT; v_power INT;
+  v_poke RECORD; v_max_hp INT; v_power INT; v_legal_moves JSONB;
 BEGIN
   IF auth.uid() IS NULL THEN RETURN jsonb_build_object('error','Not authenticated'); END IF;
   SELECT user_id INTO v_user_id FROM game_saves WHERE id = p_character_id;
@@ -216,10 +216,23 @@ BEGIN
       v_power := COALESCE(v_row.power, 0);
     END IF;
 
+    -- Valida movimentos: so aceita moves que o pokemon pode aprender (pokemon_moves_v2)
+    SELECT COALESCE(jsonb_agg(jsonb_build_object('id', (cm.move_id)::INT, 'pp', LEAST((cm.pp)::INT, 40))), '[]'::jsonb)
+    INTO v_legal_moves
+    FROM (
+      SELECT elem->>'id' AS move_id, COALESCE(elem->>'pp', '0') AS pp
+      FROM jsonb_array_elements(COALESCE((v_el->>'moves')::jsonb, '[]'::jsonb)) elem
+    ) cm
+    WHERE EXISTS (
+      SELECT 1 FROM pokemon_moves_v2 pmv
+      WHERE pmv.move_id = (cm.move_id)::INT
+        AND pmv.pokemon_id IN (v_row.pokemon_id, COALESCE(v_poke.base_pokemon_id, v_row.pokemon_id))
+    );
+
     UPDATE pokemon_team SET
       current_hp = LEAST(v_max_hp, COALESCE((v_el->>'current_hp')::INT, v_row.current_hp)),
       status_effect = COALESCE(v_el->>'status_effect', v_row.status_effect),
-      moves = COALESCE((v_el->>'moves')::jsonb, v_row.moves),
+      moves = v_legal_moves,
       held_item_id = COALESCE((v_el->>'held_item_id')::INT, v_row.held_item_id),
       slot = COALESCE((v_el->>'slot')::INT, v_row.slot),
       power = v_power
