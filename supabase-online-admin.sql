@@ -98,8 +98,10 @@ BEGIN
   END IF;
 
   -- Revoga o refresh token/sessões ativas (força re-autenticação)
+  -- ATENÇÃO: auth.refresh_tokens.user_id é varchar no Supabase,
+  -- então compara com cast para evitar "operator does not exist".
   DELETE FROM auth.sessions WHERE user_id = p_user_id;
-  DELETE FROM auth.refresh_tokens WHERE user_id = p_user_id;
+  DELETE FROM auth.refresh_tokens WHERE user_id::uuid = p_user_id;
 
   -- Marca para o client fazer logout local imediato
   UPDATE profiles SET force_logout_at = NOW() WHERE id = p_user_id;
