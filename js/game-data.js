@@ -463,13 +463,22 @@ const GameData = {
     async withdrawPokemon(boxId) {
         if (!this.currentCharacterId) return null;
         try {
-            const { data, error } = await window.db.rpc('safe_retrieve_pc_pokemon', {
+            const { data, error } = await window.db.rpc('secure_withdraw_pc', {
                 p_character_id: this.currentCharacterId,
                 p_pokemon_pc_id: boxId
             });
             if (error || !data?.success) return null;
             return { id: data.id, species: data.pokemon_name };
         } catch (e) { return null; }
+    },
+
+    async removeFromTeam(pokemonDbId) {
+        if (!this.currentCharacterId || !pokemonDbId) return false;
+        const { error } = await window.db.rpc('secure_delete_team_pokemon', {
+            p_character_id: this.currentCharacterId,
+            p_pokemon_team_id: pokemonDbId
+        });
+        return !error;
     },
 
     async deleteBoxPokemon(boxId) {

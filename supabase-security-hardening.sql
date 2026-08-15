@@ -438,3 +438,51 @@ BEGIN
   RETURN jsonb_build_object('success', true, 'level', v_level, 'experience', v_exp);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ------------------------------------------------------------
+-- 10. SACAR DO PC seguro (move pokemon_pc -> pokemon_team no servidor)
+-- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS secure_withdraw_pc(UUID, UUID);
+CREATE OR REPLACE FUNCTION secure_withdraw_pc(p_character_id UUID, p_pokemon_pc_id UUID) RETURNS JSONB AS $$
+DECLARE
+  v_user_id UUID; v_poke RECORD; v_pc RECORD; v_team_count INT; v_power INT; v_new_id UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN jsonb_build_object('error','Not authenticated'); END IF;
+  SELECT user_id INTO v_user_id FROM game_saves WHERE id = p_character_id;
+  IF v_user_id IS DISTINCT FROM auth.uid() THEN RETURN jsonb_build_object('error','Not authorized'); END IF;
+
+  SELECT * INTO v_pc FROM pokemon_pc WHERE id = p_pokemon_pc_id AND character_id = p_character_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('error','Pokemon not found in PC'); END IF;
+
+  SELECT COUNT(*) INTO v_team_count FROM pokemon_team WHERE character_id = p_character_id;
+  IF v_team_count >= 6 THEN RETURN jsonb_build_object('error','Team full'); END IF;
+
+  SELECT * INTO v_poke FROM pokemon WHERE id = v_pc.pokemon_id;
+  v_power := compute_power(COALESCE(v_poke.hp,50), COALESCE(v_poke.attack,50), COALESCE(v_poke.defense,50), COALESCE(v_poke.sp_atk,50), COALESCE(v_poke.sp_def,50), COALESCE(v_poke.speed,50),
+    v_pc.level, v_pc.iv_hp, v_pc.iv_attack, v_pc.iv_defense, v_pc.iv_sp_atk, v_pc.iv_sp_def, v_pc.iv_speed,
+    v_pc.ev_hp, v_pc.ev_attack, v_pc.ev_defense, v_pc.ev_sp_atk, v_pc.ev_sp_def, v_pc.ev_speed, v_pc.nature);
+
+  INSERT INTO pokemon_team (user_id, character_id, pokemon_id, species, nickname, level, current_hp, max_hp, experience, moves, is_active, slot, iv_hp, iv_attack, iv_defense, iv_sp_atk, iv_sp_def, iv_speed, ev_hp, ev_attack, ev_defense, ev_sp_atk, ev_sp_def, ev_speed, nature, happiness, is_shiny, is_mega, held_item_id, power)
+  VALUES (auth.uid(), p_character_id, v_pc.pokemon_id, v_pc.species, COALESCE(v_pc.nickname, v_pc.species), v_pc.level, COALESCE(v_pc.current_hp, v_pc.max_hp), COALESCE(v_pc.max_hp, 10), COALESCE(v_pc.experience, 0), COALESCE(v_pc.moves, '[]'::jsonb), false, v_team_count + 1, v_pc.iv_hp, v_pc.iv_attack, v_pc.iv_defense, v_pc.iv_sp_atk, v_pc.iv_sp_def, v_pc.iv_speed, v_pc.ev_hp, v_pc.ev_attack, v_pc.ev_defense, v_pc.ev_sp_atk, v_pc.ev_sp_def, v_pc.ev_speed, v_pc.nature, COALESCE(v_pc.happiness, 70), v_pc.is_shiny, false, v_pc.held_item_id, v_power)
+  RETURNING id INTO v_new_id;
+
+  DELETE FROM pokemon_pc WHERE id = p_pokemon_pc_id;
+
+  RETURN jsonb_build_object('success', true, 'id', v_new_id, 'pokemon_name', v_pc.species);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ------------------------------------------------------------
+-- 11. REMOVER do time (deposito no PC / liberar) seguro
+-- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS secure_delete_team_pokemon(UUID, UUID);
+CREATE OR REPLACE FUNCTION secure_delete_team_pokemon(p_character_id UUID, p_pokemon_team_id UUID) RETURNS JSONB AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN jsonb_build_object('error','Not authenticated'); END IF;
+  IF NOT EXISTS(SELECT 1 FROM pokemon_team WHERE id = p_pokemon_team_id AND character_id = p_character_id) THEN
+    RETURN jsonb_build_object('error','Not authorized');
+  END IF;
+  DELETE FROM pokemon_team WHERE id = p_pokemon_team_id AND character_id = p_character_id;
+  RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

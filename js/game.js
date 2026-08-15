@@ -3806,6 +3806,7 @@ class PokeFuryGame {
         if (!pokemon) return;
         const success = await window.GameData.storePokemon(pokemon, boxNumber, slotIndex);
         if (success) {
+            if (pokemon.dbId) await window.GameData.removeFromTeam(pokemon.dbId);
             this.playerTeam.splice(partyIndex, 1);
             await this.saveTeam();
             this.updatePartyPanel();
