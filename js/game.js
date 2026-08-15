@@ -2910,6 +2910,7 @@ class PokeFuryGame {
                     }
 
                     await showBattleMessage(`${pokemon.name} evoluiu para ${newPokemonData.name}!`);
+                    this.showToast(`${pokemon.name} evoluiu para ${newPokemonData.name}!`, 'success');
                     break;
                 }
             }
@@ -3628,8 +3629,8 @@ class PokeFuryGame {
         const removed = await window.GameData.removeItem(inv.item_id, 1);
         if (!removed) { console.error('Erro ao usar item!'); return; }
 
+        const prevLevel = pokemon.level;
         if (item.effect === 'level_up') {
-            const prevLevel = pokemon.level;
             const res = pokemon.dbId ? await window.GameData.levelUp(pokemon.dbId) : null;
             if (res && res.level != null) {
                 pokemon.level = res.level;
@@ -3653,7 +3654,6 @@ class PokeFuryGame {
             else alert(`${pokemon.name} subiu para Nv.${pokemon.level}!`);
         } else if (item.effect && item.effect.startsWith('exp_')) {
             const amount = item.effect_value || 100;
-            const prevLevel = pokemon.level;
             const res = pokemon.dbId ? await window.GameData.grantExp(pokemon.dbId, amount) : null;
             if (res && res.level != null) {
                 pokemon.level = res.level;
@@ -3698,6 +3698,23 @@ class PokeFuryGame {
             if (typeof this.showToast === 'function') this.showToast(`${pokemon.name} agora é Shiny!`, 'success');
             else alert(`${pokemon.name} agora é Shiny!`);
         }
+
+        if (pokemon.level > prevLevel) {
+            const learnableMoves = await learnLevelUpMoves(pokemon, prevLevel, pokemon.level);
+            for (const newMove of learnableMoves) {
+                const choice = await showMoveLearnPopup(pokemon, newMove, pokemon.moves);
+                if (choice.teach) {
+                    if (choice.replaceIndex >= 0) {
+                        pokemon.moves[choice.replaceIndex] = { ...newMove, id: newMove.id, currentPp: newMove.pp || 35 };
+                    } else {
+                        pokemon.moves.push({ ...newMove, id: newMove.id, currentPp: newMove.pp || 35 });
+                    }
+                }
+            }
+            const abilityName = await checkAbilityChange(pokemon);
+            if (abilityName) this.showToast(`${pokemon.name} agora tem a habilidade ${abilityName}!`, 'success');
+        }
+        await this.checkEvolutions();
 
         await this.saveTeam();
         this.updatePartyPanel();
