@@ -2869,52 +2869,55 @@ class PokeFuryGame {
 
     async checkEvolutions() {
         if (!this.playerTeam) return;
-
         for (const pokemon of this.playerTeam) {
             if (pokemon.fainted) continue;
+            let evolved = true;
+            while (evolved) {
+                evolved = await this._evolveOneStep(pokemon);
+            }
+        }
+    }
 
-            const { data: evolutions } = await window.db
+    async _evolveOneStep(pokemon) {
+        let evolutions;
+        try {
+            const { data } = await window.db
                 .from('pokemon_evolutions')
                 .select('*')
                 .eq('from_pokemon_id', pokemon.id);
+            evolutions = data;
+        } catch (e) { return false; }
+        if (!evolutions || evolutions.length === 0) return false;
 
-            if (!evolutions || evolutions.length === 0) continue;
+        for (const evo of evolutions) {
+            const isLevelEvo = evo.evolution_method === 'level' || evo.evolution_method === 'level-up';
+            if (!isLevelEvo || pokemon.level < (evo.min_level || 0)) continue;
 
-            for (const evo of evolutions) {
-                let canEvolve = false;
+            const newPokemonData = await PokeAPI.ensurePokemon(evo.to_pokemon_id);
+            if (!newPokemonData) continue;
 
-                if (evo.evolution_method === 'level' && pokemon.level >= evo.min_level) {
-                    canEvolve = true;
-                }
+            const oldDbId = pokemon.dbId;
+            const oldLevel = pokemon.level;
+            const oldExp = pokemon.experience || 0;
+            const oldIvs = pokemon.ivs;
+            const oldEvs = pokemon.evs;
+            const oldNature = pokemon.nature;
+            const oldShiny = pokemon.isShiny;
 
-                if (canEvolve) {
-                    const newPokemonData = await PokeAPI.ensurePokemon(evo.to_pokemon_id);
-                    if (!newPokemonData) continue;
+            Object.assign(pokemon, await createPokemon(newPokemonData, oldLevel, oldIvs, oldEvs, oldNature, oldShiny));
+            pokemon.experience = oldExp;
+            pokemon.currentHp = pokemon.stats.hp;
+            pokemon.dbId = oldDbId;
 
-                    const oldDbId = pokemon.dbId;
-                    const oldLevel = pokemon.level;
-                    const oldExp = pokemon.experience || 0;
-                    const oldMoves = pokemon.moves;
-                    const oldIvs = pokemon.ivs;
-                    const oldEvs = pokemon.evs;
-                    const oldNature = pokemon.nature;
-                    const oldShiny = pokemon.isShiny;
-
-                    Object.assign(pokemon, await createPokemon(newPokemonData, oldLevel, oldIvs, oldEvs, oldNature, oldShiny));
-                    pokemon.experience = oldExp;
-                    pokemon.currentHp = pokemon.stats.hp;
-                    pokemon.dbId = oldDbId;
-
-                    if (oldDbId) {
-                        await window.GameData.evolve(oldDbId, evo.to_pokemon_id);
-                    }
-
-                    await showBattleMessage(`${pokemon.name} evoluiu para ${newPokemonData.name}!`);
-                    this.showToast(`${pokemon.name} evoluiu para ${newPokemonData.name}!`, 'success');
-                    break;
-                }
+            if (oldDbId) {
+                await window.GameData.evolve(oldDbId, evo.to_pokemon_id);
             }
+
+            await showBattleMessage(`${pokemon.name} evoluiu para ${newPokemonData.name}!`);
+            this.showToast(`${pokemon.name} evoluiu para ${newPokemonData.name}!`, 'success');
+            return true;
         }
+        return false;
     }
 
     positionBattleScreen() {
@@ -3699,26 +3702,32 @@ class PokeFuryGame {
             else alert(`${pokemon.name} agora é Shiny!`);
         }
 
-        if (pokemon.level > prevLevel) {
-            const learnableMoves = await learnLevelUpMoves(pokemon, prevLevel, pokemon.level);
-            for (const newMove of learnableMoves) {
-                const choice = await showMoveLearnPopup(pokemon, newMove, pokemon.moves);
-                if (choice.teach) {
-                    if (choice.replaceIndex >= 0) {
-                        pokemon.moves[choice.replaceIndex] = { ...newMove, id: newMove.id, currentPp: newMove.pp || 35 };
-                    } else {
-                        pokemon.moves.push({ ...newMove, id: newMove.id, currentPp: newMove.pp || 35 });
+        this.updatePartyPanel();
+        await this.renderMochila();
+
+        try {
+            if (pokemon.level > prevLevel) {
+                const learnableMoves = await learnLevelUpMoves(pokemon, prevLevel, pokemon.level);
+                for (const newMove of learnableMoves) {
+                    const choice = await showMoveLearnPopup(pokemon, newMove, pokemon.moves);
+                    if (choice.teach) {
+                        if (choice.replaceIndex >= 0) {
+                            pokemon.moves[choice.replaceIndex] = { ...newMove, id: newMove.id, currentPp: newMove.pp || 35 };
+                        } else {
+                            pokemon.moves.push({ ...newMove, id: newMove.id, currentPp: newMove.pp || 35 });
+                        }
                     }
                 }
+                const abilityName = await checkAbilityChange(pokemon);
+                if (abilityName) this.showToast(`${pokemon.name} agora tem a habilidade ${abilityName}!`, 'success');
             }
-            const abilityName = await checkAbilityChange(pokemon);
-            if (abilityName) this.showToast(`${pokemon.name} agora tem a habilidade ${abilityName}!`, 'success');
+            await this.checkEvolutions();
+        } catch (e) {
+            console.error('[Item] level-up effects error:', e);
         }
-        await this.checkEvolutions();
 
         await this.saveTeam();
         this.updatePartyPanel();
-        this.renderMochila();
     }
 
     getExpForNext(level) {
