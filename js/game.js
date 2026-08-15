@@ -2290,6 +2290,7 @@ class PokeFuryGame {
             this._winStreak++;
             const enemy = this.enemyTeam[0];
             const hasAmuletCoin = this.playerTeam.some(p => p.heldItemId === 220);
+            if (window.SecurityWatchdog) window.SecurityWatchdog.check();
             const { data: rewardData, error: rewardError } = await window.db.rpc('calculate_battle_reward', {
                 p_character_id: this.currentCharacterId,
                 p_enemy_pokemon_id: enemy.id || enemy.pokemonId || 0,
@@ -2298,6 +2299,7 @@ class PokeFuryGame {
                 p_amulet_coin: hasAmuletCoin
             });
             if (rewardError || !rewardData?.success) {
+                if (window.SecurityWatchdog) window.SecurityWatchdog.onRpcError(rewardError || rewardData, 'calculate_battle_reward');
                 console.error('[Battle] Reward delivery failed:', rewardError);
                 this.showToast('A recompensa será sincronizada novamente.', 'warning');
             }

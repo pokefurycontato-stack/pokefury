@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>PokeFury Admin - Segurança</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0d0f1a;
+            color: #fff;
+            font-family: Inter, sans-serif;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+        header h1 { font-size: 22px; font-weight: 900; letter-spacing: 0.5px; }
+        header h1 span { color: #e94560; }
+        .chip { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); padding: 6px 12px; border-radius: 20px; font-size: 12px; }
+        .chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .dot.on { background: #22c55e; }
+        .dot.off { background: #6b7280; }
+        .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .toolbar button, .toolbar select {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: Inter, sans-serif;
+        }
+        .toolbar button:hover { background: rgba(255,255,255,0.16); }
+        .toolbar .updated { font-size: 12px; color: rgba(255,255,255,0.45); }
+        .card {
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; overflow: hidden;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            text-align: left; padding: 10px 12px; background: rgba(255,255,255,0.06);
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,0.55);
+            position: sticky; top: 0;
+        }
+        tbody td { padding: 10px 12px; border-top: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .badge.function_tamper { background: rgba(233,69,96,0.2); color: #ff6b81; }
+        .badge.rate_limit { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .badge.client_error { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .badge.server_reject { background: rgba(168,85,247,0.2); color: #c084fc; }
+        .badge.anomaly { background: rgba(139,92,246,0.2); color: #a78bfa; }
+        .badge.other { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
+        .mono { font-family: 'Consolas', monospace; font-size: 12px; color: rgba(255,255,255,0.75); }
+        .detail { font-size: 11px; color: rgba(255,255,255,0.55); max-width: 280px; word-break: break-word; }
+        .time { white-space: nowrap; color: rgba(255,255,255,0.55); font-size: 12px; }
+        .btn-ban {
+            padding: 5px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: Inter, sans-serif;
+        }
+        .btn-ban.ban { background: #e94560; color: #fff; }
+        .btn-ban.unban { background: rgba(255,255,255,0.14); color: #fff; }
+        .banned-flag { color: #ff6b81; font-weight: 700; font-size: 11px; }
+        .empty { padding: 40px; text-align: center; color: rgba(255,255,255,0.4); }
+        .login-box { max-width: 380px; margin: 80px auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 28px; }
+        .login-box h2 { font-size: 20px; margin-bottom: 18px; }
+        .login-box input {
+            width: 100%; padding: 11px 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.06); color: #fff; font-size: 14px; font-family: Inter, sans-serif;
+        }
+        .login-box button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #e94560; color: #fff; font-weight: 700; cursor: pointer; font-family: Inter, sans-serif; }
+        .error { color: #ff6b81; font-size: 13px; margin-top: 10px; }
+        .denied { text-align: center; padding: 80px 20px; color: rgba(255,255,255,0.7); }
+        .denied h2 { color: #ff6b81; margin-bottom: 12px; }
+        a.back { color: #60a5fa; text-decoration: none; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="app"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script>
+        const app = document.getElementById('app');
+        const TYPE_COLORS = {
+            function_tamper: 'function_tamper', rate_limit: 'rate_limit',
+            client_error: 'client_error', server_reject: 'server_reject', anomaly: 'anomaly'
+        };
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function fmtTime(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        async function ensureSession() {
+            const { data: { session } } = await window.db.auth.getSession();
+            if (session) return session;
+            return new Promise((resolve) => {
+                app.innerHTML = `
+                    <div class="login-box">
+                        <h2>PokeFury Admin</h2>
+                        <input id="adm-email" type="email" placeholder="E-mail" autocomplete="username">
+                        <input id="adm-pass" type="password" placeholder="Senha" autocomplete="current-password">
+                        <button id="adm-login">Entrar</button>
+                        <div class="error" id="adm-error"></div>
+                    </div>`;
+                document.getElementById('adm-login').addEventListener('click', async () => {
+                    const email = document.getElementById('adm-email').value.trim();
+                    const password = document.getElementById('adm-pass').value;
+                    const { error } = await window.db.auth.signInWithPassword({ email, password });
+                    if (error) {
+                        document.getElementById('adm-error').textContent = 'E-mail ou senha inválidos.';
+                    } else {
+                        window.db.auth.getSession().then(r => resolve(r.data.session));
+                    }
+                });
+            });
+        }
+
+        async function checkAdmin() {
+            const { data: { session } } = await window.db.auth.getSession();
+            if (!session) return false;
+            const { data: profile } = await window.db.from('profiles').select('is_admin, username').eq('id', session.user.id).single();
+            return !!(profile && profile.is_admin);
+        }
+
+        let currentFilter = 'all';
+        let lastLoad = 0;
+
+        async function loadEvents() {
+            try {
+                const { data } = await window.db.rpc('get_security_events', { p_limit: 200 });
+                if (data && data.success) {
+                    renderTable(data.events || []);
+                    lastLoad = Date.now();
+                    const el = document.getElementById('updated-at');
+                    if (el) el.textContent = 'atualizado ' + new Date().toLocaleTimeString('pt-BR');
+                }
+            } catch (e) {
+                const el = document.getElementById('updated-at');
+                if (el) el.textContent = 'erro ao carregar';
+            }
+        }
+
+        async function toggleBan(userId, banned, username) {
+            const label = banned ? 'banir' : 'desbanir';
+            if (!confirm(`Deseja ${label} o jogador ${username || userId}?`)) return;
+            const { data, error } = await window.db.rpc('set_player_banned', { p_user_id: userId, p_banned: banned });
+            if (error || !data || !data.success) {
+                alert('Falha ao ' + label + '. Erro: ' + (error ? error.message : (data && data.error) || 'desconhecido'));
+                return;
+            }
+            await loadEvents();
+        }
+
+        function renderTable(events) {
+            const filtered = currentFilter === 'all' ? events : events.filter(e => e.event_type === currentFilter);
+            const rows = filtered.map(e => {
+                const badge = TYPE_COLORS[e.event_type] || 'other';
+                const isBanned = !!e.is_banned;
+                let detail = '';
+                try { detail = typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail || {}); } catch (err) { detail = ''; }
+                return `<tr>
+                    <td class="time">${fmtTime(e.created_at)}</td>
+                    <td>
+                        <div><strong>${esc(e.username || e.player_name || '—')}</strong> ${isBanned ? '<span class="banned-flag">BANIDO</span>' : ''}</div>
+                        <div class="mono">${esc(e.user_id || '')}</div>
+                    </td>
+                    <td><span class="badge ${badge}">${esc(e.event_type)}</span></td>
+                    <td class="mono">${esc(e.function_name || '—')}</td>
+                    <td><div class="detail">${esc(detail)}</div></td>
+                    <td>
+                        <button class="btn-ban ${isBanned ? 'unban' : 'ban'}" onclick="toggleBan('${e.user_id}', ${isBanned ? 'false' : 'true'}, '${esc((e.username || '').replace(/'/g, "\\'"))}')">
+                            ${isBanned ? 'Desbanir' : 'Banir'}
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            const listEl = document.getElementById('event-list');
+            listEl.innerHTML = rows || '<div class="empty">Nenhum evento registrado.</div>';
+        }
+
+        function renderAdmin(session) {
+            const username = session.user.user_metadata && (session.user.user_metadata.username || session.user.email) || session.user.email;
+            app.innerHTML = `
+                <header>
+                    <div>
+                        <h1>PokeFury <span>Admin</span> — Segurança</h1>
+                        <a class="back" href="/" target="_blank">← abrir o jogo</a>
+                    </div>
+                    <div class="chip"><span class="dot on"></span>logado como ${esc(username)} (admin)</div>
+                </header>
+                <div class="toolbar">
+                    <button onclick="loadEvents()">Atualizar</button>
+                    <select id="filter-type" onchange="currentFilter=this.value;loadEvents()">
+                        <option value="all">Todos os eventos</option>
+                        <option value="function_tamper">function_tamper</option>
+                        <option value="rate_limit">rate_limit</option>
+                        <option value="client_error">client_error</option>
+                        <option value="server_reject">server_reject</option>
+                        <option value="anomaly">anomaly</option>
+                    </select>
+                    <span class="updated" id="updated-at"></span>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th><th>Jogador</th><th>Tipo</th><th>Função</th><th>Detalhe</th><th>Ação</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <div id="event-list" style="max-height:calc(100vh - 230px);overflow-y:auto;"></div>
+                </div>`;
+            loadEvents();
+            setInterval(loadEvents, 5000);
+        }
+
+        (async function init() {
+            if (!window.db) {
+                app.innerHTML = '<div class="empty">Falha ao conectar no Supabase.</div>';
+                return;
+            }
+            const session = await ensureSession();
+            if (!session) return;
+            if (!(await checkAdmin())) {
+                app.innerHTML = '<div class="denied"><h2>Acesso negado</h2><p>Esta área é restrita a administradores.</p></div>';
+                return;
+            }
+            renderAdmin(session);
+        })();
+    </script>
+</body>
+</html>

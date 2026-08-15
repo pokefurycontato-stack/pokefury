@@ -142,6 +142,7 @@ const GameData = {
         });
 
         if (error) {
+            if (window.SecurityWatchdog) window.SecurityWatchdog.onRpcError(error, 'secure_save_team');
             console.error('[GameData] secure_save_team error:', error);
             return false;
         }
@@ -149,6 +150,7 @@ const GameData = {
     },
 
     async addPokemonToTeam(pokemon) {
+        if (window.SecurityWatchdog) window.SecurityWatchdog.check();
         const team = await this.getTeam();
         if (team.length >= 6) {
             const pcResult = await this.autoStorePokemonToPC(pokemon);
@@ -164,6 +166,7 @@ const GameData = {
         });
 
         if (error || !data || data.error) {
+            if (window.SecurityWatchdog) window.SecurityWatchdog.onRpcError(error || data, 'secure_capture_pokemon');
             console.error('[AddToTeam] secure_capture_pokemon error:', error || data?.error);
             return false;
         }
@@ -185,12 +188,20 @@ const GameData = {
 
     async grantExp(pokemonDbId, amount) {
         if (!this.currentCharacterId || !pokemonDbId) return null;
+        if (window.SecurityWatchdog) window.SecurityWatchdog.check();
         const { data, error } = await window.db.rpc('secure_grant_exp', {
             p_character_id: this.currentCharacterId,
             p_pokemon_team_id: pokemonDbId,
             p_amount: amount
         });
-        if (error) { console.error('[GameData] secure_grant_exp error:', error); return null; }
+        if (error) {
+            if (window.SecurityWatchdog) window.SecurityWatchdog.onRpcError(error, 'secure_grant_exp');
+            console.error('[GameData] secure_grant_exp error:', error);
+            return null;
+        }
+        if (data && data.error && window.SecurityWatchdog) {
+            window.SecurityWatchdog.onRpcError({ message: data.error }, 'secure_grant_exp');
+        }
         return data;
     },
 
