@@ -89,6 +89,7 @@ function logEvent(type, fnLabel, detail) {
             p_detail: detail || {},
             p_url: (window.location.pathname || '') + (window.location.search || ''),
         })
+        .then(() => {})
         .catch(() => {});
 }
 
