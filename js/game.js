@@ -1253,26 +1253,35 @@ class PokeFuryGame {
             .filter(({ pokemon, index }) => index !== activeIndex && !pokemon.fainted && pokemon.currentHp > 0);
         if (available.length === 0) return;
 
+        await this.playPVPExit('player', faintedPokemon);
+        setSkipPlayerRender(true);
+        drawBattleScene(this.ctx, this.canvas, null, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+
         let newIndex = null;
         if (this.afkManager?.running && this.afkManager.autoBattle) {
             newIndex = available[0].index;
         } else {
-            newIndex = await new Promise(resolve => {
-                showSwitchPokemonSelection(this.playerTeam, activeIndex, resolve, () => resolve(null));
-            });
+            do {
+                newIndex = await new Promise(resolve => {
+                    showSwitchPokemonSelection(this.playerTeam, activeIndex, resolve, () => resolve(null));
+                });
+            } while (newIndex == null || newIndex === activeIndex);
         }
-        if (newIndex == null) return;
+        if (newIndex == null) {
+            setSkipPlayerRender(false);
+            drawBattleScene(this.ctx, this.canvas, faintedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+            return;
+        }
 
         const newPokemon = this.playerTeam[newIndex];
-        if (!newPokemon || newPokemon.fainted || newIndex === activeIndex) return;
+        if (!newPokemon || newPokemon.fainted) return;
         const temp = this.playerTeam[activeIndex];
         this.playerTeam[activeIndex] = newPokemon;
         this.playerTeam[newIndex] = temp;
         clearChoiceLock(faintedPokemon);
         await showBattleMessage(`Você enviou ${newPokemon.name}!`);
         await preloadBattleSprites(newPokemon, enemyPokemon);
-        drawBattleScene(this.ctx, this.canvas, faintedPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
-        await this.playPVPExit('player', faintedPokemon);
+        setSkipPlayerRender(false);
         drawBattleScene(this.ctx, this.canvas, newPokemon, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
         updateBattleUI(this.playerTeam, this.enemyTeam);
         await this.playPVPEntrance('player', newPokemon);
