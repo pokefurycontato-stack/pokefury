@@ -292,7 +292,14 @@ class PokeFuryGame {
                 pcTrash.style.background = 'rgba(0,0,0,0.25)';
                 pcTrash.style.borderColor = 'rgba(233,69,96,0.5)';
                 pcTrash.style.transform = '';
-                const pcId = e.dataTransfer.getData('text/pc-pokemon-id');
+                let pcId = null;
+                try {
+                    const raw = e.dataTransfer.getData('text/plain');
+                    if (raw && raw.startsWith('pc:')) pcId = raw.slice(3);
+                } catch (err) { console.error('[PC] drop getData error:', err); }
+                if (!pcId && this._draggingPcId) pcId = this._draggingPcId;
+                this._draggingPcId = null;
+                console.log('[PC] trash drop, pcId =', pcId);
                 if (!pcId) return;
                 const p = (this._pcBoxPokemon || []).find(x => x.id === pcId);
                 if (p) this.openDeletePCModal(p);
@@ -3822,7 +3829,7 @@ class PokeFuryGame {
             if (p) {
                 const pokeData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
                 const spriteUrl = pokeData?.spriteUrls?.front || pokeData?.spriteUrls?.home || '';
-                slot.innerHTML = `<img src="${spriteUrl}" style="width:80%;height:80%;object-fit:contain;" alt="${p.nickname || p.species}" onerror="this.style.display='none'">`;
+                slot.innerHTML = `<img src="${spriteUrl}" draggable="false" style="width:80%;height:80%;object-fit:contain;pointer-events:none;" alt="${p.nickname || p.species}" onerror="this.style.display='none'">`;
                 slot.title = `${p.nickname || p.species} Lv.${p.level}`;
                 slot.style.borderColor = p.is_shiny ? '#ffd700' : 'rgba(255,255,255,0.2)';
 
@@ -3830,11 +3837,15 @@ class PokeFuryGame {
 
                 slot.draggable = true;
                 slot.ondragstart = (e) => {
-                    e.dataTransfer.setData('text/pc-pokemon-id', p.id);
-                    e.dataTransfer.effectAllowed = 'move';
+                    this._draggingPcId = p.id;
+                    try {
+                        e.dataTransfer.setData('text/plain', 'pc:' + p.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                    } catch (err) { console.error('[PC] dragstart setData error:', err); }
+                    console.log('[PC] dragstart slot, id =', p.id);
                     slot.style.opacity = '0.35';
                 };
-                slot.ondragend = () => { slot.style.opacity = '1'; };
+                slot.ondragend = () => { slot.style.opacity = '1'; this._draggingPcId = null; };
 
                 slot.ondragover = (e) => { e.preventDefault(); slot.style.background = 'rgba(233,69,96,0.3)'; };
                 slot.ondragleave = () => { slot.style.background = 'rgba(0,0,0,0.4)'; };
