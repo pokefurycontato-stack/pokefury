@@ -2887,7 +2887,10 @@ class PokeFuryGame {
                 .eq('from_pokemon_id', pokemon.id);
             evolutions = data;
         } catch (e) { return false; }
-        if (!evolutions || evolutions.length === 0) return false;
+        if (!evolutions || evolutions.length === 0) {
+            console.log('[Evo] sem evolucoes para', pokemon.id, pokemon.name);
+            return false;
+        }
 
         for (const evo of evolutions) {
             const isLevelEvo = evo.evolution_method === 'level' || evo.evolution_method === 'level-up';
@@ -3568,8 +3571,13 @@ class PokeFuryGame {
             row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
             row.addEventListener('mouseleave', () => row.style.background = 'transparent');
             row.addEventListener('click', async () => {
-                await this.useItemOnPokemon(inv, p, i);
-                overlay.remove();
+                try {
+                    await this.useItemOnPokemon(inv, p, i);
+                } catch (e) {
+                    console.error('[Item] useItemOnPokemon error:', e);
+                } finally {
+                    overlay.remove();
+                }
             });
             teamList.appendChild(row);
         });
@@ -3702,10 +3710,9 @@ class PokeFuryGame {
             else alert(`${pokemon.name} agora é Shiny!`);
         }
 
-        this.updatePartyPanel();
-        await this.renderMochila();
-
         try {
+            this.updatePartyPanel();
+            await this.renderMochila();
             if (pokemon.level > prevLevel) {
                 const learnableMoves = await learnLevelUpMoves(pokemon, prevLevel, pokemon.level);
                 for (const newMove of learnableMoves) {
@@ -3726,7 +3733,11 @@ class PokeFuryGame {
             console.error('[Item] level-up effects error:', e);
         }
 
-        await this.saveTeam();
+        try {
+            await this.saveTeam();
+        } catch (e) {
+            console.error('[Item] saveTeam error:', e);
+        }
         this.updatePartyPanel();
     }
 
