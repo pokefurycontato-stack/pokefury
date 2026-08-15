@@ -1362,7 +1362,7 @@ class PokeFuryGame {
         const usableItems = items.filter(inv => inv.items
             && inv.items.usable_in_battle
             && inv.items.category === 'medicine'
-            && (inv.items.subcategory === 'heal' || inv.items.subcategory === 'status'));
+            && (inv.items.subcategory === 'heal' || inv.items.subcategory === 'status' || inv.items.subcategory === 'revive'));
 
         if (usableItems.length === 0) {
             await showBattleMessage('Nenhum item medicinal disponível!');
@@ -1371,12 +1371,13 @@ class PokeFuryGame {
         }
 
         showBagSelection(usableItems, async (item) => {
+            const isRevive = item.items && item.items.subcategory === 'revive';
             showTargetSelection(this.playerTeam, `Usar ${item.items.name} em qual Pokémon?`, async (targetIdx) => {
                 await this.useItemInBattle(item, this.playerTeam[targetIdx]);
                 this._turnLocked = false;
             }, () => {
                 this._turnLocked = false;
-            });
+            }, { includeFainted: isRevive });
         }, () => {
             this._turnLocked = false;
         });
@@ -1427,6 +1428,18 @@ class PokeFuryGame {
                 await showBattleMessage(`${itemData.name} não teve efeito em ${playerPokemon.name}.`);
                 return;
             }
+            this.updatePartyPanel();
+        } else if (itemData.subcategory === 'revive') {
+            if (!playerPokemon.fainted) {
+                await showBattleMessage(`${itemData.name} não teve efeito em ${playerPokemon.name}.`);
+                return;
+            }
+            consumed = true;
+            playerPokemon.fainted = false;
+            const fraction = itemData.effect_value || 0.5;
+            playerPokemon.currentHp = Math.max(1, Math.round(playerPokemon.stats.hp * fraction));
+            playerPokemon.statusEffect = null;
+            await showBattleMessage(`${playerPokemon.name} reviveu com ${playerPokemon.currentHp} HP!`);
             this.updatePartyPanel();
         } else if (itemData.category === 'pokeball') {
             if (enemyPokemon.isAlpha || enemyPokemon.isRaidBoss || enemyPokemon.isGymLeader) {

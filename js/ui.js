@@ -567,7 +567,8 @@ export function showSwitchPokemonSelection(team, activeIndex, onSelect, onCancel
     });
 }
 
-export function showTargetSelection(team, title, onSelect, onCancel = null) {
+export function showTargetSelection(team, title, onSelect, onCancel = null, options = {}) {
+    const includeFainted = !!options.includeFainted;
     const overlay = document.createElement('div');
     overlay.id = 'battle-target-selection';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);pointer-events:auto';
@@ -590,18 +591,20 @@ export function showTargetSelection(team, title, onSelect, onCancel = null) {
     document.body.appendChild(overlay);
 
     const teamList = popup.querySelector('#target-team-list');
+    let anyShown = false;
     team.forEach((p, i) => {
-        if (p.fainted) return;
+        if (!includeFainted && p.fainted) return;
+        anyShown = true;
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;' + (p.fainted ? 'opacity:0.85;' : '');
         row.innerHTML = `
             <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
                 <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
             </div>
             <div style="flex:1;min-width:0;">
-                <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
+                <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span>${p.fainted ? ' <span style="color:#f44336;font-size:10px;">DESMAIADO</span>' : ''}</div>
                 <div style="width:100%;height:5px;background:rgba(0,0,0,0.4);border-radius:3px;overflow:hidden;margin-top:3px;">
-                    <div style="height:100%;width:${(p.currentHp / p.stats.hp) * 100}%;background:${p.currentHp > p.stats.hp * 0.5 ? '#4caf50' : '#ff9800'};border-radius:3px;"></div>
+                    <div style="height:100%;width:${(p.currentHp / p.stats.hp) * 100}%;background:${p.fainted ? '#f44336' : (p.currentHp > p.stats.hp * 0.5 ? '#4caf50' : '#ff9800')};border-radius:3px;"></div>
                 </div>
                 <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:1px;">HP ${p.currentHp}/${p.stats.hp}${p.statusEffect ? ` · <span style="color:#fbbf24;">${p.statusEffect}</span>` : ''}</div>
             </div>
@@ -614,6 +617,10 @@ export function showTargetSelection(team, title, onSelect, onCancel = null) {
         });
         teamList.appendChild(row);
     });
+
+    if (!anyShown) {
+        teamList.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:11px;padding:12px;">Nenhum Pokémon disponível.</div>';
+    }
 
     popup.querySelector('#target-cancel').addEventListener('click', () => {
         overlay.remove();
