@@ -857,17 +857,25 @@ class CityScreen {
             const biome = this.getSpawnZoneBiomeForPoint(point);
             if (!biome) continue;
 
+            // Conta especies ja no mapa para nao repetir mais de 2 de cada
+            const currentIds = this.wildPokemon.map(p => p.encounter?.pokemon_id).filter(Boolean);
+            const placedCounts = {};
+            for (const id of currentIds) placedCounts[String(id)] = (placedCounts[String(id)] || 0) + 1;
+
             let encounter;
             let isShiny = false;
             let serverSprite = null;
             if (charId) {
-                try {
-                    const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
-                        p_character_id: charId,
-                        p_biome: biome,
-                        p_is_night: this.getDayNight().isNight
-                    });
-                    if (!error && data?.success) {
+                // RPC com re-roll enquanto sortear especie que ja atingiu o limite (max 2 por especie)
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
+                            p_character_id: charId,
+                            p_biome: biome,
+                            p_is_night: this.getDayNight().isNight
+                        });
+                        if (error || !data?.success) break;
+                        if ((placedCounts[String(data.pokemon_id)] || 0) >= 2) continue;
                         encounter = {
                             pokemon_id: data.pokemon_id,
                             pokemon_name: data.pokemon_name,
@@ -875,14 +883,14 @@ class CityScreen {
                         };
                         isShiny = data.is_shiny || false;
                         serverSprite = data.sprite_url;
-                    }
-                } catch (e) {}
+                        break;
+                    } catch (e) { break; }
+                }
             }
 
             if (!encounter) {
                 const encounters = await this.filterSpawnEncounters(await this.resolveSpawnEncounters(biome), biome);
                 if (!encounters || encounters.length === 0) continue;
-                const currentIds = this.wildPokemon.map(p => p.encounter?.pokemon_id).filter(Boolean);
                 encounter = this.chooseWeightedEncounter(encounters, currentIds);
                 if (!encounter) continue;
                 isShiny = (typeof getShinyChance === 'function') ? (Math.random() < (1 / getShinyChance())) : false;
@@ -967,14 +975,22 @@ class CityScreen {
         let isShiny = false;
         let serverSprite = null;
 
+        // Conta especies ja no mapa (ignorando p, que esta sendo substituido) para nao repetir mais de 2 de cada
+        const currentIds = this.wildPokemon.filter(wp => wp !== p).map(wp => wp.encounter?.pokemon_id).filter(Boolean);
+        const placedCounts = {};
+        for (const id of currentIds) placedCounts[String(id)] = (placedCounts[String(id)] || 0) + 1;
+
         if (charId) {
-            try {
-                const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
-                    p_character_id: charId,
-                    p_biome: biome,
-                    p_is_night: this.getDayNight().isNight
-                });
-                if (!error && data?.success) {
+            // RPC com re-roll enquanto sortear especie que ja atingiu o limite (max 2 por especie)
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const { data, error } = await window.db.rpc('roll_spawn_by_biome', {
+                        p_character_id: charId,
+                        p_biome: biome,
+                        p_is_night: this.getDayNight().isNight
+                    });
+                    if (error || !data?.success) break;
+                    if ((placedCounts[String(data.pokemon_id)] || 0) >= 2) continue;
                     encounter = {
                         pokemon_id: data.pokemon_id,
                         pokemon_name: data.pokemon_name,
@@ -982,8 +998,9 @@ class CityScreen {
                     };
                     isShiny = data.is_shiny || false;
                     serverSprite = data.sprite_url;
-                }
-            } catch (e) {}
+                    break;
+                } catch (e) { break; }
+            }
         }
 
         if (!encounter) {
@@ -992,7 +1009,6 @@ class CityScreen {
                 encounters = await this.filterSpawnEncounters(await this.resolveSpawnEncounters(biome), biome);
             } catch (e) {
             }
-            const currentIds = this.wildPokemon.map(wp => wp.encounter?.pokemon_id).filter(Boolean);
             encounter = this.chooseWeightedEncounter(encounters, currentIds);
         }
         if (encounter) {
