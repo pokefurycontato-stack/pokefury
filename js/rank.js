@@ -44,9 +44,22 @@ class RankSystem {
       this.data.trainer = (trainer.data && !trainer.error) ? (trainer.data || []) : [];
       this.lastUpdated = Date.now();
       this._emit();
+      this.checkRankTitles();
     } catch (e) {
       console.warn('[Rank] refresh error:', e);
     }
+  }
+
+  // Concede títulos de rank (permanentes) se o jogador estiver no top 3
+  async checkRankTitles() {
+    const charId = window.GameData?.currentCharacterId;
+    if (!charId || !window.db || !window.Titles) return;
+    try {
+      const { data, error } = await window.db.rpc('award_rank_titles', { p_character_id: charId });
+      if (!error && data?.awarded && data.awarded.length > 0) {
+        window.Titles.queueAward(data.awarded);
+      }
+    } catch (e) {}
   }
 
   getByType(type) {

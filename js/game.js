@@ -342,6 +342,7 @@ class PokeFuryGame {
         }
 
         await this.startGame(save.starter_pokemon);
+        if (window.rankSystem) window.rankSystem.checkRankTitles();
     }
 
     startHeartbeat() {
