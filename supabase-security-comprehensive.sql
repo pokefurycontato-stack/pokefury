@@ -680,7 +680,7 @@ BEGIN
   IF p_amulet_coin THEN v_silver := v_silver * 2; END IF;
 
   -- Base EXP calculation
-  v_base_exp := FLOOR((p_enemy_level * 15) / 9);
+  v_base_exp := FLOOR((p_enemy_level * 15) / 9) * 3;
 
   -- Issue silver
   PERFORM add_currency(p_character_id, 'silver', v_silver, 'reward', 'Battle vs pokemon #' || p_enemy_pokemon_id);

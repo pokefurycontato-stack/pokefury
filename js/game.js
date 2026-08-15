@@ -2233,7 +2233,7 @@ class PokeFuryGame {
                 const hasExpShare = p.heldItemId === 99;
                 if (!isAttacker && !hasExpShare) continue;
 
-                let baseExp = Math.floor((enemyLevel * 15) / 9);
+                let baseExp = Math.floor((enemyLevel * 15) / 9) * 3;
                 if (window.boostsManager && window.boostsManager.isActive('exp_pokemon')) baseExp *= 2;
                 let expGain = baseExp;
                 if (p.heldItemId === 219) expGain = Math.floor(expGain * 1.5);
@@ -5226,6 +5226,8 @@ openEventsPanel() {
 
         const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
         const spriteAnimated = `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/animated-front/${p.id}.gif`;
+        const popupAdj = window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(p.id) : null;
+        const popupTransform = popupAdj ? `transform:scale(${popupAdj.scaleX}, ${popupAdj.scaleY});` : '';
 
         const typeColors = {
             normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
@@ -5249,7 +5251,7 @@ openEventsPanel() {
 
         content.innerHTML = `
             <div style="text-align:center;margin-bottom:12px">
-                <img src="${spriteAnimated}" style="width:120px;height:120px;image-rendering:pixelated" onerror="this.src='${spriteUrl}';this.style.width='100px';this.style.height='100px'">
+                <img src="${spriteAnimated}" style="width:120px;height:120px;image-rendering:pixelated;${popupTransform}" onerror="this.src='${spriteUrl}';this.style.width='100px';this.style.height='100px'">
                 <div style="margin-top:8px">${typesHtml}</div>
             </div>
             <div style="text-align:center;margin-bottom:12px">
