@@ -174,9 +174,11 @@ class PokeFuryGame {
                                 profile = { is_admin: false };
                             }
                             window.isAdmin = !!(profile && profile.is_admin);
+                            window.adminOverworldAccess = !!window.isAdmin && new URLSearchParams(window.location.search).has('overworld');
                         } catch (e) {
                             console.warn('[PokeFury] Profile check/create failed:', e);
                             window.isAdmin = false;
+                            window.adminOverworldAccess = false;
                         }
 
                         document.getElementById('auth-screen').classList.add('hidden');
@@ -576,7 +578,7 @@ class PokeFuryGame {
         document.getElementById('character-screen').classList.add('hidden');
         document.getElementById('game-wrapper').classList.remove('hidden');
 
-        if (!window.isAdmin) {
+        if (!window.adminOverworldAccess) {
             // Mostra a tela de carregamento e cobre o overworld (evita flash)
             if (window.LoadingScreen) window.LoadingScreen.show();
             const gc = document.getElementById('game-canvas');
@@ -648,7 +650,7 @@ class PokeFuryGame {
         });
 
         try {
-            if (window.isAdmin) {
+            if (window.adminOverworldAccess) {
                 if (this.overworld2d) this.overworld2d.show();
             }
             await this.loadPlayerRegion();
@@ -696,7 +698,7 @@ class PokeFuryGame {
 
 
         const adminPanel = document.getElementById('admin-panel');
-        if (adminPanel && window.isAdmin) {
+        if (adminPanel && window.adminOverworldAccess) {
             adminPanel.classList.remove('hidden');
         }
         this.setupAdminButtons();
@@ -705,8 +707,8 @@ class PokeFuryGame {
             console.error('[PokeFury] Background save error:', e)
         );
 
-        // Jogadores nao-admin: o jogo acontece totalmente na cidade (overworld exclusivo para admin)
-        if (!window.isAdmin) {
+        // Jogadores (e admin fora do hub): o jogo acontece totalmente na cidade (overworld so via admin.html)
+        if (!window.adminOverworldAccess) {
             this.applyNonAdminCityMode();
             if (this.overworld2d) this.overworld2d.hide();
             if (window.cityScreen && typeof window.cityScreen.open === 'function') {

@@ -124,8 +124,10 @@ async function handleLogin() {
                 profile = { is_admin: false };
             }
             window.isAdmin = !!(profile && profile.is_admin);
+            window.adminOverworldAccess = !!window.isAdmin && new URLSearchParams(window.location.search).has('overworld');
         } catch (e) {
             window.isAdmin = false;
+            window.adminOverworldAccess = false;
         }
 
         goToCharacterScreen();

@@ -348,8 +348,8 @@ class CityScreen {
     }
 
     close() {
-        if (!window.isAdmin) {
-            // Jogadores nao-admin permanecem na cidade (overworld exclusivo para admin)
+        if (!window.adminOverworldAccess) {
+            // Jogadores (e admin fora do hub) permanecem na cidade (overworld so via admin.html)
             return;
         }
         this.running = false;
@@ -2509,8 +2509,8 @@ class CityScreen {
             await game.overworld2d.setCurrentMap(firstMap);
         }
 
-        // Jogadores nao-admin permanecem na cidade: re-spawn imediato dos pokemons da nova regiao
-        if (!window.isAdmin) {
+        // Jogadores (e admin fora do hub) permanecem na cidade: re-spawn imediato dos pokemons da nova regiao
+        if (!window.adminOverworldAccess) {
             try { await this.spawnVisiblePokemon(); } catch (e) {}
         }
 

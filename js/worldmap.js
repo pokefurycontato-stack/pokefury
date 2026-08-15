@@ -86,7 +86,7 @@ async function travelToRegion(regionName) {
 }
 
 function openWorldMap() {
-    if (!window.isAdmin) return; // Mapa do overworld exclusivo para admin
+    if (!window.adminOverworldAccess) return; // Mapa do overworld exclusivo para admin (via admin.html)
     const overlay = document.getElementById('worldmap-overlay');
     if (!overlay) return;
     overlay.classList.remove('hidden');

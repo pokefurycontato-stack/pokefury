@@ -116,6 +116,7 @@
     <script src="js/supabase-config.js"></script>
     <script>
         const app = document.getElementById('app');
+        const GAME_URL = 'index.html?overworld=1';
         const TYPE_COLORS = {
             function_tamper: 'function_tamper', rate_limit: 'rate_limit',
             client_error: 'client_error', server_reject: 'server_reject', anomaly: 'anomaly'
@@ -226,7 +227,7 @@
             document.getElementById('view-game').classList.toggle('hidden', view !== 'game');
             if (view === 'game') {
                 const frame = document.getElementById('game-frame');
-                if (frame && !frame.src) frame.src = 'index.html';
+                if (frame && !frame.src) frame.src = GAME_URL;
             }
         }
 
@@ -283,10 +284,10 @@
                                     <div class="title">Painel Admin do Jogo</div>
                                     <div class="hint">Regiões · Líderes de Ginásio · Doar · Eventos · Loja Premium · Posições PVP · Novo Pokemon · Criar Cidade · Perfil</div>
                                 </div>
-                                <button onclick="document.getElementById('game-frame').src='index.html'">Recarregar</button>
+                                <button onclick="document.getElementById('game-frame').src=GAME_URL">Recarregar</button>
                             </div>
                             <div class="iframe-wrap">
-                                <iframe id="game-frame" src="index.html"></iframe>
+                                <iframe id="game-frame" src="${GAME_URL}"></iframe>
                             </div>
                         </section>
                     </main>
