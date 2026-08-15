@@ -9,6 +9,7 @@ import { calculateDamage } from './utils.js';
 
 const INTERVAL_MS = 5000;
 const BAN_POLL_MS = 60000;
+const DEVICE_POLL_MS = 30000;
 
 const WATCHDOG = {
     guards: [],
@@ -16,7 +17,60 @@ const WATCHDOG = {
     loggedTamper: new Set(),
     _lastCheck: 0,
     _bannedShown: false,
+    _deviceHash: null,
+    _deviceRegistered: false,
 };
+
+function computeDeviceHash() {
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 220;
+        canvas.height = 60;
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#e94560';
+        ctx.fillRect(20, 10, 60, 40);
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(80, 10, 60, 40);
+        ctx.fillStyle = '#2196f3';
+        ctx.fillRect(140, 10, 60, 40);
+        ctx.fillStyle = '#fff';
+        ctx.font = '15px monospace';
+        ctx.fillText('PokeFury::device-fp', 12, 18);
+        const dataUrl = canvas.toDataURL();
+        const parts = [
+            dataUrl,
+            navigator.userAgent || '',
+            String(screen.width) + 'x' + String(screen.height) + 'x' + String(screen.colorDepth || 24),
+            String(screen.availWidth) + 'x' + String(screen.availHeight),
+            String(navigator.language || ''),
+            String(new Date().getTimezoneOffset()),
+            String(navigator.hardwareConcurrency || ''),
+            String(navigator.platform || ''),
+            String(navigator.deviceMemory || ''),
+        ];
+        const raw = parts.join('|');
+        let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+        for (let i = 0; i < raw.length; i++) {
+            const ch = raw.charCodeAt(i);
+            h1 = Math.imul(h1 ^ ch, 2654435761);
+            h2 = Math.imul(h2 ^ ch, 1597334677);
+        }
+        h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+        h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        const hex = (n) => (n >>> 0).toString(16).padStart(8, '0');
+        return 'dev_' + hex(h1) + hex(h2);
+    } catch (e) {
+        const fallback = 'dev_fb_' + String(navigator.userAgent || '').length + '_' + String(screen.width || 0) + 'x' + String(screen.height || 0);
+        return fallback;
+    }
+}
+
+function getDeviceHash() {
+    if (!WATCHDOG._deviceHash) WATCHDOG._deviceHash = computeDeviceHash();
+    return WATCHDOG._deviceHash;
+}
 
 function register(label, resolver) {
     if (WATCHDOG.registered.has(label)) return;
@@ -93,7 +147,7 @@ function logEvent(type, fnLabel, detail) {
         .catch(() => {});
 }
 
-function showBanned() {
+function showBanned(reason) {
     if (WATCHDOG._bannedShown) return;
     WATCHDOG._bannedShown = true;
     const overlay = document.createElement('div');
@@ -102,7 +156,7 @@ function showBanned() {
     overlay.innerHTML =
         '<div style="font-size:44px;">🚫</div>' +
         '<div style="font-size:24px;font-weight:800;color:#e94560;">Conta banida</div>' +
-        '<div style="font-size:14px;color:rgba(255,255,255,0.7);max-width:420px;">Esta conta foi banida por violação das regras. Se você acha que isso é um erro, entre em contato com o suporte.</div>' +
+        '<div style="font-size:14px;color:rgba(255,255,255,0.7);max-width:420px;">' + (reason || 'Esta conta foi banida por violação das regras. Se você acha que isso é um erro, entre em contato com o suporte.') + '</div>' +
         '<button id="banned-logout" style="margin-top:12px;padding:10px 28px;border:none;border-radius:8px;background:#e94560;color:#fff;font-weight:700;cursor:pointer;">Sair</button>';
     document.body.appendChild(overlay);
     document.getElementById('banned-logout').addEventListener('click', () => {
@@ -115,9 +169,26 @@ function showBanned() {
 async function pollBanStatus() {
     if (!window.db) return;
     try {
-        const { data } = await window.db.rpc('get_my_ban_status');
-        if (data && data.success && data.is_banned) {
-            showBanned();
+        const deviceHash = getDeviceHash();
+        if (!WATCHDOG._deviceRegistered) {
+            WATCHDOG._deviceRegistered = true;
+            try {
+                await window.db
+                    .rpc('register_device', { p_device_hash: deviceHash })
+                    .then(() => {})
+                    .catch(() => { WATCHDOG._deviceRegistered = false; });
+            } catch (e) { WATCHDOG._deviceRegistered = false; }
+        }
+        const { data } = await window.db
+            .rpc('get_my_ban_status', { p_device_hash: deviceHash })
+            .then(r => r)
+            .catch(() => ({ data: null }));
+        if (data && data.success && (data.is_banned || data.device_banned)) {
+            if (data.device_banned && !data.is_banned) {
+                showBanned('Este dispositivo foi banido por violação das regras. Se você acha que isso é um erro, entre em contato com o suporte.');
+            } else {
+                showBanned();
+            }
         }
     } catch (e) { /* sem sessão ou erro de rede: ignora */ }
 }
@@ -159,6 +230,9 @@ function setup() {
     // Verifica status de ban periodicamente
     setInterval(pollBanStatus, BAN_POLL_MS);
     setTimeout(pollBanStatus, 5000);
+
+    // Re-registra o dispositivo periodicamente (mantém last_seen fresco)
+    setInterval(() => { WATCHDOG._deviceRegistered = false; pollBanStatus(); }, DEVICE_POLL_MS);
 
     // Snapshot inicial o quanto antes (registra guards do game/gamedata)
     setTimeout(checkIntegrity, 0);

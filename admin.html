@@ -182,6 +182,56 @@
             }
         }
 
+        async function loadDevices() {
+            const panel = document.getElementById('device-panel');
+            if (!panel) return;
+            const list = document.getElementById('device-list');
+            if (!list) return;
+            try {
+                const { data } = await window.db.rpc('get_banned_devices');
+                if (data && data.success) {
+                    const devices = data.devices || [];
+                    list.innerHTML = devices.length
+                        ? devices.map(d => {
+                            const users = (d.users || []).join(', ') || '—';
+                            return `<tr>
+                                <td class="time">${fmtTime(d.created_at)}</td>
+                                <td class="mono">${esc(d.device_hash)}</td>
+                                <td>${esc(d.reason || '—')}</td>
+                                <td>${esc(users)}</td>
+                                <td>
+                                    <button class="btn-ban unban" onclick="unbanDevice('${esc((d.device_hash || '').replace(/'/g, "\\'"))}')">Desbanir</button>
+                                </td>
+                            </tr>`;
+                        }).join('')
+                        : '<tr><td colspan="5" class="empty">Nenhum dispositivo banido.</td></tr>';
+                } else {
+                    list.innerHTML = '<tr><td colspan="5" class="empty">Erro: ' + esc((data && data.error) || 'sem resposta') + '</td></tr>';
+                }
+            } catch (e) {
+                list.innerHTML = '<tr><td colspan="5" class="empty">Falha ao carregar dispositivos.</td></tr>';
+            }
+        }
+
+        function toggleDevicePanel() {
+            const panel = document.getElementById('device-panel');
+            if (!panel) return;
+            const showing = !panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', showing);
+            if (!showing) loadDevices();
+        }
+
+        async function unbanDevice(deviceHash) {
+            if (!confirm('Deseja desbanir este dispositivo?\n' + deviceHash + '\nQualquer conta usada nele poderá jogar novamente.')) return;
+            const { data, error } = await window.db.rpc('unban_device', { p_device_hash: deviceHash });
+            if (error || !data || !data.success) {
+                alert('Falha ao desbanir. ' + (error ? error.message : (data && data.error) || 'desconhecido'));
+                return;
+            }
+            loadDevices();
+            loadEvents();
+        }
+
         async function toggleBan(userId, banned, username) {
             const label = banned ? 'banir' : 'desbanir';
             if (!confirm(`Deseja ${label} o jogador ${username || userId}?`)) return;
@@ -254,6 +304,7 @@
                             </div>
                             <div class="toolbar">
                                 <button onclick="loadEvents()">Atualizar</button>
+                                <button onclick="toggleDevicePanel()">📵 Dispositivos banidos</button>
                                 <select id="filter-type" onchange="currentFilter=this.value;loadEvents()">
                                     <option value="all">Todos os eventos</option>
                                     <option value="function_tamper">function_tamper</option>
@@ -263,6 +314,18 @@
                                     <option value="anomaly">anomaly</option>
                                 </select>
                                 <span class="updated" id="updated-at"></span>
+                            </div>
+                            <div id="device-panel" class="hidden" style="padding:0 22px 12px;">
+                                <div class="card">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Desde</th><th>Dispositivo</th><th>Motivo</th><th>Usuários</th><th>Ação</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                    <div id="device-list" style="max-height:200px;overflow-y:auto;"></div>
+                                </div>
                             </div>
                             <div class="sec-body">
                                 <div class="card">
