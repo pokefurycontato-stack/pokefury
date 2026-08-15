@@ -44,6 +44,8 @@
         .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         .view { height: 100%; overflow-y: auto; }
         .view.hidden { display: none; }
+        #view-game { display: flex; flex-direction: column; overflow: hidden; }
+        #view-game.hidden { display: none; }
 
         /* Security view */
         .sec-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 18px 22px 0; }
@@ -275,7 +277,7 @@
                             </div>
                         </section>
 
-                        <section id="view-game" class="view hidden" style="display:flex;flex-direction:column;overflow:hidden;">
+                        <section id="view-game" class="view hidden">
                             <div class="game-toolbar">
                                 <div>
                                     <div class="title">Painel Admin do Jogo</div>
