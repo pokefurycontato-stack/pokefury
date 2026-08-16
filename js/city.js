@@ -2891,9 +2891,9 @@ class CityScreen {
             }
         });
 
-        const targetX = this.playerX;
-        const targetY = this.playerY;
-        const cl = Math.min(1, 0.15 * this._dt);
+        const targetX = this.playerFromX + (this.playerX - this.playerFromX) * this.moveProgress;
+        const targetY = this.playerFromY + (this.playerY - this.playerFromY) * this.moveProgress;
+        const cl = Math.min(1, 0.25 * this._dt);
         this.cameraX += (targetX - this.cameraX) * cl;
         this.cameraY += (targetY - this.cameraY) * cl;
 
