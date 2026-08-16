@@ -2,6 +2,26 @@
    groups.js — Sistema de Grupos/Equipes (máx. 3 jogadores)
    ============================================================= */
 
+function cityGroupCropThumb(img) {
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    const isGrid = nw > 100 && nh > 100 && Math.abs(nw - nh) < 20;
+    const container = img.parentElement;
+    if (!container) return;
+    const boxSize = container.clientWidth || 36;
+    if (isGrid) {
+        img.style.width = (boxSize * 4) + 'px';
+        img.style.height = (boxSize * 4) + 'px';
+        img.style.maxWidth = 'none';
+        img.style.objectFit = 'none';
+    } else {
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.maxWidth = '100%';
+        img.style.objectFit = 'cover';
+    }
+}
+
 class GroupSystem {
     constructor() {
         this.db = window.db;
@@ -339,7 +359,9 @@ class GroupSystem {
             const skin = m.skin_url || 'assets/perso_masculino.webp';
             return `
                 <div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;background:${isMe ? 'rgba(56,189,248,0.12)' : 'rgba(255,255,255,0.04)'};margin-bottom:4px;">
-                    <img src="${skin}" alt="" onerror="this.onerror=null;this.src='assets/perso_masculino.webp';" style="width:30px;height:30px;border-radius:6px;object-fit:cover;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);">
+                    <div style="width:36px;height:36px;flex-shrink:0;overflow:hidden;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);position:relative;">
+                        <img src="${skin}" alt="" loading="lazy" onerror="this.onerror=null;this.src='assets/perso_masculino.webp';" style="position:absolute;top:0;left:0;width:144px;height:144px;max-width:none;" onload="cityGroupCropThumb(this)">
+                    </div>
                     <span style="flex:1;color:#fff;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._esc(m.character_name)}${isMe ? ' <span style="color:#38bdf8;font-size:10px;">(você)</span>' : ''}</span>
                     ${isLeader ? '<span style="font-size:14px;" title="Líder">👑</span>' : ''}
                 </div>
