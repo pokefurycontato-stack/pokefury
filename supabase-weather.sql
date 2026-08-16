@@ -57,7 +57,7 @@ BEGIN
         RETURN json_build_object('error', 'Apenas administradores podem forçar o clima');
     END IF;
 
-    DELETE FROM forced_weather;
+    DELETE FROM forced_weather WHERE id > 0;
 
     INSERT INTO forced_weather (weather, ends_at, created_by)
     VALUES (p_weather, now() + interval '15 minutes', auth.uid());
