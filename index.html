@@ -1282,7 +1282,14 @@
         </div>
         <!-- Scanner button -->
         <button id="city-scan-btn" class="hidden" onclick="window.cityScreen?.openScanPopup()" title="Scanner de Zona" style="position:absolute;bottom:64px;right:16px;z-index:700;cursor:pointer;background:none;border:none;padding:0;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
-            <img src="assets/ferramentas/scan-crop.png" alt="Scanner" style="width:80px;height:80px;object-fit:contain;border-radius:12px;background:rgba(10,14,26,0.55);backdrop-filter:blur(2px);border:1px solid rgba(255,255,255,0.18);">
+            <div class="city-radar-wrap">
+                <img src="assets/ferramentas/scan-crop.png" alt="Scanner">
+                <div class="city-radar-sweep"></div>
+                <div class="city-radar-blip" style="top:25%;left:38%;animation-delay:0s;"></div>
+                <div class="city-radar-blip" style="top:60%;left:62%;animation-delay:0.5s;"></div>
+                <div class="city-radar-blip" style="top:70%;left:30%;animation-delay:1s;"></div>
+                <div class="city-radar-blip" style="top:40%;left:70%;animation-delay:1.2s;"></div>
+            </div>
             <div style="color:#fff;font-size:11px;font-weight:700;margin-top:2px;text-align:center;text-shadow:0 2px 4px rgba(0,0,0,0.8);">Poké Radar</div>
         </button>
         <!-- Teleport Popup -->
@@ -1495,7 +1502,7 @@
     <script src="js/event-pokemon-admin.js"></script>
     <script src="js/loading-screen.js"></script>
     <script src="js/rank.js?v=20260816a"></script>
-    <script src="js/city.js?v=20260816v"></script>
+    <script src="js/city.js?v=20260816w"></script>
     <script src="js/professor-quests.js?v=20260815c"></script>
     <script src="js/city-builder.js?v=20260816j"></script>
     <script src="js/profile.js?v=20260815o"></script>
