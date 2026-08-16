@@ -318,10 +318,22 @@ export class Chat {
 
     showNameMenu(characterId, name, e) {
         document.querySelectorAll('.chat-name-menu').forEach(m => m.remove());
+        const gs = window.GroupSystem;
+        const myId = this._charId();
+        const isGroupMember = gs && gs.isMember(characterId);
+        const amLeader = gs && gs.isLeader();
+
+        let buttonsHtml = '<button data-action="pm" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Enviar mensagem privada</button>';
+        if (amLeader && isGroupMember && characterId !== myId) {
+            buttonsHtml += '<button data-action="group-kick" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#f87171;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Expulsar do grupo</button>';
+        } else if (!isGroupMember) {
+            buttonsHtml += '<button data-action="group-invite" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar convite de grupo</button>';
+        }
+
         const menu = document.createElement('div');
         menu.className = 'chat-name-menu';
         menu.style.cssText = 'position:fixed;z-index:10070;background:#1c2333;border:1px solid rgba(255,255,255,0.15);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;';
-        menu.innerHTML = `<button data-action="pm" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Enviar mensagem privada</button><button data-action="group-invite" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar convite de grupo</button>`;
+        menu.innerHTML = buttonsHtml;
         menu.style.left = e.clientX + 'px';
         menu.style.top = e.clientY + 'px';
         document.body.appendChild(menu);
@@ -329,7 +341,8 @@ export class Chat {
             menu.remove();
             this.openPrivateChat(characterId, name);
         });
-        menu.querySelector('[data-action="group-invite"]').addEventListener('click', async () => {
+        const inviteBtn = menu.querySelector('[data-action="group-invite"]');
+        if (inviteBtn) inviteBtn.addEventListener('click', async () => {
             menu.remove();
             if (window.GroupSystem) {
                 const result = await window.GroupSystem.sendInvite(characterId, name);
@@ -338,6 +351,13 @@ export class Chat {
                 } else if (result && result.ok) {
                     window.pokefury?.showToast?.('Convite de grupo enviado!', 'success');
                 }
+            }
+        });
+        const kickBtn = menu.querySelector('[data-action="group-kick"]');
+        if (kickBtn) kickBtn.addEventListener('click', () => {
+            menu.remove();
+            if (window.GroupSystem) {
+                window.GroupSystem.showKickConfirm(characterId, name);
             }
         });
         const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', close); } };

@@ -253,6 +253,54 @@ class GroupSystem {
         } catch (e) {}
     }
 
+    // ---------------- Expulsar membro (apenas líder) ----------------
+    showKickConfirm(characterId, name) {
+        if (!this.isLeader()) return;
+        const overlay = document.getElementById('city-group-kick-popup');
+        if (!overlay) return;
+        const box = document.getElementById('city-group-kick-box');
+        if (!box) return;
+        box.innerHTML = `
+            <div style="text-align:center;margin-bottom:14px;">
+                <div style="font-size:26px;margin-bottom:4px;">🚫</div>
+                <h3 style="margin:0;color:#fff;font-size:15px;">Expulsar do grupo</h3>
+            </div>
+            <p style="color:#d1d5db;font-size:13px;text-align:center;margin:0 0 16px;">
+                Tem certeza que quer expulsar o jogador <b style="color:#fff;">${this._esc(name)}</b> do seu grupo?
+            </p>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button id="city-group-kick-yes" style="flex:1;padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Sim</button>
+                <button id="city-group-kick-no" style="flex:1;padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#6b7280,#4b5563);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Não</button>
+            </div>
+        `;
+        overlay.classList.remove('hidden');
+
+        document.getElementById('city-group-kick-yes').addEventListener('click', async () => {
+            overlay.classList.add('hidden');
+            await this.kickMember(characterId, name);
+        });
+        document.getElementById('city-group-kick-no').addEventListener('click', () => {
+            overlay.classList.add('hidden');
+        });
+    }
+
+    async kickMember(characterId, name) {
+        if (!this.isLeader()) return;
+        const myId = this._charId();
+        if (!myId || !characterId) return;
+        try {
+            const { data, error } = await this.db.rpc('group_kick_member', {
+                p_leader_id: myId,
+                p_target_id: characterId
+            });
+            if (error || (data && data.error)) {
+                window.pokefury?.showToast?.((data && data.error) || error.message, 'error');
+                return;
+            }
+            window.pokefury?.showToast?.(`${name} foi expulso do grupo.`, 'success');
+        } catch (e) {}
+    }
+
     // ---------------- Membros (atualização em tempo real) ----------------
     subscribeMembers() {
         if (this._memberSub) return;

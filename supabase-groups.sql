@@ -218,6 +218,42 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Expulsa um membro do grupo (apenas o líder).
+CREATE OR REPLACE FUNCTION group_kick_member(p_leader_id UUID, p_target_id UUID)
+RETURNS JSON AS $$
+DECLARE
+    v_owner UUID;
+    v_gid UUID;
+    v_cnt INT;
+BEGIN
+    SELECT user_id INTO v_owner FROM game_saves WHERE id = p_leader_id;
+    IF v_owner IS NULL OR v_owner != auth.uid() THEN
+        RETURN json_build_object('error', 'Não autorizado');
+    END IF;
+
+    SELECT g.id INTO v_gid FROM groups g WHERE g.leader_character_id = p_leader_id;
+    IF v_gid IS NULL THEN
+        RETURN json_build_object('error', 'Você não é líder de uma equipe');
+    END IF;
+    IF p_target_id = p_leader_id THEN
+        RETURN json_build_object('error', 'Você não pode expulsar a si mesmo');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM group_members WHERE group_id = v_gid AND character_id = p_target_id) THEN
+        RETURN json_build_object('error', 'Este jogador não está na sua equipe');
+    END IF;
+
+    DELETE FROM group_members WHERE group_id = v_gid AND character_id = p_target_id;
+
+    SELECT COUNT(*) INTO v_cnt FROM group_members WHERE group_id = v_gid;
+    IF v_cnt <= 1 THEN
+        DELETE FROM groups WHERE id = v_gid;
+        RETURN json_build_object('ok', true, 'disbanded', true);
+    END IF;
+
+    RETURN json_build_object('ok', true, 'disbanded', false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Envia mensagem para o grupo do personagem.
 CREATE OR REPLACE FUNCTION group_send_message(p_character_id UUID, p_message TEXT)
 RETURNS JSON AS $$
