@@ -311,6 +311,7 @@ class CityScreen {
         if (!window.isAdmin) this._loaded = true;
 
         this.subscribeRealtime();
+        this._startSpriteReaper();
         this._setupCityChat();
         if (LS) LS.setProgress(94);
 
@@ -371,6 +372,7 @@ class CityScreen {
             }
         }
         this.unregisterPlayer();
+        this._stopSpriteReaper();
         this.players = {};
         if (this.wildPokemonLayer) {
             this.wildPokemonLayer.remove();
@@ -589,8 +591,8 @@ class CityScreen {
         if (inactive && this._isVisible !== false) {
             this._isVisible = false;
             try { await window.db.from('city_players').update({ is_visible: false }).eq('user_id', this.authUserId); } catch (e) {}
-        } else if (!inactive && this._isVisible !== true) {
-            this._isVisible = true;
+        } else if (!inactive) {
+            if (this._isVisible !== true) this._isVisible = true;
             try { await window.db.from('city_players').update({ is_visible: true }).eq('user_id', this.authUserId); } catch (e) {}
         }
     }
@@ -606,9 +608,11 @@ class CityScreen {
         try {
             const { data, error } = await window.db.from('city_players').select('*');
             if (error) throw error;
+            const now = Date.now();
             (data || []).forEach(p => {
                 if (p.user_id === this.authUserId) return;
                 if (p.is_visible === false) return;
+                if (!this.isCityPlayerActive(p, now)) return;
                 this.players[p.user_id] = { ...p, _skinImg: null };
                 if (p.skin_url) {
                     const img = new Image();
@@ -621,6 +625,31 @@ class CityScreen {
         }
     }
 
+    isCityPlayerActive(p, now) {
+        if (!p || p.is_visible === false) return false;
+        const t = p.updated_at ? new Date(p.updated_at).getTime() : 0;
+        if (!t) return true;
+        return (now || Date.now()) - t < 10 * 60 * 1000;
+    }
+
+    _startSpriteReaper() {
+        if (this._spriteReaperTimer) return;
+        this._spriteReaperTimer = setInterval(() => {
+            const now = Date.now();
+            for (const key of Object.keys(this.players)) {
+                const p = this.players[key];
+                if (p.user_id === this.authUserId) continue;
+                if (!this.isCityPlayerActive(p, now)) {
+                    delete this.players[key];
+                }
+            }
+        }, 15000);
+    }
+
+    _stopSpriteReaper() {
+        if (this._spriteReaperTimer) { clearInterval(this._spriteReaperTimer); this._spriteReaperTimer = null; }
+    }
+
     subscribeRealtime() {
         if (this.channel) this.channel.unsubscribe();
         this.channel = window.db.channel('city-players');
@@ -629,6 +658,10 @@ class CityScreen {
                 const p = payload.new;
                 if (p.user_id === this.authUserId) return;
                 if (p.is_visible === false) {
+                    delete this.players[p.user_id];
+                    return;
+                }
+                if (!this.isCityPlayerActive(p)) {
                     delete this.players[p.user_id];
                     return;
                 }
