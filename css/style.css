@@ -3076,8 +3076,8 @@ body {
 /* ===== Battle type helper icon ===== */
 .battle-type-ic {
   position: absolute;
-  right: 8px;
-  bottom: 4px;
+  right: 3px;
+  bottom: 2px;
   width: 22px;
   height: 22px;
   cursor: help;
@@ -3094,7 +3094,7 @@ body {
 .battle-type-ic:hover img { transform: scale(1.15); opacity: 1; }
 #enemy-type-ic, #pvp-enemy-type-ic {
   right: auto;
-  left: 8px;
+  left: 3px;
 }
 #enemy-type-ic .battle-type-tip, #pvp-enemy-type-ic .battle-type-tip {
   right: auto;
