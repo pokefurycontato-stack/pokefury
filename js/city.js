@@ -183,6 +183,7 @@ class CityScreen {
         menu.innerHTML = `
             <button data-action="add-friend" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Adicionar Amigo</button>
             <button data-action="private-msg" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar mensagem privada</button>
+            <button data-action="group-invite" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar convite de grupo</button>
             <button data-action="pvp" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar pedido de PVP</button>
         `;
         menu.style.left = (rect.left + sx * scaleX) + 'px';
@@ -201,6 +202,18 @@ class CityScreen {
             menu.remove();
             if (friendId) {
                 window.openPrivateChatWith(friendId, name);
+            }
+        });
+
+        menu.querySelector('[data-action="group-invite"]').addEventListener('click', async () => {
+            menu.remove();
+            if (friendId && window.GroupSystem) {
+                const result = await window.GroupSystem.sendInvite(friendId, name);
+                if (result && result.error) {
+                    window.pokefury?.showToast?.(result.error, 'error');
+                } else if (result && result.ok) {
+                    window.pokefury?.showToast?.('Convite de grupo enviado!', 'success');
+                }
             }
         });
 
@@ -313,6 +326,7 @@ class CityScreen {
         this.subscribeRealtime();
         this._startSpriteReaper();
         this._setupCityChat();
+        if (window.GroupSystem) window.GroupSystem.init();
         if (LS) LS.setProgress(94);
 
         this.resizeCanvas();

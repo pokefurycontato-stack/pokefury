@@ -19,6 +19,7 @@ export class Chat {
         this.isOpen = true;
         this.unreadGlobal = 0;
         this.unreadTrade = 0;
+        this.unreadGroup = 0;
         this.prefix = options.prefix || '';
         this.container = options.container || null;
         this.privateChats = {};
@@ -40,6 +41,31 @@ export class Chat {
         this.subscribeRealtime();
         this.subscribePrivateRealtime();
         this.restorePrivateChats();
+        this.setupGroupListener();
+        if (window.GroupSystem) {
+            window.GroupSystem.onGroupChange(() => {
+                if (this.channel === 'group') this.loadMessages();
+                this.updateBadges();
+            });
+        }
+    }
+
+    setupGroupListener() {
+        if (!window.GroupSystem) return;
+        window.GroupSystem.onGroupMessage((msg) => {
+            if (!window.GroupSystem.inGroup) return;
+            if (this.channel === 'group') {
+                const box = document.getElementById(this.prefix + 'chat-messages');
+                if (box) {
+                    this.appendMessage(msg, true);
+                    const near = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+                    if (near) box.scrollTop = box.scrollHeight;
+                }
+            } else {
+                this.unreadGroup++;
+                this.updateBadges();
+            }
+        });
     }
 
     injectStyle() {
@@ -74,6 +100,10 @@ export class Chat {
                 <button class="chat-tab" data-channel="trade" style="flex:1;padding:5px;background:rgba(255,255,255,0.08);border:none;border-radius:4px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">
                     <span class="chat-tab-dot trade"></span> Trade
                     <span class="chat-badge hidden" id="${this.prefix}badge-trade">0</span>
+                </button>
+                <button class="chat-tab" data-channel="group" id="${this.prefix}chat-tab-group" style="flex:1;padding:5px;background:rgba(255,255,255,0.08);border:none;border-radius:4px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">
+                    <span class="chat-tab-dot group" style="background:#a78bfa;"></span> Grupo
+                    <span class="chat-badge hidden" id="${this.prefix}badge-group">0</span>
                 </button>
                 <button class="chat-tab" data-channel="private" id="${this.prefix}chat-tab-private" style="flex:1;padding:5px;background:rgba(255,255,255,0.08);border:none;border-radius:4px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">
                     <span class="chat-tab-dot private" style="background:#38bdf8;"></span> Privado
@@ -123,6 +153,7 @@ export class Chat {
                 this.channel = tab.dataset.channel;
                 if (this.channel === 'global') this.unreadGlobal = 0;
                 if (this.channel === 'trade') this.unreadTrade = 0;
+                if (this.channel === 'group') this.unreadGroup = 0;
                 if (this.channel === 'private') {
                     for (const id in this.privateChats) this.privateChats[id].unread = 0;
                     if (!this.activePrivateId) {
@@ -187,14 +218,30 @@ export class Chat {
         if (!box) return;
 
         try {
-            const { data, error } = await this.db
-                .from('chat_messages')
-                .select('*')
-                .eq('channel', this.channel)
-                .order('created_at', { ascending: false })
-                .limit(this.maxMessages);
-
-            if (error) throw error;
+            let data = null;
+            if (this.channel === 'group') {
+                if (!window.GroupSystem || !window.GroupSystem.inGroup) {
+                    box.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:11px;padding:8px;text-align:center;">Você não está em uma equipe.</div>';
+                    return;
+                }
+                const res = await this.db
+                    .from('group_messages')
+                    .select('*')
+                    .eq('group_id', window.GroupSystem.groupId)
+                    .order('created_at', { ascending: false })
+                    .limit(this.maxMessages);
+                if (res.error) throw res.error;
+                data = res.data;
+            } else {
+                const res = await this.db
+                    .from('chat_messages')
+                    .select('*')
+                    .eq('channel', this.channel)
+                    .order('created_at', { ascending: false })
+                    .limit(this.maxMessages);
+                if (res.error) throw res.error;
+                data = res.data;
+            }
 
             box.innerHTML = '';
             const reversed = (data || []).reverse();
@@ -246,7 +293,9 @@ export class Chat {
 
         const time = new Date(msg.created_at);
         const timeStr = time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
-        const isMe = msg.user_id === this.userId;
+        const isMe = this.channel === 'group'
+            ? msg.character_id === this._charId()
+            : msg.user_id === this.userId;
         const nameHtml = (msg.character_id && !isMe)
             ? `<span class="chat-name chat-name-click" data-char-id="${msg.character_id}" data-char-name="${chatEsc(msg.player_name)}">${chatEsc(msg.player_name)}</span>`
             : `<span class="chat-name${isMe ? ' chat-name-me' : ''}">${chatEsc(msg.player_name)}</span>`;
@@ -272,13 +321,24 @@ export class Chat {
         const menu = document.createElement('div');
         menu.className = 'chat-name-menu';
         menu.style.cssText = 'position:fixed;z-index:10070;background:#1c2333;border:1px solid rgba(255,255,255,0.15);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;';
-        menu.innerHTML = `<button data-action="pm" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Enviar mensagem privada</button>`;
+        menu.innerHTML = `<button data-action="pm" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Enviar mensagem privada</button><button data-action="group-invite" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Enviar convite de grupo</button>`;
         menu.style.left = e.clientX + 'px';
         menu.style.top = e.clientY + 'px';
         document.body.appendChild(menu);
         menu.querySelector('[data-action="pm"]').addEventListener('click', () => {
             menu.remove();
             this.openPrivateChat(characterId, name);
+        });
+        menu.querySelector('[data-action="group-invite"]').addEventListener('click', async () => {
+            menu.remove();
+            if (window.GroupSystem) {
+                const result = await window.GroupSystem.sendInvite(characterId, name);
+                if (result && result.error) {
+                    window.pokefury?.showToast?.(result.error, 'error');
+                } else if (result && result.ok) {
+                    window.pokefury?.showToast?.('Convite de grupo enviado!', 'success');
+                }
+            }
         });
         const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', close); } };
         setTimeout(() => document.addEventListener('click', close), 0);
@@ -447,6 +507,11 @@ export class Chat {
             bTrade.textContent = this.unreadTrade;
             bTrade.classList.toggle('hidden', this.unreadTrade === 0 || this.channel === 'trade');
         }
+        const bGroup = document.getElementById(this.prefix + 'badge-group');
+        if (bGroup) {
+            bGroup.textContent = this.unreadGroup;
+            bGroup.classList.toggle('hidden', this.unreadGroup === 0 || this.channel === 'group');
+        }
         const unread = this.totalUnreadPrivate();
         if (bPrivate) {
             bPrivate.textContent = unread;
@@ -462,6 +527,14 @@ export class Chat {
         if (!this.userId || !this.db) return;
 
         try {
+            if (this.channel === 'group') {
+                if (!window.GroupSystem || !window.GroupSystem.inGroup) return;
+                await this.db.rpc('group_send_message', {
+                    p_character_id: this._charId(),
+                    p_message: text.substring(0, 200)
+                });
+                return;
+            }
             await this.db.from('chat_messages').insert({
                 channel: this.channel,
                 user_id: this.userId,
