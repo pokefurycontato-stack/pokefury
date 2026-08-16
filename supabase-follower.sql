@@ -4,6 +4,7 @@ ALTER TABLE public.city_players
   ADD COLUMN IF NOT EXISTS follower_id bigint,
   ADD COLUMN IF NOT EXISTS follower_sprite_url text,
   ADD COLUMN IF NOT EXISTS follower_back_url text,
+  ADD COLUMN IF NOT EXISTS follower_static_url text,
   ADD COLUMN IF NOT EXISTS follower_scale real;
 
 -- city_players ja deve estar na publicacao realtime (as posicoes ja sincronizam).

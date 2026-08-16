@@ -48,6 +48,7 @@ class CityScreen {
         this.pokemonFollowing = null;
         this.pokemonFollowSpriteUrl = null;
         this.pokemonFollowBackSpriteUrl = null;
+        this.pokemonFollowStaticUrl = null;
         this.pokemonFollowEl = null;
         this.pokemonFollowShadowEl = null;
         this.pokemonFollowRenderX = this.playerX;
@@ -747,6 +748,7 @@ class CityScreen {
                     existing.follower_id = p.follower_id;
                     existing.follower_sprite_url = p.follower_sprite_url;
                     existing.follower_back_url = p.follower_back_url;
+                    existing.follower_static_url = p.follower_static_url;
                     existing.follower_scale = p.follower_scale;
                     if (p.skin_url && p.skin_url !== existing.skin_url) {
                         existing.skin_url = p.skin_url;
@@ -3110,11 +3112,12 @@ class CityScreen {
         this.pokemonFollowing = pokemon;
 
         const staticFront = pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official;
-        const animUrl = (window.PokeAPI && pokemon.id <= 1025)
+        const animUrl = window.PokeAPI
             ? (pokemon.isShiny || pokemon.shiny
                 ? window.PokeAPI.getAnimatedFrontShinyUrl(pokemon.id)
                 : window.PokeAPI.getAnimatedFrontUrl(pokemon.id))
             : null;
+        this.pokemonFollowStaticUrl = staticFront || null;
         this.pokemonFollowSpriteUrl = animUrl || staticFront;
         this.pokemonFollowBackSpriteUrl = pokemon.spriteUrls?.back || null;
 
@@ -3127,8 +3130,19 @@ class CityScreen {
 
             this.pokemonFollowEl = document.createElement('img');
             this.pokemonFollowEl.style.cssText = 'position:absolute;pointer-events:none;z-index:3;';
+            this.pokemonFollowEl.onerror = () => {
+                const fb = this.pokemonFollowEl.dataset.fallback;
+                if (fb && this.pokemonFollowEl.src !== fb) {
+                    this.pokemonFollowEl.dataset.fallbackUsed = '1';
+                    this.pokemonFollowEl.src = fb;
+                } else {
+                    this.pokemonFollowEl.style.display = 'none';
+                }
+            };
             wrap.appendChild(this.pokemonFollowEl);
         }
+        this.pokemonFollowEl.dataset.fallback = this.pokemonFollowStaticUrl || '';
+        delete this.pokemonFollowEl.dataset.fallbackUsed;
         this.pokemonFollowEl.src = this.pokemonFollowSpriteUrl;
         this.pokemonFollowShadowEl.src = this.pokemonFollowSpriteUrl;
         this.pokemonFollowEl.style.display = 'block';
@@ -3140,6 +3154,11 @@ class CityScreen {
         this._syncFollowerToDb();
     }
 
+    _cityFollowerScale(poke) {
+        const raw = window.getPokemonScale ? window.getPokemonScale(poke) : 1;
+        return Math.min(0.75, raw);
+    }
+
     async _syncFollowerToDb() {
         if (!this.authUserId || this.authUserId === 'local') return;
         const poke = this.pokemonFollowing;
@@ -3148,7 +3167,8 @@ class CityScreen {
                 follower_id: poke ? poke.id : null,
                 follower_sprite_url: poke ? (this.pokemonFollowSpriteUrl || null) : null,
                 follower_back_url: poke ? (this.pokemonFollowBackSpriteUrl || null) : null,
-                follower_scale: poke ? (window.getPokemonScale ? window.getPokemonScale(poke) : 1) : null
+                follower_static_url: poke ? (this.pokemonFollowStaticUrl || null) : null,
+                follower_scale: poke ? this._cityFollowerScale(poke) : null
             }).eq('user_id', this.authUserId);
         } catch (e) {}
     }
@@ -3164,6 +3184,7 @@ class CityScreen {
         this.pokemonFollowing = null;
         this.pokemonFollowSpriteUrl = null;
         this.pokemonFollowBackSpriteUrl = null;
+        this.pokemonFollowStaticUrl = null;
         if (follower) {
             await this.loadCityFollower(follower);
         } else {
@@ -3177,8 +3198,8 @@ class CityScreen {
         if (!this.pokemonFollowing || !this.pokemonFollowEl) return;
 
         // Posição alvo: logo atrás do jogador, no sentido contrário à direção atual
-        const behindX = this.playerX - (this.playerDir === 'right' ? 42 : this.playerDir === 'left' ? -42 : 0);
-        const behindY = this.playerY - (this.playerDir === 'down' ? 42 : this.playerDir === 'up' ? -42 : 0);
+        const behindX = this.playerX - (this.playerDir === 'right' ? 55 : this.playerDir === 'left' ? -55 : 0);
+        const behindY = this.playerY - (this.playerDir === 'down' ? 55 : this.playerDir === 'up' ? -55 : 0);
 
         // Movimento suave (lerp) — desliza atrás do jogador como a câmera
         const cl = Math.min(1, 0.12 * dt);
@@ -3229,12 +3250,12 @@ class CityScreen {
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
 
-        const fScale = Math.min(1.25, (window.getPokemonScale ? window.getPokemonScale(this.pokemonFollowing) : 1));
+        const fScale = this._cityFollowerScale(this.pokemonFollowing);
         const spriteSize = this.playerSize * fScale;
 
         const useBack = this.playerDir === 'up' && this.pokemonFollowBackSpriteUrl;
         const targetSrc = useBack ? this.pokemonFollowBackSpriteUrl : this.pokemonFollowSpriteUrl;
-        if (this.pokemonFollowEl.src !== targetSrc) {
+        if (!this.pokemonFollowEl.dataset.fallbackUsed && this.pokemonFollowEl.src !== targetSrc) {
             this.pokemonFollowEl.src = targetSrc;
             if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.src = targetSrc;
         }
@@ -3284,6 +3305,15 @@ class CityScreen {
         wrap.appendChild(shadowEl);
         const el = document.createElement('img');
         el.style.cssText = 'position:absolute;pointer-events:none;z-index:3;';
+        el.onerror = () => {
+            const fb = el.dataset.fallback;
+            if (fb && el.src !== fb) {
+                el.dataset.fallbackUsed = '1';
+                el.src = fb;
+            } else {
+                el.style.display = 'none';
+            }
+        };
         wrap.appendChild(el);
         const entry = { el, shadowEl };
         this._otherFollowerEls[userId] = entry;
@@ -3307,18 +3337,21 @@ class CityScreen {
         const dir = p.direction || 'down';
         const useBack = dir === 'up' && p.follower_back_url;
         const src = useBack ? p.follower_back_url : p.follower_sprite_url;
-        if (el.src !== src) {
+        el.dataset.fallback = p.follower_static_url || '';
+        if (!el.dataset.fallbackUsed && el.src !== src) {
             el.src = src;
             shadowEl.src = src;
         }
 
-        const fScale = Math.min(1.25, Number(p.follower_scale) || 1);
+        const fScale = Math.min(0.75, Number(p.follower_scale) || 1);
         const size = ps * fScale;
+        // Distancia fixa do CENTRO do jogador (nao encosta nem cobre o sprite)
+        const OFF = 55;
         let offX = 0, offY = 0;
-        if (dir === 'down') offY = -34;
-        else if (dir === 'up') offY = 34;
-        else if (dir === 'left') offX = 34;
-        else offX = -34;
+        if (dir === 'down') offY = -(OFF + ps / 2);
+        else if (dir === 'up') offY = OFF - ps / 2;
+        else if (dir === 'left') offX = OFF;
+        else offX = -OFF;
 
         const cX = drawX + (ps - size) / 2 + offX;
         const cY = (drawY + ps) - size + offY;
