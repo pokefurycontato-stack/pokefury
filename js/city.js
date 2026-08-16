@@ -971,8 +971,9 @@ class CityScreen {
             if (seen.has(String(e.pokemon_id))) continue;
             seen.add(String(e.pokemon_id));
             const spriteUrl = window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(e.pokemon_id) : (e.sprite_url || '');
+            const staticUrl = (window.PokeAPI ? `${window.PokeAPI.supabaseStorageUrl}/home-front/${e.pokemon_id}.png` : (e.sprite_url || ''));
             html += `<div class="scan-pkm" data-id="${e.pokemon_id}" data-name="${encodeURIComponent(e.pokemon_name || '')}" style="cursor:pointer;text-align:center;width:74px;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">`;
-            html += `<img src="${spriteUrl}" alt="${e.pokemon_name || ''}" loading="lazy" style="width:64px;height:64px;image-rendering:pixelated;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.08);padding:4px;">`;
+            html += `<img src="${spriteUrl}" data-static="${staticUrl}" alt="${e.pokemon_name || ''}" loading="lazy" onerror="if(this.dataset.static && this.src !== this.dataset.static){this.src=this.dataset.static;}else{this.style.opacity=0.2;}" style="width:64px;height:64px;image-rendering:pixelated;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.08);padding:4px;">`;
             html += `<div style="color:#fff;font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.pokemon_name || ''}</div>`;
             html += '</div>';
         }
@@ -989,11 +990,13 @@ class CityScreen {
 
         let types = [];
         let sprite = window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(pokemonId) : '';
+        let staticUrl = window.PokeAPI ? `${window.PokeAPI.supabaseStorageUrl}/home-front/${pokemonId}.png` : '';
         try {
             const p = await window.PokeAPI.ensurePokemon(pokemonId);
             if (p) {
                 types = p.types || [];
                 sprite = window.PokeAPI.getAnimatedFrontUrl(p.id);
+                staticUrl = p.sprite_official || p.sprite_home || `${window.PokeAPI.supabaseStorageUrl}/home-front/${p.id}.png`;
             }
         } catch (e) {}
 
@@ -1002,7 +1005,7 @@ class CityScreen {
         ).join(' ');
 
         if (box) box.innerHTML = `
-            <img src="${sprite}" alt="${name}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto 10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5));">
+            <img src="${sprite}" data-static="${staticUrl}" alt="${name}" onerror="if(this.dataset.static && this.src !== this.dataset.static){this.src=this.dataset.static;}else{this.style.opacity=0.2;}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto 10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5));">
             <div style="color:#fff;font-size:17px;font-weight:700;margin-bottom:10px;">${name}</div>
             <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">${typeHtml || '<span style="color:#888;font-size:12px;">Sem tipo</span>'}</div>
         `;
