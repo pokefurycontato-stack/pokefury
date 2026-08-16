@@ -3516,23 +3516,6 @@ class CityScreen {
         this.drawGymElements(ctx, camX, camY, cw, ch);
         this.renderRankDom();
 
-        if (this.spawnZones.length > 0) {
-            this.spawnZones.forEach((z, i) => {
-                const sx = z.pos_x - camX;
-                const sy = z.pos_y - camY;
-                if (sx + z.width < -50 || sx > cw + 50 || sy + z.height < -50 || sy > ch + 50) return;
-                ctx.fillStyle = 'rgba(34, 197, 94, 0.12)';
-                ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
-                ctx.lineWidth = 2;
-                ctx.fillRect(sx, sy, z.width, z.height);
-                ctx.strokeRect(sx, sy, z.width, z.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 10px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(z.biome ? z.biome : 'Spawn', sx + z.width / 2, sy - 6);
-            });
-        }
-
         this.npcs.forEach(n => {
             if (n.npc_type !== 'nurse' && n.npc_type !== 'professor' && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'banker') return;
             const sx = n.pos_x - camX;
