@@ -331,6 +331,8 @@ class CityScreen {
         this._setupCityChat();
         if (window.GroupSystem) window.GroupSystem.init();
         this.loadForcedWeather();
+        // Pré-computa a cadeia de climas até o slot atual (evita travar o 1º frame)
+        this.getWeather();
         if (LS) LS.setProgress(94);
 
         this.resizeCanvas();
@@ -3188,15 +3190,57 @@ class CityScreen {
         const SLOT = 15 * 60 * 1000;      // clima muda a cada 15 min
         const OFFSET = 7.5 * 60 * 1000;   // deslocado no meio entre dia e noite
         const slot = Math.floor((this.serverNow() + OFFSET) / SLOT);
-        const h = Math.abs(Math.sin(slot * 127.1 + 311.7) * 43758.5453) % 1;
-        if (h < 0.38) return 'clear';
-        if (h < 0.58) return 'rain';
-        if (h < 0.68) return 'snow';
-        if (h < 0.76) return 'sandstorm';
-        if (h < 0.84) return 'psychic';
-        if (h < 0.90) return 'grassstorm';
-        if (h < 0.96) return 'wind';
-        return 'gold';
+        this._advanceWeatherChain(slot);
+        return this._slotHistory[this._slotHistory.length - 1];
+    }
+
+    _pickWeatherForSlot(slot, banned) {
+        // Todos com a mesma chance; ouro = peso 0.04 (efetivo ~5%, o mais raro)
+        const goldW = 0.04;
+        const base = (1 - goldW) / 7; // ~13.7% para cada um dos 7
+        const weights = [
+            { id: 'clear', w: base },
+            { id: 'rain', w: base },
+            { id: 'snow', w: base },
+            { id: 'sandstorm', w: base },
+            { id: 'psychic', w: base },
+            { id: 'grassstorm', w: base },
+            { id: 'wind', w: base },
+            { id: 'gold', w: goldW }
+        ];
+        const bannedSet = new Set(banned || []);
+        let candidate = 'gold';
+        let attempts = 0;
+        do {
+            const h = Math.abs(Math.sin(slot * 127.1 + 311.7 + attempts * 91.7) * 43758.5453) % 1;
+            let acc = 0;
+            candidate = 'gold';
+            for (const w of weights) {
+                acc += w.w;
+                if (h < acc) { candidate = w.id; break; }
+            }
+            attempts++;
+        } while (bannedSet.has(candidate) && attempts < 64);
+        // Fallback determinístico: se exaurir as tentativas, escolhe o primeiro não banido
+        if (bannedSet.has(candidate)) {
+            candidate = weights.find(w => !bannedSet.has(w.id)).id;
+        }
+        return candidate;
+    }
+
+    _advanceWeatherChain(slot) {
+        if (this._chainSlot === undefined) {
+            this._chainSlot = -1;
+            this._slotHistory = [];
+        }
+        // Avança a cadeia do último slot computado até o slot atual.
+        // Cada slot não pode repetir nenhum dos 2 anteriores (memória em _slotHistory).
+        while (this._chainSlot < slot) {
+            this._chainSlot++;
+            const w = this._pickWeatherForSlot(this._chainSlot, this._slotHistory);
+            this._slotHistory.push(w);
+            if (this._slotHistory.length > 2) this._slotHistory.shift();
+        }
     }
 
     weatherDurationMs() {
