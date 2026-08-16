@@ -3162,15 +3162,26 @@ class CityScreen {
     async _syncFollowerToDb() {
         if (!this.authUserId || this.authUserId === 'local') return;
         const poke = this.pokemonFollowing;
+        const base = {
+            follower_id: poke ? poke.id : null,
+            follower_sprite_url: poke ? (this.pokemonFollowSpriteUrl || null) : null,
+            follower_back_url: poke ? (this.pokemonFollowBackSpriteUrl || null) : null,
+            follower_scale: poke ? this._cityFollowerScale(poke) : null
+        };
+        const withStatic = { ...base, follower_static_url: poke ? (this.pokemonFollowStaticUrl || null) : null };
+        let res = null;
         try {
-            await window.db.from('city_players').update({
-                follower_id: poke ? poke.id : null,
-                follower_sprite_url: poke ? (this.pokemonFollowSpriteUrl || null) : null,
-                follower_back_url: poke ? (this.pokemonFollowBackSpriteUrl || null) : null,
-                follower_static_url: poke ? (this.pokemonFollowStaticUrl || null) : null,
-                follower_scale: poke ? this._cityFollowerScale(poke) : null
-            }).eq('user_id', this.authUserId);
-        } catch (e) {}
+            res = await window.db.from('city_players').update(withStatic).eq('user_id', this.authUserId);
+        } catch (e) {
+            res = { error: e };
+        }
+        // Se a coluna follower_static_url ainda nao existir no banco, o UPDATE inteiro falha
+        // (e o follower some p/ os outros). Nesse caso, tenta de novo sem essa coluna.
+        if (res && res.error) {
+            try {
+                await window.db.from('city_players').update(base).eq('user_id', this.authUserId);
+            } catch (e2) {}
+        }
     }
 
     async updateCityFollower() {
