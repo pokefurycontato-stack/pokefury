@@ -37,6 +37,11 @@ class GroupSystem {
         return !!this.groupId;
     }
 
+    isMember(charId) {
+        if (!this.groupId || !charId) return false;
+        return this.members.some(m => m.character_id === charId);
+    }
+
     isLeader() {
         return this.groupId && this.leaderId === this._charId();
     }

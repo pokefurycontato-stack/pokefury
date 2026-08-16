@@ -1974,6 +1974,14 @@ class CityScreen {
                 await window.db.from('city_players').update({ skin_url: skinUrl }).eq('user_id', this.authUserId);
             } catch (e) {}
         }
+        if (window.GroupSystem && window.GroupSystem.inGroup) {
+            try {
+                await window.db.rpc('group_update_skin', {
+                    p_character_id: window.GameData?.currentCharacterId,
+                    p_skin_url: skinUrl
+                });
+            } catch (e) {}
+        }
         this.render();
     }
 
@@ -3699,6 +3707,7 @@ class CityScreen {
         if (this.myPlayer) allPlayers.push({
             pos_x: this.playerX, pos_y: this.playerY, direction: this.playerDir,
             character_name: this.myPlayer.character_name,
+            character_id: this.myPlayer.character_id,
             _skinImg: this.playerSkinImg, isMe: true
         });
         Object.values(this.players).forEach(p => {
@@ -3758,7 +3767,7 @@ class CityScreen {
                 ctx.fillRect(drawX + 4, drawY + 4, ps - 8, ps - 8);
             }
 
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = (window.GroupSystem && window.GroupSystem.isMember(p.character_id)) ? '#38bdf8' : '#fff';
             ctx.font = 'bold 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.shadowColor = 'rgba(0,0,0,0.9)';
