@@ -3844,9 +3844,6 @@ class CityScreen {
             }
             ctx.restore();
         }
-
-        const posEl = document.getElementById('city-pos');
-        if (posEl) posEl.textContent = `X: ${Math.round(this.playerX)} Y: ${Math.round(this.playerY)}`;
     }
 }
 
