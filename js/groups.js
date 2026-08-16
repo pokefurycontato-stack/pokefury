@@ -376,6 +376,38 @@ class GroupSystem {
     }
 
     // ---------------- Box de time ----------------
+    showMemberMenu(characterId, name, e) {
+        document.querySelectorAll('.chat-name-menu').forEach(m => m.remove());
+        const myId = this._charId();
+        const amLeader = this.isLeader();
+        const isMe = characterId === myId;
+
+        let buttonsHtml = '<button data-action="pm" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">Enviar mensagem privada</button>';
+        if (amLeader && !isMe) {
+            buttonsHtml += '<button data-action="group-kick" style="display:block;width:100%;padding:9px 14px;background:none;border:none;color:#f87171;font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-top:1px solid rgba(255,255,255,0.08);">Expulsar do grupo</button>';
+        }
+
+        const menu = document.createElement('div');
+        menu.className = 'chat-name-menu';
+        menu.style.cssText = 'position:fixed;z-index:10070;background:#1c2333;border:1px solid rgba(255,255,255,0.15);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;';
+        menu.innerHTML = buttonsHtml;
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        document.body.appendChild(menu);
+
+        menu.querySelector('[data-action="pm"]').addEventListener('click', () => {
+            menu.remove();
+            window.openPrivateChatWith(characterId, name);
+        });
+        const kickBtn = menu.querySelector('[data-action="group-kick"]');
+        if (kickBtn) kickBtn.addEventListener('click', () => {
+            menu.remove();
+            this.showKickConfirm(characterId, name);
+        });
+        const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', close); } };
+        setTimeout(() => document.addEventListener('click', close), 0);
+    }
+
     renderBox() {
         const box = document.getElementById('city-group-box');
         if (!box) return;
@@ -439,6 +471,15 @@ class GroupSystem {
                 you.style.cssText = 'color:#38bdf8;font-size:10px;';
                 you.textContent = ' (você)';
                 nameEl.appendChild(you);
+            }
+            if (!isMe) {
+                nameEl.style.cursor = 'pointer';
+                nameEl.style.textDecoration = 'underline dotted rgba(255,255,255,0.4)';
+                nameEl.title = 'Clique para opções';
+                nameEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showMemberMenu(m.character_id, m.character_name, e);
+                });
             }
             row.appendChild(nameEl);
 
