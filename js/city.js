@@ -3561,7 +3561,7 @@ class CityScreen {
         const CONFIGS = {
             rain: { target: 120, speed: 9, speedVar: 6, len: 15, lenVar: 15, size: 0, wind: -2.5, windVar: 1 },
             snow: { target: 70, speed: 1.2, speedVar: 2, len: 0, size: 2, sizeVar: 4 },
-            sandstorm: { target: 90, speed: 5, speedVar: 4, len: 2, lenVar: 3, size: 1, sizeVar: 2, wind: 2, windVar: 1.5, drift: 2 },
+            sandstorm: { target: 180, speed: 5, speedVar: 4, len: 2, lenVar: 3, size: 1, sizeVar: 2, wind: 2, windVar: 1.5, drift: 2 },
             grassstorm: { target: 70, speed: 3, speedVar: 3, len: 0, size: 2, sizeVar: 3, wind: 1.5, windVar: 1.5, drift: 1 },
             wind: { target: 45, speed: 18, speedVar: 14, len: 40, lenVar: 40, size: 0, wind: 6, windVar: 3 },
             gold: { target: 70, speed: 2.5, speedVar: 2, len: 0, size: 1, sizeVar: 2, wind: 0, drift: 0 }
@@ -4059,8 +4059,8 @@ class CityScreen {
         // Psychic weather: leve tom roxo sobre a tela (dia ou noite)
         if ((this._weather || this.getWeather()) === 'psychic') {
             ctx.save();
-            ctx.globalAlpha = 0.16;
-            ctx.fillStyle = 'rgb(120, 80, 200)';
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = 'rgb(139, 92, 246)';
             ctx.fillRect(0, 0, cw, ch);
             ctx.restore();
         }
