@@ -54,6 +54,7 @@ class CityScreen {
         this.pokemonFollowRenderY = this.playerY;
         this.pokemonFollowIdleTimer = 0;
         this.pokemonFollowIdleFlip = false;
+        this._otherFollowerEls = {};
 
         this.raidPortal = null;
         this.raidSpawn = null;
@@ -413,6 +414,8 @@ class CityScreen {
         this.players = {};
         if (this.pokemonFollowEl) { this.pokemonFollowEl.remove(); this.pokemonFollowEl = null; }
         if (this.pokemonFollowShadowEl) { this.pokemonFollowShadowEl.remove(); this.pokemonFollowShadowEl = null; }
+        for (const uid of Object.keys(this._otherFollowerEls || {})) this._removeOtherFollowerEls(uid);
+        this._otherFollowerEls = {};
         this.pokemonFollowing = null;
         this.pokemonFollowSpriteUrl = null;
         this.pokemonFollowBackSpriteUrl = null;
@@ -691,6 +694,7 @@ class CityScreen {
                 const p = this.players[key];
                 if (p.user_id === this.authUserId) continue;
                 if (!this.isCityPlayerActive(p, now)) {
+                    this._removeOtherFollowerEls(p.user_id);
                     delete this.players[key];
                 }
             }
@@ -709,10 +713,12 @@ class CityScreen {
                 const p = payload.new;
                 if (p.user_id === this.authUserId) return;
                 if (p.is_visible === false) {
+                    this._removeOtherFollowerEls(p.user_id);
                     delete this.players[p.user_id];
                     return;
                 }
                 if (!this.isCityPlayerActive(p)) {
+                    this._removeOtherFollowerEls(p.user_id);
                     delete this.players[p.user_id];
                     return;
                 }
@@ -751,6 +757,7 @@ class CityScreen {
                     }
                 }
             } else if (payload.eventType === 'DELETE') {
+                this._removeOtherFollowerEls(payload.old?.user_id);
                 delete this.players[payload.old?.user_id];
             }
         }).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'city_forced_teleports' }, (payload) => {
@@ -3267,25 +3274,43 @@ class CityScreen {
         }
     }
 
-    _getFollowerImg(url) {
-        if (!url) return null;
-        if (!this._followerImgCache) this._followerImgCache = {};
-        let img = this._followerImgCache[url];
-        if (!img) {
-            img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = url;
-            this._followerImgCache[url] = img;
-        }
-        return img;
+    _getOtherFollowerEls(userId) {
+        if (!userId) return null;
+        if (this._otherFollowerEls[userId]) return this._otherFollowerEls[userId];
+        const wrap = this.canvas.parentElement;
+        if (!wrap) return null;
+        const shadowEl = document.createElement('img');
+        shadowEl.style.cssText = 'position:absolute;pointer-events:none;z-index:2;filter:brightness(0) blur(3px) opacity(0.35);';
+        wrap.appendChild(shadowEl);
+        const el = document.createElement('img');
+        el.style.cssText = 'position:absolute;pointer-events:none;z-index:3;';
+        wrap.appendChild(el);
+        const entry = { el, shadowEl };
+        this._otherFollowerEls[userId] = entry;
+        return entry;
     }
 
-    drawOtherPlayerFollower(ctx, p, drawX, drawY, ps) {
-        if (!p || p.follower_sprite_url === null || p.follower_sprite_url === undefined) return;
+    _removeOtherFollowerEls(userId) {
+        const entry = this._otherFollowerEls && this._otherFollowerEls[userId];
+        if (!entry) return;
+        try { entry.el.remove(); } catch (e) {}
+        try { entry.shadowEl.remove(); } catch (e) {}
+        delete this._otherFollowerEls[userId];
+    }
+
+    drawOtherPlayerFollowerDom(p, drawX, drawY, ps, scaleX, scaleY, offsetX, offsetY) {
+        if (!p || !p.follower_sprite_url) return;
+        const entry = this._getOtherFollowerEls(p.user_id);
+        if (!entry) return;
+        const { el, shadowEl } = entry;
+
         const dir = p.direction || 'down';
-        let img = this._getFollowerImg(p.follower_sprite_url);
-        if (dir === 'up' && p.follower_back_url) img = this._getFollowerImg(p.follower_back_url);
-        if (!img || !img.complete || !img.naturalWidth) return;
+        const useBack = dir === 'up' && p.follower_back_url;
+        const src = useBack ? p.follower_back_url : p.follower_sprite_url;
+        if (el.src !== src) {
+            el.src = src;
+            shadowEl.src = src;
+        }
 
         const fScale = Math.min(1.25, Number(p.follower_scale) || 1);
         const size = ps * fScale;
@@ -3295,24 +3320,33 @@ class CityScreen {
         else if (dir === 'left') offX = 34;
         else offX = -34;
 
-        const feetY = drawY + ps;
-        const imgX = drawX + (ps - size) / 2 + offX;
-        const imgY = feetY - size + offY;
+        const cX = drawX + (ps - size) / 2 + offX;
+        const cY = (drawY + ps) - size + offY;
+        const left = offsetX + cX * scaleX;
+        const top = offsetY + cY * scaleY;
+        const w = size * scaleX;
+        const h = size * scaleY;
 
         const adj = window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(p.follower_id) : null;
-        const flip = dir === 'right';
-        if (flip || adj) {
-            ctx.save();
-            const cx = imgX + size / 2;
-            const cy = imgY + size / 2;
-            ctx.translate(cx, cy);
-            if (flip) ctx.scale(-1, 1);
-            if (adj) ctx.scale(adj.scaleX, adj.scaleY);
-            ctx.drawImage(img, -size / 2, -size / 2, size, size);
-            ctx.restore();
-        } else {
-            ctx.drawImage(img, imgX, imgY, size, size);
-        }
+        let transform = adj ? `scale(${adj.scaleX}, ${adj.scaleY})` : '';
+        if (dir === 'right') transform = (transform ? transform + ' ' : '') + 'scaleX(-1)';
+        const tf = transform || 'none';
+
+        el.style.display = 'block';
+        el.style.left = left + 'px';
+        el.style.top = top + 'px';
+        el.style.width = w + 'px';
+        el.style.height = h + 'px';
+        el.style.transform = tf;
+
+        const shadowW = w * 0.8;
+        const shadowH = h * 0.25;
+        shadowEl.style.display = 'block';
+        shadowEl.style.left = (left + (w - shadowW) / 2) + 'px';
+        shadowEl.style.top = (top + h - shadowH * 0.3) + 'px';
+        shadowEl.style.width = shadowW + 'px';
+        shadowEl.style.height = shadowH + 'px';
+        shadowEl.style.transform = tf;
     }
 
     teleportToGymType(gymType) {
@@ -4230,6 +4264,15 @@ class CityScreen {
         const countEl = document.getElementById('city-player-count');
         if (countEl) countEl.textContent = `${count} jogador${count !== 1 ? 'es' : ''} online`;
 
+        // Escala/offset do canvas -> container DOM (para followers DOM dos outros jogadores)
+        const _wrap = this.canvas.parentElement;
+        const _canvasRect = this.canvas.getBoundingClientRect();
+        const _wrapRect = _wrap ? _wrap.getBoundingClientRect() : null;
+        const fScaleX = _canvasRect.width / this.canvas.width;
+        const fScaleY = _canvasRect.height / this.canvas.height;
+        const fOffX = _canvasRect.left - (_wrapRect ? _wrapRect.left : 0);
+        const fOffY = _canvasRect.top - (_wrapRect ? _wrapRect.top : 0);
+
         allPlayers.forEach(p => {
             const ps = this.playerSize;
             let drawX, drawY;
@@ -4246,8 +4289,15 @@ class CityScreen {
             ctx.ellipse(drawX + ps / 2 + shadowOffX, drawY + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Pokemon seguindo dos OUTROS jogadores (o proprio e desenhado como DOM acima do canvas)
-            if (!p.isMe) this.drawOtherPlayerFollower(ctx, p, drawX, drawY, ps);
+            // Pokemon seguindo dos OUTROS jogadores (DOM sobre o canvas p/ animar o GIF)
+            if (!p.isMe) {
+                if (p.follower_sprite_url) {
+                    this.drawOtherPlayerFollowerDom(p, drawX, drawY, ps, fScaleX, fScaleY, fOffX, fOffY);
+                } else {
+                    const _entry = this._otherFollowerEls && this._otherFollowerEls[p.user_id];
+                    if (_entry) { _entry.el.style.display = 'none'; _entry.shadowEl.style.display = 'none'; }
+                }
+            }
 
             const skinImg = p._skinImg;
             if (skinImg && skinImg.complete && skinImg.naturalWidth) {
