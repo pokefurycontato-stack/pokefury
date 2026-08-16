@@ -3704,8 +3704,8 @@ class CityScreen {
             btn.textContent = m.icon + ' ' + m.label;
             btn.onclick = async () => {
                 const res = await window.db.rpc('force_weather', { p_weather: m.id });
-                if (res && res.error) {
-                    window.pokefury?.showToast?.(res.error.message || 'Erro ao forçar clima', 'error');
+                if (res && (res.error || (res.data && res.data.error))) {
+                    window.pokefury?.showToast?.(res.error?.message || res.data?.error || 'Erro ao forçar clima', 'error');
                     return;
                 }
                 window.pokefury?.showToast?.(`Clima forçado: ${m.label}!`, 'success');
