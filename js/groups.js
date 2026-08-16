@@ -2,26 +2,6 @@
    groups.js — Sistema de Grupos/Equipes (máx. 3 jogadores)
    ============================================================= */
 
-function cityGroupCropThumb(img) {
-    const nw = img.naturalWidth;
-    const nh = img.naturalHeight;
-    const isGrid = nw > 100 && nh > 100 && Math.abs(nw - nh) < 20;
-    const container = img.parentElement;
-    if (!container) return;
-    const boxSize = container.clientWidth || 36;
-    if (isGrid) {
-        img.style.width = (boxSize * 4) + 'px';
-        img.style.height = (boxSize * 4) + 'px';
-        img.style.maxWidth = 'none';
-        img.style.objectFit = 'none';
-    } else {
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.maxWidth = '100%';
-        img.style.objectFit = 'cover';
-    }
-}
-
 class GroupSystem {
     constructor() {
         this.db = window.db;
@@ -353,29 +333,72 @@ class GroupSystem {
         box.classList.remove('hidden');
         const myId = this._charId();
 
-        const rows = this.members.map(m => {
-            const isLeader = m.character_id === this.leaderId;
-            const isMe = m.character_id === myId;
-            const skin = m.skin_url || 'assets/perso_masculino.webp';
-            return `
-                <div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;background:${isMe ? 'rgba(56,189,248,0.12)' : 'rgba(255,255,255,0.04)'};margin-bottom:4px;">
-                    <div style="width:36px;height:36px;flex-shrink:0;overflow:hidden;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);position:relative;">
-                        <img src="${skin}" alt="" loading="lazy" onerror="this.onerror=null;this.src='assets/perso_masculino.webp';" style="position:absolute;top:0;left:0;width:144px;height:144px;max-width:none;" onload="cityGroupCropThumb(this)">
-                    </div>
-                    <span style="flex:1;color:#fff;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._esc(m.character_name)}${isMe ? ' <span style="color:#38bdf8;font-size:10px;">(você)</span>' : ''}</span>
-                    ${isLeader ? '<span style="font-size:14px;" title="Líder">👑</span>' : ''}
-                </div>
-            `;
-        }).join('');
-
         box.innerHTML = `
             <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.1);">
                 <span style="color:#fff;font-size:12px;font-weight:700;">👥 Equipe</span>
                 <span style="margin-left:auto;color:rgba(255,255,255,0.4);font-size:10px;">${this.members.length}/3</span>
             </div>
-            <div style="padding:6px;">${rows}</div>
+            <div id="city-group-members" style="padding:6px;"></div>
             <button id="city-group-leave" style="width:100%;padding:9px;border:none;border-radius:8px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Sair da equipe</button>
         `;
+
+        const membersEl = document.getElementById('city-group-members');
+        if (!membersEl) return;
+
+        this.members.forEach(m => {
+            const isLeader = m.character_id === this.leaderId;
+            const isMe = m.character_id === myId;
+            const skin = m.skin_url || 'assets/perso_masculino.webp';
+
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;margin-bottom:4px;background:' + (isMe ? 'rgba(56,189,248,0.12)' : 'rgba(255,255,255,0.04)') + ';';
+
+            const thumbWrap = document.createElement('div');
+            thumbWrap.style.cssText = 'width:36px;height:36px;flex-shrink:0;border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);position:relative;';
+
+            const thumb = document.createElement('img');
+            thumb.style.cssText = 'image-rendering:pixelated;display:block;position:relative;z-index:2;width:144px;height:144px;max-width:none;';
+            thumb.alt = '';
+            thumb.onerror = () => {
+                if (thumb.src && thumb.src.indexOf('perso_masculino') !== -1) return;
+                thumb.src = 'assets/perso_masculino.webp';
+            };
+            thumb.onload = () => {
+                const nw = thumb.naturalWidth;
+                const nh = thumb.naturalHeight;
+                const isGrid = nw > 100 && nh > 100 && Math.abs(nw - nh) < 20;
+                if (!isGrid) {
+                    thumb.style.width = '100%';
+                    thumb.style.height = '100%';
+                    thumb.style.maxWidth = '100%';
+                    thumb.style.objectFit = 'cover';
+                }
+            };
+            thumb.src = skin;
+            thumbWrap.appendChild(thumb);
+            row.appendChild(thumbWrap);
+
+            const nameEl = document.createElement('span');
+            nameEl.style.cssText = 'flex:1;color:#fff;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            nameEl.textContent = m.character_name;
+            if (isMe) {
+                const you = document.createElement('span');
+                you.style.cssText = 'color:#38bdf8;font-size:10px;';
+                you.textContent = ' (você)';
+                nameEl.appendChild(you);
+            }
+            row.appendChild(nameEl);
+
+            if (isLeader) {
+                const crown = document.createElement('span');
+                crown.style.cssText = 'font-size:14px;';
+                crown.textContent = '👑';
+                crown.title = 'Líder';
+                row.appendChild(crown);
+            }
+
+            membersEl.appendChild(row);
+        });
 
         const leaveBtn = document.getElementById('city-group-leave');
         if (leaveBtn) leaveBtn.addEventListener('click', () => this.leaveGroup());
