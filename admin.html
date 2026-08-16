@@ -82,6 +82,14 @@
         .btn-ban.unban { background: rgba(255,255,255,0.14); color: #fff; }
         .banned-flag { color: #ff6b81; font-weight: 700; font-size: 11px; }
         .empty { padding: 40px; text-align: center; color: rgba(255,255,255,0.4); }
+        .online-sort {
+            background: none; border: none; padding: 0; margin: 0; cursor: pointer;
+            color: rgba(255,255,255,0.55); font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.6px; font-family: Inter, sans-serif;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .online-sort:hover { color: #fff; }
+        .sort-ic { font-size: 10px; color: rgba(255,255,255,0.35); }
 
         /* Game view */
         .game-toolbar {
@@ -244,44 +252,94 @@
         }
 
         let onlineTimer = null;
+        let onlineSort = { col: 'connected', dir: -1 };
+
+        function sortOnline(players) {
+            const { col, dir } = onlineSort;
+            return [...players].sort((a, b) => {
+                switch (col) {
+                    case 'name': {
+                        const na = (a.player_name || '').toLowerCase();
+                        const nb = (b.player_name || '').toLowerCase();
+                        if (na === nb) return 0;
+                        return dir * (na < nb ? -1 : 1);
+                    }
+                    case 'connected': {
+                        const va = a.is_online ? (a.connected_seconds != null ? a.connected_seconds : Infinity) : (a.idle_seconds || 0);
+                        const vb = b.is_online ? (b.connected_seconds != null ? b.connected_seconds : Infinity) : (b.idle_seconds || 0);
+                        if (va === vb) return 0;
+                        return dir * (va - vb);
+                    }
+                    case 'idle': {
+                        return dir * ((a.idle_seconds || 0) - (b.idle_seconds || 0));
+                    }
+                    default: return 0;
+                }
+            });
+        }
+
+        function renderOnline(players) {
+            const list = document.getElementById('online-list');
+            if (!list) return;
+            list.innerHTML = players.length
+                ? players.map(p => {
+                    const idle = p.idle_seconds;
+                    const online = !!p.is_online;
+                    const idleBadge = online
+                        ? (idle > 420 ? `<span class="badge server_reject" style="background:rgba(233,69,96,0.25);color:#ff6b81;">${fmtDur(idle)}</span>`
+                           : idle > 300 ? `<span class="badge rate_limit" style="background:rgba(245,158,11,0.25);color:#fbbf24;">${fmtDur(idle)}</span>`
+                           : `<span class="badge other" style="background:rgba(34,197,94,0.2);color:#4ade80;">${fmtDur(idle)}</span>`)
+                        : `<span class="badge other" style="background:rgba(148,163,184,0.2);color:#94a3b8;">${fmtDur(idle)}</span>`;
+                    const statusBadge = online
+                        ? `<span style="display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;padding:1px 7px;border-radius:8px;background:rgba(34,197,94,0.18);color:#4ade80;margin-left:6px;vertical-align:middle;">Online</span>`
+                        : `<span style="display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;padding:1px 7px;border-radius:8px;background:rgba(148,163,184,0.15);color:#94a3b8;margin-left:6px;vertical-align:middle;">Offline</span>`;
+                    return `<tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="width:32px;height:32px;border-radius:50%;background:${online ? 'linear-gradient(135deg,#e94560,#7c3aed)' : 'rgba(148,163,184,0.35)'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">${esc((p.player_name || '?').charAt(0).toUpperCase())}</div>
+                                <div>
+                                    <div style="font-weight:700;color:#fff;">${esc(p.player_name || '—')}${statusBadge}</div>
+                                    <div style="font-size:11px;color:rgba(255,255,255,0.4);">${esc(p.email || '—')}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="time">${online ? fmtDur(p.connected_seconds) : '—'}</td>
+                        <td>${idleBadge}</td>
+                        <td>
+                            ${online
+                                ? `<button class="btn-ban ban" onclick="forceLogoutPlayer('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')">Desconectar</button>`
+                                : `<button class="btn-ban" disabled style="background:rgba(148,163,184,0.25);color:rgba(255,255,255,0.35);cursor:not-allowed;">Desconectar</button>`}
+                        </td>
+                    </tr>`;
+                }).join('')
+                : '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhuma conta cadastrada.</td></tr>';
+        }
 
         async function loadOnline() {
             const list = document.getElementById('online-list');
             if (!list) return;
             try {
-                const { data } = await window.db.rpc('get_online_players');
+                const { data } = await window.db.rpc('get_all_accounts');
                 if (data && data.success) {
-                    const players = data.players || [];
-                    list.innerHTML = players.length
-                        ? players.map(p => {
-                            const idle = p.idle_seconds;
-                            const idleBadge = idle > 420 ? `<span class="badge server_reject" style="background:rgba(233,69,96,0.25);color:#ff6b81;">${fmtDur(idle)}</span>`
-                                          : idle > 300 ? `<span class="badge rate_limit" style="background:rgba(245,158,11,0.25);color:#fbbf24;">${fmtDur(idle)}</span>`
-                                          : `<span class="badge other" style="background:rgba(34,197,94,0.2);color:#4ade80;">${fmtDur(idle)}</span>`;
-                            return `<tr>
-                                <td>
-                                    <div style="display:flex;align-items:center;gap:10px;">
-                                        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#e94560,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">${esc((p.player_name || '?').charAt(0).toUpperCase())}</div>
-                                        <div>
-                                            <div style="font-weight:700;color:#fff;">${esc(p.player_name || '—')}</div>
-                                            <div style="font-size:11px;color:rgba(255,255,255,0.4);">${esc(p.email || '—')}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="time">${fmtDur(p.connected_seconds)}</td>
-                                <td>${idleBadge}</td>
-                                <td>
-                                    <button class="btn-ban ban" onclick="forceLogoutPlayer('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')">Desconectar</button>
-                                </td>
-                            </tr>`;
-                        }).join('')
-                        : '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhum jogador online agora.</td></tr>';
+                    renderOnline(sortOnline(data.players || []));
                 } else {
                     list.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Erro: ' + esc((data && data.error) || 'sem resposta') + '</td></tr>';
                 }
             } catch (e) {
-                list.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Falha ao carregar jogadores online.</td></tr>';
+                list.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Falha ao carregar contas.</td></tr>';
             }
+        }
+
+        function sortOnlineBy(col) {
+            if (onlineSort.col === col) onlineSort.dir = -onlineSort.dir;
+            else onlineSort = { col, dir: col === 'name' ? 1 : -1 };
+            document.querySelectorAll('.online-sort').forEach(el => {
+                const isActive = el.dataset.sort === onlineSort.col;
+                el.style.color = isActive ? '#e94560' : 'rgba(255,255,255,0.55)';
+                const ic = el.querySelector('.sort-ic');
+                if (ic) ic.textContent = isActive ? (onlineSort.dir > 0 ? '▲' : '▼') : '⇅';
+            });
+            loadOnline();
         }
 
         function toggleOnlinePanel() {
@@ -380,7 +438,7 @@
                             </div>
                             <div class="toolbar">
                                 <button onclick="loadEvents()">Atualizar</button>
-                                <button onclick="toggleOnlinePanel()">🟢 Contas conectadas</button>
+                                <button onclick="toggleOnlinePanel()">👥 Todas as contas</button>
                                 <button onclick="toggleDevicePanel()">📵 Dispositivos banidos</button>
                                 <select id="filter-type" onchange="currentFilter=this.value;loadEvents()">
                                     <option value="all">Todos os eventos</option>
@@ -398,7 +456,10 @@
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>Jogador</th><th>Conectado há</th><th>Inativo há</th><th>Ação</th>
+                                                <th><button class="online-sort" data-sort="name" onclick="sortOnlineBy('name')">Jogador <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
+                                                <th><button class="online-sort" data-sort="connected" onclick="sortOnlineBy('connected')">Conectado há <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
+                                                <th><button class="online-sort" data-sort="idle" onclick="sortOnlineBy('idle')">Inativo há <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
+                                                <th>Ação</th>
                                             </tr>
                                         </thead>
                                         <tbody id="online-list"></tbody>
