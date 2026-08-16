@@ -359,6 +359,10 @@ class CityScreen {
         document.getElementById('city-premium-modal')?.classList.add('hidden');
         this.hideBattleZoneUI();
         this.closeNpcDialogue();
+        this.closeScanPopup();
+        this.closeScanDetail();
+        const scanBtn = document.getElementById('city-scan-btn');
+        if (scanBtn) scanBtn.classList.add('hidden');
         const pcOverlay = document.getElementById('pc-overlay');
         if (pcOverlay) {
             if (pcOverlay.dataset.pcOrigParentId !== undefined) {
@@ -866,6 +870,150 @@ class CityScreen {
             }
         }
         return encounters;
+    }
+
+    // ==================== SCANNER ====================
+    updateScanButton() {
+        const btn = document.getElementById('city-scan-btn');
+        if (!btn) return;
+        const inZone = !!this.currentSpawnZone;
+        btn.classList.toggle('hidden', !inZone);
+        if (this.currentSpawnZone && this.currentSpawnZone.biome) {
+            btn.title = 'Scanner: ' + this.currentSpawnZone.biome;
+        }
+    }
+
+    async openScanPopup() {
+        const zone = this.currentSpawnZone;
+        if (!zone || !zone.biome) return;
+        const overlay = document.getElementById('city-scan-popup');
+        if (!overlay) return;
+        overlay.classList.remove('hidden');
+        const titleEl = document.getElementById('city-scan-title');
+        if (titleEl) titleEl.textContent = 'Scanner • ' + zone.biome;
+        const content = document.getElementById('city-scan-content');
+        if (content) content.innerHTML = '<div style="color:#888;text-align:center;padding:30px;">Carregando...</div>';
+
+        let encounters = [];
+        try {
+            encounters = await this.filterSpawnEncounters(await this.resolveSpawnEncounters(zone.biome), zone.biome);
+        } catch (e) {
+            encounters = [];
+        }
+
+        const ids = [...new Set((encounters || []).map(e => e && e.pokemon_id).filter(Boolean))];
+        let timeMap = {};
+        if (ids.length) {
+            try {
+                const { data } = await window.db.from('pokemon_spawn_time').select('pokemon_id,time_of_day').in('pokemon_id', ids);
+                for (const r of data || []) timeMap[String(r.pokemon_id)] = r.time_of_day;
+            } catch (e) {}
+        }
+
+        const RARITY_ORDER = ['common', 'uncommon', 'rare', 'legendary', 'inicial'];
+        const RARITY_LABELS = { common: 'Comuns', uncommon: 'Incomuns', rare: 'Raros', legendary: 'Lendários', inicial: 'Iniciais' };
+        const RARITY_COLORS = { common: '#aaa', uncommon: '#3498db', rare: '#e94560', legendary: '#f39c12', inicial: '#2ecc71' };
+
+        const groups = {};
+        for (const e of encounters || []) {
+            if (!e || e.pokemon_id == null) continue;
+            const rar = e.rarity || 'common';
+            const tod = timeMap[String(e.pokemon_id)] || 'all';
+            if (!groups[rar]) groups[rar] = { all: [], day: [], night: [] };
+            groups[rar][tod].push(e);
+        }
+
+        const rarKeys = Object.keys(groups).sort((a, b) => {
+            const ia = RARITY_ORDER.indexOf(a);
+            const ib = RARITY_ORDER.indexOf(b);
+            if (ia === -1 && ib === -1) return a.localeCompare(b);
+            if (ia === -1) return 1;
+            if (ib === -1) return -1;
+            return ia - ib;
+        });
+
+        let html = '';
+        for (const rar of rarKeys) {
+            const g = groups[rar];
+            const label = RARITY_LABELS[rar] || rar;
+            const color = RARITY_COLORS[rar] || '#aaa';
+            html += '<div style="margin-bottom:18px;">';
+            html += `<div style="color:${color};font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:6px;">${label} <span style="color:rgba(255,255,255,0.35);font-weight:600;font-size:11px;">(${g.all.length + g.day.length + g.night.length})</span></div>`;
+            const subGroups = [
+                { key: 'day', label: '☀️ Só de dia', list: g.day },
+                { key: 'night', label: '🌙 Só de noite', list: g.night },
+                { key: 'all', label: '🕐 Qualquer horário', list: g.all }
+            ];
+            for (const sg of subGroups) {
+                if (!sg.list || sg.list.length === 0) continue;
+                html += `<div style="font-size:11px;color:rgba(255,255,255,0.5);margin:6px 0 4px;">${sg.label}</div>`;
+                html += this.renderScanGrid(sg.list);
+            }
+            html += '</div>';
+        }
+        if (!html) html = '<div style="color:#888;text-align:center;padding:30px;">Nenhum Pokémon encontrado nesta zona.</div>';
+
+        content.innerHTML = html;
+        content.querySelectorAll('.scan-pkm').forEach(el => {
+            el.addEventListener('click', () => {
+                const id = el.dataset.id;
+                const name = el.dataset.name;
+                this.openScanDetail(id, name);
+            });
+        });
+    }
+
+    renderScanGrid(list) {
+        const seen = new Set();
+        let html = '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+        for (const e of list) {
+            if (!e || e.pokemon_id == null) continue;
+            if (seen.has(String(e.pokemon_id))) continue;
+            seen.add(String(e.pokemon_id));
+            const spriteUrl = window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(e.pokemon_id) : (e.sprite_url || '');
+            html += `<div class="scan-pkm" data-id="${e.pokemon_id}" data-name="${encodeURIComponent(e.pokemon_name || '')}" style="cursor:pointer;text-align:center;width:74px;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">`;
+            html += `<img src="${spriteUrl}" alt="${e.pokemon_name || ''}" loading="lazy" style="width:64px;height:64px;image-rendering:pixelated;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.08);padding:4px;">`;
+            html += `<div style="color:#fff;font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.pokemon_name || ''}</div>`;
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    async openScanDetail(pokemonId, name) {
+        const overlay = document.getElementById('city-scan-detail-popup');
+        if (!overlay) return;
+        overlay.classList.remove('hidden');
+        const box = document.getElementById('city-scan-detail-box');
+        if (box) box.innerHTML = '<div style="color:#888;text-align:center;padding:20px;">Carregando...</div>';
+
+        let types = [];
+        let sprite = window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(pokemonId) : '';
+        try {
+            const p = await window.PokeAPI.ensurePokemon(pokemonId);
+            if (p) {
+                types = p.types || [];
+                sprite = window.PokeAPI.getAnimatedFrontUrl(p.id);
+            }
+        } catch (e) {}
+
+        const typeHtml = types.map(t =>
+            `<span class="type-badge type-${t}">${t}</span>`
+        ).join(' ');
+
+        if (box) box.innerHTML = `
+            <img src="${sprite}" alt="${name}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto 10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5));">
+            <div style="color:#fff;font-size:17px;font-weight:700;margin-bottom:10px;">${name}</div>
+            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">${typeHtml || '<span style="color:#888;font-size:12px;">Sem tipo</span>'}</div>
+        `;
+    }
+
+    closeScanPopup() {
+        document.getElementById('city-scan-popup')?.classList.add('hidden');
+    }
+
+    closeScanDetail() {
+        document.getElementById('city-scan-detail-popup')?.classList.add('hidden');
     }
 
     async spawnVisiblePokemon() {
@@ -2795,6 +2943,7 @@ class CityScreen {
                 break;
             }
         }
+        this.updateScanButton();
         if (this.currentSpawnZone && this.currentSpawnZone !== prevSpawn) {
         }
 

@@ -1280,6 +1280,10 @@
                 </div>
             </div>
         </div>
+        <!-- Scanner button -->
+        <button id="city-scan-btn" class="hidden" onclick="window.cityScreen?.openScanPopup()" title="Scanner de Zona" style="position:absolute;bottom:64px;right:16px;z-index:700;cursor:pointer;background:none;border:none;padding:0;width:56px;height:56px;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="assets/ferramentas/scan.png" alt="Scanner" style="width:100%;height:100%;object-fit:contain;border-radius:12px;background:rgba(10,14,26,0.55);backdrop-filter:blur(2px);border:1px solid rgba(255,255,255,0.18);">
+        </button>
         <div style="padding:8px 16px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;gap:12px;">
             <span id="city-pos" style="color:rgba(255,255,255,0.4);font-size:12px;">X: 0 Y: 0</span>
             <div style="flex:1;"></div>
@@ -1317,8 +1321,24 @@
                 <div id="city-worldmap-region-label" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#00ff44;font-family:Inter,sans-serif;font-size:14px;font-weight:700;padding:8px 20px;border-radius:8px;border:1px solid rgba(0,255,68,0.3);pointer-events:none;text-align:center;white-space:nowrap;"></div>
             </div>
         </div>
+        <!-- Scan Popup -->
+        <div id="city-scan-popup" class="hidden" style="position:fixed;inset:0;z-index:990;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.80);backdrop-filter:blur(6px);">
+            <div style="position:relative;width:min(760px,92vw);max-height:84vh;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #38bdf8;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.7);display:flex;flex-direction:column;overflow:hidden;">
+                <div style="padding:14px 18px;background:rgba(56,189,248,0.08);border-bottom:1px solid rgba(56,189,248,0.2);display:flex;align-items:center;justify-content:space-between;">
+                    <div style="color:#38bdf8;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">📡 <span id="city-scan-title">Scanner</span></div>
+                    <button onclick="window.cityScreen?.closeScanPopup()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;font-size:16px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>
+                <div id="city-scan-content" style="flex:1;overflow-y:auto;padding:16px 18px;"></div>
+            </div>
+        </div>
+        <!-- Scan Detail Popup -->
+        <div id="city-scan-detail-popup" class="hidden" style="position:fixed;inset:0;z-index:995;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);">
+            <div style="position:relative;min-width:220px;text-align:center;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #38bdf8;border-radius:14px;padding:26px 30px;box-shadow:0 12px 40px rgba(0,0,0,0.7);">
+                <button onclick="window.cityScreen?.closeScanDetail()" style="position:absolute;top:-10px;right:-10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#aaa;font-size:15px;width:30px;height:30px;border-radius:50%;cursor:pointer;">✕</button>
+                <div id="city-scan-detail-box"></div>
+            </div>
+        </div>
     </div>
-    <div id="city-builder-screen" class="hidden" style="position:fixed;inset:0;z-index:960;background:#0a0e1a;display:flex;flex-direction:column;">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#f59e0b,#ef4444);border-bottom:1px solid #30363d;">
             <h2 style="margin:0;color:#fff;font-size:16px;">🏙️ Criar Cidade - Editor</h2>
             <div style="display:flex;gap:8px;">
@@ -1478,7 +1498,7 @@
     <script src="js/event-pokemon-admin.js"></script>
     <script src="js/loading-screen.js"></script>
     <script src="js/rank.js?v=20260816a"></script>
-    <script src="js/city.js?v=20260816n"></script>
+    <script src="js/city.js?v=20260816o"></script>
     <script src="js/professor-quests.js?v=20260815c"></script>
     <script src="js/city-builder.js?v=20260816j"></script>
     <script src="js/profile.js?v=20260815o"></script>
