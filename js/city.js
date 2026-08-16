@@ -738,6 +738,10 @@ class CityScreen {
                     existing.moveProgress = 0;
                     existing.equipped_title = p.equipped_title;
                     existing.equipped_title_id = p.equipped_title_id;
+                    existing.follower_id = p.follower_id;
+                    existing.follower_sprite_url = p.follower_sprite_url;
+                    existing.follower_back_url = p.follower_back_url;
+                    existing.follower_scale = p.follower_scale;
                     if (p.skin_url && p.skin_url !== existing.skin_url) {
                         existing.skin_url = p.skin_url;
                         const img = new Image();
@@ -3125,6 +3129,21 @@ class CityScreen {
 
         this.pokemonFollowRenderX = this.playerX;
         this.pokemonFollowRenderY = this.playerY;
+
+        this._syncFollowerToDb();
+    }
+
+    async _syncFollowerToDb() {
+        if (!this.authUserId || this.authUserId === 'local') return;
+        const poke = this.pokemonFollowing;
+        try {
+            await window.db.from('city_players').update({
+                follower_id: poke ? poke.id : null,
+                follower_sprite_url: poke ? (this.pokemonFollowSpriteUrl || null) : null,
+                follower_back_url: poke ? (this.pokemonFollowBackSpriteUrl || null) : null,
+                follower_scale: poke ? (window.getPokemonScale ? window.getPokemonScale(poke) : 1) : null
+            }).eq('user_id', this.authUserId);
+        } catch (e) {}
     }
 
     async updateCityFollower() {
@@ -3143,6 +3162,7 @@ class CityScreen {
         } else {
             if (this.pokemonFollowEl) this.pokemonFollowEl.style.display = 'none';
             if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.display = 'none';
+            this._syncFollowerToDb();
         }
     }
 
@@ -3244,6 +3264,54 @@ class CityScreen {
             this.pokemonFollowShadowEl.style.width = shadowW + 'px';
             this.pokemonFollowShadowEl.style.height = shadowH + 'px';
             this.pokemonFollowShadowEl.style.transform = followTransform || 'none';
+        }
+    }
+
+    _getFollowerImg(url) {
+        if (!url) return null;
+        if (!this._followerImgCache) this._followerImgCache = {};
+        let img = this._followerImgCache[url];
+        if (!img) {
+            img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = url;
+            this._followerImgCache[url] = img;
+        }
+        return img;
+    }
+
+    drawOtherPlayerFollower(ctx, p, drawX, drawY, ps) {
+        if (!p || p.follower_sprite_url === null || p.follower_sprite_url === undefined) return;
+        const dir = p.direction || 'down';
+        let img = this._getFollowerImg(p.follower_sprite_url);
+        if (dir === 'up' && p.follower_back_url) img = this._getFollowerImg(p.follower_back_url);
+        if (!img || !img.complete || !img.naturalWidth) return;
+
+        const fScale = Math.min(1.25, Number(p.follower_scale) || 1);
+        const size = ps * fScale;
+        let offX = 0, offY = 0;
+        if (dir === 'down') offY = -34;
+        else if (dir === 'up') offY = 34;
+        else if (dir === 'left') offX = 34;
+        else offX = -34;
+
+        const feetY = drawY + ps;
+        const imgX = drawX + (ps - size) / 2 + offX;
+        const imgY = feetY - size + offY;
+
+        const adj = window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(p.follower_id) : null;
+        const flip = dir === 'right';
+        if (flip || adj) {
+            ctx.save();
+            const cx = imgX + size / 2;
+            const cy = imgY + size / 2;
+            ctx.translate(cx, cy);
+            if (flip) ctx.scale(-1, 1);
+            if (adj) ctx.scale(adj.scaleX, adj.scaleY);
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+            ctx.restore();
+        } else {
+            ctx.drawImage(img, imgX, imgY, size, size);
         }
     }
 
@@ -4177,6 +4245,9 @@ class CityScreen {
             ctx.beginPath();
             ctx.ellipse(drawX + ps / 2 + shadowOffX, drawY + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
             ctx.fill();
+
+            // Pokemon seguindo dos OUTROS jogadores (o proprio e desenhado como DOM acima do canvas)
+            if (!p.isMe) this.drawOtherPlayerFollower(ctx, p, drawX, drawY, ps);
 
             const skinImg = p._skinImg;
             if (skinImg && skinImg.complete && skinImg.naturalWidth) {

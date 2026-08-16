@@ -3443,6 +3443,7 @@ class PokeFuryGame {
         this.updatePartyPanel();
         const cityPartyList = document.getElementById('city-party-list');
         if (cityPartyList) this.updatePartyPanel(cityPartyList);
+        if (window.profileScreen) window.profileScreen.renderTeam();
         if (this.overworld2d) this.overworld2d.updateFollower();
         if (window.cityScreen) window.cityScreen.updateCityFollower();
     }

@@ -303,10 +303,55 @@ class ProfileScreen {
       for (let i = 0; i < 6; i++) {
         const p = team[i];
         const slot = document.createElement('div');
-        slot.style.cssText = 'display:flex;align-items:flex-start;gap:6px;padding:4px;margin-bottom:3px;border-radius:6px;background:rgba(255,255,255,0.05);';
+        slot.style.cssText = 'display:flex;align-items:flex-start;gap:6px;padding:4px;margin-bottom:3px;border-radius:6px;background:rgba(255,255,255,0.05);transition:opacity 0.15s,transform 0.15s,background 0.15s;';
         if (p && p.fainted) slot.style.opacity = '0.45';
 
         if (p) {
+          slot.draggable = true;
+          slot.dataset.index = i;
+          slot.style.cursor = 'grab';
+          slot.title = 'Arraste para reordenar o time';
+
+          slot.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', i);
+            e.dataTransfer.effectAllowed = 'move';
+            slot.style.opacity = '0.4';
+            slot.style.transform = 'scale(0.95)';
+          };
+          slot.ondragend = () => {
+            slot.style.opacity = p && p.fainted ? '0.45' : '1';
+            slot.style.transform = '';
+            list.querySelectorAll('[data-drop]').forEach(s => {
+              s.style.borderTop = '';
+              s.style.borderBottom = '';
+            });
+          };
+          slot.ondragover = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const rect = slot.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            slot.style.borderTop = e.clientY < mid ? '2px solid #e94560' : '';
+            slot.style.borderBottom = e.clientY >= mid ? '2px solid #e94560' : '';
+          };
+          slot.ondragleave = () => {
+            slot.style.borderTop = '';
+            slot.style.borderBottom = '';
+          };
+          slot.ondrop = (e) => {
+            e.preventDefault();
+            slot.style.borderTop = '';
+            slot.style.borderBottom = '';
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = i;
+            if (fromIndex === toIndex) return;
+            const rect = slot.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            const insertBefore = e.clientY < mid;
+            if (window.pokefury) {
+              window.pokefury.reorderTeam(fromIndex, toIndex, insertBefore).then(() => this.renderTeam());
+            }
+          };
           const fallbackUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
           let spriteUrl = fallbackUrl;
           if (window.PokeAPI && p.id) {
