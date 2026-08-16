@@ -44,6 +44,17 @@ class CityScreen {
         this.wildPokemon = [];
         this.wildPokemonCooldown = 0;
 
+        // Pokemon seguindo o jogador
+        this.pokemonFollowing = null;
+        this.pokemonFollowSpriteUrl = null;
+        this.pokemonFollowBackSpriteUrl = null;
+        this.pokemonFollowEl = null;
+        this.pokemonFollowShadowEl = null;
+        this.pokemonFollowRenderX = this.playerX;
+        this.pokemonFollowRenderY = this.playerY;
+        this.pokemonFollowIdleTimer = 0;
+        this.pokemonFollowIdleFlip = false;
+
         this.raidPortal = null;
         this.raidSpawn = null;
         this.raidBoss = null;
@@ -331,6 +342,8 @@ class CityScreen {
         this._setupCityChat();
         if (window.GroupSystem) window.GroupSystem.init();
         this.loadForcedWeather();
+        // Pokemon seguindo o jogador na cidade
+        this.updateCityFollower();
         // Pré-computa a cadeia de climas até o slot atual (evita travar o 1º frame)
         this.getWeather();
         if (LS) LS.setProgress(94);
@@ -398,6 +411,11 @@ class CityScreen {
         this.unregisterPlayer();
         this._stopSpriteReaper();
         this.players = {};
+        if (this.pokemonFollowEl) { this.pokemonFollowEl.remove(); this.pokemonFollowEl = null; }
+        if (this.pokemonFollowShadowEl) { this.pokemonFollowShadowEl.remove(); this.pokemonFollowShadowEl = null; }
+        this.pokemonFollowing = null;
+        this.pokemonFollowSpriteUrl = null;
+        this.pokemonFollowBackSpriteUrl = null;
         if (this.wildPokemonLayer) {
             this.wildPokemonLayer.remove();
             this.wildPokemonLayer = null;
@@ -2947,6 +2965,8 @@ class CityScreen {
         this.cameraX += (targetX - this.cameraX) * cl;
         this.cameraY += (targetY - this.cameraY) * cl;
 
+        this._updateCityFollowerMove(this._dt);
+
         this.nearestTeleport = null;
         for (const t of this.teleports) {
             const cx = t.sign_x + t.sign_width / 2;
@@ -3069,6 +3089,161 @@ class CityScreen {
             if (this.playerX >= z.pos_x && this.playerX <= z.pos_x + z.width && this.playerY >= z.pos_y && this.playerY <= z.pos_y + z.height) {
                 this.inActiveGymZone = true;
             }
+        }
+    }
+
+    // ---------------- Pokemon seguindo (cidade) ----------------
+
+    async loadCityFollower(pokemon) {
+        if (!pokemon) return;
+        this.pokemonFollowing = pokemon;
+
+        const staticFront = pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official;
+        const animUrl = (window.PokeAPI && pokemon.id <= 1025)
+            ? (pokemon.isShiny || pokemon.shiny
+                ? window.PokeAPI.getAnimatedFrontShinyUrl(pokemon.id)
+                : window.PokeAPI.getAnimatedFrontUrl(pokemon.id))
+            : null;
+        this.pokemonFollowSpriteUrl = animUrl || staticFront;
+        this.pokemonFollowBackSpriteUrl = pokemon.spriteUrls?.back || null;
+
+        if (!this.pokemonFollowEl) {
+            const wrap = this.canvas.parentElement;
+            if (!wrap) return;
+            this.pokemonFollowShadowEl = document.createElement('img');
+            this.pokemonFollowShadowEl.style.cssText = 'position:absolute;pointer-events:none;z-index:2;filter:brightness(0) blur(3px) opacity(0.35);';
+            wrap.appendChild(this.pokemonFollowShadowEl);
+
+            this.pokemonFollowEl = document.createElement('img');
+            this.pokemonFollowEl.style.cssText = 'position:absolute;pointer-events:none;z-index:3;';
+            wrap.appendChild(this.pokemonFollowEl);
+        }
+        this.pokemonFollowEl.src = this.pokemonFollowSpriteUrl;
+        this.pokemonFollowShadowEl.src = this.pokemonFollowSpriteUrl;
+        this.pokemonFollowEl.style.display = 'block';
+        this.pokemonFollowShadowEl.style.display = 'block';
+
+        this.pokemonFollowRenderX = this.playerX;
+        this.pokemonFollowRenderY = this.playerY;
+    }
+
+    async updateCityFollower() {
+        const game = window.pokefury;
+        const follower = game?.playerTeam?.find(p => !p.fainted);
+        if (follower && this.pokemonFollowing
+            && follower.id === this.pokemonFollowing.id
+            && (follower.shiny || follower.isShiny) === (this.pokemonFollowing.shiny || this.pokemonFollowing.isShiny)) {
+            return;
+        }
+        this.pokemonFollowing = null;
+        this.pokemonFollowSpriteUrl = null;
+        this.pokemonFollowBackSpriteUrl = null;
+        if (follower) {
+            await this.loadCityFollower(follower);
+        } else {
+            if (this.pokemonFollowEl) this.pokemonFollowEl.style.display = 'none';
+            if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.display = 'none';
+        }
+    }
+
+    _updateCityFollowerMove(dt) {
+        if (!this.pokemonFollowing || !this.pokemonFollowEl) return;
+
+        // Posição alvo: logo atrás do jogador, no sentido contrário à direção atual
+        const behindX = this.playerX - (this.playerDir === 'right' ? 42 : this.playerDir === 'left' ? -42 : 0);
+        const behindY = this.playerY - (this.playerDir === 'down' ? 42 : this.playerDir === 'up' ? -42 : 0);
+
+        // Movimento suave (lerp) — desliza atrás do jogador como a câmera
+        const cl = Math.min(1, 0.12 * dt);
+        this.pokemonFollowRenderX += (behindX - this.pokemonFollowRenderX) * cl;
+        this.pokemonFollowRenderY += (behindY - this.pokemonFollowRenderY) * cl;
+
+        if (Math.abs(behindX - this.pokemonFollowRenderX) < 0.5 && Math.abs(behindY - this.pokemonFollowRenderY) < 0.5) {
+            this.pokemonFollowRenderX = behindX;
+            this.pokemonFollowRenderY = behindY;
+        }
+
+        // Idle animation (troca de lado do sprite quando parado)
+        if (!this.playerMoving) {
+            this.pokemonFollowIdleTimer++;
+            if (this.pokemonFollowIdleTimer >= 180) {
+                this.pokemonFollowIdleTimer = 0;
+                this.pokemonFollowIdleFlip = !this.pokemonFollowIdleFlip;
+            }
+        } else {
+            this.pokemonFollowIdleTimer = 0;
+            this.pokemonFollowIdleFlip = false;
+        }
+    }
+
+    drawCityFollower() {
+        const game = window.pokefury;
+        if (!this.pokemonFollowing || !this.pokemonFollowEl) return;
+        if (game && (game.state === 'battle' || game._battleStarting)) {
+            if (this.pokemonFollowEl.style.display !== 'none') {
+                this.pokemonFollowEl.style.display = 'none';
+                if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.display = 'none';
+            }
+            return;
+        }
+
+        const wrap = this.canvas.parentElement;
+        if (!wrap) return;
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        if (canvasRect.width === 0) return;
+
+        const scaleX = canvasRect.width / this.canvas.width;
+        const scaleY = canvasRect.height / this.canvas.height;
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
+
+        const camX = this.cameraX - this.canvas.width / 2;
+        const camY = this.cameraY - this.canvas.height / 2;
+
+        const fScale = Math.min(1.25, (window.getPokemonScale ? window.getPokemonScale(this.pokemonFollowing) : 1));
+        const spriteSize = this.playerSize * fScale;
+
+        const useBack = this.playerDir === 'up' && this.pokemonFollowBackSpriteUrl;
+        const targetSrc = useBack ? this.pokemonFollowBackSpriteUrl : this.pokemonFollowSpriteUrl;
+        if (this.pokemonFollowEl.src !== targetSrc) {
+            this.pokemonFollowEl.src = targetSrc;
+            if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.src = targetSrc;
+        }
+
+        const flipX = !useBack && this.playerDir === 'right';
+        const idleFlip = !this.playerMoving && this.pokemonFollowIdleFlip;
+        const finalFlip = idleFlip ? !flipX : flipX;
+        const downOffsetX = this.playerDir === 'down' ? -(spriteSize * scaleX * 0.6) : 0;
+
+        const px = this.pokemonFollowRenderX - camX - spriteSize / 2;
+        const py = this.pokemonFollowRenderY - camY - spriteSize;
+
+        const drawLeft = offsetX + px * scaleX + downOffsetX;
+        const drawTop = offsetY + py * scaleY;
+
+        this.pokemonFollowEl.style.display = 'block';
+        this.pokemonFollowEl.style.left = drawLeft + 'px';
+        this.pokemonFollowEl.style.top = drawTop + 'px';
+        this.pokemonFollowEl.style.width = (spriteSize * scaleX) + 'px';
+        this.pokemonFollowEl.style.height = (spriteSize * scaleY) + 'px';
+        const followAdj = window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(this.pokemonFollowing?.id) : null;
+        let followTransform = followAdj ? `scale(${followAdj.scaleX}, ${followAdj.scaleY})` : '';
+        if (finalFlip) followTransform = (followTransform ? followTransform + ' ' : '') + 'scaleX(-1)';
+        this.pokemonFollowEl.style.transform = followTransform || 'none';
+
+        if (this.pokemonFollowShadowEl) {
+            const shadowW = spriteSize * scaleX * 0.8;
+            const shadowH = spriteSize * scaleY * 0.25;
+            const shadowLeft = drawLeft + (spriteSize * scaleX - shadowW) / 2;
+            const shadowTop = drawTop + spriteSize * scaleY - shadowH * 0.3;
+            this.pokemonFollowShadowEl.style.display = 'block';
+            this.pokemonFollowShadowEl.style.left = shadowLeft + 'px';
+            this.pokemonFollowShadowEl.style.top = shadowTop + 'px';
+            this.pokemonFollowShadowEl.style.width = shadowW + 'px';
+            this.pokemonFollowShadowEl.style.height = shadowH + 'px';
+            this.pokemonFollowShadowEl.style.transform = followTransform || 'none';
         }
     }
 
@@ -4059,6 +4234,9 @@ class CityScreen {
         });
 
         ctx.restore();
+
+        // Pokemon seguindo o jogador (desenhado sobre o canvas)
+        this.drawCityFollower();
 
         // Day/night overlay
         if (dn.darkness > 0.01) {

@@ -2315,6 +2315,7 @@ class PokeFuryGame {
             showScreen('hud');
             this.overworld2d?.show();
             if (this.overworld2d) this.overworld2d.updateFollower();
+            if (window.cityScreen) window.cityScreen.updateCityFollower();
         };
         restoreBattleView();
         setTimeout(restoreBattleView, 100);
@@ -3422,6 +3423,7 @@ class PokeFuryGame {
             const cityPartyList = document.getElementById('city-party-list');
             if (cityPartyList) this.updatePartyPanel(cityPartyList);
             if (this.overworld2d) this.overworld2d.updateFollower();
+            if (window.cityScreen) window.cityScreen.updateCityFollower();
             this.showTransitionBanner('Seus Pokemon foram curados!');
         }
     }
@@ -3442,6 +3444,7 @@ class PokeFuryGame {
         const cityPartyList = document.getElementById('city-party-list');
         if (cityPartyList) this.updatePartyPanel(cityPartyList);
         if (this.overworld2d) this.overworld2d.updateFollower();
+        if (window.cityScreen) window.cityScreen.updateCityFollower();
     }
 
     openPC() {
@@ -3992,6 +3995,7 @@ class PokeFuryGame {
             this.updatePartyPanel();
             this.renderPCBox();
             if (this.overworld2d) this.overworld2d.updateFollower();
+            if (window.cityScreen) window.cityScreen.updateCityFollower();
         }
     }
 
@@ -4056,6 +4060,7 @@ class PokeFuryGame {
         this.updatePartyPanel();
         this.renderPCBox();
         if (this.overworld2d) this.overworld2d.updateFollower();
+        if (window.cityScreen) window.cityScreen.updateCityFollower();
     }
 
     openDeletePCModal(boxPokemon) {

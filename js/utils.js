@@ -609,7 +609,7 @@ export function getPokemonSpriteAdjust(pokemonId) {
     if (id === 23) return { scaleX: 0.5, scaleY: 0.5 };    // Ekans: metade do tamanho
     return null;
 }
-if (typeof window !== 'undefined') { window.getPokemonSpriteAdjust = getPokemonSpriteAdjust; }
+if (typeof window !== 'undefined') { window.getPokemonScale = getPokemonScale; window.getPokemonSpriteAdjust = getPokemonSpriteAdjust; }
 
 // Aplica as regras de sprite GLOBALMENTE: toda vez que um <img> com sprite de pokemon
 // for adicionado ao DOM (rank, perfil, PC, party, shiny, etc.), o ajuste é aplicado.
