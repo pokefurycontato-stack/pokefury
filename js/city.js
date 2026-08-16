@@ -30,6 +30,9 @@ class CityScreen {
         this.npcDialogueOpen = false;
         this.weatherParticles = [];
         this._weather = null;
+        this._forcedWeather = null;
+        this._forcedWeatherUntil = 0;
+        this._forcedWeatherSub = null;
         this.puddles = [];
         this.lights = [];
         this.battleZones = [];
@@ -327,6 +330,7 @@ class CityScreen {
         this._startSpriteReaper();
         this._setupCityChat();
         if (window.GroupSystem) window.GroupSystem.init();
+        this.loadForcedWeather();
         if (LS) LS.setProgress(94);
 
         this.resizeCanvas();
@@ -414,6 +418,15 @@ class CityScreen {
             this.channel.unsubscribe();
             this.channel = null;
         }
+        if (this._forcedWeatherSub) {
+            try { this._forcedWeatherSub.unsubscribe(); } catch (e) {}
+            this._forcedWeatherSub = null;
+        }
+        if (this._weatherAdminTimer) {
+            clearInterval(this._weatherAdminTimer);
+            this._weatherAdminTimer = null;
+        }
+        document.getElementById('city-weather-admin')?.remove();
         if (window._cityResizeHandler) {
             window.removeEventListener('resize', window._cityResizeHandler);
         }
@@ -3168,13 +3181,165 @@ class CityScreen {
     }
 
     getWeather() {
+        // Clima forçado (painel admin) tem prioridade enquanto durar
+        if (this._forcedWeather && this._forcedWeatherUntil > this.serverNow()) {
+            return this._forcedWeather;
+        }
         const SLOT = 15 * 60 * 1000;      // clima muda a cada 15 min
         const OFFSET = 7.5 * 60 * 1000;   // deslocado no meio entre dia e noite
         const slot = Math.floor((this.serverNow() + OFFSET) / SLOT);
         const h = Math.abs(Math.sin(slot * 127.1 + 311.7) * 43758.5453) % 1;
-        if (h < 0.45) return 'clear';
-        if (h < 0.78) return 'rain';
-        return 'snow';
+        if (h < 0.38) return 'clear';
+        if (h < 0.58) return 'rain';
+        if (h < 0.68) return 'snow';
+        if (h < 0.76) return 'sandstorm';
+        if (h < 0.84) return 'psychic';
+        if (h < 0.90) return 'grassstorm';
+        if (h < 0.96) return 'wind';
+        return 'gold';
+    }
+
+    weatherDurationMs() {
+        const SLOT = 15 * 60 * 1000;
+        const OFFSET = 7.5 * 60 * 1000;
+        const now = this.serverNow();
+        if (this._forcedWeather && this._forcedWeatherUntil > now) {
+            return this._forcedWeatherUntil - now;
+        }
+        const nextSlot = (Math.floor((now + OFFSET) / SLOT) + 1) * SLOT - OFFSET;
+        return nextSlot - now;
+    }
+
+    // ---------------- Clima forçado (admin) ----------------
+    async loadForcedWeather() {
+        try {
+            const { data, error } = await window.db.from('forced_weather').select('*').limit(1);
+            if (!error && data && data.length > 0) {
+                const row = data[0];
+                this._forcedWeather = row.weather;
+                this._forcedWeatherUntil = new Date(row.ends_at).getTime();
+            } else {
+                this._forcedWeather = null;
+                this._forcedWeatherUntil = 0;
+            }
+            this.subscribeForcedWeather();
+        } catch (e) {
+        }
+    }
+
+    subscribeForcedWeather() {
+        if (this._forcedWeatherSub) return;
+        this._forcedWeatherSub = window.db
+            .channel('forced-weather-realtime')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'forced_weather'
+            }, () => {
+                this.loadForcedWeather();
+            })
+            .subscribe();
+    }
+
+    getWeatherMeta() {
+        return [
+            { id: 'clear', label: 'Tempo limpo', icon: '☀️' },
+            { id: 'rain', label: 'Chuva', icon: '🌧️' },
+            { id: 'snow', label: 'Neve', icon: '❄️' },
+            { id: 'sandstorm', label: 'Tempestade de areia', icon: '🌪️' },
+            { id: 'psychic', label: 'Fluxo psíquico', icon: '🔮' },
+            { id: 'grassstorm', label: 'Tempestade de grama', icon: '🍃' },
+            { id: 'wind', label: 'Ventos fortes', icon: '💨' },
+            { id: 'gold', label: 'Partículas de ouro', icon: '✨' }
+        ];
+    }
+
+    openWeatherAdminPanel() {
+        if (!window.isAdmin) return;
+        const existing = document.getElementById('city-weather-admin');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'city-weather-admin';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;';
+
+        const panel = document.createElement('div');
+        panel.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #38bdf8;border-radius:14px;padding:22px;min-width:340px;max-width:420px;box-shadow:0 10px 40px rgba(0,0,0,0.7);color:#fff;font-family:Inter,sans-serif;';
+        panel.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <h3 style="margin:0;font-size:16px;">🌦️ Controle de Clima</h3>
+                <button id="city-weather-admin-close" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <div id="city-weather-now" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Climas disponíveis</div>
+            <div id="city-weather-list" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:280px;overflow-y:auto;"></div>
+        `;
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+        panel.querySelector('#city-weather-admin-close').addEventListener('click', () => overlay.remove());
+
+        this.renderWeatherAdminNow(panel);
+        this.renderWeatherAdminList(panel);
+
+        this._weatherAdminTimer = setInterval(() => {
+            const nowEl = document.getElementById('city-weather-now');
+            if (!nowEl) {
+                clearInterval(this._weatherAdminTimer);
+                return;
+            }
+            this.renderWeatherAdminNow(panel);
+        }, 1000);
+    }
+
+    renderWeatherAdminNow(panel) {
+        const nowEl = document.getElementById('city-weather-now');
+        if (!nowEl) return;
+        const meta = this.getWeatherMeta().find(m => m.id === (this._weather || this.getWeather())) || { label: this._weather || 'clear', icon: '❓' };
+        const ms = this.weatherDurationMs();
+        const total = Math.max(0, ms);
+        const s = Math.floor(total / 1000);
+        const mm = String(Math.floor(s / 60)).padStart(2, '0');
+        const ss = String(s % 60).padStart(2, '0');
+        nowEl.innerHTML = `
+            <div style="font-size:30px;">${meta.icon}</div>
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;">${meta.label}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.55);">Tempo restante: <span style="color:#38bdf8;font-weight:700;">${mm}:${ss}</span></div>
+            </div>
+            ${this._forcedWeather && this._forcedWeatherUntil > this.serverNow() ? '<div style="font-size:10px;color:#fbbf24;font-weight:700;background:rgba(251,191,36,0.12);padding:4px 8px;border-radius:6px;">FORÇADO</div>' : ''}
+        `;
+    }
+
+    renderWeatherAdminList(panel) {
+        const listEl = document.getElementById('city-weather-list');
+        if (!listEl) return;
+        const current = this._weather || this.getWeather();
+        listEl.innerHTML = '';
+        this.getWeatherMeta().forEach(m => {
+            const btn = document.createElement('button');
+            const active = m.id === current;
+            btn.style.cssText = 'padding:10px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:Inter,sans-serif;color:#fff;background:' + (active ? 'linear-gradient(135deg,#38bdf8,#2563eb)' : 'rgba(255,255,255,0.08)') + ';border:1px solid ' + (active ? '#38bdf8' : 'rgba(255,255,255,0.1)') + ';';
+            btn.textContent = m.icon + ' ' + m.label;
+            btn.onclick = async () => {
+                const res = await window.db.rpc('force_weather', { p_weather: m.id });
+                if (res && res.error) {
+                    window.pokefury?.showToast?.(res.error.message || 'Erro ao forçar clima', 'error');
+                    return;
+                }
+                window.pokefury?.showToast?.(`Clima forçado: ${m.label}!`, 'success');
+                this._forcedWeather = m.id;
+                this._forcedWeatherUntil = Date.now() + (15 * 60 * 1000);
+                this._weather = null;
+                this.weatherParticles = [];
+                this.renderWeatherAdminNow(panel);
+                this.renderWeatherAdminList(panel);
+            };
+            listEl.appendChild(btn);
+        });
     }
 
     isPokemonTimeValid(pokemonId) {
@@ -3311,6 +3476,11 @@ class CityScreen {
         let weatherIcon = '';
         if (weather === 'rain') weatherIcon = '🌧️';
         else if (weather === 'snow') weatherIcon = '❄️';
+        else if (weather === 'sandstorm') weatherIcon = '🌪️';
+        else if (weather === 'psychic') weatherIcon = '🔮';
+        else if (weather === 'grassstorm') weatherIcon = '🍃';
+        else if (weather === 'wind') weatherIcon = '💨';
+        else if (weather === 'gold') weatherIcon = '✨';
         const key = timeIcon + '|' + timeLabel + '|' + weather + '|' + weatherIcon;
         if (this._hudKey === key) return;
         this._hudKey = key;
@@ -3342,18 +3512,29 @@ class CityScreen {
             if (weather === 'rain') this._generatePuddles();
             else this.puddles = [];
         }
-        if (weather === 'clear') { this.weatherParticles = []; return; }
+        if (weather === 'clear' || weather === 'psychic') { this.weatherParticles = []; return; }
 
-        const target = weather === 'rain' ? 120 : 70;
-        while (this.weatherParticles.length < target) {
+        const CONFIGS = {
+            rain: { target: 120, speed: 9, speedVar: 6, len: 15, lenVar: 15, size: 0, wind: -2.5, windVar: 1 },
+            snow: { target: 70, speed: 1.2, speedVar: 2, len: 0, size: 2, sizeVar: 4 },
+            sandstorm: { target: 90, speed: 5, speedVar: 4, len: 2, lenVar: 3, size: 1, sizeVar: 2, wind: 2, windVar: 1.5, drift: 2 },
+            grassstorm: { target: 70, speed: 3, speedVar: 3, len: 0, size: 2, sizeVar: 3, wind: 1.5, windVar: 1.5, drift: 1 },
+            wind: { target: 45, speed: 18, speedVar: 14, len: 40, lenVar: 40, size: 0, wind: 6, windVar: 3 },
+            gold: { target: 70, speed: 2.5, speedVar: 2, len: 0, size: 1, sizeVar: 2, wind: 0, drift: 0 }
+        };
+        const cfg = CONFIGS[weather];
+        if (!cfg) return;
+
+        while (this.weatherParticles.length < cfg.target) {
             this.weatherParticles.push({
                 x: Math.random() * w,
                 y: Math.random() * h,
-                speed: weather === 'rain' ? (9 + Math.random() * 6) : (1.2 + Math.random() * 2),
-                len: weather === 'rain' ? (15 + Math.random() * 15) : 0,
-                size: weather === 'rain' ? 0 : (2 + Math.random() * 4),
+                speed: cfg.speed + Math.random() * cfg.speedVar,
+                len: cfg.len ? cfg.len + Math.random() * cfg.lenVar : 0,
+                size: cfg.size ? cfg.size + Math.random() * cfg.sizeVar : 0,
                 opacity: 0.2 + Math.random() * 0.4,
-                wind: weather === 'rain' ? (-1.5 - Math.random() * 1) : 0,
+                wind: cfg.wind ? cfg.wind + Math.random() * (cfg.windVar || 1) : 0,
+                drift: cfg.drift || 0,
                 wobble: Math.random() * Math.PI * 2,
                 wobbleSpeed: 0.02 + Math.random() * 0.03
             });
@@ -3365,6 +3546,30 @@ class CityScreen {
                 p.y += p.speed * f;
                 if (p.y > h) { p.y = -p.len; p.x = Math.random() * w; }
                 if (p.x < -20) p.x = w + 10;
+            } else if (weather === 'wind') {
+                p.x += p.speed * f;
+                p.y += Math.sin(p.wobble) * 0.6 * f;
+                p.wobble += p.wobbleSpeed * f;
+                if (p.x > w + p.len) { p.x = -p.len; p.y = Math.random() * h; }
+            } else if (weather === 'sandstorm') {
+                p.wobble += p.wobbleSpeed * f;
+                p.x += (p.wind + Math.sin(p.wobble) * p.drift) * f;
+                p.y += p.speed * 0.6 * f;
+                if (p.y > h + 10) { p.y = -10; p.x = Math.random() * w; }
+                if (p.x > w + 10) p.x = -10;
+                if (p.x < -10) p.x = w + 10;
+            } else if (weather === 'grassstorm') {
+                p.wobble += p.wobbleSpeed * f;
+                p.x += (p.wind + Math.sin(p.wobble) * p.drift) * f;
+                p.y += p.speed * 0.5 * f;
+                if (p.y > h + 10) { p.y = -10; p.x = Math.random() * w; }
+                if (p.x > w + 10) p.x = -10;
+                if (p.x < -10) p.x = w + 10;
+            } else if (weather === 'gold') {
+                p.wobble += p.wobbleSpeed * f;
+                p.x += Math.sin(p.wobble) * 0.5 * f;
+                p.y += p.speed * f;
+                if (p.y > h + 10) { p.y = -10; p.x = Math.random() * w; }
             } else {
                 p.wobble += p.wobbleSpeed * f;
                 p.x += Math.sin(p.wobble) * 0.8 * f;
@@ -3807,6 +4012,15 @@ class CityScreen {
             ctx.restore();
         }
 
+        // Psychic weather: leve tom roxo sobre a tela (dia ou noite)
+        if ((this._weather || this.getWeather()) === 'psychic') {
+            ctx.save();
+            ctx.globalAlpha = 0.16;
+            ctx.fillStyle = 'rgb(120, 80, 200)';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.restore();
+        }
+
         // Night lights (lamps glow as it gets dark)
         if (dn.darkness > 0.15 && this.lights.length > 0) {
             const intensity = Math.min(1, (dn.darkness - 0.15) / 0.5);
@@ -3831,7 +4045,7 @@ class CityScreen {
 
         // Weather particles
         const weather = this._weather || 'clear';
-        if (weather !== 'clear') {
+        if (weather !== 'clear' && weather !== 'psychic') {
             ctx.save();
             for (const p of this.weatherParticles) {
                 if (weather === 'rain') {
@@ -3841,6 +4055,26 @@ class CityScreen {
                     ctx.strokeStyle = `rgba(120,180,255,${p.opacity})`;
                     ctx.lineWidth = 1.2;
                     ctx.stroke();
+                } else if (weather === 'wind') {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p.x - p.len, p.y + Math.sin(p.wobble) * 2);
+                    ctx.strokeStyle = `rgba(255,255,255,${p.opacity * 0.55})`;
+                    ctx.lineWidth = 1.6;
+                    ctx.stroke();
+                } else if (weather === 'sandstorm') {
+                    ctx.fillStyle = `rgba(222, 179, 106, ${p.opacity * 0.85})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (weather === 'grassstorm') {
+                    ctx.fillStyle = `rgba(130, 190, 90, ${p.opacity * 0.85})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (weather === 'gold') {
+                    ctx.fillStyle = `rgba(255, 214, 90, ${p.opacity})`;
+                    ctx.fillRect(p.x, p.y, p.size + 1, p.size + 1);
                 } else {
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);

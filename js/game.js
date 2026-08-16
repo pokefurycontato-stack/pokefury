@@ -4178,6 +4178,15 @@ class PokeFuryGame {
             };
         }
 
+        const weatherAdminBtn = document.getElementById('admin-btn-weather');
+        if (weatherAdminBtn) {
+            weatherAdminBtn.onclick = () => {
+                if (window.cityScreen && typeof window.cityScreen.openWeatherAdminPanel === 'function') {
+                    window.cityScreen.openWeatherAdminPanel();
+                }
+            };
+        }
+
         // Sidebar Premium buttons
         const buyDiamondsBtn = document.getElementById('btn-buy-diamonds');
         if (buyDiamondsBtn) {
