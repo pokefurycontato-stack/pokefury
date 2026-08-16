@@ -3097,14 +3097,17 @@ body {
   left: 3px;
 }
 #enemy-type-ic .battle-type-tip, #pvp-enemy-type-ic .battle-type-tip {
-  right: auto;
-  left: 0;
+  left: auto;
+  right: calc(100% + 6px);
 }
 .battle-type-tip {
   display: none;
   position: absolute;
-  bottom: calc(100% + 6px);
-  right: 0;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  right: auto;
+  bottom: auto;
   background: rgba(0,0,0,0.95);
   border: 1px solid rgba(255,255,255,0.25);
   border-radius: 8px;
