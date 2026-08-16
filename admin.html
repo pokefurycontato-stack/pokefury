@@ -310,9 +310,12 @@
                                 ? `<button class="btn-ban ban" onclick="forceLogoutPlayer('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')">Desconectar</button>`
                                 : `<button class="btn-ban" disabled style="background:rgba(148,163,184,0.25);color:rgba(255,255,255,0.35);cursor:not-allowed;">Desconectar</button>`}
                         </td>
+                        <td>
+                            <button class="btn-reset" style="background:linear-gradient(135deg,#38bdf8,#2563eb);color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;" onclick="resetPlayerPosition('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')">Resetar posição</button>
+                        </td>
                     </tr>`;
                 }).join('')
-                : '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhuma conta cadastrada.</td></tr>';
+                : '<tr><td colspan="5" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhuma conta cadastrada.</td></tr>';
         }
 
         async function loadOnline() {
@@ -363,6 +366,17 @@
                 alert('Falha ao desconectar. ' + (error ? error.message : (data && data.error) || 'desconhecido'));
                 return;
             }
+            loadOnline();
+        }
+
+        async function resetPlayerPosition(userId, name) {
+            if (!confirm('Deseja resetar a posição de ' + name + '?\nEle(a) será teleportado(a) para o spawn padrão da cidade em tempo real.')) return;
+            const { data, error } = await window.db.rpc('reset_player_position', { p_user_id: userId });
+            if (error || !data || !data.success) {
+                alert('Falha ao resetar posição. ' + (error ? error.message : (data && data.error) || 'desconhecido'));
+                return;
+            }
+            alert('Posição de ' + name + ' resetada para o spawn da cidade.');
             loadOnline();
         }
 
@@ -460,6 +474,7 @@
                                                 <th><button class="online-sort" data-sort="connected" onclick="sortOnlineBy('connected')">Conectado há <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
                                                 <th><button class="online-sort" data-sort="idle" onclick="sortOnlineBy('idle')">Inativo há <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
                                                 <th>Ação</th>
+                                                <th>Posição</th>
                                             </tr>
                                         </thead>
                                         <tbody id="online-list"></tbody>

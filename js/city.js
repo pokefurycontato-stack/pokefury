@@ -731,6 +731,19 @@ class CityScreen {
             } else if (payload.eventType === 'DELETE') {
                 delete this.players[payload.old?.user_id];
             }
+        }).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'city_forced_teleports' }, (payload) => {
+            const t = payload.new;
+            if (!t || t.user_id !== this.authUserId) return;
+            this.playerX = t.pos_x;
+            this.playerY = t.pos_y;
+            this.playerFromX = t.pos_x;
+            this.playerFromY = t.pos_y;
+            this.cameraX = t.pos_x;
+            this.cameraY = t.pos_y;
+            this.syncPosition();
+            if (window.pokefury?.showToast) window.pokefury.showToast('Um administrador te reposicionou para o spawn da cidade.', 'info');
+            // Remove a notificação após aplicar
+            window.db.from('city_forced_teleports').delete().eq('id', t.id).then(() => {}).catch(() => {});
         }).subscribe((status) => {
         });
     }
