@@ -2532,6 +2532,10 @@ class PokeFuryGame {
                 }
             } else {
                 this._currentGymLeader = null;
+                // Fugiu da batalha do ginásio: sai da arena para não ficar preso
+                if (result === null && window.cityScreen) {
+                    window.cityScreen.teleportToGymNpc();
+                }
             }
         }
         this._battleEnding = false;
