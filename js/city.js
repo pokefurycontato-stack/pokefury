@@ -910,7 +910,7 @@ class CityScreen {
             } catch (e) {}
         }
 
-        const RARITY_ORDER = ['common', 'uncommon', 'rare', 'legendary', 'inicial'];
+        const RARITY_ORDER = ['common', 'uncommon', 'rare', 'inicial', 'legendary'];
         const RARITY_LABELS = { common: 'Comuns', uncommon: 'Incomuns', rare: 'Raros', legendary: 'Lendários', inicial: 'Iniciais' };
         const RARITY_COLORS = { common: '#aaa', uncommon: '#3498db', rare: '#e94560', legendary: '#f39c12', inicial: '#2ecc71' };
 
