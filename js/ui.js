@@ -361,7 +361,8 @@ export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activ
             else if (hpPct > 20) hpBarFill.style.background = '#ff9800';
             else hpBarFill.style.background = '#f44336';
         }
-        if (hpText) hpText.textContent = `${playerPokemon.currentHp} / ${playerPokemon.stats.hp}`;
+if (hpText) hpText.textContent = `${playerPokemon.currentHp} / ${playerPokemon.stats.hp}`;
+        updateBattleTypeTip('player', playerPokemon.types);
     }
 
     if (enemyPokemon) {
@@ -381,7 +382,17 @@ export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activ
             else hpBarFill.style.background = '#f44336';
         }
         if (hpText) hpText.textContent = `${enemyPokemon.currentHp} / ${enemyPokemon.stats.hp}`;
+        updateBattleTypeTip('enemy', enemyPokemon.types);
     }
+}
+
+function updateBattleTypeTip(side, types) {
+    const tip = document.getElementById(`${side}-type-tip`);
+    if (!tip) return;
+    const list = Array.isArray(types) && types.length > 0 ? types : [];
+    tip.innerHTML = list.length > 0
+        ? list.map(t => `<span class="type-badge type-${t}">${t}</span>`).join('')
+        : '';
 }
 
 function updateTeamIndicators(selector, team) {

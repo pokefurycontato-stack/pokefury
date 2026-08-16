@@ -3072,3 +3072,38 @@ body {
   animation: radar-blip 1.6s ease-in-out infinite;
   pointer-events: none;
 }
+
+/* ===== Battle type helper icon ===== */
+.battle-type-ic {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  width: 22px;
+  height: 22px;
+  cursor: help;
+  z-index: 40;
+}
+.battle-type-ic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
+  transition: transform 0.15s, opacity 0.15s;
+}
+.battle-type-ic:hover img { transform: scale(1.15); opacity: 1; }
+.battle-type-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  background: rgba(0,0,0,0.95);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  padding: 6px 8px;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+  pointer-events: none;
+  z-index: 50;
+}
+.battle-type-ic:hover .battle-type-tip { display: flex; gap: 4px; align-items: center; }

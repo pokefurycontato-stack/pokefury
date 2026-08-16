@@ -7752,6 +7752,10 @@ openEventsPanel() {
                         <div id="pvp-enemy-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
                     </div>
                     <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-enemy-hp-text"></div>
+                    <div class="battle-type-ic" id="pvp-enemy-type-ic">
+                        <img src="assets/ferramentas/pokedex.png" alt="Tipos">
+                        <div class="battle-type-tip" id="pvp-enemy-type-tip"></div>
+                    </div>
                 </div>
                 <div id="pvp-my-info" style="position:absolute;top:10px;left:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
                     <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-my-name"></div>
@@ -7760,6 +7764,10 @@ openEventsPanel() {
                         <div id="pvp-my-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
                     </div>
                     <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-my-hp-text"></div>
+                    <div class="battle-type-ic" id="pvp-my-type-ic">
+                        <img src="assets/ferramentas/pokedex.png" alt="Tipos">
+                        <div class="battle-type-tip" id="pvp-my-type-tip"></div>
+                    </div>
                 </div>
                 <div id="pvp-actions" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;pointer-events:auto;">
                     <button id="pvp-fight-btn" style="padding:8px 20px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">⚔️ Lutar</button>
@@ -7941,6 +7949,9 @@ openEventsPanel() {
             document.getElementById('pvp-my-hp-bar').style.width = myHpPct + '%';
             document.getElementById('pvp-my-hp-bar').style.background = myHpPct > 50 ? '#4caf50' : myHpPct > 25 ? '#ff9800' : '#f44336';
             document.getElementById('pvp-my-hp-text').textContent = `HP ${myPokemon.currentHp}/${myPokemon.stats.hp}`;
+            const myTypes = myPokemon.isTerastallized ? [myPokemon.teraType] : (myPokemon.types || []);
+            const myTip = document.getElementById('pvp-my-type-tip');
+            if (myTip) myTip.innerHTML = myTypes.map(t => `<span class="type-badge type-${t}">${t}</span>`).join('');
         }
 
         if (enemyPokemon) {
@@ -7953,6 +7964,9 @@ openEventsPanel() {
             document.getElementById('pvp-enemy-hp-bar').style.width = enemyHpPct + '%';
             document.getElementById('pvp-enemy-hp-bar').style.background = enemyHpPct > 50 ? '#4caf50' : enemyHpPct > 25 ? '#ff9800' : '#f44336';
             document.getElementById('pvp-enemy-hp-text').textContent = `HP ${enemyPokemon.currentHp}/${enemyPokemon.stats.hp}`;
+            const enemyTypes = enemyPokemon.isTerastallized ? [enemyPokemon.teraType] : (enemyPokemon.types || []);
+            const enemyTip = document.getElementById('pvp-enemy-type-tip');
+            if (enemyTip) enemyTip.innerHTML = enemyTypes.map(t => `<span class="type-badge type-${t}">${t}</span>`).join('');
         }
 
         const turnIndicator = document.getElementById('pvp-turn-indicator');
