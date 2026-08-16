@@ -7751,7 +7751,7 @@ openEventsPanel() {
                     <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
                         <div id="pvp-enemy-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
                     </div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-enemy-hp-text"></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;text-align:right;" id="pvp-enemy-hp-text"></div>
                     <div class="battle-type-ic" id="pvp-enemy-type-ic">
                         <img src="assets/ferramentas/pokedex.png" alt="Tipos">
                         <div class="battle-type-tip" id="pvp-enemy-type-tip"></div>
