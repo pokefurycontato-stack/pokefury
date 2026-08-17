@@ -40,6 +40,10 @@ class CityScreen {
         this.playerSpeed = 60;
         this.playerSize = 48;
         this.followerBehind = 30;
+        // Velocidade do follower em u/frame (dt=1 = 60fps). O jogador anda ~2.4u/frame,
+        // entao 2.1 deixa o pokemon levemente mais lento: segue sempre, sem "borracha".
+        this.followerSpeed = 2.1;
+        this.followerCatchupSpeed = 3.4;
         this.grassForegroundOffset = 18;
         this.grassForegroundHalf = 40;
         this.grassForegroundPad = 8;
@@ -3310,18 +3314,29 @@ class CityScreen {
         const behindX = this.playerX - (this.playerDir === 'right' ? 55 : this.playerDir === 'left' ? -55 : 0);
         const behindY = this.playerY - (this.playerDir === 'down' ? this.followerBehind : this.playerDir === 'up' ? -55 : 0);
 
-        // Movimento suave (lerp) — desliza atrás do jogador como a câmera
-        const cl = Math.min(1, 0.12 * dt);
-        this.pokemonFollowRenderX += (behindX - this.pokemonFollowRenderX) * cl;
-        this.pokemonFollowRenderY += (behindY - this.pokemonFollowRenderY) * cl;
+        // Movimento: perseguicao com velocidade CONSTANTE (nao lerp exponencial).
+        // O pokemon segue o treinador sem disparar na frente nem fazer paradinha.
+        const dx = behindX - this.pokemonFollowRenderX;
+        const dy = behindY - this.pokemonFollowRenderY;
+        const dist = Math.hypot(dx, dy);
 
-        if (Math.abs(behindX - this.pokemonFollowRenderX) < 0.5 && Math.abs(behindY - this.pokemonFollowRenderY) < 0.5) {
-            this.pokemonFollowRenderX = behindX;
-            this.pokemonFollowRenderY = behindY;
+        if (dist > 0.5) {
+            // Se ficou muito longe (ex.: teleport ou pulou uma parede), acelera pra alcançar.
+            const speed = dist > 150 ? this.followerCatchupSpeed : this.followerSpeed;
+            const step = speed * dt;
+            if (dist <= step) {
+                this.pokemonFollowRenderX = behindX;
+                this.pokemonFollowRenderY = behindY;
+            } else {
+                this.pokemonFollowRenderX += (dx / dist) * step;
+                this.pokemonFollowRenderY += (dy / dist) * step;
+            }
         }
 
-        // Idle animation (troca de lado do sprite quando parado)
-        if (!this.playerMoving) {
+        // Idle animation: so quando o pokemon chega de fato no ponto atras do jogador
+        // (treinador parado E follower posicionado), nao quando o treinador apenas parou.
+        const arrived = dist <= 0.5;
+        if (arrived) {
             this.pokemonFollowIdleTimer++;
             if (this.pokemonFollowIdleTimer >= 180) {
                 this.pokemonFollowIdleTimer = 0;
