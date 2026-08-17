@@ -431,6 +431,7 @@ class CityScreen {
             if (p._grassEl) { try { p._grassEl.remove(); } catch (e) {} }
         }
         this.wildPokemon = [];
+        if (this._nightOverlayEl) { this._nightOverlayEl.remove(); this._nightOverlayEl = null; }
         if (this._raidLayer) {
             this._raidLayer.remove();
             this._raidLayer = null;
@@ -1363,18 +1364,15 @@ class CityScreen {
         const offsetY = canvasRect.top - wrapRect.top;
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
-        const nf = this._nightFilter(this.getDayNight());
-        const usedBands = Math.min((this._depthSplits ? this._depthSplits.length + 1 : 1), this.depthCanvases ? this.depthCanvases.length : 1);
 
         for (const p of this.wildPokemon) {
             if (!p.active) continue;
             const el = p._el;
             if (!el) continue;
             // Banda pela profundidade real (pos_y = pes) e z 3+2b, como os followers.
-            // Se cair na ultima banda fica ACIMA do topCtx -> precisa de mascara; se nao,
-            // o overlay do topCtx ja escurece naturalmente.
+            // O dia/noite e coberto pelo overlay acima de tudo (z 25), na mesma cor,
+            // independente da banda -> nenhuma mascara.
             const band = this._bandForFollower(p.pos_y, this._depthSplits);
-            const aboveTop = band >= usedBands - 1;
             const z = (3 + 2 * band) + '';
             el.style.zIndex = z;
             const sz = this.getWildPokemonSize(p);
@@ -1392,7 +1390,6 @@ class CityScreen {
                 continue;
             }
             el.style.display = 'block';
-            el.style.filter = aboveTop ? nf : '';
             el.style.left = (offsetX + (sx - w / 2) * scaleX) + 'px';
             el.style.top = (offsetY + (sy - h) * scaleY) + 'px';
             el.style.width = (w * scaleX) + 'px';
@@ -1403,7 +1400,7 @@ class CityScreen {
                 const fOff = Math.max(8, Math.round(sz * 0.4));
                 const fHalf = Math.max(16, Math.round(Math.max(sz, w) * 0.55));
                 const fPad = Math.max(2, Math.round(sz * 0.12));
-                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, aboveTop);
+                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
             }
         }
     }
@@ -3354,14 +3351,10 @@ class CityScreen {
         this.pokemonFollowEl.style.zIndex = z;
         if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.zIndex = z;
 
-        // Dia/noite: o overlay de noite vive no topCtx (faixa de cima). Se o follower
-        // estiver ABAIXO do topCtx (f < ultima faixa), o topCtx ja escurece os DOM e
-        // aplicar tint/filtro aqui seria uma 2a camada -> tarja duplicada. So tintamos
-        // quando o follower fica ACIMA do topCtx (f == ultima faixa).
-        const usedBands = Math.min((this._depthSplits ? this._depthSplits.length + 1 : 1), this.depthCanvases ? this.depthCanvases.length : 1);
-        const aboveTop = f >= usedBands - 1;
-        const nf = this._nightFilter(this.getDayNight());
-        this.pokemonFollowEl.style.filter = aboveTop ? nf : '';
+        // Dia/noite: o overlay de noite vive em um canvas acima de tudo (z 25),
+        // cobrindo TODAS as entidades DOM (followers e selvagens) com a mesma cor,
+        // independente da posicao/profundidade -> nenhuma mascara aqui.
+        this.pokemonFollowEl.style.filter = '';
 
         // Grama na frente do follower (recorte alinhado da mesma textura), acima do seu z
         if (!this.pokemonFollowGrassEl) {
@@ -3380,7 +3373,7 @@ class CityScreen {
             // Centra o recorte na posicao VISUAL do sprite (olhando pra baixo o sprite e
             // deslocado pra esquerda via downOffsetX; os pes mundiais nao acompanham).
             const visualFeetX = this.pokemonFollowRenderX + downOffsetX / scaleX;
-            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, aboveTop);
+            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
         }
     }
 
@@ -3461,12 +3454,9 @@ class CityScreen {
         if (dir === 'right') transform = (transform ? transform + ' ' : '') + 'scaleX(-1)';
         const tf = transform || 'none';
 
-        // Dia/noite: overlay de noite no topCtx ja escurece followers abaixo dele; so
-        // filtramos aqui quando o follower fica ACIMA do topCtx (band == ultima faixa).
-        const usedBands = Math.min((this._depthSplits ? this._depthSplits.length + 1 : 1), this.depthCanvases ? this.depthCanvases.length : 1);
-        const aboveTop = (band || 0) >= usedBands - 1;
-        const nf = this._nightFilter(this.getDayNight());
-        el.style.filter = aboveTop ? nf : '';
+        // Dia/noite: overlay de noite em canvas acima de tudo (z 25) cobre todos os
+        // followers com a mesma cor, independente de profundidade -> sem mascara aqui.
+        el.style.filter = '';
 
         el.style.display = 'block';
         el.style.left = left + 'px';
@@ -3492,7 +3482,7 @@ class CityScreen {
         const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (size / ps)));
         const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (size / ps)));
         const fPad = Math.max(2, Math.round(this.grassForegroundPad * (size / ps)));
-        this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, aboveTop);
+        this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
     }
 
     teleportToGymType(gymType) {
@@ -4205,12 +4195,7 @@ class CityScreen {
     // Faixa de grama na frente para entidades DOM (followers animados e pokemons
     // selvagens): um <canvas> posicionado sobre a parte inferior da entidade com o
     // recorte alinhado da mesma textura. A entidade continua animando atras da grama.
-    _nightFilter(dn) {
-        const k = dn ? dn.darkness : 0;
-        return k > 0.01 ? `brightness(${(1 - k * 0.72).toFixed(3)})` : '';
-    }
-
-    _drawGrassFrontOverlay(canvasEl, grassTiles, feetX, feetY, offset, halfW, pad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, applyNight) {
+    _drawGrassFrontOverlay(canvasEl, grassTiles, feetX, feetY, offset, halfW, pad, camX, camY, scaleX, scaleY, offsetX, offsetY, z) {
         if (!canvasEl || !grassTiles || grassTiles.length === 0) {
             if (canvasEl) canvasEl.style.display = 'none';
             return;
@@ -4273,19 +4258,6 @@ class CityScreen {
             const sw = (c.ox1 - c.ox0) / s;
             const sh = (c.oy1 - c.oy0) / s;
             cctx.drawImage(img, sx, sy, sw, sh, (c.ox0 - minX) * scaleX, (c.oy0 - minY) * scaleY, (c.ox1 - c.ox0) * scaleX, (c.oy1 - c.oy0) * scaleY);
-        }
-        // Dia/noite: replica o mesmo overlay do canvas principal (rgba tint, alpha =
-        // darkness) DENTRO deste canvas, mas so sobre a grama ja desenhada (source-atop),
-        // para nao pintar areas vazias (gaps entre tiles / fora do patch). So quando a
-        // entidade esta ACIMA do topCtx (se nao, o overlay de noite do topCtx ja escurece).
-        const dn = this.getDayNight();
-        if (applyNight && dn.darkness > 0.01) {
-            cctx.save();
-            cctx.globalCompositeOperation = 'source-atop';
-            cctx.globalAlpha = dn.darkness;
-            cctx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
-            cctx.fillRect(0, 0, W, H);
-            cctx.restore();
         }
     }
 
@@ -4818,86 +4790,97 @@ class CityScreen {
         // Pokemon seguindo o jogador (desenhado sobre o canvas)
         this.drawCityFollower();
 
-        // Day/night overlay
-        if (dn.darkness > 0.01) {
-            topCtx.save();
-            topCtx.globalAlpha = dn.darkness;
-            topCtx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
-            topCtx.fillRect(0, 0, cw, ch);
-            topCtx.restore();
+        // Day/night overlay (ACIMA de todas as entidades DOM, mesma cor, sem mascara):
+        // canvas transparente z 25, abaixo dos layers de raid/teleport (z 40+).
+        let ovEl = this._nightOverlayEl;
+        if (!ovEl && this.canvas && this.canvas.parentElement) {
+            ovEl = document.createElement('canvas');
+            ovEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:25;';
+            this.canvas.parentElement.appendChild(ovEl);
+            this._nightOverlayEl = ovEl;
         }
-
-        // Psychic weather: leve tom roxo sobre a tela (dia ou noite)
-        if ((this._weather || this.getWeather()) === 'psychic') {
-            topCtx.save();
-            topCtx.globalAlpha = 0.3;
-            topCtx.fillStyle = 'rgb(139, 92, 246)';
-            topCtx.fillRect(0, 0, cw, ch);
-            topCtx.restore();
-        }
-
-        // Night lights (lamps glow as it gets dark)
-        if (dn.darkness > 0.15 && this.lights.length > 0) {
-            const intensity = Math.min(1, (dn.darkness - 0.15) / 0.5);
-            topCtx.save();
-            topCtx.globalCompositeOperation = 'screen';
-            for (const l of this.lights) {
-                const sx = l.pos_x - camX;
-                const sy = l.pos_y - camY;
-                if (sx < -300 || sx > cw + 300 || sy < -300 || sy > ch + 300) continue;
-                const radius = (l.radius || 120);
-                const grad = topCtx.createRadialGradient(sx, sy, 0, sx, sy, radius);
-                grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
-                grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
-                grad.addColorStop(1, 'rgba(255,180,80,0)');
-                topCtx.fillStyle = grad;
-                topCtx.beginPath();
-                topCtx.arc(sx, sy, radius, 0, Math.PI * 2);
-                topCtx.fill();
+        if (ovEl) {
+            if (ovEl.width !== cw) ovEl.width = cw;
+            if (ovEl.height !== ch) ovEl.height = ch;
+            const ovCtx = ovEl.getContext('2d');
+            ovCtx.clearRect(0, 0, cw, ch);
+            if (dn.darkness > 0.01) {
+                ovCtx.save();
+                ovCtx.globalAlpha = dn.darkness;
+                ovCtx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
+                ovCtx.fillRect(0, 0, cw, ch);
+                ovCtx.restore();
             }
-            topCtx.restore();
-        }
-
-        // Weather particles
-        const weather = this._weather || 'clear';
-        if (weather !== 'clear' && weather !== 'psychic') {
-            topCtx.save();
-            for (const p of this.weatherParticles) {
-                if (weather === 'rain') {
-                    topCtx.beginPath();
-                    topCtx.moveTo(p.x, p.y);
-                    topCtx.lineTo(p.x + p.wind * 0.5, p.y + p.len);
-                    topCtx.strokeStyle = `rgba(120,180,255,${p.opacity})`;
-                    topCtx.lineWidth = 1.2;
-                    topCtx.stroke();
-                } else if (weather === 'wind') {
-                    topCtx.beginPath();
-                    topCtx.moveTo(p.x, p.y);
-                    topCtx.lineTo(p.x - p.len, p.y + Math.sin(p.wobble) * 2);
-                    topCtx.strokeStyle = `rgba(255,255,255,${p.opacity * 0.55})`;
-                    topCtx.lineWidth = 1.6;
-                    topCtx.stroke();
-                } else if (weather === 'sandstorm') {
-                    topCtx.fillStyle = `rgba(222, 179, 106, ${p.opacity * 0.85})`;
-                    topCtx.beginPath();
-                    topCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    topCtx.fill();
-                } else if (weather === 'grassstorm') {
-                    topCtx.fillStyle = `rgba(130, 190, 90, ${p.opacity * 0.85})`;
-                    topCtx.beginPath();
-                    topCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    topCtx.fill();
-                } else if (weather === 'gold') {
-                    topCtx.fillStyle = `rgba(255, 214, 90, ${p.opacity})`;
-                    topCtx.fillRect(p.x, p.y, p.size + 1, p.size + 1);
-                } else {
-                    topCtx.beginPath();
-                    topCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    topCtx.fillStyle = `rgba(220,235,255,${p.opacity})`;
-                    topCtx.fill();
+            // Psychic weather: leve tom roxo sobre a tela (dia ou noite)
+            if ((this._weather || this.getWeather()) === 'psychic') {
+                ovCtx.save();
+                ovCtx.globalAlpha = 0.3;
+                ovCtx.fillStyle = 'rgb(139, 92, 246)';
+                ovCtx.fillRect(0, 0, cw, ch);
+                ovCtx.restore();
+            }
+            // Night lights (lamps glow as it gets dark)
+            if (dn.darkness > 0.15 && this.lights.length > 0) {
+                const intensity = Math.min(1, (dn.darkness - 0.15) / 0.5);
+                ovCtx.save();
+                ovCtx.globalCompositeOperation = 'screen';
+                for (const l of this.lights) {
+                    const sx = l.pos_x - camX;
+                    const sy = l.pos_y - camY;
+                    if (sx < -300 || sx > cw + 300 || sy < -300 || sy > ch + 300) continue;
+                    const radius = (l.radius || 120);
+                    const grad = ovCtx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+                    grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
+                    grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
+                    grad.addColorStop(1, 'rgba(255,180,80,0)');
+                    ovCtx.fillStyle = grad;
+                    ovCtx.beginPath();
+                    ovCtx.arc(sx, sy, radius, 0, Math.PI * 2);
+                    ovCtx.fill();
                 }
+                ovCtx.restore();
             }
-            topCtx.restore();
+            // Weather particles
+            const weather = this._weather || 'clear';
+            if (weather !== 'clear' && weather !== 'psychic') {
+                ovCtx.save();
+                for (const p of this.weatherParticles) {
+                    if (weather === 'rain') {
+                        ovCtx.beginPath();
+                        ovCtx.moveTo(p.x, p.y);
+                        ovCtx.lineTo(p.x + p.wind * 0.5, p.y + p.len);
+                        ovCtx.strokeStyle = `rgba(120,180,255,${p.opacity})`;
+                        ovCtx.lineWidth = 1.2;
+                        ovCtx.stroke();
+                    } else if (weather === 'wind') {
+                        ovCtx.beginPath();
+                        ovCtx.moveTo(p.x, p.y);
+                        ovCtx.lineTo(p.x - p.len, p.y + Math.sin(p.wobble) * 2);
+                        ovCtx.strokeStyle = `rgba(255,255,255,${p.opacity * 0.55})`;
+                        ovCtx.lineWidth = 1.6;
+                        ovCtx.stroke();
+                    } else if (weather === 'sandstorm') {
+                        ovCtx.fillStyle = `rgba(222, 179, 106, ${p.opacity * 0.85})`;
+                        ovCtx.beginPath();
+                        ovCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ovCtx.fill();
+                    } else if (weather === 'grassstorm') {
+                        ovCtx.fillStyle = `rgba(130, 190, 90, ${p.opacity * 0.85})`;
+                        ovCtx.beginPath();
+                        ovCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ovCtx.fill();
+                    } else if (weather === 'gold') {
+                        ovCtx.fillStyle = `rgba(255, 214, 90, ${p.opacity})`;
+                        ovCtx.fillRect(p.x, p.y, p.size + 1, p.size + 1);
+                    } else {
+                        ovCtx.beginPath();
+                        ovCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ovCtx.fillStyle = `rgba(220,235,255,${p.opacity})`;
+                        ovCtx.fill();
+                    }
+                }
+                ovCtx.restore();
+            }
         }
     }
 }
