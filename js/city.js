@@ -41,6 +41,9 @@ class CityScreen {
         this.playerSize = 48;
         this.followerBehind = 26;
         this.followerSideOffset = 40;
+        // Offset para baixo (follower atras quando o jogador olha pra baixo): pequeno,
+        // pra pokemon ficar tuckado nas costas, parcialmente coberto pelo treinador.
+        this.followerDownOffset = 10;
         // Velocidade do follower em u/frame (dt=1 = 60fps). O jogador anda ~2.4u/frame,
         // entao 2.1 deixa o pokemon levemente mais lento: segue sempre, sem "borracha".
         this.followerSpeed = 2.1;
@@ -3316,7 +3319,7 @@ class CityScreen {
         const feetY = this.playerY + this.playerSize / 2;
         let behindX = this.playerX;
         let behindY = feetY;
-        if (this.playerDir === 'down') behindY = this.playerY - this.followerBehind;
+        if (this.playerDir === 'down') behindY = this.playerY - this.followerDownOffset;
         else if (this.playerDir === 'up') behindY = feetY + this.followerBehind;
         else if (this.playerDir === 'left') behindX = this.playerX + this.followerSideOffset;
         else if (this.playerDir === 'right') behindX = this.playerX - this.followerSideOffset;
@@ -3395,7 +3398,8 @@ class CityScreen {
         const flipX = !useBack && this.playerDir === 'right';
         const idleFlip = !this.playerMoving && this.pokemonFollowIdleFlip;
         const finalFlip = idleFlip ? !flipX : flipX;
-        const downOffsetX = this.playerDir === 'down' ? -(spriteSize * scaleX * 0.6) : 0;
+        // Sem deslocamento lateral: follower centrado nas costas do jogador
+        const downOffsetX = 0;
 
         const px = this.pokemonFollowRenderX - camX - spriteSize / 2;
         const py = this.pokemonFollowRenderY - camY - spriteSize;
@@ -3451,8 +3455,7 @@ class CityScreen {
             const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (spriteSize / this.playerSize)));
             const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (spriteSize / this.playerSize)));
             const fPad = Math.max(2, Math.round(this.grassForegroundPad * (spriteSize / this.playerSize)));
-            // Centra o recorte na posicao VISUAL do sprite (olhando pra baixo o sprite e
-            // deslocado pra esquerda via downOffsetX; os pes mundiais nao acompanham).
+            // Centra o recorte na posicao VISUAL do sprite (follower sempre centralizado)
             const visualFeetX = this.pokemonFollowRenderX + downOffsetX / scaleX;
             this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
         }
