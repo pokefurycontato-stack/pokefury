@@ -426,9 +426,9 @@ class CityScreen {
         this.pokemonFollowing = null;
         this.pokemonFollowSpriteUrl = null;
         this.pokemonFollowBackSpriteUrl = null;
-        if (this.wildPokemonLayer) {
-            this.wildPokemonLayer.remove();
-            this.wildPokemonLayer = null;
+        for (const p of (this.wildPokemon || [])) {
+            if (p._el) { try { p._el.remove(); } catch (e) {} }
+            if (p._grassEl) { try { p._grassEl.remove(); } catch (e) {} }
         }
         this.wildPokemon = [];
         if (this._raidLayer) {
@@ -1106,18 +1106,19 @@ class CityScreen {
     }
 
     async spawnVisiblePokemon() {
-        if (this.wildPokemonLayer) this.wildPokemonLayer.remove();
-        this.wildPokemonLayer = null;
+        for (const p of (this.wildPokemon || [])) {
+            if (p._el) { try { p._el.remove(); } catch (e) {} }
+            if (p._grassEl) { try { p._grassEl.remove(); } catch (e) {} }
+        }
         this.wildPokemon = [];
         if (!this.spawnPoints || this.spawnPoints.length === 0) return;
 
         const wrap = document.getElementById('city-canvas-wrap');
         if (!wrap) return;
-        const layer = document.createElement('div');
-        layer.id = 'city-wild-pokemon-layer';
-        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:50;';
-        wrap.appendChild(layer);
-        this.wildPokemonLayer = layer;
+        // Os selvagens vivem no MESMO wrap das faixas/followers, com z por banda
+        // (3+2b). Ficam abaixo do topCtx, entao o dia/noite os escurece naturalmente
+        // sem precisar de mascara.
+        this.wildPokemonLayer = wrap;
 
         const game = window.pokefury;
         const charId = window.GameData?.currentCharacterId;
@@ -1173,11 +1174,10 @@ class CityScreen {
             const el = document.createElement('img');
             el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;display:none;';
             if (spriteUrl) el.src = spriteUrl;
-            layer.appendChild(el);
+            wrap.appendChild(el);
             const grassEl = document.createElement('canvas');
             grassEl.style.cssText = 'position:absolute;pointer-events:none;';
-            grassEl.style.zIndex = '2';
-            layer.appendChild(grassEl);
+            wrap.appendChild(grassEl);
             this.wildPokemon.push({
                 point,
                 biome,
@@ -1363,12 +1363,16 @@ class CityScreen {
         const offsetY = canvasRect.top - wrapRect.top;
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
-        const nf = this._nightFilter(this.getDayNight());
 
         for (const p of this.wildPokemon) {
             if (!p.active) continue;
             const el = p._el;
             if (!el) continue;
+            // Banda pela profundidade real (pos_y = pes) e z 3+2b, como os followers.
+            // Fica abaixo do topCtx, entao o dia/noite escurece naturalmente (sem mascara).
+            const band = this._bandForFollower(p.pos_y, this._depthSplits);
+            const z = (3 + 2 * band) + '';
+            el.style.zIndex = z;
             const sz = this.getWildPokemonSize(p);
             const natW = el.naturalWidth || 0;
             const natH = el.naturalHeight || 0;
@@ -1384,7 +1388,7 @@ class CityScreen {
                 continue;
             }
             el.style.display = 'block';
-            el.style.filter = nf;
+            el.style.filter = '';
             el.style.left = (offsetX + (sx - w / 2) * scaleX) + 'px';
             el.style.top = (offsetY + (sy - h) * scaleY) + 'px';
             el.style.width = (w * scaleX) + 'px';
@@ -1395,7 +1399,7 @@ class CityScreen {
                 const fOff = Math.max(8, Math.round(sz * 0.4));
                 const fHalf = Math.max(16, Math.round(Math.max(sz, w) * 0.55));
                 const fPad = Math.max(2, Math.round(sz * 0.12));
-                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, '2', true);
+                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, false);
             }
         }
     }
