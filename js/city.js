@@ -4053,6 +4053,9 @@ class CityScreen {
             const ps = Math.round((r.width || 48) * 1.2);
             return r.pos_y + ps;
         }
+        if (e.kind === 'grassFront') {
+            return r.splitScreenY;
+        }
         if (e.kind === 'player') {
             const ps = this.playerSize;
             const mp = r.isMe ? this.moveProgress : (r.moveProgress ?? 1);
@@ -4080,6 +4083,61 @@ class CityScreen {
             ctx.drawImage(img, sx, sy, aw, ah);
         }
         ctx.restore();
+    }
+
+    // ---- Grama alta (textura unica dividida em 2 passadas) ----
+    // A mesma imagem `grama.png` e desenhada em duas etapas com o personagem entre elas:
+    // parte acima dos pes atras, parte abaixo dos pes na frente.
+
+    _isGrassAsset(a) {
+        if (!a) return false;
+        if (a._isGrass !== undefined) return a._isGrass;
+        const id = a.asset_id || '';
+        const url = a.asset_url || '';
+        const is = id === 'grama' || /(^|\/)grama\.png$/i.test(url);
+        a._isGrass = is;
+        return is;
+    }
+
+    _drawGrassBack(ctx, a, camX, camY, cw, ch, pfx, pfy) {
+        const img = a._img;
+        if (!img || !img.complete || !img.naturalWidth) return;
+        const aw = img.naturalWidth * (a.scale || 1);
+        const ah = img.naturalHeight * (a.scale || 1);
+        const sx = a.pos_x - camX;
+        const sy = a.pos_y - camY;
+        if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) return;
+
+        const inside = pfx >= a.pos_x && pfx <= a.pos_x + aw && pfy >= a.pos_y && pfy <= a.pos_y + ah;
+        if (!inside || a.rotation) {
+            ctx.drawImage(img, sx, sy, aw, ah);
+            return;
+        }
+
+        const scale = a.scale || 1;
+        const splitSrcY = Math.max(0, Math.min(img.naturalHeight, (pfy - a.pos_y) / scale));
+
+        // Parte de cima (atras do personagem)
+        if (splitSrcY > 0.5) {
+            ctx.drawImage(img, 0, 0, img.naturalWidth, splitSrcY, sx, sy, aw, splitSrcY * scale);
+        }
+
+        // Parte de baixo sera injetada no pool de profundidade (na frente do personagem)
+        this._grassFronts.push({ a, splitSrcY, splitScreenY: pfy, aw, ah, z_index: (a.z_index || 0) + 1000000 });
+    }
+
+    _drawGrassFront(ctx, gf, camX, camY) {
+        const a = gf.a;
+        const img = a._img;
+        if (!img || !img.complete || !img.naturalWidth) return;
+        const srcY = gf.splitSrcY;
+        const srcH = img.naturalHeight - srcY;
+        if (srcH <= 0.5) return;
+        const scale = a.scale || 1;
+        const destY = gf.splitScreenY - camY;
+        const destH = gf.ah - (gf.splitScreenY - a.pos_y);
+        if (destH <= 0.5) return;
+        ctx.drawImage(img, 0, srcY, img.naturalWidth, srcH, a.pos_x - camX, destY, gf.aw, destH);
     }
 
     drawNpcSprite(ctx, n, camX, camY, cw, ch, shadowOffX, shadowOffY) {
@@ -4332,6 +4390,12 @@ class CityScreen {
         const bandCtx = (i) => (this.depthCtxs && this.depthCtxs[i]) ? this.depthCtxs[i] : ctx;
         const topCtx = bandCtx(bandCount - 1);
 
+        // Grama alta: posicao dos pes do personagem (interpolada) para o corte
+        this._grassFronts = [];
+        const _gmp = this.moveProgress || 0;
+        const _grassPfx = this.playerFromX + (this.playerX - this.playerFromX) * _gmp;
+        const _grassPfy = (this.playerFromY + (this.playerY - this.playerFromY) * _gmp) + this.playerSize / 2;
+
         // ---- FUNDO: canvas base, abaixo de todas as faixas ----
         ctx.clearRect(0, 0, cw, ch);
         ctx.fillStyle = '#2d5a27';
@@ -4356,7 +4420,11 @@ class CityScreen {
         const sorted = [...this.assets].sort((a, b) => (a.layer || 0) - (b.layer || 0) || (a.z_index || 0) - (b.z_index || 0));
         sorted.forEach(a => {
             if ((a.layer || 0) === 3) return; // Layer 3 vai para o pool de profundidade (Y-Sorting)
-            this.drawAssetSprite(ctx, a, camX, camY, cw, ch);
+            if (this._isGrassAsset(a)) {
+                this._drawGrassBack(ctx, a, camX, camY, cw, ch, _grassPfx, _grassPfy);
+            } else {
+                this.drawAssetSprite(ctx, a, camX, camY, cw, ch);
+            }
         });
 
         // Puddles during rain
@@ -4442,6 +4510,9 @@ class CityScreen {
             depthPool.push({ kind: 'npc', ref: n });
         });
         allPlayers.forEach(p => depthPool.push({ kind: 'player', ref: p }));
+        if (this._grassFronts && this._grassFronts.length > 0) {
+            this._grassFronts.forEach(gf => depthPool.push({ kind: 'grassFront', ref: gf }));
+        }
         depthPool.sort((x, y) => (this.getEntityDepthY(x) - this.getEntityDepthY(y)) || ((x.ref.z_index || 0) - (y.ref.z_index || 0)));
 
         // Cada entidade vai para a faixa certa (entre os pokémons que seguem).
@@ -4452,6 +4523,8 @@ class CityScreen {
                 this.drawAssetSprite(dctx, e.ref, camX, camY, cw, ch);
             } else if (e.kind === 'npc') {
                 this.drawNpcSprite(dctx, e.ref, camX, camY, cw, ch, shadowOffX, shadowOffY);
+            } else if (e.kind === 'grassFront') {
+                this._drawGrassFront(dctx, e.ref, camX, camY);
             } else {
                 this.drawPlayerSprite(dctx, e.ref, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY, band);
             }
