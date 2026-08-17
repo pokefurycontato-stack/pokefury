@@ -1363,14 +1363,18 @@ class CityScreen {
         const offsetY = canvasRect.top - wrapRect.top;
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
+        const nf = this._nightFilter(this.getDayNight());
+        const usedBands = Math.min((this._depthSplits ? this._depthSplits.length + 1 : 1), this.depthCanvases ? this.depthCanvases.length : 1);
 
         for (const p of this.wildPokemon) {
             if (!p.active) continue;
             const el = p._el;
             if (!el) continue;
             // Banda pela profundidade real (pos_y = pes) e z 3+2b, como os followers.
-            // Fica abaixo do topCtx, entao o dia/noite escurece naturalmente (sem mascara).
+            // Se cair na ultima banda fica ACIMA do topCtx -> precisa de mascara; se nao,
+            // o overlay do topCtx ja escurece naturalmente.
             const band = this._bandForFollower(p.pos_y, this._depthSplits);
+            const aboveTop = band >= usedBands - 1;
             const z = (3 + 2 * band) + '';
             el.style.zIndex = z;
             const sz = this.getWildPokemonSize(p);
@@ -1388,7 +1392,7 @@ class CityScreen {
                 continue;
             }
             el.style.display = 'block';
-            el.style.filter = '';
+            el.style.filter = aboveTop ? nf : '';
             el.style.left = (offsetX + (sx - w / 2) * scaleX) + 'px';
             el.style.top = (offsetY + (sy - h) * scaleY) + 'px';
             el.style.width = (w * scaleX) + 'px';
@@ -1399,7 +1403,7 @@ class CityScreen {
                 const fOff = Math.max(8, Math.round(sz * 0.4));
                 const fHalf = Math.max(16, Math.round(Math.max(sz, w) * 0.55));
                 const fPad = Math.max(2, Math.round(sz * 0.12));
-                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, false);
+                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, aboveTop);
             }
         }
     }
