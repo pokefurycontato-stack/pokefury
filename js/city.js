@@ -2907,6 +2907,51 @@ class CityScreen {
         return false;
     }
 
+    // Calcula a posicao maxima alcancavel de (playerX, playerY) na direcao (dx,dy) com
+    // distancia `dist`, parando ENCOSTADA na primeira colisao do caminho (nunca atravessa).
+    // Retorna {x,y} ou null se nao consegue mover (ja encostado na colisao).
+    _collisionSlide(dx, dy, dist) {
+        const hb = this._playerHitbox(this.playerX, this.playerY);
+        const ps = hb.ps, half = ps / 2;
+        const top = this.playerY + this.playerSize / 2 - ps;
+        const feetY = top + ps;
+        if (dx) {
+            let limit = dx > 0 ? Infinity : -Infinity;
+            for (const z of this.collisionZones) {
+                if (!(top < z.pos_y + z.height && feetY > z.pos_y)) continue;   // sem overlap em Y
+                if (dx > 0) {
+                    if (this.playerX + half > z.pos_x) continue;                // zona ja esta atras
+                    const t = z.pos_x - half;                                   // borda direita encosta na esquerda da zona
+                    if (t < limit) limit = t;
+                } else {
+                    if (this.playerX - half < z.pos_x + z.width) continue;      // zona ja esta atras
+                    const t = z.pos_x + z.width + half;                         // borda esquerda encosta na direita da zona
+                    if (t > limit) limit = t;
+                }
+            }
+            const tx = dx > 0 ? Math.min(this.playerX + dist, limit) : Math.max(this.playerX - dist, limit);
+            if (tx === this.playerX) return null;
+            return { x: tx, y: this.playerY };
+        }
+        let limit = dy > 0 ? Infinity : -Infinity;
+        for (const z of this.collisionZones) {
+            const px = this.playerX - half;
+            if (!(px < z.pos_x + z.width && px + ps > z.pos_x)) continue;       // sem overlap em X
+            if (dy > 0) {
+                if (feetY > z.pos_y) continue;                                  // zona ja esta acima
+                const t = z.pos_y - this.playerSize / 2;                        // base (pes) encosta no topo da zona
+                if (t < limit) limit = t;
+            } else {
+                if (top < z.pos_y + z.height) continue;                         // zona ja esta abaixo
+                const t = z.pos_y + z.height + ps - this.playerSize / 2;        // topo encosta na base da zona
+                if (t > limit) limit = t;
+            }
+        }
+        const ty = dy > 0 ? Math.min(this.playerY + dist, limit) : Math.max(this.playerY - dist, limit);
+        if (ty === this.playerY) return null;
+        return { x: this.playerX, y: ty };
+    }
+
     findPath(startX, startY, endX, endY) {
         const STEP = this.playerSpeed;
         const maxSteps = 1500;
@@ -2957,27 +3002,14 @@ class CityScreen {
         else if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) { dx = 1; this.playerDir = 'right'; }
 
         if (dx || dy) {
-            const nx = this.playerX + dx * this.playerSpeed;
-            const ny = this.playerY + dy * this.playerSpeed;
-            if (!this.checkCollision(nx, ny)) {
+            // Desliza ate ENCOSTAR na colisao mais proxima da direcao: a hitbox para
+            // colada nela e nunca atravessa colisao no meio do caminho (sweep exato).
+            const r = this._collisionSlide(dx, dy, this.playerSpeed);
+            if (r) {
                 this.playerFromX = this.playerX;
                 this.playerFromY = this.playerY;
-                this.playerX = nx;
-                this.playerY = ny;
-                this.playerMoving = true;
-                this.moveProgress = 0;
-                this.syncPosition();
-            } else if (!this.checkCollision(nx, this.playerY)) {
-                this.playerFromX = this.playerX;
-                this.playerFromY = this.playerY;
-                this.playerX = nx;
-                this.playerMoving = true;
-                this.moveProgress = 0;
-                this.syncPosition();
-            } else if (!this.checkCollision(this.playerX, ny)) {
-                this.playerFromX = this.playerX;
-                this.playerFromY = this.playerY;
-                this.playerY = ny;
+                this.playerX = r.x;
+                this.playerY = r.y;
                 this.playerMoving = true;
                 this.moveProgress = 0;
                 this.syncPosition();
@@ -2994,14 +3026,12 @@ class CityScreen {
         else if (dir === 'ArrowRight') { dx = 1; this.playerDir = 'right'; }
         else return false;
 
-        const nx = this.playerX + dx * this.playerSpeed;
-        const ny = this.playerY + dy * this.playerSpeed;
-        if (this.checkCollision(nx, ny)) return false;
-
+        const r = this._collisionSlide(dx, dy, this.playerSpeed);
+        if (!r) return false;
         this.playerFromX = this.playerX;
         this.playerFromY = this.playerY;
-        this.playerX = nx;
-        this.playerY = ny;
+        this.playerX = r.x;
+        this.playerY = r.y;
         this.playerMoving = false;
         this.moveProgress = 1;
         if (this.myPlayer) {
