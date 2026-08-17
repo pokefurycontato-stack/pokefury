@@ -266,6 +266,7 @@ class CityScreen {
         this.ctx = this.canvas.getContext('2d');
         this.ctx.imageSmoothingEnabled = true;
         if ('imageSmoothingQuality' in this.ctx) this.ctx.imageSmoothingQuality = 'high';
+        this._ensureDepthCanvases();
 
         // Cache para jogadores (nao-admin): reabre a cidade sem recarregar tudo.
         // Admin sempre recarrega (para ver alteracoes no city builder).
@@ -516,6 +517,12 @@ class CityScreen {
         if (rect.width > 0 && rect.height > 0) {
             this.canvas.width = rect.width;
             this.canvas.height = rect.height;
+            if (this.depthCanvases) {
+                for (const c of this.depthCanvases) {
+                    c.width = rect.width;
+                    c.height = rect.height;
+                }
+            }
         }
     }
 
@@ -1102,7 +1109,7 @@ class CityScreen {
         if (!wrap) return;
         const layer = document.createElement('div');
         layer.id = 'city-wild-pokemon-layer';
-        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:5;';
+        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:50;';
         wrap.appendChild(layer);
         this.wildPokemonLayer = layer;
 
@@ -1669,7 +1676,7 @@ class CityScreen {
         if (!wrap) return;
         const layer = document.createElement('div');
         layer.id = 'city-raid-layer';
-        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:6;';
+        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:60;';
         wrap.appendChild(layer);
         this._raidLayer = layer;
 
@@ -1710,7 +1717,7 @@ class CityScreen {
             if (!wrap) return;
             const layer = document.createElement('div');
             layer.id = 'city-teleport-layer';
-            layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:4;';
+            layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:40;';
             wrap.appendChild(layer);
             this._teleportLayer = layer;
         }
@@ -1852,7 +1859,7 @@ class CityScreen {
         if (!wrap) return;
         const layer = document.createElement('div');
         layer.id = 'city-rank-layer';
-        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:5;';
+        layer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:51;';
         wrap.appendChild(layer);
         this._rankLayer = layer;
     }
@@ -3304,6 +3311,11 @@ class CityScreen {
             this.pokemonFollowShadowEl.style.height = shadowH + 'px';
             this.pokemonFollowShadowEl.style.transform = followTransform || 'none';
         }
+
+        // Z-index entre as faixas de profundidade (cada follower vira um ponto de divisão)
+        const z = (3 + 2 * this._bandForFollower(this.pokemonFollowRenderY, this._depthSplits)) + '';
+        this.pokemonFollowEl.style.zIndex = z;
+        if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.zIndex = z;
     }
 
     _getOtherFollowerEls(userId) {
@@ -3339,11 +3351,14 @@ class CityScreen {
         delete this._otherFollowerEls[userId];
     }
 
-    drawOtherPlayerFollowerDom(p, drawX, drawY, ps, scaleX, scaleY, offsetX, offsetY) {
+    drawOtherPlayerFollowerDom(p, drawX, drawY, ps, scaleX, scaleY, offsetX, offsetY, band) {
         if (!p || !p.follower_sprite_url) return;
         const entry = this._getOtherFollowerEls(p.user_id);
         if (!entry) return;
         const { el, shadowEl } = entry;
+        const z = (3 + 2 * (band || 0)) + '';
+        el.style.zIndex = z;
+        shadowEl.style.zIndex = z;
 
         const dir = p.direction || 'down';
         const useBack = dir === 'up' && p.follower_back_url;
@@ -3727,9 +3742,8 @@ class CityScreen {
         return true;
     }
 
-    drawSpriteReflection(img, srcX, srcY, srcW, srcH, dx, dy, dw, dh) {
+    drawSpriteReflection(ctx, img, srcX, srcY, srcW, srcH, dx, dy, dw, dh) {
         if (this._weather !== 'rain') return;
-        const ctx = this.ctx;
         ctx.save();
         ctx.globalAlpha = 0.18;
         ctx.translate(dx + dw / 2, dy + dh);
@@ -4109,10 +4123,10 @@ class CityScreen {
                 }
                 ctx.drawImage(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
                 if (clipBottom > 0) ctx.restore();
-                this.drawSpriteReflection(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
+                this.drawSpriteReflection(ctx, img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
             } else {
                 ctx.drawImage(img, sx, sy, ps, ps);
-                this.drawSpriteReflection(img, 0, 0, img.naturalWidth, img.naturalHeight, sx, sy, ps, ps);
+                this.drawSpriteReflection(ctx, img, 0, 0, img.naturalWidth, img.naturalHeight, sx, sy, ps, ps);
             }
         } else {
             ctx.fillStyle = n.npc_type === 'professor' ? '#ffd54f' : (n.npc_type === 'narrator' ? '#f59e0b' : (n.npc_type === 'vendor' ? '#2f855a' : (n.npc_type === 'banker' ? '#8b5cf6' : '#ff8fab')));
@@ -4124,7 +4138,7 @@ class CityScreen {
         }
     }
 
-    drawPlayerSprite(ctx, p, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY) {
+    drawPlayerSprite(ctx, p, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY, band) {
         const ps = this.playerSize;
         let drawX, drawY;
         const mp = p.isMe ? this.moveProgress : (p.moveProgress ?? 1);
@@ -4143,7 +4157,14 @@ class CityScreen {
         // Pokemon seguindo dos OUTROS jogadores (DOM sobre o canvas p/ animar o GIF)
         if (!p.isMe) {
             if (p.follower_sprite_url) {
-                this.drawOtherPlayerFollowerDom(p, drawX, drawY, ps, fScaleX, fScaleY, fOffX, fOffY);
+                // Banda do follower pela SUA profundidade real (offset de direção)
+                const fdir = p.direction || 'down';
+                let foffY = 0;
+                if (fdir === 'down') foffY = -(55 + ps / 2);
+                else if (fdir === 'up') foffY = 55 - ps / 2;
+                const fDepth = drawY + camY + ps + foffY;
+                const fband = this._bandForFollower(fDepth, this._depthSplits);
+                this.drawOtherPlayerFollowerDom(p, drawX, drawY, ps, fScaleX, fScaleY, fOffX, fOffY, fband);
             } else {
                 const _entry = this._otherFollowerEls && this._otherFollowerEls[p.user_id];
                 if (_entry) { _entry.el.style.display = 'none'; _entry.shadowEl.style.display = 'none'; }
@@ -4166,10 +4187,10 @@ class CityScreen {
                 const isMoving = p.isMe ? (this.moveProgress < 1.0) : (pmp < 1.0 && (dx > 2 || dy > 2));
                 const walkIdx = isMoving ? Math.min(Math.floor(pmp * 4), 3) : 0;
                 ctx.drawImage(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
-                this.drawSpriteReflection(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
+                this.drawSpriteReflection(ctx, skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
             } else {
                 ctx.drawImage(skinImg, drawX, drawY, ps, ps);
-                this.drawSpriteReflection(skinImg, 0, 0, skinImg.naturalWidth, skinImg.naturalHeight, drawX, drawY, ps, ps);
+                this.drawSpriteReflection(ctx, skinImg, 0, 0, skinImg.naturalWidth, skinImg.naturalHeight, drawX, drawY, ps, ps);
             }
         } else {
             ctx.fillStyle = p.isMe ? '#3498db' : '#e94560';
@@ -4205,6 +4226,87 @@ class CityScreen {
         }
     }
 
+    // ---- Faixas de profundidade ----
+    // Cada pokémon que segue (DOM) vira um ponto de divisão: canvas da banda i tem
+    // z = 2+2i, o follower da banda i fica em z = 3+2i (entre as faixas i e i+1).
+    // Overlays DOM (teleport/wild/rank/raid) ficam em z >= 40.
+
+    _ensureDepthCanvases() {
+        if (this._depthCanvasesReady) return;
+        const wrap = this.canvas && this.canvas.parentElement;
+        if (!wrap) return;
+        this._depthCanvasesReady = true;
+        const count = 10;
+        this.depthCanvases = [];
+        this.depthCtxs = [];
+        for (let i = 0; i < count; i++) {
+            const c = document.createElement('canvas');
+            c.className = 'city-depth-canvas';
+            c.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
+            c.style.zIndex = (2 + 2 * i) + '';
+            c.width = this.canvas.width || 1;
+            c.height = this.canvas.height || 1;
+            wrap.appendChild(c);
+            this.depthCanvases.push(c);
+            this.depthCtxs.push(c.getContext('2d'));
+        }
+    }
+
+    _computeDepthSplits() {
+        const splits = [];
+        const ps = this.playerSize;
+        if (this.pokemonFollowing && this.pokemonFollowEl && this.pokemonFollowEl.style.display !== 'none') {
+            splits.push(this.pokemonFollowRenderY);
+        }
+        Object.values(this.players || {}).forEach(p => {
+            if (!p.follower_sprite_url) return;
+            const fromY = p.fromY ?? p.pos_y;
+            const interpY = fromY + (p.pos_y - fromY) * (p.moveProgress ?? 1);
+            // Profundidade real do follower (offset de direção), igual ao DOM
+            const dir = p.direction || 'down';
+            let offY = 0;
+            if (dir === 'down') offY = -(55 + ps / 2);
+            else if (dir === 'up') offY = 55 - ps / 2;
+            splits.push(interpY + ps / 2 + offY);
+        });
+        const uniq = [...new Set(splits)];
+        uniq.sort((a, b) => a - b);
+        return uniq;
+    }
+
+    _bandForDepth(depth, splits) {
+        let b = 0;
+        if (splits) for (const s of splits) if (s <= depth) b++;
+        const max = this.depthCanvases ? this.depthCanvases.length - 1 : 0;
+        return Math.min(b, max);
+    }
+
+    // Banda de um follower: ele fica na faixa ABAIXO do próprio split (não o conta).
+    _bandForFollower(depth, splits) {
+        let b = 0;
+        if (splits) for (const s of splits) if (s < depth) b++;
+        const max = this.depthCanvases ? this.depthCanvases.length - 1 : 0;
+        return Math.min(b, max);
+    }
+
+    _clearDepthCanvases(bandCount, cw, ch) {
+        if (!this.depthCanvases) return 0;
+        const used = Math.max(1, Math.min(bandCount, this.depthCanvases.length));
+        for (let i = 0; i < this.depthCanvases.length; i++) {
+            const c = this.depthCanvases[i];
+            if (i < used) {
+                c.style.display = 'block';
+                const dctx = this.depthCtxs[i];
+                dctx.imageSmoothingEnabled = true;
+                if ('imageSmoothingQuality' in dctx) dctx.imageSmoothingQuality = 'high';
+                dctx.clearRect(0, 0, cw, ch);
+            } else {
+                c.style.display = 'none';
+            }
+        }
+        return used;
+    }
+
     render() {
         if (!this.ctx || !this.canvas) return;
         const ctx = this.ctx;
@@ -4212,7 +4314,7 @@ class CityScreen {
         const ch = this.canvas.height;
         if (cw === 0 || ch === 0) return;
 
-        ctx.clearRect(0, 0, cw, ch);
+        this._ensureDepthCanvases();
 
         const camX = this.cameraX - cw / 2;
         const camY = this.cameraY - ch / 2;
@@ -4223,6 +4325,14 @@ class CityScreen {
         const shadowOffX = -Math.cos(dn.sunAngle) * shadowLen;
         const shadowOffY = 2 + sunHeight * 3;
 
+        // Faixas de profundidade: cada pokémon seguindo (DOM) vira um ponto de divisão.
+        this._depthSplits = this._computeDepthSplits();
+        const bandCount = this._clearDepthCanvases(this._depthSplits.length + 1, cw, ch);
+        const bandCtx = (i) => (this.depthCtxs && this.depthCtxs[i]) ? this.depthCtxs[i] : ctx;
+        const topCtx = bandCtx(bandCount - 1);
+
+        // ---- FUNDO: canvas base, abaixo de todas as faixas ----
+        ctx.clearRect(0, 0, cw, ch);
         ctx.fillStyle = '#2d5a27';
         ctx.fillRect(0, 0, cw, ch);
 
@@ -4286,6 +4396,8 @@ class CityScreen {
         this.drawGymElements(ctx, camX, camY, cw, ch);
         this.renderRankDom();
 
+        ctx.restore();
+
         // ---- Y-Sorting do Layer 3 ----
         // Lista única de entidades renderizáveis do Layer 3 (assets + NPCs + jogadores),
         // ordenada por depthY (ponto de contato com o chão), do menor para o maior.
@@ -4330,52 +4442,59 @@ class CityScreen {
         });
         allPlayers.forEach(p => depthPool.push({ kind: 'player', ref: p }));
         depthPool.sort((x, y) => (this.getEntityDepthY(x) - this.getEntityDepthY(y)) || ((x.ref.z_index || 0) - (y.ref.z_index || 0)));
+
+        // Cada entidade vai para a faixa certa (entre os pokémons que seguem).
         depthPool.forEach(e => {
+            const band = this._bandForDepth(this.getEntityDepthY(e), this._depthSplits);
+            const dctx = bandCtx(band);
             if (e.kind === 'asset') {
-                this.drawAssetSprite(ctx, e.ref, camX, camY, cw, ch);
+                this.drawAssetSprite(dctx, e.ref, camX, camY, cw, ch);
             } else if (e.kind === 'npc') {
-                this.drawNpcSprite(ctx, e.ref, camX, camY, cw, ch, shadowOffX, shadowOffY);
+                this.drawNpcSprite(dctx, e.ref, camX, camY, cw, ch, shadowOffX, shadowOffY);
             } else {
-                this.drawPlayerSprite(ctx, e.ref, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY);
+                this.drawPlayerSprite(dctx, e.ref, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY, band);
             }
         });
 
+        // ---- OVERLAYS: faixa do topo (acima do pool e do fundo, abaixo dos followers) ----
+        topCtx.save();
+
         if (window._cityDebug) {
-            ctx.fillStyle = 'rgba(231, 76, 60, 0.25)';
-            ctx.strokeStyle = '#e74c3c';
-            ctx.lineWidth = 2;
+            topCtx.fillStyle = 'rgba(231, 76, 60, 0.25)';
+            topCtx.strokeStyle = '#e74c3c';
+            topCtx.lineWidth = 2;
             for (const z of this.collisionZones) {
                 const sx = z.pos_x - camX;
                 const sy = z.pos_y - camY;
-                ctx.fillRect(sx, sy, z.width, z.height);
-                ctx.strokeRect(sx, sy, z.width, z.height);
+                topCtx.fillRect(sx, sy, z.width, z.height);
+                topCtx.strokeRect(sx, sy, z.width, z.height);
             }
             const ps = 32;
             const ppx = this.playerX - camX - ps / 2;
             const ppy = this.playerY - camY - ps / 2;
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-            ctx.fillRect(ppx, ppy, ps, ps);
-            ctx.strokeRect(ppx, ppy, ps, ps);
-            ctx.fillStyle = '#00ff00';
-            ctx.font = 'bold 10px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${ps}x${ps}`, ppx + ps / 2, ppy - 6);
+            topCtx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+            topCtx.strokeStyle = '#00ff00';
+            topCtx.lineWidth = 2;
+            topCtx.fillRect(ppx, ppy, ps, ps);
+            topCtx.strokeRect(ppx, ppy, ps, ps);
+            topCtx.fillStyle = '#00ff00';
+            topCtx.font = 'bold 10px Inter, sans-serif';
+            topCtx.textAlign = 'center';
+            topCtx.fillText(`${ps}x${ps}`, ppx + ps / 2, ppy - 6);
         }
 
         if (this.nearestTeleport) {
             const t = this.nearestTeleport;
             const sx = t.sign_x - camX + t.sign_width / 2;
             const sy = t.sign_y - camY - 20;
-            ctx.fillStyle = 'rgba(139, 92, 246, 0.9)';
-            ctx.beginPath();
-            ctx.roundRect(sx - 50, sy - 14, 100, 22, 6);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Aperte E', sx, sy + 1);
+            topCtx.fillStyle = 'rgba(139, 92, 246, 0.9)';
+            topCtx.beginPath();
+            topCtx.roundRect(sx - 50, sy - 14, 100, 22, 6);
+            topCtx.fill();
+            topCtx.fillStyle = '#fff';
+            topCtx.font = 'bold 11px Inter, sans-serif';
+            topCtx.textAlign = 'center';
+            topCtx.fillText('Aperte E', sx, sy + 1);
         }
 
         if (this.nearestNpc && !this.npcDialogueOpen) {
@@ -4384,155 +4503,155 @@ class CityScreen {
             const sy = n.pos_y - camY - 20;
             const label = (n.npc_type === 'nurse' || n.npc_type === 'narrator' || n.npc_type === 'vendor' || n.npc_type === 'pc' || n.npc_type === 'banker') ? 'Aperte E para interagir' : 'Aperte E';
             const boxW = (n.npc_type === 'nurse' || n.npc_type === 'narrator' || n.npc_type === 'vendor' || n.npc_type === 'pc' || n.npc_type === 'banker') ? 170 : 100;
-            ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
-            ctx.beginPath();
-            ctx.roundRect(sx - boxW / 2, sy - 14, boxW, 22, 6);
-            ctx.fill();
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(label, sx, sy + 1);
+            topCtx.fillStyle = 'rgba(245, 158, 11, 0.9)';
+            topCtx.beginPath();
+            topCtx.roundRect(sx - boxW / 2, sy - 14, boxW, 22, 6);
+            topCtx.fill();
+            topCtx.fillStyle = '#000';
+            topCtx.font = 'bold 11px Inter, sans-serif';
+            topCtx.textAlign = 'center';
+            topCtx.fillText(label, sx, sy + 1);
         }
 
         if (this.nearRaidPortal && this.raidPortal) {
             const p = this.raidPortal;
             const sx = p.pos_x - camX + (p.width || 64) / 2;
             const sy = p.pos_y - camY - 24;
-            ctx.fillStyle = 'rgba(123, 47, 247, 0.9)';
-            ctx.beginPath();
-            ctx.roundRect(sx - 70, sy - 14, 140, 22, 6);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Pressione E para entrar na raid', sx, sy + 1);
+            topCtx.fillStyle = 'rgba(123, 47, 247, 0.9)';
+            topCtx.beginPath();
+            topCtx.roundRect(sx - 70, sy - 14, 140, 22, 6);
+            topCtx.fill();
+            topCtx.fillStyle = '#fff';
+            topCtx.font = 'bold 11px Inter, sans-serif';
+            topCtx.textAlign = 'center';
+            topCtx.fillText('Pressione E para entrar na raid', sx, sy + 1);
         }
 
         if (this.nearGymNpc && this.gymNpc) {
             const sx = this.gymNpc.pos_x - camX;
             const sy = this.gymNpc.pos_y - camY - 50;
-            ctx.fillStyle = 'rgba(233, 69, 96, 0.9)';
-            ctx.beginPath();
-            ctx.roundRect(sx - 70, sy - 14, 140, 22, 6);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Pressione E para interagir', sx, sy + 1);
+            topCtx.fillStyle = 'rgba(233, 69, 96, 0.9)';
+            topCtx.beginPath();
+            topCtx.roundRect(sx - 70, sy - 14, 140, 22, 6);
+            topCtx.fill();
+            topCtx.fillStyle = '#fff';
+            topCtx.font = 'bold 11px Inter, sans-serif';
+            topCtx.textAlign = 'center';
+            topCtx.fillText('Pressione E para interagir', sx, sy + 1);
         }
 
         if (this.nearRaidExit && this.raidExit) {
             const e = this.raidExit;
             const sx = e.pos_x - camX;
             const sy = e.pos_y - camY - 24;
-            ctx.fillStyle = 'rgba(34, 197, 94, 0.9)';
-            ctx.beginPath();
-            ctx.roundRect(sx - 60, sy - 14, 120, 22, 6);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Pressione E para sair', sx, sy + 1);
+            topCtx.fillStyle = 'rgba(34, 197, 94, 0.9)';
+            topCtx.beginPath();
+            topCtx.roundRect(sx - 60, sy - 14, 120, 22, 6);
+            topCtx.fill();
+            topCtx.fillStyle = '#fff';
+            topCtx.font = 'bold 11px Inter, sans-serif';
+            topCtx.textAlign = 'center';
+            topCtx.fillText('Pressione E para sair', sx, sy + 1);
         }
 
         if (this.inActiveGymZone) {
             const cx = this.canvas.width / 2;
             const cy = this.canvas.height - 80;
-            ctx.fillStyle = 'rgba(233, 69, 96, 0.9)';
-            ctx.beginPath();
-            ctx.roundRect(cx - 130, cy - 16, 260, 30, 8);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 14px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('APERTE E PARA DESAFIAR O LÍDER', cx, cy + 5);
+            topCtx.fillStyle = 'rgba(233, 69, 96, 0.9)';
+            topCtx.beginPath();
+            topCtx.roundRect(cx - 130, cy - 16, 260, 30, 8);
+            topCtx.fill();
+            topCtx.fillStyle = '#fff';
+            topCtx.font = 'bold 14px Inter, sans-serif';
+            topCtx.textAlign = 'center';
+            topCtx.fillText('APERTE E PARA DESAFIAR O LÍDER', cx, cy + 5);
         }
 
-        ctx.restore();
+        topCtx.restore();
 
         // Pokemon seguindo o jogador (desenhado sobre o canvas)
         this.drawCityFollower();
 
         // Day/night overlay
         if (dn.darkness > 0.01) {
-            ctx.save();
-            ctx.globalAlpha = dn.darkness;
-            ctx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
-            ctx.fillRect(0, 0, cw, ch);
-            ctx.restore();
+            topCtx.save();
+            topCtx.globalAlpha = dn.darkness;
+            topCtx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
+            topCtx.fillRect(0, 0, cw, ch);
+            topCtx.restore();
         }
 
         // Psychic weather: leve tom roxo sobre a tela (dia ou noite)
         if ((this._weather || this.getWeather()) === 'psychic') {
-            ctx.save();
-            ctx.globalAlpha = 0.3;
-            ctx.fillStyle = 'rgb(139, 92, 246)';
-            ctx.fillRect(0, 0, cw, ch);
-            ctx.restore();
+            topCtx.save();
+            topCtx.globalAlpha = 0.3;
+            topCtx.fillStyle = 'rgb(139, 92, 246)';
+            topCtx.fillRect(0, 0, cw, ch);
+            topCtx.restore();
         }
 
         // Night lights (lamps glow as it gets dark)
         if (dn.darkness > 0.15 && this.lights.length > 0) {
             const intensity = Math.min(1, (dn.darkness - 0.15) / 0.5);
-            ctx.save();
-            ctx.globalCompositeOperation = 'screen';
+            topCtx.save();
+            topCtx.globalCompositeOperation = 'screen';
             for (const l of this.lights) {
                 const sx = l.pos_x - camX;
                 const sy = l.pos_y - camY;
                 if (sx < -300 || sx > cw + 300 || sy < -300 || sy > ch + 300) continue;
                 const radius = (l.radius || 120);
-                const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+                const grad = topCtx.createRadialGradient(sx, sy, 0, sx, sy, radius);
                 grad.addColorStop(0, `rgba(255,220,150,${0.5 * intensity})`);
                 grad.addColorStop(0.3, `rgba(255,200,120,${0.28 * intensity})`);
                 grad.addColorStop(1, 'rgba(255,180,80,0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(sx, sy, radius, 0, Math.PI * 2);
-                ctx.fill();
+                topCtx.fillStyle = grad;
+                topCtx.beginPath();
+                topCtx.arc(sx, sy, radius, 0, Math.PI * 2);
+                topCtx.fill();
             }
-            ctx.restore();
+            topCtx.restore();
         }
 
         // Weather particles
         const weather = this._weather || 'clear';
         if (weather !== 'clear' && weather !== 'psychic') {
-            ctx.save();
+            topCtx.save();
             for (const p of this.weatherParticles) {
                 if (weather === 'rain') {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p.x + p.wind * 0.5, p.y + p.len);
-                    ctx.strokeStyle = `rgba(120,180,255,${p.opacity})`;
-                    ctx.lineWidth = 1.2;
-                    ctx.stroke();
+                    topCtx.beginPath();
+                    topCtx.moveTo(p.x, p.y);
+                    topCtx.lineTo(p.x + p.wind * 0.5, p.y + p.len);
+                    topCtx.strokeStyle = `rgba(120,180,255,${p.opacity})`;
+                    topCtx.lineWidth = 1.2;
+                    topCtx.stroke();
                 } else if (weather === 'wind') {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p.x - p.len, p.y + Math.sin(p.wobble) * 2);
-                    ctx.strokeStyle = `rgba(255,255,255,${p.opacity * 0.55})`;
-                    ctx.lineWidth = 1.6;
-                    ctx.stroke();
+                    topCtx.beginPath();
+                    topCtx.moveTo(p.x, p.y);
+                    topCtx.lineTo(p.x - p.len, p.y + Math.sin(p.wobble) * 2);
+                    topCtx.strokeStyle = `rgba(255,255,255,${p.opacity * 0.55})`;
+                    topCtx.lineWidth = 1.6;
+                    topCtx.stroke();
                 } else if (weather === 'sandstorm') {
-                    ctx.fillStyle = `rgba(222, 179, 106, ${p.opacity * 0.85})`;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fill();
+                    topCtx.fillStyle = `rgba(222, 179, 106, ${p.opacity * 0.85})`;
+                    topCtx.beginPath();
+                    topCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    topCtx.fill();
                 } else if (weather === 'grassstorm') {
-                    ctx.fillStyle = `rgba(130, 190, 90, ${p.opacity * 0.85})`;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fill();
+                    topCtx.fillStyle = `rgba(130, 190, 90, ${p.opacity * 0.85})`;
+                    topCtx.beginPath();
+                    topCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    topCtx.fill();
                 } else if (weather === 'gold') {
-                    ctx.fillStyle = `rgba(255, 214, 90, ${p.opacity})`;
-                    ctx.fillRect(p.x, p.y, p.size + 1, p.size + 1);
+                    topCtx.fillStyle = `rgba(255, 214, 90, ${p.opacity})`;
+                    topCtx.fillRect(p.x, p.y, p.size + 1, p.size + 1);
                 } else {
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(220,235,255,${p.opacity})`;
-                    ctx.fill();
+                    topCtx.beginPath();
+                    topCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    topCtx.fillStyle = `rgba(220,235,255,${p.opacity})`;
+                    topCtx.fill();
                 }
             }
-            ctx.restore();
+            topCtx.restore();
         }
     }
 }
