@@ -21,6 +21,7 @@ class CityScreen {
         this.playerSpeed = 60;
         this.playerSize = 48;
         this.followerBehind = 30;
+        this.grassForegroundOffset = 18;
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
@@ -4054,7 +4055,7 @@ class CityScreen {
             return r.pos_y + ps;
         }
         if (e.kind === 'grassFront') {
-            return r.splitScreenY;
+            return r.depthY;
         }
         if (e.kind === 'player') {
             const ps = this.playerSize;
@@ -4087,7 +4088,11 @@ class CityScreen {
 
     // ---- Grama alta (textura unica dividida em 2 passadas) ----
     // A mesma imagem `grama.png` e desenhada em duas etapas com o personagem entre elas:
-    // parte acima dos pes atras, parte abaixo dos pes na frente.
+    // parte acima da cintura atras, parte abaixo (pernas/cintura ate o fim do patch)
+    // na frente cobrindo a parte inferior do personagem. O corte e ajustavel por
+    // this.grassForegroundOffset (pixels acima dos pes onde o foreground comeca).
+    // A profundidade de Y-sorting da parte da frente e a posicao dos PES do personagem
+    // (igual ao jogador), garantindo que ele seja desenhado depois do jogador.
 
     _isGrassAsset(a) {
         if (!a) return false;
@@ -4108,6 +4113,10 @@ class CityScreen {
         const sy = a.pos_y - camY;
         if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) return;
 
+        // O corte do foreground fica acima dos pés (região das pernas/cintura),
+        // ajustável por grassForegroundOffset. Os pés continuam sendo usados para
+        // saber se o personagem está dentro da grama e para o Y-sorting.
+        const cutY = pfy - this.grassForegroundOffset;
         const inside = pfx >= a.pos_x && pfx <= a.pos_x + aw && pfy >= a.pos_y && pfy <= a.pos_y + ah;
         if (!inside || a.rotation) {
             ctx.drawImage(img, sx, sy, aw, ah);
@@ -4115,15 +4124,16 @@ class CityScreen {
         }
 
         const scale = a.scale || 1;
-        const splitSrcY = Math.max(0, Math.min(img.naturalHeight, (pfy - a.pos_y) / scale));
+        const splitSrcY = Math.max(0, Math.min(img.naturalHeight, (cutY - a.pos_y) / scale));
 
         // Parte de cima (atras do personagem)
         if (splitSrcY > 0.5) {
             ctx.drawImage(img, 0, 0, img.naturalWidth, splitSrcY, sx, sy, aw, splitSrcY * scale);
         }
 
-        // Parte de baixo sera injetada no pool de profundidade (na frente do personagem)
-        this._grassFronts.push({ a, splitSrcY, splitScreenY: pfy, aw, ah, z_index: (a.z_index || 0) + 1000000 });
+        // Parte de baixo sera injetada no pool de profundidade (na frente do personagem),
+        // com depthY = pes para ordenar junto (e depois) do jogador.
+        this._grassFronts.push({ a, splitSrcY, splitScreenY: cutY, depthY: pfy, aw, ah, z_index: (a.z_index || 0) + 1000000 });
     }
 
     _drawGrassFront(ctx, gf, camX, camY) {
