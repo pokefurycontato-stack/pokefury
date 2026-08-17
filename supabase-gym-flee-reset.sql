@@ -3,25 +3,22 @@
 -- no ginásio após fugir da batalha (antes do fix de auto-teleport).
 -- =============================================================
 
--- Troque o UUID abaixo pelo character_id do jogador preso.
--- Para descobrir: SELECT id, character_name FROM characters
---   WHERE character_name ILIKE '%nome%';
-
 DO $$
 DECLARE
-    v_char_id UUID := 'SUBSTITUA-PELO-CHARACTER_ID'; -- <-- edite aqui
+    v_char_name TEXT := 'Hagakury'; -- <-- nome do personagem (edite se preciso)
+    v_char_id UUID;
     v_user_id UUID;
     v_npc_pos_x FLOAT;
     v_npc_pos_y FLOAT;
 BEGIN
-    IF v_char_id = 'SUBSTITUA-PELO-CHARACTER_ID'::uuid THEN
-        RAISE EXCEPTION 'Defina o character_id no SQL antes de rodar';
-    END IF;
+    -- Descobre o character_id e user_id pelo nome
+    SELECT id, user_id INTO v_char_id, v_user_id FROM characters
+    WHERE player_name = v_char_name
+    ORDER BY created_at
+    LIMIT 1;
 
-    -- Descobre o user_id do personagem
-    SELECT user_id INTO v_user_id FROM characters WHERE id = v_char_id;
-    IF v_user_id IS NULL THEN
-        RAISE EXCEPTION 'Personagem não encontrado: %', v_char_id;
+    IF v_char_id IS NULL THEN
+        RAISE EXCEPTION 'Personagem não encontrado: %', v_char_name;
     END IF;
 
     -- Posição segura: ao lado do NPC de ginásio (mesmo destino do auto-teleport)
@@ -43,5 +40,5 @@ BEGIN
         city_pos_y = COALESCE(v_npc_pos_y, 0) + 70
     WHERE id = v_char_id;
 
-    RAISE NOTICE 'Posição resetada para o personagem %', v_char_id;
+    RAISE NOTICE 'Posição resetada para o personagem % (%), user_id %', v_char_name, v_char_id, v_user_id;
 END $$;
