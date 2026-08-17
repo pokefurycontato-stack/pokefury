@@ -2891,9 +2891,12 @@ class CityScreen {
     }
 
     checkCollision(nx, ny) {
-        const ps = 32;
+        // Hitbox pequena NOS PES (antes 32x32 no centro): permite chegar mais perto de
+        // objetos sem atravessar, pois so a regiao dos pes e bloqueada.
+        const ps = 14;
+        const feetY = ny + this.playerSize / 2;
         const px = nx - ps / 2;
-        const py = ny - ps / 2;
+        const py = feetY - ps;
         for (const z of this.collisionZones) {
             if (px < z.pos_x + z.width && px + ps > z.pos_x && py < z.pos_y + z.height && py + ps > z.pos_y) return true;
         }
