@@ -41,7 +41,6 @@ class CityScreen {
         this.playerSize = 48;
         this.followerBehind = 26;
         this.followerSideOffset = 40;
-        this.followerUpOffset = 44;
         // Velocidade do follower em u/frame (dt=1 = 60fps). O jogador anda ~2.4u/frame,
         // entao 2.1 deixa o pokemon levemente mais lento: segue sempre, sem "borracha".
         this.followerSpeed = 2.1;
@@ -3312,9 +3311,15 @@ class CityScreen {
     _updateCityFollowerMove(dt) {
         if (!this.pokemonFollowing || !this.pokemonFollowEl) return;
 
-        // Posição alvo: logo atrás do jogador, no sentido contrário à direção atual
-        const behindX = this.playerX - (this.playerDir === 'right' ? this.followerSideOffset : this.playerDir === 'left' ? -this.followerSideOffset : 0);
-        const behindY = this.playerY - (this.playerDir === 'down' ? this.followerBehind : this.playerDir === 'up' ? this.followerUpOffset : 0);
+        // Posição alvo: SEMPRE atrás do jogador (sentido contrário ao deslocamento).
+        // Nos lados, os pés do follower alinham com a linha dos pés do jogador (nao o centro).
+        const feetY = this.playerY + this.playerSize / 2;
+        let behindX = this.playerX;
+        let behindY = feetY;
+        if (this.playerDir === 'down') behindY = this.playerY - this.followerBehind;
+        else if (this.playerDir === 'up') behindY = feetY + this.followerBehind;
+        else if (this.playerDir === 'left') behindX = this.playerX + this.followerSideOffset;
+        else if (this.playerDir === 'right') behindX = this.playerX - this.followerSideOffset;
 
         // Movimento: perseguicao com velocidade CONSTANTE (nao lerp exponencial).
         // O pokemon segue o treinador sem disparar na frente nem fazer paradinha.
