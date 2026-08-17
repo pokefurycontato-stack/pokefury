@@ -1,3 +1,21 @@
+// Tipos de grama alta (mesmo comportamento de ocultar o personagem/followers/selvagens)
+const GRASS_ASSET_IDS = new Set([
+    'grama', 'gramagelo', 'gramametal', 'gramapedra',
+    'gramapraia', 'gramapsi', 'gramavoa', 'gramavulc'
+]);
+
+// Config das particulas ao andar sobre cada tipo de grama
+const GRASS_FX = {
+    grama:      { kind: 'blade', colors: ['#5cc048', '#6fd457', '#3f9c33'] },
+    gramagelo:  { kind: 'ice',   colors: ['#d8f2ff', '#a8dcff', '#eaf9ff'] },
+    gramametal: { kind: 'metal', colors: ['#aeb6c4', '#8b93a3', '#cdd4e0'] },
+    gramapedra: { kind: 'smoke', colors: ['#8a6b45', '#6f5537', '#a5855f'] },
+    gramapraia: { kind: 'sand',  colors: ['#ecd9a4', '#d8c187', '#f2e5bd'] },
+    gramapsi:   { kind: 'smoke', colors: ['#5b2d8f', '#3f1d66', '#7a44b8'] },
+    gramavoa:   { kind: 'smoke', colors: ['#4f86d8', '#3867b8', '#6ba1e8'] },
+    gramavulc:  { kind: 'soot',  colors: ['#2b2b2b', '#1a1a1a', '#454545'] }
+};
+
 class CityScreen {
     constructor() {
         this.canvas = null;
@@ -14,6 +32,7 @@ class CityScreen {
         this.playerY = 400;
         this._loadedSpawn = false;
         this.playerFromX = 400;
+        this._grassParticles = [];
         this.playerFromY = 400;
         this.playerDir = 'down';
         this.playerMoving = false;
@@ -432,6 +451,8 @@ class CityScreen {
         }
         this.wildPokemon = [];
         if (this._nightOverlayEl) { this._nightOverlayEl.remove(); this._nightOverlayEl = null; }
+        if (this._grassFxEl) { this._grassFxEl.remove(); this._grassFxEl = null; }
+        this._grassParticles = [];
         if (this._raidLayer) {
             this._raidLayer.remove();
             this._raidLayer = null;
@@ -4172,11 +4193,26 @@ class CityScreen {
     _isGrassAsset(a) {
         if (!a) return false;
         if (a._isGrass !== undefined) return a._isGrass;
-        const id = a.asset_id || '';
+        const id = String(a.asset_id || '').replace(/\.png$/i, '');
         const url = a.asset_url || '';
-        const is = id === 'grama' || /(^|\/)grama\.png$/i.test(url);
+        const name = (url.split('/').pop() || '').replace(/\.png$/i, '');
+        const is = GRASS_ASSET_IDS.has(id) || GRASS_ASSET_IDS.has(name);
         a._isGrass = is;
         return is;
+    }
+
+    _grassTypeAt(x, y) {
+        for (const a of this._grassTiles || []) {
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            if (x >= a.pos_x && x <= a.pos_x + aw && y >= a.pos_y && y <= a.pos_y + ah) {
+                const id = String(a.asset_id || '').replace(/\.png$/i, '');
+                if (GRASS_ASSET_IDS.has(id)) return id;
+            }
+        }
+        return null;
     }
 
     _drawGrassFront(ctx, gf, camX, camY) {
@@ -4258,6 +4294,102 @@ class CityScreen {
             const sw = (c.ox1 - c.ox0) / s;
             const sh = (c.oy1 - c.oy0) / s;
             cctx.drawImage(img, sx, sy, sw, sh, (c.ox0 - minX) * scaleX, (c.oy0 - minY) * scaleY, (c.ox1 - c.ox0) * scaleX, (c.oy1 - c.oy0) * scaleY);
+        }
+    }
+
+    // ---- Particulas ao andar na grama alta ----
+    // Pequenos pedacos (grama/gelo/metal/areia) ou fumaca (pedra/psi/voador) ou fuligem
+    // (vulcanico) que sobem do corpo do personagem/follower e somem. Simples e rapidas.
+
+    _spawnGrassFx(wx, wy, typeId) {
+        const cfg = GRASS_FX[typeId];
+        if (!cfg) return;
+        const n = 1 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < n; i++) {
+            this._grassParticles.push({
+                x: wx + (Math.random() - 0.5) * 26,
+                y: wy + (Math.random() - 0.5) * 20,
+                vx: (Math.random() - 0.5) * 20,
+                vy: -(16 + Math.random() * 28),
+                life: 0,
+                maxLife: 0.35 + Math.random() * 0.3,
+                size: 2 + Math.random() * 3.5,
+                kind: cfg.kind,
+                color: cfg.colors[Math.floor(Math.random() * cfg.colors.length)],
+                rot: Math.random() * Math.PI * 2,
+                vr: (Math.random() - 0.5) * 8,
+                drift: (Math.random() - 0.5) * 40
+            });
+        }
+        if (this._grassParticles.length > 140) this._grassParticles.splice(0, this._grassParticles.length - 140);
+    }
+
+    _updateGrassFx() {
+        let fxEl = this._grassFxEl;
+        if (!fxEl && this.canvas && this.canvas.parentElement) {
+            fxEl = document.createElement('canvas');
+            fxEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:24;';
+            this.canvas.parentElement.appendChild(fxEl);
+            this._grassFxEl = fxEl;
+        }
+        if (!fxEl) return;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        if (fxEl.width !== cw) fxEl.width = cw;
+        if (fxEl.height !== ch) fxEl.height = ch;
+        const ctx = fxEl.getContext('2d');
+        ctx.clearRect(0, 0, cw, ch);
+        const camX = this.cameraX - cw / 2;
+        const camY = this.cameraY - ch / 2;
+        const dt = this._dt || 1;
+
+        // Jogador (corpo do personagem)
+        if (this.playerMoving) {
+            const pfx = this.playerFromX + (this.playerX - this.playerFromX) * this.moveProgress;
+            const pfy = (this.playerFromY + (this.playerY - this.playerFromY) * this.moveProgress) + this.playerSize / 2;
+            const type = this._grassTypeAt(pfx, pfy);
+            if (type) this._spawnGrassFx(pfx, pfy - this.playerSize * 0.55, type);
+        }
+        // Pokemon que segue (DOM acompanha o jogador)
+        if (this.playerMoving && this.pokemonFollowing && this.pokemonFollowEl && this.pokemonFollowEl.style.display !== 'none') {
+            const type = this._grassTypeAt(this.pokemonFollowRenderX, this.pokemonFollowRenderY);
+            if (type) {
+                const fScale = this._cityFollowerScale(this.pokemonFollowing);
+                const spriteSize = this.playerSize * fScale;
+                this._spawnGrassFx(this.pokemonFollowRenderX, this.pokemonFollowRenderY - spriteSize * 0.5, type);
+            }
+        }
+        // Pronto para selvagens andando: basta chamar _spawnGrassFx(pos_x, pos_y - alt, tipo)
+
+        const list = this._grassParticles;
+        const k = dt / 60;
+        for (let i = list.length - 1; i >= 0; i--) {
+            const p = list[i];
+            p.life += k;
+            if (p.life >= p.maxLife) { list.splice(i, 1); continue; }
+            const t = p.life / p.maxLife;
+            p.x += p.vx * k;
+            p.y += p.vy * k;
+            p.vy += 30 * k;
+            p.vx += p.drift * k * 0.2;
+            p.rot += p.vr * k;
+            p.size = Math.max(0.5, p.size - 2.5 * k);
+            const sx = p.x - camX;
+            const sy = p.y - camY;
+            if (sx < -20 || sx > cw + 20 || sy < -20 || sy > ch + 20) { list.splice(i, 1); continue; }
+            ctx.save();
+            ctx.globalAlpha = (1 - t) * 0.9;
+            ctx.fillStyle = p.color;
+            ctx.translate(sx, sy);
+            if (p.kind === 'smoke' || p.kind === 'soot') {
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size * (1 + t * 1.7), 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.rotate(p.rot);
+                ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+            }
+            ctx.restore();
         }
     }
 
@@ -4789,6 +4921,9 @@ class CityScreen {
 
         // Pokemon seguindo o jogador (desenhado sobre o canvas)
         this.drawCityFollower();
+
+        // Particulas de grama ao andar (jogador + pokemon que segue)
+        this._updateGrassFx();
 
         // Day/night overlay (ACIMA de todas as entidades DOM, mesma cor, sem mascara):
         // canvas transparente z 25, abaixo dos layers de raid/teleport (z 40+).
