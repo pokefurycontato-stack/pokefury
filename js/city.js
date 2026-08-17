@@ -4094,7 +4094,7 @@ class CityScreen {
         if (a._isGrass !== undefined) return a._isGrass;
         const id = a.asset_id || '';
         const url = a.asset_url || '';
-        const is = id === 'grama' || /(^|\/)grama\.png$/i.test(url);
+        const is = id === 'grama' || id === 'textgrama' || /(^|\/)(grama|textgrama)\.png$/i.test(url);
         a._isGrass = is;
         return is;
     }
