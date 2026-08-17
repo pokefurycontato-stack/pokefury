@@ -43,6 +43,7 @@ class CityScreen {
         this.grassForegroundOffset = 18;
         this.grassForegroundHalf = 40;
         this.grassForegroundPad = 8;
+        this.grassWaveAmp = 8;
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
@@ -4215,6 +4216,17 @@ class CityScreen {
         return null;
     }
 
+    // Topo ondulado da faixa frontal por coluna do MUNDO (estavel ao mover a camera e
+    // continuo entre tiles). So desce (cobre menos) para nao precisar recortar acima.
+    _grassWaveTop(x, baseY, maxY) {
+        const amp = this.grassWaveAmp || 0;
+        if (!amp) return baseY;
+        const n = 0.5 + 0.5 * Math.sin(x * 0.13 + 4.7);
+        const n2 = 0.5 + 0.5 * Math.sin(x * 0.041 + 1.3);
+        const top = baseY + amp * (0.4 * n + 0.6 * n2);
+        return Math.min(top, maxY - 0.5);
+    }
+
     _drawGrassFront(ctx, gf, camX, camY) {
         const a = gf.a;
         const img = a._img;
@@ -4225,7 +4237,24 @@ class CityScreen {
         const sw = (gf.ox1 - gf.ox0) / scale;
         const sh = (gf.oy1 - gf.oy0) / scale;
         if (sw <= 0.5 || sh <= 0.5) return;
-        ctx.drawImage(img, sx, sy, sw, sh, gf.ox0 - camX, gf.oy0 - camY, gf.ox1 - gf.ox0, gf.oy1 - gf.oy0);
+        const dx = gf.ox0 - camX;
+        const dy = gf.oy0 - camY;
+        const dw = gf.ox1 - gf.ox0;
+        const dh = gf.oy1 - gf.oy0;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(dx, this._grassWaveTop(gf.ox0, gf.oy0, gf.oy1) - camY);
+        const step = 8;
+        for (let x = gf.ox0 + step; x < gf.ox1; x += step) {
+            ctx.lineTo(x - camX, this._grassWaveTop(x, gf.oy0, gf.oy1) - camY);
+        }
+        ctx.lineTo(dx + dw, this._grassWaveTop(gf.ox1, gf.oy0, gf.oy1) - camY);
+        ctx.lineTo(dx + dw, dy + dh);
+        ctx.lineTo(dx, dy + dh);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+        ctx.restore();
     }
 
     // Faixa de grama na frente para entidades DOM (followers animados e pokemons
@@ -4293,7 +4322,25 @@ class CityScreen {
             const sy = (c.oy0 - c.a.pos_y) / s;
             const sw = (c.ox1 - c.ox0) / s;
             const sh = (c.oy1 - c.oy0) / s;
-            cctx.drawImage(img, sx, sy, sw, sh, (c.ox0 - minX) * scaleX, (c.oy0 - minY) * scaleY, (c.ox1 - c.ox0) * scaleX, (c.oy1 - c.oy0) * scaleY);
+            if (sw <= 0.5 || sh <= 0.5) continue;
+            const px0 = (c.ox0 - minX) * scaleX;
+            const py0 = (c.oy0 - minY) * scaleY;
+            const pw = (c.ox1 - c.ox0) * scaleX;
+            const ph = (c.oy1 - c.oy0) * scaleY;
+            cctx.save();
+            cctx.beginPath();
+            cctx.moveTo(px0, (this._grassWaveTop(c.ox0, c.oy0, c.oy1) - minY) * scaleY);
+            const step = 8;
+            for (let x = c.ox0 + step; x < c.ox1; x += step) {
+                cctx.lineTo((x - minX) * scaleX, (this._grassWaveTop(x, c.oy0, c.oy1) - minY) * scaleY);
+            }
+            cctx.lineTo(px0 + pw, (this._grassWaveTop(c.ox1, c.oy0, c.oy1) - minY) * scaleY);
+            cctx.lineTo(px0 + pw, py0 + ph);
+            cctx.lineTo(px0, py0 + ph);
+            cctx.closePath();
+            cctx.clip();
+            cctx.drawImage(img, sx, sy, sw, sh, px0, py0, pw, ph);
+            cctx.restore();
         }
     }
 
