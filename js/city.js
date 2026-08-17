@@ -4023,6 +4023,188 @@ class CityScreen {
         requestAnimationFrame((ts) => this.loop(ts));
     }
 
+    // ---- Y-Sorting do Layer 3 ----
+    // depthY = ponto em que a entidade toca o chão (base), não o topo da imagem.
+
+    getEntityDepthY(e) {
+        const r = e.ref;
+        if (e.kind === 'asset') {
+            const img = r._img;
+            if (!img || !img.complete || !img.naturalWidth) return Number.MIN_SAFE_INTEGER;
+            const ah = img.naturalHeight * (r.scale || 1);
+            return r.pos_y + ah;
+        }
+        if (e.kind === 'npc') {
+            const ps = Math.round((r.width || 48) * 1.2);
+            return r.pos_y + ps;
+        }
+        if (e.kind === 'player') {
+            const ps = this.playerSize;
+            const mp = r.isMe ? this.moveProgress : (r.moveProgress ?? 1);
+            const fy = r.isMe ? this.playerFromY : (r.fromY ?? r.pos_y);
+            const ty = r.isMe ? this.playerY : r.pos_y;
+            return (fy + (ty - fy) * mp) + ps / 2;
+        }
+        return 0;
+    }
+
+    drawAssetSprite(ctx, a, camX, camY, cw, ch) {
+        const img = a._img;
+        if (!img || !img.complete || !img.naturalWidth) return;
+        const aw = img.naturalWidth * (a.scale || 1);
+        const ah = img.naturalHeight * (a.scale || 1);
+        const sx = a.pos_x - camX;
+        const sy = a.pos_y - camY;
+        if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) return;
+        ctx.save();
+        if (a.rotation) {
+            ctx.translate(sx + aw / 2, sy + ah / 2);
+            ctx.rotate((a.rotation || 0) * Math.PI / 180);
+            ctx.drawImage(img, -aw / 2, -ah / 2, aw, ah);
+        } else {
+            ctx.drawImage(img, sx, sy, aw, ah);
+        }
+        ctx.restore();
+    }
+
+    drawNpcSprite(ctx, n, camX, camY, cw, ch, shadowOffX, shadowOffY) {
+        if (n.npc_type !== 'nurse' && n.npc_type !== 'professor' && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'banker') return;
+        const sx = n.pos_x - camX;
+        const sy = n.pos_y - camY;
+        const ps = Math.round((n.width || 48) * 1.2);
+        if (sx + (n.width || 64) < -50 || sx > cw + 50 || sy + (n.height || 64) < -50 || sy > ch + 50) return;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(sx + ps / 2 + shadowOffX, sy + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const img = n._img;
+        if (img && img.complete && img.naturalWidth) {
+            const imgW = img.naturalWidth;
+            const imgH = img.naturalHeight;
+            const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
+            if (isGrid) {
+                const cols = 4;
+                const rows = 4;
+                const frameW = Math.floor(imgW / cols);
+                const frameH = Math.floor(imgH / rows);
+                const offsetX = Math.floor((imgW - frameW * cols) / 2);
+                const offsetY = Math.floor((imgH - frameH * rows) / 2);
+                const dirs = ['down', 'left', 'right', 'up'];
+                const dirIdx = Math.max(0, dirs.indexOf(n.direction || 'down'));
+                const walkIdx = Math.min(3, n.walkFrame || 0);
+                let drawY = sy;
+                let clipBottom = 0;
+                if (n.npc_type === 'professor') {
+                    if (dirIdx === 1) { drawY = sy + Math.round(ps * 0.12); clipBottom = Math.round(ps * 0.06); }
+                    else if (dirIdx === 2) { drawY = sy + Math.round(ps * 0.16); clipBottom = Math.round(ps * 0.08); }
+                    else if (dirIdx === 3) { drawY = sy + Math.round(ps * 0.15); }
+                }
+                if (clipBottom > 0) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(sx - 1, drawY - 1, ps + 2, ps + 1 - clipBottom);
+                    ctx.clip();
+                }
+                ctx.drawImage(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
+                if (clipBottom > 0) ctx.restore();
+                this.drawSpriteReflection(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
+            } else {
+                ctx.drawImage(img, sx, sy, ps, ps);
+                this.drawSpriteReflection(img, 0, 0, img.naturalWidth, img.naturalHeight, sx, sy, ps, ps);
+            }
+        } else {
+            ctx.fillStyle = n.npc_type === 'professor' ? '#ffd54f' : (n.npc_type === 'narrator' ? '#f59e0b' : (n.npc_type === 'vendor' ? '#2f855a' : (n.npc_type === 'banker' ? '#8b5cf6' : '#ff8fab')));
+            ctx.fillRect(sx + 4, sy + 4, ps - 8, ps - 8);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(n.name || (n.npc_type === 'professor' ? 'Carvalho' : (n.npc_type === 'narrator' ? 'Narrador' : (n.npc_type === 'vendor' ? 'Vendedor' : (n.npc_type === 'banker' ? 'Banqueira' : 'Joy')))), sx + ps / 2, sy - 6);
+        }
+    }
+
+    drawPlayerSprite(ctx, p, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY) {
+        const ps = this.playerSize;
+        let drawX, drawY;
+        const mp = p.isMe ? this.moveProgress : (p.moveProgress ?? 1);
+        const fx = p.isMe ? this.playerFromX : (p.fromX ?? p.pos_x);
+        const fy = p.isMe ? this.playerFromY : (p.fromY ?? p.pos_y);
+        const tx = p.isMe ? this.playerX : p.pos_x;
+        const ty = p.isMe ? this.playerY : p.pos_y;
+        drawX = (fx + (tx - fx) * mp) - camX - ps / 2;
+        drawY = (fy + (ty - fy) * mp) - camY - ps / 2;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(drawX + ps / 2 + shadowOffX, drawY + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pokemon seguindo dos OUTROS jogadores (DOM sobre o canvas p/ animar o GIF)
+        if (!p.isMe) {
+            if (p.follower_sprite_url) {
+                this.drawOtherPlayerFollowerDom(p, drawX, drawY, ps, fScaleX, fScaleY, fOffX, fOffY);
+            } else {
+                const _entry = this._otherFollowerEls && this._otherFollowerEls[p.user_id];
+                if (_entry) { _entry.el.style.display = 'none'; _entry.shadowEl.style.display = 'none'; }
+            }
+        }
+
+        const skinImg = p._skinImg;
+        if (skinImg && skinImg.complete && skinImg.naturalWidth) {
+            const imgW = skinImg.naturalWidth;
+            const imgH = skinImg.naturalHeight;
+            const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
+            if (isGrid) {
+                const frameW = imgW / 4;
+                const frameH = imgH / 4;
+                const dirs = ['down', 'left', 'right', 'up'];
+                const row = dirs.indexOf(p.direction || 'down');
+                const pmp = p.isMe ? this.moveProgress : (p.moveProgress ?? 1);
+                const dx = Math.abs((p.pos_x || 0) - (p.fromX || p.pos_x || 0));
+                const dy = Math.abs((p.pos_y || 0) - (p.fromY || p.pos_y || 0));
+                const isMoving = p.isMe ? (this.moveProgress < 1.0) : (pmp < 1.0 && (dx > 2 || dy > 2));
+                const walkIdx = isMoving ? Math.min(Math.floor(pmp * 4), 3) : 0;
+                ctx.drawImage(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
+                this.drawSpriteReflection(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
+            } else {
+                ctx.drawImage(skinImg, drawX, drawY, ps, ps);
+                this.drawSpriteReflection(skinImg, 0, 0, skinImg.naturalWidth, skinImg.naturalHeight, drawX, drawY, ps, ps);
+            }
+        } else {
+            ctx.fillStyle = p.isMe ? '#3498db' : '#e94560';
+            ctx.fillRect(drawX + 4, drawY + 4, ps - 8, ps - 8);
+        }
+
+        ctx.fillStyle = (window.GroupSystem && window.GroupSystem.isMember(p.character_id)) ? '#38bdf8' : '#fff';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0,0,0,0.9)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(p.character_name || '?', drawX + ps / 2, drawY - 8);
+        ctx.shadowBlur = 0;
+
+        const title = p.isMe ? (this.myEquippedTitle || null) : (p.equipped_title || null);
+        if (title) {
+            const titleId = p.isMe ? (this.myEquippedTitleId || null) : (p.equipped_title_id || null);
+            const rarity = window.Titles ? window.Titles.getRarity(titleId) : 'common';
+            let color;
+            if (rarity === 'mythic') {
+                const hue = (Date.now() / 12) % 360;
+                color = `hsl(${hue}, 100%, 65%)`;
+            } else {
+                color = (window.Titles && window.Titles.getRarityStyle(titleId)) ? window.Titles.getRarityStyle(titleId).color : '#fbbf24';
+            }
+            ctx.fillStyle = color;
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.9)';
+            ctx.shadowBlur = 3;
+            ctx.fillText(title, drawX + ps / 2, drawY - 20);
+            ctx.shadowBlur = 0;
+        }
+    }
+
     render() {
         if (!this.ctx || !this.canvas) return;
         const ctx = this.ctx;
@@ -4062,25 +4244,8 @@ class CityScreen {
 
         const sorted = [...this.assets].sort((a, b) => (a.layer || 0) - (b.layer || 0) || (a.z_index || 0) - (b.z_index || 0));
         sorted.forEach(a => {
-            const img = a._img;
-            if (!img || !img.complete || !img.naturalWidth) return;
-
-            const aw = img.naturalWidth * (a.scale || 1);
-            const ah = img.naturalHeight * (a.scale || 1);
-            const sx = a.pos_x - camX;
-            const sy = a.pos_y - camY;
-
-            if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) return;
-
-            ctx.save();
-            if (a.rotation) {
-                ctx.translate(sx + aw / 2, sy + ah / 2);
-                ctx.rotate((a.rotation || 0) * Math.PI / 180);
-                ctx.drawImage(img, -aw / 2, -ah / 2, aw, ah);
-            } else {
-                ctx.drawImage(img, sx, sy, aw, ah);
-            }
-            ctx.restore();
+            if ((a.layer || 0) === 3) return; // Layer 3 vai para o pool de profundidade (Y-Sorting)
+            this.drawAssetSprite(ctx, a, camX, camY, cw, ch);
         });
 
         // Puddles during rain
@@ -4121,60 +4286,57 @@ class CityScreen {
         this.drawGymElements(ctx, camX, camY, cw, ch);
         this.renderRankDom();
 
+        // ---- Y-Sorting do Layer 3 ----
+        // Lista única de entidades renderizáveis do Layer 3 (assets + NPCs + jogadores),
+        // ordenada por depthY (ponto de contato com o chão), do menor para o maior.
+        const allPlayers = [];
+        if (this.myPlayer) allPlayers.push({
+            pos_x: this.playerX, pos_y: this.playerY, direction: this.playerDir,
+            character_name: this.myPlayer.character_name,
+            character_id: this.myPlayer.character_id,
+            _skinImg: this.playerSkinImg, isMe: true
+        });
+        Object.values(this.players).forEach(p => {
+            allPlayers.push({
+                ...p,
+                _skinImg: p._skinImg || null,
+                isMe: false,
+                fromX: p.fromX ?? p.pos_x,
+                fromY: p.fromY ?? p.pos_y,
+                moveProgress: p.moveProgress ?? 1
+            });
+        });
+
+        const count = allPlayers.length;
+        const countEl = document.getElementById('city-player-count');
+        if (countEl) countEl.textContent = `${count} jogador${count !== 1 ? 'es' : ''} online`;
+
+        // Escala/offset do canvas -> container DOM (para followers DOM dos outros jogadores)
+        const _wrap = this.canvas.parentElement;
+        const _canvasRect = this.canvas.getBoundingClientRect();
+        const _wrapRect = _wrap ? _wrap.getBoundingClientRect() : null;
+        const fScaleX = _canvasRect.width / this.canvas.width;
+        const fScaleY = _canvasRect.height / this.canvas.height;
+        const fOffX = _canvasRect.left - (_wrapRect ? _wrapRect.left : 0);
+        const fOffY = _canvasRect.top - (_wrapRect ? _wrapRect.top : 0);
+
+        const depthPool = [];
+        this.assets.forEach(a => {
+            if ((a.layer || 0) === 3) depthPool.push({ kind: 'asset', ref: a });
+        });
         this.npcs.forEach(n => {
             if (n.npc_type !== 'nurse' && n.npc_type !== 'professor' && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'banker') return;
-            const sx = n.pos_x - camX;
-            const sy = n.pos_y - camY;
-            const ps = Math.round((n.width || 48) * 1.2);
-            if (sx + (n.width || 64) < -50 || sx > cw + 50 || sy + (n.height || 64) < -50 || sy > ch + 50) return;
-
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.beginPath();
-            ctx.ellipse(sx + ps / 2 + shadowOffX, sy + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            const img = n._img;
-            if (img && img.complete && img.naturalWidth) {
-                const imgW = img.naturalWidth;
-                const imgH = img.naturalHeight;
-                const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
-                if (isGrid) {
-                    const cols = 4;
-                    const rows = 4;
-                    const frameW = Math.floor(imgW / cols);
-                    const frameH = Math.floor(imgH / rows);
-                    const offsetX = Math.floor((imgW - frameW * cols) / 2);
-                    const offsetY = Math.floor((imgH - frameH * rows) / 2);
-                    const dirs = ['down', 'left', 'right', 'up'];
-                    const dirIdx = Math.max(0, dirs.indexOf(n.direction || 'down'));
-                    const walkIdx = Math.min(3, n.walkFrame || 0);
-                    let drawY = sy;
-                    let clipBottom = 0;
-                    if (n.npc_type === 'professor') {
-                        if (dirIdx === 1) { drawY = sy + Math.round(ps * 0.12); clipBottom = Math.round(ps * 0.06); }
-                        else if (dirIdx === 2) { drawY = sy + Math.round(ps * 0.16); clipBottom = Math.round(ps * 0.08); }
-                        else if (dirIdx === 3) { drawY = sy + Math.round(ps * 0.15); }
-                    }
-                    if (clipBottom > 0) {
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.rect(sx - 1, drawY - 1, ps + 2, ps + 1 - clipBottom);
-                        ctx.clip();
-                    }
-                    ctx.drawImage(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
-                    if (clipBottom > 0) ctx.restore();
-                    this.drawSpriteReflection(img, offsetX + walkIdx * frameW, offsetY + dirIdx * frameH, frameW, frameH, sx, drawY, ps, ps);
-                } else {
-                    ctx.drawImage(img, sx, sy, ps, ps);
-                    this.drawSpriteReflection(img, 0, 0, img.naturalWidth, img.naturalHeight, sx, sy, ps, ps);
-                }
+            depthPool.push({ kind: 'npc', ref: n });
+        });
+        allPlayers.forEach(p => depthPool.push({ kind: 'player', ref: p }));
+        depthPool.sort((x, y) => (this.getEntityDepthY(x) - this.getEntityDepthY(y)) || ((x.ref.z_index || 0) - (y.ref.z_index || 0)));
+        depthPool.forEach(e => {
+            if (e.kind === 'asset') {
+                this.drawAssetSprite(ctx, e.ref, camX, camY, cw, ch);
+            } else if (e.kind === 'npc') {
+                this.drawNpcSprite(ctx, e.ref, camX, camY, cw, ch, shadowOffX, shadowOffY);
             } else {
-                ctx.fillStyle = n.npc_type === 'professor' ? '#ffd54f' : (n.npc_type === 'narrator' ? '#f59e0b' : (n.npc_type === 'vendor' ? '#2f855a' : (n.npc_type === 'banker' ? '#8b5cf6' : '#ff8fab')));
-                ctx.fillRect(sx + 4, sy + 4, ps - 8, ps - 8);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 11px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(n.name || (n.npc_type === 'professor' ? 'Carvalho' : (n.npc_type === 'narrator' ? 'Narrador' : (n.npc_type === 'vendor' ? 'Vendedor' : (n.npc_type === 'banker' ? 'Banqueira' : 'Joy')))), sx + ps / 2, sy - 6);
+                this.drawPlayerSprite(ctx, e.ref, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY);
             }
         });
 
@@ -4285,118 +4447,6 @@ class CityScreen {
             ctx.textAlign = 'center';
             ctx.fillText('APERTE E PARA DESAFIAR O LÍDER', cx, cy + 5);
         }
-
-        const allPlayers = [];
-        if (this.myPlayer) allPlayers.push({
-            pos_x: this.playerX, pos_y: this.playerY, direction: this.playerDir,
-            character_name: this.myPlayer.character_name,
-            character_id: this.myPlayer.character_id,
-            _skinImg: this.playerSkinImg, isMe: true
-        });
-        Object.values(this.players).forEach(p => {
-            allPlayers.push({
-                ...p,
-                _skinImg: p._skinImg || null,
-                isMe: false,
-                fromX: p.fromX ?? p.pos_x,
-                fromY: p.fromY ?? p.pos_y,
-                moveProgress: p.moveProgress ?? 1
-            });
-        });
-
-        const count = allPlayers.length;
-        const countEl = document.getElementById('city-player-count');
-        if (countEl) countEl.textContent = `${count} jogador${count !== 1 ? 'es' : ''} online`;
-
-        // Escala/offset do canvas -> container DOM (para followers DOM dos outros jogadores)
-        const _wrap = this.canvas.parentElement;
-        const _canvasRect = this.canvas.getBoundingClientRect();
-        const _wrapRect = _wrap ? _wrap.getBoundingClientRect() : null;
-        const fScaleX = _canvasRect.width / this.canvas.width;
-        const fScaleY = _canvasRect.height / this.canvas.height;
-        const fOffX = _canvasRect.left - (_wrapRect ? _wrapRect.left : 0);
-        const fOffY = _canvasRect.top - (_wrapRect ? _wrapRect.top : 0);
-
-        allPlayers.forEach(p => {
-            const ps = this.playerSize;
-            let drawX, drawY;
-            const mp = p.isMe ? this.moveProgress : (p.moveProgress ?? 1);
-            const fx = p.isMe ? this.playerFromX : (p.fromX ?? p.pos_x);
-            const fy = p.isMe ? this.playerFromY : (p.fromY ?? p.pos_y);
-            const tx = p.isMe ? this.playerX : p.pos_x;
-            const ty = p.isMe ? this.playerY : p.pos_y;
-            drawX = (fx + (tx - fx) * mp) - camX - ps / 2;
-            drawY = (fy + (ty - fy) * mp) - camY - ps / 2;
-
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.beginPath();
-            ctx.ellipse(drawX + ps / 2 + shadowOffX, drawY + ps - 2 + shadowOffY, ps / 3, 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Pokemon seguindo dos OUTROS jogadores (DOM sobre o canvas p/ animar o GIF)
-            if (!p.isMe) {
-                if (p.follower_sprite_url) {
-                    this.drawOtherPlayerFollowerDom(p, drawX, drawY, ps, fScaleX, fScaleY, fOffX, fOffY);
-                } else {
-                    const _entry = this._otherFollowerEls && this._otherFollowerEls[p.user_id];
-                    if (_entry) { _entry.el.style.display = 'none'; _entry.shadowEl.style.display = 'none'; }
-                }
-            }
-
-            const skinImg = p._skinImg;
-            if (skinImg && skinImg.complete && skinImg.naturalWidth) {
-                const imgW = skinImg.naturalWidth;
-                const imgH = skinImg.naturalHeight;
-                const isGrid = imgW > 100 && imgH > 100 && Math.abs(imgW - imgH) < 20;
-                if (isGrid) {
-                    const frameW = imgW / 4;
-                    const frameH = imgH / 4;
-                    const dirs = ['down', 'left', 'right', 'up'];
-                    const row = dirs.indexOf(p.direction || 'down');
-                    const pmp = p.isMe ? this.moveProgress : (p.moveProgress ?? 1);
-                    const dx = Math.abs((p.pos_x || 0) - (p.fromX || p.pos_x || 0));
-                    const dy = Math.abs((p.pos_y || 0) - (p.fromY || p.pos_y || 0));
-                    const isMoving = p.isMe ? (this.moveProgress < 1.0) : (pmp < 1.0 && (dx > 2 || dy > 2));
-                    const walkIdx = isMoving ? Math.min(Math.floor(pmp * 4), 3) : 0;
-                    ctx.drawImage(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
-                    this.drawSpriteReflection(skinImg, walkIdx * frameW, row * frameH, frameW, frameH, drawX, drawY, ps, ps);
-                } else {
-                    ctx.drawImage(skinImg, drawX, drawY, ps, ps);
-                    this.drawSpriteReflection(skinImg, 0, 0, skinImg.naturalWidth, skinImg.naturalHeight, drawX, drawY, ps, ps);
-                }
-            } else {
-                ctx.fillStyle = p.isMe ? '#3498db' : '#e94560';
-                ctx.fillRect(drawX + 4, drawY + 4, ps - 8, ps - 8);
-            }
-
-            ctx.fillStyle = (window.GroupSystem && window.GroupSystem.isMember(p.character_id)) ? '#38bdf8' : '#fff';
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.shadowColor = 'rgba(0,0,0,0.9)';
-            ctx.shadowBlur = 4;
-            ctx.fillText(p.character_name || '?', drawX + ps / 2, drawY - 8);
-            ctx.shadowBlur = 0;
-
-            const title = p.isMe ? (this.myEquippedTitle || null) : (p.equipped_title || null);
-            if (title) {
-                const titleId = p.isMe ? (this.myEquippedTitleId || null) : (p.equipped_title_id || null);
-                const rarity = window.Titles ? window.Titles.getRarity(titleId) : 'common';
-                let color;
-                if (rarity === 'mythic') {
-                    const hue = (Date.now() / 12) % 360;
-                    color = `hsl(${hue}, 100%, 65%)`;
-                } else {
-                    color = (window.Titles && window.Titles.getRarityStyle(titleId)) ? window.Titles.getRarityStyle(titleId).color : '#fbbf24';
-                }
-                ctx.fillStyle = color;
-                ctx.font = 'bold 10px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.shadowColor = 'rgba(0,0,0,0.9)';
-                ctx.shadowBlur = 3;
-                ctx.fillText(title, drawX + ps / 2, drawY - 20);
-                ctx.shadowBlur = 0;
-            }
-        });
 
         ctx.restore();
 
