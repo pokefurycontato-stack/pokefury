@@ -1198,10 +1198,10 @@ class CityScreen {
 
     getWildPokemonSize(p) {
         const enc = p.encounter;
-        let base = 64;
+        let base = 52;
         if (enc.pokemon_id && window.PokeAPI && window.PokeAPI.pokemonCache) {
             const data = window.PokeAPI.pokemonCache[String(enc.pokemon_id)];
-            if (data && data.height) base = 64 + Math.min(56, Math.round((data.height - 5) * 3));
+            if (data && data.height) base = 48 + Math.min(12, Math.round((data.height - 5) * 1.2));
         }
         return base;
     }
@@ -1363,31 +1363,36 @@ class CityScreen {
         const offsetY = canvasRect.top - wrapRect.top;
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
+        layer.style.filter = this._nightFilter(this.getDayNight());
 
         for (const p of this.wildPokemon) {
             if (!p.active) continue;
             const el = p._el;
             if (!el) continue;
             const sz = this.getWildPokemonSize(p);
+            const natW = el.naturalWidth || 0;
+            const natH = el.naturalHeight || 0;
+            let aspect = 1;
+            if (natW > 0 && natH > 0) aspect = Math.min(1.5, Math.max(0.6, natW / natH));
+            const w = Math.max(1, Math.round(sz * aspect));
+            const h = sz;
             const sx = p.pos_x - camX;
             const sy = p.pos_y - camY;
-            if (sx + sz < -50 || sx > this.canvas.width + 50 || sy + sz < -50 || sy > this.canvas.height + 50) {
+            if (sx + w < -50 || sx > this.canvas.width + 50 || sy + h < -50 || sy > this.canvas.height + 50) {
                 el.style.display = 'none';
                 if (p._grassEl) p._grassEl.style.display = 'none';
                 continue;
             }
             el.style.display = 'block';
-            el.style.left = (offsetX + (sx - sz / 2) * scaleX) + 'px';
-            el.style.top = (offsetY + (sy - sz) * scaleY) + 'px';
-            el.style.width = (sz * scaleX) + 'px';
-            el.style.height = (sz * scaleY) + 'px';
-            const adj = window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(p.encounter.pokemon_id) : null;
-            el.style.transform = adj ? `scale(${adj.scaleX}, ${adj.scaleY})` : '';
+            el.style.left = (offsetX + (sx - w / 2) * scaleX) + 'px';
+            el.style.top = (offsetY + (sy - h) * scaleY) + 'px';
+            el.style.width = (w * scaleX) + 'px';
+            el.style.height = (h * scaleY) + 'px';
 
             // Grama na frente do pokemon selvagem (recorte alinhado da mesma textura)
             if (p._grassEl) {
                 const fOff = Math.max(8, Math.round(sz * 0.4));
-                const fHalf = Math.max(12, Math.round(sz * 0.55));
+                const fHalf = Math.max(16, Math.round(Math.max(sz, w) * 0.55));
                 const fPad = Math.max(2, Math.round(sz * 0.12));
                 this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, '2');
             }
@@ -3339,6 +3344,10 @@ class CityScreen {
         this.pokemonFollowEl.style.zIndex = z;
         if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.zIndex = z;
 
+        // Dia/noite: DOM fica fora do canvas, entao replica o escurecimento via CSS
+        const nf = this._nightFilter(this.getDayNight());
+        this.pokemonFollowEl.style.filter = nf;
+
         // Grama na frente do follower (recorte alinhado da mesma textura), acima do seu z
         if (!this.pokemonFollowGrassEl) {
             const wrap = this.canvas && this.canvas.parentElement;
@@ -3353,6 +3362,7 @@ class CityScreen {
             const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (spriteSize / this.playerSize)));
             const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (spriteSize / this.playerSize)));
             const fPad = Math.max(2, Math.round(this.grassForegroundPad * (spriteSize / this.playerSize)));
+            this.pokemonFollowGrassEl.style.filter = nf;
             this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], this.pokemonFollowRenderX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
         }
     }
@@ -3434,6 +3444,10 @@ class CityScreen {
         if (dir === 'right') transform = (transform ? transform + ' ' : '') + 'scaleX(-1)';
         const tf = transform || 'none';
 
+        // Dia/noite: DOM fica fora do canvas, entao replica o escurecimento via CSS
+        const nf = this._nightFilter(this.getDayNight());
+        el.style.filter = nf;
+
         el.style.display = 'block';
         el.style.left = left + 'px';
         el.style.top = top + 'px';
@@ -3458,6 +3472,7 @@ class CityScreen {
         const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (size / ps)));
         const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (size / ps)));
         const fPad = Math.max(2, Math.round(this.grassForegroundPad * (size / ps)));
+        grassEl.style.filter = nf;
         this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
     }
 
@@ -4171,6 +4186,11 @@ class CityScreen {
     // Faixa de grama na frente para entidades DOM (followers animados e pokemons
     // selvagens): um <canvas> posicionado sobre a parte inferior da entidade com o
     // recorte alinhado da mesma textura. A entidade continua animando atras da grama.
+    _nightFilter(dn) {
+        const k = dn ? dn.darkness : 0;
+        return k > 0.01 ? `brightness(${(1 - k * 0.72).toFixed(3)})` : '';
+    }
+
     _drawGrassFrontOverlay(canvasEl, grassTiles, feetX, feetY, offset, halfW, pad, camX, camY, scaleX, scaleY, offsetX, offsetY, z) {
         if (!canvasEl || !grassTiles || grassTiles.length === 0) {
             if (canvasEl) canvasEl.style.display = 'none';
@@ -4180,20 +4200,24 @@ class CityScreen {
         const bX0 = feetX - halfW;
         const bX1 = feetX + halfW;
         const bY1 = feetY + pad;
-        let anyInside = false;
+        const bandH = offset + pad;
+        const minOverlap = Math.max(4, Math.round(bandH * 0.35));
+        const minW = Math.max(6, Math.round(halfW * 0.4));
+        let maxOverlap = 0;
         const crops = [];
         for (const a of grassTiles) {
             const img = a._img;
             if (!img || !img.complete || !img.naturalWidth) continue;
             const aw = img.naturalWidth * (a.scale || 1);
             const ah = img.naturalHeight * (a.scale || 1);
-            const feetIn = feetX >= a.pos_x && feetX <= a.pos_x + aw && feetY >= a.pos_y && feetY <= a.pos_y + ah;
-            if (feetIn) anyInside = true;
             const ox0 = Math.max(bX0, a.pos_x), ox1 = Math.min(bX1, a.pos_x + aw);
             const oy0 = Math.max(waistY, a.pos_y), oy1 = Math.min(bY1, a.pos_y + ah);
-            if (ox0 < ox1 && oy0 < oy1) crops.push({ a, ox0, ox1, oy0, oy1 });
+            if (ox0 < ox1 && oy0 < oy1) {
+                crops.push({ a, ox0, ox1, oy0, oy1 });
+                if (ox1 - ox0 >= minW && oy1 - oy0 > maxOverlap) maxOverlap = oy1 - oy0;
+            }
         }
-        if (!anyInside || crops.length === 0) {
+        if (crops.length === 0 || maxOverlap < minOverlap) {
             canvasEl.style.display = 'none';
             return;
         }
