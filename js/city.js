@@ -2890,13 +2890,17 @@ class CityScreen {
         if (game && game.showTransitionBanner) game.showTransitionBanner('Você foi enviado ao Centro Pokemon...');
     }
 
+    _playerHitbox(nx, ny) {
+        const ps = 14;
+        const feetY = ny + this.playerSize / 2;
+        return { px: nx - ps / 2, py: feetY - ps, ps };
+    }
+
     checkCollision(nx, ny) {
         // Hitbox pequena NOS PES (antes 32x32 no centro): permite chegar mais perto de
         // objetos sem atravessar, pois so a regiao dos pes e bloqueada.
-        const ps = 14;
-        const feetY = ny + this.playerSize / 2;
-        const px = nx - ps / 2;
-        const py = feetY - ps;
+        const hb = this._playerHitbox(nx, ny);
+        const px = hb.px, py = hb.py, ps = hb.ps;
         for (const z of this.collisionZones) {
             if (px < z.pos_x + z.width && px + ps > z.pos_x && py < z.pos_y + z.height && py + ps > z.pos_y) return true;
         }
@@ -4869,18 +4873,18 @@ class CityScreen {
                 topCtx.fillRect(sx, sy, z.width, z.height);
                 topCtx.strokeRect(sx, sy, z.width, z.height);
             }
-            const ps = 32;
-            const ppx = this.playerX - camX - ps / 2;
-            const ppy = this.playerY - camY - ps / 2;
+            const hb = this._playerHitbox(this.playerX, this.playerY);
+            const ppx = hb.px - camX;
+            const ppy = hb.py - camY;
             topCtx.fillStyle = 'rgba(0, 255, 0, 0.2)';
             topCtx.strokeStyle = '#00ff00';
             topCtx.lineWidth = 2;
-            topCtx.fillRect(ppx, ppy, ps, ps);
-            topCtx.strokeRect(ppx, ppy, ps, ps);
+            topCtx.fillRect(ppx, ppy, hb.ps, hb.ps);
+            topCtx.strokeRect(ppx, ppy, hb.ps, hb.ps);
             topCtx.fillStyle = '#00ff00';
             topCtx.font = 'bold 10px Inter, sans-serif';
             topCtx.textAlign = 'center';
-            topCtx.fillText(`${ps}x${ps}`, ppx + ps / 2, ppy - 6);
+            topCtx.fillText(`${hb.ps}x${hb.ps}`, ppx + hb.ps / 2, ppy - 6);
         }
 
         if (this.nearestTeleport) {
