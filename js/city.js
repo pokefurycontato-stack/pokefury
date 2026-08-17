@@ -1363,7 +1363,7 @@ class CityScreen {
         const offsetY = canvasRect.top - wrapRect.top;
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
-        layer.style.filter = this._nightFilter(this.getDayNight());
+        const nf = this._nightFilter(this.getDayNight());
 
         for (const p of this.wildPokemon) {
             if (!p.active) continue;
@@ -1384,6 +1384,7 @@ class CityScreen {
                 continue;
             }
             el.style.display = 'block';
+            el.style.filter = nf;
             el.style.left = (offsetX + (sx - w / 2) * scaleX) + 'px';
             el.style.top = (offsetY + (sy - h) * scaleY) + 'px';
             el.style.width = (w * scaleX) + 'px';
@@ -3365,7 +3366,6 @@ class CityScreen {
             // Centra o recorte na posicao VISUAL do sprite (olhando pra baixo o sprite e
             // deslocado pra esquerda via downOffsetX; os pes mundiais nao acompanham).
             const visualFeetX = this.pokemonFollowRenderX + downOffsetX / scaleX;
-            this.pokemonFollowGrassEl.style.filter = nf;
             this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
         }
     }
@@ -3475,7 +3475,6 @@ class CityScreen {
         const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (size / ps)));
         const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (size / ps)));
         const fPad = Math.max(2, Math.round(this.grassForegroundPad * (size / ps)));
-        grassEl.style.filter = nf;
         this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
     }
 
@@ -4257,6 +4256,16 @@ class CityScreen {
             const sw = (c.ox1 - c.ox0) / s;
             const sh = (c.oy1 - c.oy0) / s;
             cctx.drawImage(img, sx, sy, sw, sh, (c.ox0 - minX) * scaleX, (c.oy0 - minY) * scaleY, (c.ox1 - c.ox0) * scaleX, (c.oy1 - c.oy0) * scaleY);
+        }
+        // Dia/noite: replica o mesmo overlay do canvas principal (rgba tint, alpha =
+        // darkness) DENTRO deste canvas, para a grama aqui ficar identica a ao redor.
+        const dn = this.getDayNight();
+        if (dn.darkness > 0.01) {
+            cctx.save();
+            cctx.globalAlpha = dn.darkness;
+            cctx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
+            cctx.fillRect(0, 0, W, H);
+            cctx.restore();
         }
     }
 
