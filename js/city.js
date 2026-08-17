@@ -20,6 +20,7 @@ class CityScreen {
         this.moveProgress = 1;
         this.playerSpeed = 60;
         this.playerSize = 48;
+        this.followerBehind = 30;
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
@@ -3217,7 +3218,7 @@ class CityScreen {
 
         // Posição alvo: logo atrás do jogador, no sentido contrário à direção atual
         const behindX = this.playerX - (this.playerDir === 'right' ? 55 : this.playerDir === 'left' ? -55 : 0);
-        const behindY = this.playerY - (this.playerDir === 'down' ? 55 : this.playerDir === 'up' ? -55 : 0);
+        const behindY = this.playerY - (this.playerDir === 'down' ? this.followerBehind : this.playerDir === 'up' ? -55 : 0);
 
         // Movimento suave (lerp) — desliza atrás do jogador como a câmera
         const cl = Math.min(1, 0.12 * dt);
@@ -3374,7 +3375,7 @@ class CityScreen {
         // Distancia fixa do CENTRO do jogador (nao encosta nem cobre o sprite)
         const OFF = 55;
         let offX = 0, offY = 0;
-        if (dir === 'down') offY = -(OFF + ps / 2);
+        if (dir === 'down') offY = -(this.followerBehind + ps / 2);
         else if (dir === 'up') offY = OFF - ps / 2;
         else if (dir === 'left') offX = OFF;
         else offX = -OFF;
@@ -4160,7 +4161,7 @@ class CityScreen {
                 // Banda do follower pela SUA profundidade real (offset de direção)
                 const fdir = p.direction || 'down';
                 let foffY = 0;
-                if (fdir === 'down') foffY = -(55 + ps / 2);
+                if (fdir === 'down') foffY = -(this.followerBehind + ps / 2);
                 else if (fdir === 'up') foffY = 55 - ps / 2;
                 const fDepth = drawY + camY + ps + foffY;
                 const fband = this._bandForFollower(fDepth, this._depthSplits);
@@ -4265,7 +4266,7 @@ class CityScreen {
             // Profundidade real do follower (offset de direção), igual ao DOM
             const dir = p.direction || 'down';
             let offY = 0;
-            if (dir === 'down') offY = -(55 + ps / 2);
+            if (dir === 'down') offY = -(this.followerBehind + ps / 2);
             else if (dir === 'up') offY = 55 - ps / 2;
             splits.push(interpY + ps / 2 + offY);
         });
