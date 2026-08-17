@@ -4258,10 +4258,12 @@ class CityScreen {
             cctx.drawImage(img, sx, sy, sw, sh, (c.ox0 - minX) * scaleX, (c.oy0 - minY) * scaleY, (c.ox1 - c.ox0) * scaleX, (c.oy1 - c.oy0) * scaleY);
         }
         // Dia/noite: replica o mesmo overlay do canvas principal (rgba tint, alpha =
-        // darkness) DENTRO deste canvas, para a grama aqui ficar identica a ao redor.
+        // darkness) DENTRO deste canvas, mas so sobre a grama ja desenhada (source-atop),
+        // para nao pintar areas vazias (gaps entre tiles / fora do patch).
         const dn = this.getDayNight();
         if (dn.darkness > 0.01) {
             cctx.save();
+            cctx.globalCompositeOperation = 'source-atop';
             cctx.globalAlpha = dn.darkness;
             cctx.fillStyle = `rgb(${dn.tint.r},${dn.tint.g},${dn.tint.b})`;
             cctx.fillRect(0, 0, W, H);
