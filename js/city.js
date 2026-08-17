@@ -1395,7 +1395,7 @@ class CityScreen {
                 const fOff = Math.max(8, Math.round(sz * 0.4));
                 const fHalf = Math.max(16, Math.round(Math.max(sz, w) * 0.55));
                 const fPad = Math.max(2, Math.round(sz * 0.12));
-                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, '2');
+                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, '2', true);
             }
         }
     }
@@ -3341,13 +3341,19 @@ class CityScreen {
         }
 
         // Z-index entre as faixas de profundidade (cada follower vira um ponto de divisão)
-        const z = (3 + 2 * this._bandForFollower(this.pokemonFollowRenderY, this._depthSplits)) + '';
+        const f = this._bandForFollower(this.pokemonFollowRenderY, this._depthSplits);
+        const z = (3 + 2 * f) + '';
         this.pokemonFollowEl.style.zIndex = z;
         if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.zIndex = z;
 
-        // Dia/noite: DOM fica fora do canvas, entao replica o escurecimento via CSS
+        // Dia/noite: o overlay de noite vive no topCtx (faixa de cima). Se o follower
+        // estiver ABAIXO do topCtx (f < ultima faixa), o topCtx ja escurece os DOM e
+        // aplicar tint/filtro aqui seria uma 2a camada -> tarja duplicada. So tintamos
+        // quando o follower fica ACIMA do topCtx (f == ultima faixa).
+        const usedBands = Math.min((this._depthSplits ? this._depthSplits.length + 1 : 1), this.depthCanvases ? this.depthCanvases.length : 1);
+        const aboveTop = f >= usedBands - 1;
         const nf = this._nightFilter(this.getDayNight());
-        this.pokemonFollowEl.style.filter = nf;
+        this.pokemonFollowEl.style.filter = aboveTop ? nf : '';
 
         // Grama na frente do follower (recorte alinhado da mesma textura), acima do seu z
         if (!this.pokemonFollowGrassEl) {
@@ -3366,7 +3372,7 @@ class CityScreen {
             // Centra o recorte na posicao VISUAL do sprite (olhando pra baixo o sprite e
             // deslocado pra esquerda via downOffsetX; os pes mundiais nao acompanham).
             const visualFeetX = this.pokemonFollowRenderX + downOffsetX / scaleX;
-            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
+            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, aboveTop);
         }
     }
 
@@ -3447,9 +3453,12 @@ class CityScreen {
         if (dir === 'right') transform = (transform ? transform + ' ' : '') + 'scaleX(-1)';
         const tf = transform || 'none';
 
-        // Dia/noite: DOM fica fora do canvas, entao replica o escurecimento via CSS
+        // Dia/noite: overlay de noite no topCtx ja escurece followers abaixo dele; so
+        // filtramos aqui quando o follower fica ACIMA do topCtx (band == ultima faixa).
+        const usedBands = Math.min((this._depthSplits ? this._depthSplits.length + 1 : 1), this.depthCanvases ? this.depthCanvases.length : 1);
+        const aboveTop = (band || 0) >= usedBands - 1;
         const nf = this._nightFilter(this.getDayNight());
-        el.style.filter = nf;
+        el.style.filter = aboveTop ? nf : '';
 
         el.style.display = 'block';
         el.style.left = left + 'px';
@@ -3475,7 +3484,7 @@ class CityScreen {
         const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (size / ps)));
         const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (size / ps)));
         const fPad = Math.max(2, Math.round(this.grassForegroundPad * (size / ps)));
-        this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
+        this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, aboveTop);
     }
 
     teleportToGymType(gymType) {
@@ -4193,7 +4202,7 @@ class CityScreen {
         return k > 0.01 ? `brightness(${(1 - k * 0.72).toFixed(3)})` : '';
     }
 
-    _drawGrassFrontOverlay(canvasEl, grassTiles, feetX, feetY, offset, halfW, pad, camX, camY, scaleX, scaleY, offsetX, offsetY, z) {
+    _drawGrassFrontOverlay(canvasEl, grassTiles, feetX, feetY, offset, halfW, pad, camX, camY, scaleX, scaleY, offsetX, offsetY, z, applyNight) {
         if (!canvasEl || !grassTiles || grassTiles.length === 0) {
             if (canvasEl) canvasEl.style.display = 'none';
             return;
@@ -4259,9 +4268,10 @@ class CityScreen {
         }
         // Dia/noite: replica o mesmo overlay do canvas principal (rgba tint, alpha =
         // darkness) DENTRO deste canvas, mas so sobre a grama ja desenhada (source-atop),
-        // para nao pintar areas vazias (gaps entre tiles / fora do patch).
+        // para nao pintar areas vazias (gaps entre tiles / fora do patch). So quando a
+        // entidade esta ACIMA do topCtx (se nao, o overlay de noite do topCtx ja escurece).
         const dn = this.getDayNight();
-        if (dn.darkness > 0.01) {
+        if (applyNight && dn.darkness > 0.01) {
             cctx.save();
             cctx.globalCompositeOperation = 'source-atop';
             cctx.globalAlpha = dn.darkness;
