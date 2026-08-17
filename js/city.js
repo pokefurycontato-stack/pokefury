@@ -22,6 +22,8 @@ class CityScreen {
         this.playerSize = 48;
         this.followerBehind = 30;
         this.grassForegroundOffset = 18;
+        this.grassForegroundHalf = 40;
+        this.grassForegroundPad = 8;
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
@@ -418,6 +420,7 @@ class CityScreen {
         this.players = {};
         if (this.pokemonFollowEl) { this.pokemonFollowEl.remove(); this.pokemonFollowEl = null; }
         if (this.pokemonFollowShadowEl) { this.pokemonFollowShadowEl.remove(); this.pokemonFollowShadowEl = null; }
+        if (this.pokemonFollowGrassEl) { this.pokemonFollowGrassEl.remove(); this.pokemonFollowGrassEl = null; }
         for (const uid of Object.keys(this._otherFollowerEls || {})) this._removeOtherFollowerEls(uid);
         this._otherFollowerEls = {};
         this.pokemonFollowing = null;
@@ -572,6 +575,7 @@ class CityScreen {
                     _mask: null
                 };
             }).filter(Boolean);
+            this._grassTiles = this.assets.filter(a => this._isGrassAsset(a));
             this.assets.forEach(a => {
                 if (a.has_collision && a._img) {
                     const checkReady = () => { if (a._img.complete && a._img.naturalWidth) a._ready = true; };
@@ -1170,6 +1174,10 @@ class CityScreen {
             el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;display:none;';
             if (spriteUrl) el.src = spriteUrl;
             layer.appendChild(el);
+            const grassEl = document.createElement('canvas');
+            grassEl.style.cssText = 'position:absolute;pointer-events:none;';
+            grassEl.style.zIndex = '2';
+            layer.appendChild(grassEl);
             this.wildPokemon.push({
                 point,
                 biome,
@@ -1177,6 +1185,7 @@ class CityScreen {
                 spriteUrl,
                 isShiny,
                 _el: el,
+                _grassEl: grassEl,
                 pos_x: point.pos_x,
                 pos_y: point.pos_y,
                 baseX: point.pos_x,
@@ -1339,6 +1348,7 @@ class CityScreen {
             p.active = false;
             p.respawnTimer = 20;
             if (p._el) p._el.style.display = 'none';
+            if (p._grassEl) p._grassEl.style.display = 'none';
         }
     }
 
@@ -1363,6 +1373,7 @@ class CityScreen {
             const sy = p.pos_y - camY;
             if (sx + sz < -50 || sx > this.canvas.width + 50 || sy + sz < -50 || sy > this.canvas.height + 50) {
                 el.style.display = 'none';
+                if (p._grassEl) p._grassEl.style.display = 'none';
                 continue;
             }
             el.style.display = 'block';
@@ -1372,6 +1383,14 @@ class CityScreen {
             el.style.height = (sz * scaleY) + 'px';
             const adj = window.getPokemonSpriteAdjust ? window.getPokemonSpriteAdjust(p.encounter.pokemon_id) : null;
             el.style.transform = adj ? `scale(${adj.scaleX}, ${adj.scaleY})` : '';
+
+            // Grama na frente do pokemon selvagem (recorte alinhado da mesma textura)
+            if (p._grassEl) {
+                const fOff = Math.max(8, Math.round(sz * 0.4));
+                const fHalf = Math.max(12, Math.round(sz * 0.55));
+                const fPad = Math.max(2, Math.round(sz * 0.12));
+                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, '2');
+            }
         }
     }
 
@@ -3251,6 +3270,7 @@ class CityScreen {
             if (this.pokemonFollowEl.style.display !== 'none') {
                 this.pokemonFollowEl.style.display = 'none';
                 if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.display = 'none';
+                if (this.pokemonFollowGrassEl) this.pokemonFollowGrassEl.style.display = 'none';
             }
             return;
         }
@@ -3318,6 +3338,23 @@ class CityScreen {
         const z = (3 + 2 * this._bandForFollower(this.pokemonFollowRenderY, this._depthSplits)) + '';
         this.pokemonFollowEl.style.zIndex = z;
         if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.zIndex = z;
+
+        // Grama na frente do follower (recorte alinhado da mesma textura), acima do seu z
+        if (!this.pokemonFollowGrassEl) {
+            const wrap = this.canvas && this.canvas.parentElement;
+            if (wrap) {
+                const gc = document.createElement('canvas');
+                gc.style.cssText = 'position:absolute;pointer-events:none;';
+                wrap.appendChild(gc);
+                this.pokemonFollowGrassEl = gc;
+            }
+        }
+        if (this.pokemonFollowGrassEl) {
+            const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (spriteSize / this.playerSize)));
+            const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (spriteSize / this.playerSize)));
+            const fPad = Math.max(2, Math.round(this.grassForegroundPad * (spriteSize / this.playerSize)));
+            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], this.pokemonFollowRenderX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
+        }
     }
 
     _getOtherFollowerEls(userId) {
@@ -3340,7 +3377,10 @@ class CityScreen {
             }
         };
         wrap.appendChild(el);
-        const entry = { el, shadowEl };
+        const grassEl = document.createElement('canvas');
+        grassEl.style.cssText = 'position:absolute;pointer-events:none;';
+        wrap.appendChild(grassEl);
+        const entry = { el, shadowEl, grassEl };
         this._otherFollowerEls[userId] = entry;
         return entry;
     }
@@ -3350,6 +3390,7 @@ class CityScreen {
         if (!entry) return;
         try { entry.el.remove(); } catch (e) {}
         try { entry.shadowEl.remove(); } catch (e) {}
+        try { entry.grassEl && entry.grassEl.remove(); } catch (e) {}
         delete this._otherFollowerEls[userId];
     }
 
@@ -3357,7 +3398,7 @@ class CityScreen {
         if (!p || !p.follower_sprite_url) return;
         const entry = this._getOtherFollowerEls(p.user_id);
         if (!entry) return;
-        const { el, shadowEl } = entry;
+        const { el, shadowEl, grassEl } = entry;
         const z = (3 + 2 * (band || 0)) + '';
         el.style.zIndex = z;
         shadowEl.style.zIndex = z;
@@ -3408,6 +3449,16 @@ class CityScreen {
         shadowEl.style.width = shadowW + 'px';
         shadowEl.style.height = shadowH + 'px';
         shadowEl.style.transform = tf;
+
+        // Grama na frente do follower (recorte alinhado da mesma textura), acima do seu z
+        const camX = this.cameraX - this.canvas.width / 2;
+        const camY = this.cameraY - this.canvas.height / 2;
+        const fX = cX + size / 2 + camX;
+        const fY = cY + size + camY;
+        const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (size / ps)));
+        const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (size / ps)));
+        const fPad = Math.max(2, Math.round(this.grassForegroundPad * (size / ps)));
+        this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
     }
 
     teleportToGymType(gymType) {
@@ -4087,12 +4138,12 @@ class CityScreen {
     }
 
     // ---- Grama alta (textura unica dividida em 2 passadas) ----
-    // A mesma imagem `grama.png` e desenhada em duas etapas com o personagem entre elas:
-    // parte acima da cintura atras, parte abaixo (pernas/cintura ate o fim do patch)
-    // na frente cobrindo a parte inferior do personagem. O corte e ajustavel por
-    // this.grassForegroundOffset (pixels acima dos pes onde o foreground comeca).
-    // A profundidade de Y-sorting da parte da frente e a posicao dos PES do personagem
-    // (igual ao jogador), garantindo que ele seja desenhado depois do jogador.
+    // A grama e renderizada normalmente (Etapa 1) e a parte que fica NA FRENTE do
+    // personagem (regiao da cintura para baixo, uma faixa estreita em volta do corpo)
+    // e desenhada novamente por cima, com o MESMO recorte da mesma textura na mesma
+    // posicao do mundo (perfeitamente alinhada). Nao ha clipping nem remocao de grama.
+    // Configuraveis: grassForegroundOffset (altura do corte), grassForegroundHalf
+    // (meia-largura da faixa), grassForegroundPad (sobra abaixo dos pes).
 
     _isGrassAsset(a) {
         if (!a) return false;
@@ -4104,50 +4155,82 @@ class CityScreen {
         return is;
     }
 
-    _drawGrassBack(ctx, a, camX, camY, cw, ch, pfx, pfy) {
-        const img = a._img;
-        if (!img || !img.complete || !img.naturalWidth) return;
-        const aw = img.naturalWidth * (a.scale || 1);
-        const ah = img.naturalHeight * (a.scale || 1);
-        const sx = a.pos_x - camX;
-        const sy = a.pos_y - camY;
-        if (sx + aw < -50 || sx > cw + 50 || sy + ah < -50 || sy > ch + 50) return;
-
-        // O corte do foreground fica acima dos pés (região das pernas/cintura),
-        // ajustável por grassForegroundOffset. Os pés continuam sendo usados para
-        // saber se o personagem está dentro da grama e para o Y-sorting.
-        const cutY = pfy - this.grassForegroundOffset;
-        const inside = pfx >= a.pos_x && pfx <= a.pos_x + aw && pfy >= a.pos_y && pfy <= a.pos_y + ah;
-        if (!inside || a.rotation) {
-            ctx.drawImage(img, sx, sy, aw, ah);
-            return;
-        }
-
-        const scale = a.scale || 1;
-        const splitSrcY = Math.max(0, Math.min(img.naturalHeight, (cutY - a.pos_y) / scale));
-
-        // Parte de cima (atras do personagem)
-        if (splitSrcY > 0.5) {
-            ctx.drawImage(img, 0, 0, img.naturalWidth, splitSrcY, sx, sy, aw, splitSrcY * scale);
-        }
-
-        // Parte de baixo sera injetada no pool de profundidade (na frente do personagem),
-        // com depthY = pes para ordenar junto (e depois) do jogador.
-        this._grassFronts.push({ a, splitSrcY, splitScreenY: cutY, depthY: pfy, aw, ah, z_index: (a.z_index || 0) + 1000000 });
-    }
-
     _drawGrassFront(ctx, gf, camX, camY) {
         const a = gf.a;
         const img = a._img;
         if (!img || !img.complete || !img.naturalWidth) return;
-        const srcY = gf.splitSrcY;
-        const srcH = img.naturalHeight - srcY;
-        if (srcH <= 0.5) return;
         const scale = a.scale || 1;
-        const destY = gf.splitScreenY - camY;
-        const destH = gf.ah - (gf.splitScreenY - a.pos_y);
-        if (destH <= 0.5) return;
-        ctx.drawImage(img, 0, srcY, img.naturalWidth, srcH, a.pos_x - camX, destY, gf.aw, destH);
+        const sx = (gf.ox0 - a.pos_x) / scale;
+        const sy = (gf.oy0 - a.pos_y) / scale;
+        const sw = (gf.ox1 - gf.ox0) / scale;
+        const sh = (gf.oy1 - gf.oy0) / scale;
+        if (sw <= 0.5 || sh <= 0.5) return;
+        ctx.drawImage(img, sx, sy, sw, sh, gf.ox0 - camX, gf.oy0 - camY, gf.ox1 - gf.ox0, gf.oy1 - gf.oy0);
+    }
+
+    // Faixa de grama na frente para entidades DOM (followers animados e pokemons
+    // selvagens): um <canvas> posicionado sobre a parte inferior da entidade com o
+    // recorte alinhado da mesma textura. A entidade continua animando atras da grama.
+    _drawGrassFrontOverlay(canvasEl, grassTiles, feetX, feetY, offset, halfW, pad, camX, camY, scaleX, scaleY, offsetX, offsetY, z) {
+        if (!canvasEl || !grassTiles || grassTiles.length === 0) {
+            if (canvasEl) canvasEl.style.display = 'none';
+            return;
+        }
+        const waistY = feetY - offset;
+        const bX0 = feetX - halfW;
+        const bX1 = feetX + halfW;
+        const bY1 = feetY + pad;
+        let anyInside = false;
+        const crops = [];
+        for (const a of grassTiles) {
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            const feetIn = feetX >= a.pos_x && feetX <= a.pos_x + aw && feetY >= a.pos_y && feetY <= a.pos_y + ah;
+            if (feetIn) anyInside = true;
+            const ox0 = Math.max(bX0, a.pos_x), ox1 = Math.min(bX1, a.pos_x + aw);
+            const oy0 = Math.max(waistY, a.pos_y), oy1 = Math.min(bY1, a.pos_y + ah);
+            if (ox0 < ox1 && oy0 < oy1) crops.push({ a, ox0, ox1, oy0, oy1 });
+        }
+        if (!anyInside || crops.length === 0) {
+            canvasEl.style.display = 'none';
+            return;
+        }
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const c of crops) {
+            if (c.ox0 < minX) minX = c.ox0;
+            if (c.oy0 < minY) minY = c.oy0;
+            if (c.ox1 > maxX) maxX = c.ox1;
+            if (c.oy1 > maxY) maxY = c.oy1;
+        }
+        const w = maxX - minX, h = maxY - minY;
+        if (w <= 0.5 || h <= 0.5) {
+            canvasEl.style.display = 'none';
+            return;
+        }
+        canvasEl.style.display = 'block';
+        canvasEl.style.left = (offsetX + (minX - camX) * scaleX) + 'px';
+        canvasEl.style.top = (offsetY + (minY - camY) * scaleY) + 'px';
+        canvasEl.style.width = (w * scaleX) + 'px';
+        canvasEl.style.height = (h * scaleY) + 'px';
+        if (z) canvasEl.style.zIndex = z;
+        const W = Math.max(1, Math.round(w * scaleX));
+        const H = Math.max(1, Math.round(h * scaleY));
+        if (canvasEl.width !== W) canvasEl.width = W;
+        if (canvasEl.height !== H) canvasEl.height = H;
+        const cctx = canvasEl.getContext('2d');
+        cctx.clearRect(0, 0, W, H);
+        for (const c of crops) {
+            const img = c.a._img;
+            if (!img) continue;
+            const s = c.a.scale || 1;
+            const sx = (c.ox0 - c.a.pos_x) / s;
+            const sy = (c.oy0 - c.a.pos_y) / s;
+            const sw = (c.ox1 - c.ox0) / s;
+            const sh = (c.oy1 - c.oy0) / s;
+            cctx.drawImage(img, sx, sy, sw, sh, (c.ox0 - minX) * scaleX, (c.oy0 - minY) * scaleY, (c.ox1 - c.ox0) * scaleX, (c.oy1 - c.oy0) * scaleY);
+        }
     }
 
     drawNpcSprite(ctx, n, camX, camY, cw, ch, shadowOffX, shadowOffY) {
@@ -4405,6 +4488,33 @@ class CityScreen {
         const _gmp = this.moveProgress || 0;
         const _grassPfx = this.playerFromX + (this.playerX - this.playerFromX) * _gmp;
         const _grassPfy = (this.playerFromY + (this.playerY - this.playerFromY) * _gmp) + this.playerSize / 2;
+        const _grassTiles = this._grassTiles || [];
+        if (_grassTiles.length > 0) {
+            const _cutY = _grassPfy - this.grassForegroundOffset;
+            const _anyIn = _grassTiles.some(a => {
+                const img = a._img;
+                if (!img || !img.complete || !img.naturalWidth) return false;
+                const aw = img.naturalWidth * (a.scale || 1);
+                const ah = img.naturalHeight * (a.scale || 1);
+                return _grassPfx >= a.pos_x && _grassPfx <= a.pos_x + aw && _grassPfy >= a.pos_y && _grassPfy <= a.pos_y + ah;
+            });
+            if (_anyIn) {
+                const _bx0 = _grassPfx - this.grassForegroundHalf;
+                const _bx1 = _grassPfx + this.grassForegroundHalf;
+                const _by1 = _grassPfy + this.grassForegroundPad;
+                for (const a of _grassTiles) {
+                    const img = a._img;
+                    if (!img || !img.complete || !img.naturalWidth) continue;
+                    const aw = img.naturalWidth * (a.scale || 1);
+                    const ah = img.naturalHeight * (a.scale || 1);
+                    const ox0 = Math.max(_bx0, a.pos_x), ox1 = Math.min(_bx1, a.pos_x + aw);
+                    const oy0 = Math.max(_cutY, a.pos_y), oy1 = Math.min(_by1, a.pos_y + ah);
+                    if (ox0 < ox1 && oy0 < oy1) {
+                        this._grassFronts.push({ a, ox0, ox1, oy0, oy1, depthY: _grassPfy, z_index: (a.z_index || 0) + 1000000 });
+                    }
+                }
+            }
+        }
 
         // ---- FUNDO: canvas base, abaixo de todas as faixas ----
         ctx.clearRect(0, 0, cw, ch);
@@ -4430,11 +4540,7 @@ class CityScreen {
         const sorted = [...this.assets].sort((a, b) => (a.layer || 0) - (b.layer || 0) || (a.z_index || 0) - (b.z_index || 0));
         sorted.forEach(a => {
             if ((a.layer || 0) === 3) return; // Layer 3 vai para o pool de profundidade (Y-Sorting)
-            if (this._isGrassAsset(a)) {
-                this._drawGrassBack(ctx, a, camX, camY, cw, ch, _grassPfx, _grassPfy);
-            } else {
-                this.drawAssetSprite(ctx, a, camX, camY, cw, ch);
-            }
+            this.drawAssetSprite(ctx, a, camX, camY, cw, ch);
         });
 
         // Puddles during rain
