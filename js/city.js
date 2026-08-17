@@ -3362,8 +3362,11 @@ class CityScreen {
             const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (spriteSize / this.playerSize)));
             const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (spriteSize / this.playerSize)));
             const fPad = Math.max(2, Math.round(this.grassForegroundPad * (spriteSize / this.playerSize)));
+            // Centra o recorte na posicao VISUAL do sprite (olhando pra baixo o sprite e
+            // deslocado pra esquerda via downOffsetX; os pes mundiais nao acompanham).
+            const visualFeetX = this.pokemonFollowRenderX + downOffsetX / scaleX;
             this.pokemonFollowGrassEl.style.filter = nf;
-            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], this.pokemonFollowRenderX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
+            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
         }
     }
 
