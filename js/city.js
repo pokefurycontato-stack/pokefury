@@ -4261,6 +4261,41 @@ class CityScreen {
     // ---- Y-Sorting do Layer 3 ----
     // depthY = ponto em que a entidade toca o chão (base), não o topo da imagem.
 
+    // Adiciona grama/agua na frente de uma entidade cujos pes estao em (feetX, feetY).
+    // Na agua o corte e mais profundo (submerge ate a cintura, parecendo boiando).
+    _pushGrassFrontForFeet(feetX, feetY) {
+        const _occl = this._occluderTiles || [];
+        if (_occl.length === 0) return;
+        const _inWater = this._inWaterAt(feetX, feetY);
+        const _cutOff = _inWater ? this.waterForegroundOffset : this.grassForegroundOffset;
+        const _cutHalf = _inWater ? this.waterForegroundHalf : this.grassForegroundHalf;
+        const _cutPad = _inWater ? this.waterForegroundPad : this.grassForegroundPad;
+        let _anyIn = false;
+        for (const a of _occl) {
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            if (feetX >= a.pos_x && feetX <= a.pos_x + aw && feetY >= a.pos_y && feetY <= a.pos_y + ah) { _anyIn = true; break; }
+        }
+        if (!_anyIn) return;
+        const _bx0 = feetX - _cutHalf;
+        const _bx1 = feetX + _cutHalf;
+        const _by1 = feetY + _cutPad;
+        const _cutY = feetY - _cutOff;
+        for (const a of _occl) {
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            const ox0 = Math.max(_bx0, a.pos_x), ox1 = Math.min(_bx1, a.pos_x + aw);
+            const oy0 = Math.max(_cutY, a.pos_y), oy1 = Math.min(_by1, a.pos_y + ah);
+            if (ox0 < ox1 && oy0 < oy1) {
+                this._grassFronts.push({ a, ox0, ox1, oy0, oy1, depthY: feetY, z_index: (a.z_index || 0) + 1000000 });
+            }
+        }
+    }
+
     getEntityDepthY(e) {
         const r = e.ref;
         if (e.kind === 'asset') {
@@ -5112,38 +5147,7 @@ class CityScreen {
         const _gmp = this.moveProgress || 0;
         const _grassPfx = this.playerFromX + (this.playerX - this.playerFromX) * _gmp;
         const _grassPfy = (this.playerFromY + (this.playerY - this.playerFromY) * _gmp) + this.playerSize / 2;
-        // Na agua o corte e mais profundo (submerge ate a cintura, parecendo boiando)
-        const _inWater = this._inWaterAt(_grassPfx, _grassPfy);
-        const _cutOff = _inWater ? this.waterForegroundOffset : this.grassForegroundOffset;
-        const _cutHalf = _inWater ? this.waterForegroundHalf : this.grassForegroundHalf;
-        const _cutPad = _inWater ? this.waterForegroundPad : this.grassForegroundPad;
-        const _occl = this._occluderTiles || [];
-        if (_occl.length > 0) {
-            const _cutY = _grassPfy - _cutOff;
-            const _anyIn = _occl.some(a => {
-                const img = a._img;
-                if (!img || !img.complete || !img.naturalWidth) return false;
-                const aw = img.naturalWidth * (a.scale || 1);
-                const ah = img.naturalHeight * (a.scale || 1);
-                return _grassPfx >= a.pos_x && _grassPfx <= a.pos_x + aw && _grassPfy >= a.pos_y && _grassPfy <= a.pos_y + ah;
-            });
-            if (_anyIn) {
-                const _bx0 = _grassPfx - _cutHalf;
-                const _bx1 = _grassPfx + _cutHalf;
-                const _by1 = _grassPfy + _cutPad;
-                for (const a of _occl) {
-                    const img = a._img;
-                    if (!img || !img.complete || !img.naturalWidth) continue;
-                    const aw = img.naturalWidth * (a.scale || 1);
-                    const ah = img.naturalHeight * (a.scale || 1);
-                    const ox0 = Math.max(_bx0, a.pos_x), ox1 = Math.min(_bx1, a.pos_x + aw);
-                    const oy0 = Math.max(_cutY, a.pos_y), oy1 = Math.min(_by1, a.pos_y + ah);
-                    if (ox0 < ox1 && oy0 < oy1) {
-                        this._grassFronts.push({ a, ox0, ox1, oy0, oy1, depthY: _grassPfy, z_index: (a.z_index || 0) + 1000000 });
-                    }
-                }
-            }
-        }
+        this._pushGrassFrontForFeet(_grassPfx, _grassPfy);
 
         // ---- FUNDO: canvas base, abaixo de todas as faixas ----
         ctx.clearRect(0, 0, cw, ch);
@@ -5232,6 +5236,19 @@ class CityScreen {
                 moveProgress: p.moveProgress ?? 1
             });
         });
+
+        // Grama/agua na frente de OUTROS jogadores: eles tambem sao cobertos quando
+        // andam na grama ou na agua (recorte alinhado, igual ao do jogador local).
+        for (const p of allPlayers) {
+            if (p.isMe) continue;
+            const ps = this.playerSize;
+            const mp = p.moveProgress ?? 1;
+            const fx = p.fromX ?? p.pos_x;
+            const fy = p.fromY ?? p.pos_y;
+            const ix = fx + (p.pos_x - fx) * mp;
+            const iy = (fy + (p.pos_y - fy) * mp) + ps / 2;
+            this._pushGrassFrontForFeet(ix, iy);
+        }
 
         const count = allPlayers.length;
         const countEl = document.getElementById('city-player-count');
