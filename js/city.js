@@ -68,6 +68,12 @@ class CityScreen {
         this.waterForegroundOffset = 20;
         this.waterForegroundHalf = 46;
         this.waterForegroundPad = 6;
+        // Suaviza a linha do recorte da agua no corpo (feather do topo)
+        this.waterFeather = 7;
+        // Ondas de espuma que quebram nas entidades dentro d'agua
+        this.waterWaveInterval = 3.5;
+        this._waterWaves = [];
+        this._waveTimer = 0;
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
@@ -480,6 +486,7 @@ class CityScreen {
         this._grassParticles = [];
         if (this._waterFxEl) { this._waterFxEl.remove(); this._waterFxEl = null; }
         this._waterParticles = [];
+        this._waterWaves = [];
         if (this._raidLayer) {
             this._raidLayer.remove();
             this._raidLayer = null;
@@ -4381,7 +4388,27 @@ class CityScreen {
         ctx.closePath();
         ctx.clip();
         ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+        if (this._isWaterAsset(a)) this._featherWaterTop(ctx, gf, camX, camY);
         ctx.restore();
+    }
+
+    // Suaviza a borda superior do recorte de agua: dissolve o topo em faixas de coluna
+    // (destination-in), removendo a linha dura que cortava o corpo do personagem.
+    _featherWaterTop(ctx, gf, camX, camY) {
+        const feather = this.waterFeather || 0;
+        if (feather <= 0) return;
+        const step = 8;
+        ctx.globalCompositeOperation = 'destination-in';
+        for (let x = gf.ox0; x < gf.ox1; x += step) {
+            const topW = this._grassWaveTop(x, gf.oy0, gf.oy1);
+            const sy = topW - camY;
+            const grad = ctx.createLinearGradient(0, sy, 0, sy + feather);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,1)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - camX, sy, step + 1, feather);
+        }
+        ctx.globalCompositeOperation = 'source-over';
     }
 
     // Faixa de grama na frente para entidades DOM (followers animados e pokemons
@@ -4467,6 +4494,24 @@ class CityScreen {
             cctx.closePath();
             cctx.clip();
             cctx.drawImage(img, sx, sy, sw, sh, px0, py0, pw, ph);
+            // Suaviza a linha do recorte de agua no corpo da entidade (feather)
+            if (this._isWaterAsset(c.a)) {
+                const feather = (this.waterFeather || 0) * scaleY;
+                if (feather > 1) {
+                    cctx.globalCompositeOperation = 'destination-in';
+                    const step = 8;
+                    for (let x = c.ox0; x < c.ox1; x += step) {
+                        const topW = this._grassWaveTop(x, c.oy0, c.oy1);
+                        const sy = (topW - minY) * scaleY;
+                        const grad = cctx.createLinearGradient(0, sy, 0, sy + feather);
+                        grad.addColorStop(0, 'rgba(0,0,0,0)');
+                        grad.addColorStop(1, 'rgba(0,0,0,1)');
+                        cctx.fillStyle = grad;
+                        cctx.fillRect((x - minX) * scaleX, sy, step * scaleX + 1, feather);
+                    }
+                    cctx.globalCompositeOperation = 'source-over';
+                }
+            }
             cctx.restore();
         }
     }
@@ -4567,9 +4612,10 @@ class CityScreen {
         }
     }
 
-    // ---- Agua: bolhas contínuas (mesmo parado) + ondas animadas na superficie ----
+    // ---- Agua: bolhas contínuas (mesmo parado) + ondas de espuma que quebram ----
     // A agua oculta como a grama (front-cut) e as entidades boiam; aqui ficam as bolhas
-    // subindo do corpo de quem esta dentro d'agua e linhas de onda suaves deslizando.
+    // subindo do corpo de quem esta dentro d'agua e ondas de espuma que cruzam a agua,
+    // quebram nas entidades (foam burst + anel) e se dissolvem.
 
     _spawnWaterBubble(x, y) {
         const colors = WATER_FX.bubble;
@@ -4589,39 +4635,127 @@ class CityScreen {
         if (this._waterParticles.length > 130) this._waterParticles.splice(0, this._waterParticles.length - 130);
     }
 
-    // Linhas de onda suaves que deslizam horizontalmente sobre cada tile de agua visivel
-    _drawWaterWaves(ctx, cw, ch, camX, camY) {
-        const tiles = this._waterTiles || [];
-        if (tiles.length === 0) return;
-        const t = this._animTime || 0;
-        for (const a of tiles) {
-            const img = a._img;
-            if (!img || !img.complete || !img.naturalWidth) continue;
-            const aw = img.naturalWidth * (a.scale || 1);
-            const ah = img.naturalHeight * (a.scale || 1);
-            const sx = a.pos_x - camX;
-            const sy = a.pos_y - camY;
-            if (sx + aw < -40 || sx > cw + 40 || sy + ah < -40 || sy > ch + 40) continue;
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(sx, sy, aw, ah);
-            ctx.clip();
-            const off = (t * 14) % (aw + 80);
-            for (let i = 0; i < 3; i++) {
-                const yy = sy + ah * (0.3 + i * 0.28);
-                ctx.beginPath();
-                for (let x = -60; x <= aw + 60; x += 12) {
-                    const px2 = sx + x;
-                    const py2 = yy + Math.sin((x + off + i * 70) * 0.03) * 4;
-                    if (x === -60) ctx.moveTo(px2, py2);
-                    else ctx.lineTo(px2, py2);
-                }
-                ctx.strokeStyle = `rgba(255,255,255,${0.05 + i * 0.02})`;
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            }
-            ctx.restore();
+    // Onda de espuma que cruza a agua em direcao a um alvo (entidade dentro d'agua).
+    // Quando a linha de espuma passa por cima de uma entidade, quebra nela (foam burst).
+    _spawnWaterWave(tx, ty) {
+        const ang = Math.random() * Math.PI * 2;
+        const dirX = Math.cos(ang), dirY = Math.sin(ang);
+        const dist = 140 + Math.random() * 120;
+        this._waterWaves.push({
+            x: tx - dirX * dist,
+            y: ty - dirY * dist,
+            nx: dirX,
+            ny: dirY,
+            len: 55 + Math.random() * 40,
+            speed: 34 + Math.random() * 18,
+            t: 0,
+            life: 0,
+            maxLife: 2.2 + Math.random() * 0.9,
+            hit: new Set()
+        });
+    }
+
+    // Espuma que espirra quando a onda quebra na entidade (particulas + anel que expande)
+    _spawnFoamBurst(x, y) {
+        const n = 9 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < n; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const sp = 18 + Math.random() * 44;
+            this._waterParticles.push({
+                kind: 'foam',
+                x: x + (Math.random() - 0.5) * 8,
+                y: y + (Math.random() - 0.5) * 6,
+                vx: Math.cos(a) * sp,
+                vy: Math.sin(a) * sp - 20,
+                life: 0,
+                maxLife: 0.5 + Math.random() * 0.45,
+                size: 2.5 + Math.random() * 4,
+                color: '#eaf8ff'
+            });
         }
+        this._waterParticles.push({
+            kind: 'ring', x, y, size: 5, maxSize: 30, life: 0, maxLife: 0.45
+        });
+        if (this._waterParticles.length > 240) this._waterParticles.splice(0, this._waterParticles.length - 240);
+    }
+
+    // Atualiza e desenha as ondas de espuma
+    _updateWaterWaves(ctx, k, camX, camY) {
+        const waves = this._waterWaves;
+        for (let i = waves.length - 1; i >= 0; i--) {
+            const w = waves[i];
+            w.t += k;
+            w.life += k;
+            if (w.life >= w.maxLife) { waves.splice(i, 1); continue; }
+            w.x += w.nx * w.speed * k;
+            w.y += w.ny * w.speed * k;
+
+            // Quebra nas entidades dentro d'agua que a linha de espuma cruzar
+            const perpX = -w.ny, perpY = w.nx;
+            const targets = this._waterWaveTargets();
+            for (const e of targets) {
+                if (w.hit.has(e.id)) continue;
+                const rx = e.x - w.x, ry = e.y - w.y;
+                const along = rx * perpX + ry * perpY;
+                const across = rx * w.nx + ry * w.ny;
+                let dist;
+                if (Math.abs(along) <= w.len) dist = Math.abs(across);
+                else {
+                    const ex = Math.abs(along) - w.len;
+                    dist = Math.sqrt(ex * ex + across * across);
+                }
+                if (dist < 22) {
+                    w.hit.add(e.id);
+                    this._spawnFoamBurst(e.x, e.y - 14);
+                }
+            }
+
+            // Linha de espuma (blobs brancos ao longo da perpendicular, com ondulacao)
+            const fade = 1 - (w.life / w.maxLife);
+            for (let pass = 0; pass < 2; pass++) {
+                const step = pass === 0 ? 5 : 14;
+                const mult = pass === 0 ? 1 : 1.8;
+                const alphaMul = pass === 0 ? 1 : 0.35;
+                for (let i = -w.len; i <= w.len; i += step) {
+                    const bx = w.x + perpX * i;
+                    const by = w.y + perpY * i;
+                    const wob = Math.sin(i * 0.1 + w.t * 3.2) * 6;
+                    const fx = bx + w.nx * wob;
+                    const fy = by + w.ny * wob;
+                    if (!this._inWaterAt(fx, fy)) continue;
+                    const sx = fx - camX, sy = fy - camY;
+                    const edge = 1 - Math.min(1, Math.abs(i) / w.len);
+                    const alpha = 0.42 * fade * alphaMul * (0.35 + edge * 0.65);
+                    if (alpha <= 0.01) continue;
+                    const r = (4 + Math.sin(i * 0.7 + w.t * 2.8) * 2) * mult * (1.6 - fade * 0.5);
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = '#eaf8ff';
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // Entidades atualmente dentro d'agua (alvos das ondas)
+    _waterWaveTargets() {
+        const out = [];
+        const gmp = this.moveProgress || 0;
+        const pfx = this.playerFromX + (this.playerX - this.playerFromX) * gmp;
+        const pfy = (this.playerFromY + (this.playerY - this.playerFromY) * gmp) + this.playerSize / 2;
+        if (this._inWaterAt(pfx, pfy)) out.push({ id: 'me', x: pfx, y: pfy });
+        if (this.pokemonFollowing && this.pokemonFollowEl && this.pokemonFollowEl.style.display !== 'none') {
+            if (this._inWaterAt(this.pokemonFollowRenderX, this.pokemonFollowRenderY)) {
+                out.push({ id: 'fol', x: this.pokemonFollowRenderX, y: this.pokemonFollowRenderY });
+            }
+        }
+        for (const p of (this.wildPokemon || [])) {
+            if (!p.active || !p._el || p._el.style.display === 'none') continue;
+            if (this._inWaterAt(p.pos_x, p.pos_y)) out.push({ id: 'w' + p.pos_x + '_' + p.pos_y, x: p.pos_x, y: p.pos_y });
+        }
+        return out;
     }
 
     _updateWaterFx() {
@@ -4646,8 +4780,18 @@ class CityScreen {
         const dt = this._dt || 1;
         const k = dt / 60;
 
-        // Ondas na superficie da agua
-        this._drawWaterWaves(ctx, cw, ch, camX, camY);
+        // Ondas de espuma: spawn periodico mirando entidades dentro d'agua
+        this._waveTimer = (this._waveTimer || 0) + k;
+        if (this._waveTimer >= this.waterWaveInterval) {
+            this._waveTimer = 0;
+            const targets = this._waterWaveTargets();
+            if (targets.length > 0) {
+                const tgt = targets[Math.floor(Math.random() * targets.length)];
+                this._spawnWaterWave(tgt.x, tgt.y);
+                this._waveTimer = -(Math.random() * 1.2);
+            }
+        }
+        this._updateWaterWaves(ctx, k, camX, camY);
 
         // Bolhas contínuas (mesmo parado) saindo de quem esta dentro d'agua
         const gmp = this.moveProgress || 0;
@@ -4677,25 +4821,47 @@ class CityScreen {
             p.life += k;
             if (p.life >= p.maxLife) { list.splice(i, 1); continue; }
             const t = p.life / p.maxLife;
-            p.x += p.vx * k + Math.sin(p.life * p.wobF + p.wobP) * p.wobA * k * 1.5;
-            p.y += p.vy * k;
-            p.vy -= 8 * k;
-            const size = p.size * (1 + t * 0.4);
+            if (p.kind !== 'ring') {
+                p.x += (p.vx || 0) * k + (p.wobA ? Math.sin(p.life * p.wobF + p.wobP) * p.wobA * k * 1.5 : 0);
+                p.y += (p.vy || 0) * k;
+                if (p.kind === 'foam') {
+                    p.vy += 34 * k;
+                    p.size *= (1 - 0.25 * k);
+                } else {
+                    p.vy -= 8 * k;
+                }
+            }
             const sx = p.x - camX;
             const sy = p.y - camY;
-            if (sy < -20 || sx < -20 || sx > cw + 20 || sy > ch + 20) { list.splice(i, 1); continue; }
-            const alpha = Math.sin(Math.min(1, t * 1.4) * Math.PI) * 0.6;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(sx, sy, size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.85)';
-            ctx.beginPath();
-            ctx.arc(sx - size * 0.3, sy - size * 0.35, Math.max(0.5, size * 0.3), 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
+            if (sy < -30 || sx < -30 || sx > cw + 30 || sy > ch + 30) { list.splice(i, 1); continue; }
+            if (p.kind === 'foam') {
+                const alpha = Math.sin(Math.min(1, t * 1.2) * Math.PI) * 0.8;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(sx, sy, Math.max(0.5, p.size * (1 - t * 0.35)), 0, Math.PI * 2);
+                ctx.fill();
+            } else if (p.kind === 'ring') {
+                const s = p.size + (p.maxSize - p.size) * t;
+                ctx.globalAlpha = (1 - t) * 0.5;
+                ctx.strokeStyle = '#eaf8ff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(sx, sy, s, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                const size = p.size * (1 + t * 0.4);
+                const alpha = Math.sin(Math.min(1, t * 1.4) * Math.PI) * 0.6;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.beginPath();
+                ctx.arc(sx - size * 0.3, sy - size * 0.35, Math.max(0.5, size * 0.3), 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
