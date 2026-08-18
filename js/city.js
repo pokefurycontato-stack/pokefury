@@ -65,7 +65,7 @@ class CityScreen {
         this.grassForegroundPad = 8;
         this.grassWaveAmp = 8;
         // Agua: corte mais fundo que a grama (submerge) mas deixa o personagem mais visivel
-        this.waterForegroundOffset = 28;
+        this.waterForegroundOffset = 20;
         this.waterForegroundHalf = 46;
         this.waterForegroundPad = 6;
         this.cameraX = 400;
