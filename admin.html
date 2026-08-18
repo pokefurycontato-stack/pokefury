@@ -253,6 +253,39 @@
 
         let onlineTimer = null;
         let onlineSort = { col: 'connected', dir: -1 };
+        let teleportList = [];
+        let teleportsLoadedAt = 0;
+
+        // Teleporte mais proximo do jogador (por distancia ao letreiro) + coords atuais
+        function teleportLabel(p) {
+            if (p.pos_x == null || p.pos_y == null) {
+                return '<span style="color:rgba(255,255,255,0.3);font-size:11px;">sem posição</span>';
+            }
+            let best = null, bestD = Infinity;
+            for (const t of teleportList) {
+                const dx = (t.sign_x - p.pos_x), dy = (t.sign_y - p.pos_y);
+                const d = dx * dx + dy * dy;
+                if (d < bestD) { bestD = d; best = t; }
+            }
+            if (!best) {
+                return `<span style="color:rgba(255,255,255,0.3);font-size:11px;">sem teleporte</span>`;
+            }
+            const dist = Math.round(Math.sqrt(bestD));
+            const name = esc(best.name || 'Teleporte');
+            return `<span style="color:#7dd3fc;font-weight:700;font-size:12px;">${name}</span>
+                    <span style="color:rgba(255,255,255,0.35);font-size:10px;margin-left:4px;">${dist}px</span>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.35);">x:${Math.round(p.pos_x)} y:${Math.round(p.pos_y)}</div>`;
+        }
+
+        async function loadTeleportsCache() {
+            try {
+                const { data } = await window.db.from('city_teleports').select('name,sign_x,sign_y');
+                teleportList = (data || []).filter(t => t.sign_x != null && t.sign_y != null);
+                teleportsLoadedAt = Date.now();
+            } catch (e) {
+                teleportList = [];
+            }
+        }
 
         function sortOnline(players) {
             const { col, dir } = onlineSort;
@@ -305,6 +338,7 @@
                         </td>
                         <td class="time">${online ? fmtDur(p.connected_seconds) : '—'}</td>
                         <td>${idleBadge}</td>
+                        <td>${teleportLabel(p)}</td>
                         <td>
                             ${online
                                 ? `<button class="btn-ban ban" onclick="forceLogoutPlayer('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')">Desconectar</button>`
@@ -315,7 +349,7 @@
                         </td>
                     </tr>`;
                 }).join('')
-                : '<tr><td colspan="5" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhuma conta cadastrada.</td></tr>';
+                : '<tr><td colspan="6" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Nenhuma conta cadastrada.</td></tr>';
         }
 
         async function loadOnline() {
@@ -324,12 +358,22 @@
             try {
                 const { data } = await window.db.rpc('get_all_accounts');
                 if (data && data.success) {
-                    renderOnline(sortOnline(data.players || []));
+                    const players = data.players || [];
+                    // Posicao em tempo real na cidade (pos_x/pos_y do city_players)
+                    try {
+                        const { data: cp } = await window.db.from('city_players').select('user_id,pos_x,pos_y');
+                        const posMap = {};
+                        (cp || []).forEach(r => { if (r.pos_x != null && r.pos_y != null) posMap[r.user_id] = r; });
+                        players.forEach(p => { const m = posMap[p.user_id]; if (m) { p.pos_x = m.pos_x; p.pos_y = m.pos_y; } });
+                    } catch (e) {}
+                    // Cache dos teleportes (atualiza a cada 60s para pegar placas novas)
+                    if (Date.now() - teleportsLoadedAt > 60000) loadTeleportsCache();
+                    renderOnline(sortOnline(players));
                 } else {
-                    list.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Erro: ' + esc((data && data.error) || 'sem resposta') + '</td></tr>';
+                    list.innerHTML = '<tr><td colspan="6" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Erro: ' + esc((data && data.error) || 'sem resposta') + '</td></tr>';
                 }
             } catch (e) {
-                list.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Falha ao carregar contas.</td></tr>';
+                list.innerHTML = '<tr><td colspan="6" style="padding:32px;text-align:center;color:rgba(255,255,255,0.4);">Falha ao carregar contas.</td></tr>';
             }
         }
 
@@ -354,6 +398,7 @@
                 if (onlineTimer) { clearInterval(onlineTimer); onlineTimer = null; }
             } else {
                 loadOnline();
+                loadTeleportsCache();
                 if (onlineTimer) clearInterval(onlineTimer);
                 onlineTimer = setInterval(loadOnline, 5000);
             }
@@ -473,8 +518,9 @@
                                                 <th><button class="online-sort" data-sort="name" onclick="sortOnlineBy('name')">Jogador <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
                                                 <th><button class="online-sort" data-sort="connected" onclick="sortOnlineBy('connected')">Conectado há <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
                                                 <th><button class="online-sort" data-sort="idle" onclick="sortOnlineBy('idle')">Inativo há <span class="sort-ic" style="font-size:10px;">⇅</span></button></th>
+                                                <th>Teleporte</th>
                                                 <th>Ação</th>
-                                                <th>Posição</th>
+                                                <th>Reset</th>
                                             </tr>
                                         </thead>
                                         <tbody id="online-list"></tbody>
