@@ -68,8 +68,6 @@ class CityScreen {
         this.waterForegroundOffset = 20;
         this.waterForegroundHalf = 46;
         this.waterForegroundPad = 6;
-        // Suaviza a linha do recorte da agua no corpo (feather do topo)
-        this.waterFeather = 7;
         // Ondas de espuma que quebram nas entidades dentro d'agua
         this.waterWaveInterval = 1.6;
         this._waterWaves = [];
@@ -487,7 +485,6 @@ class CityScreen {
         if (this._waterFxEl) { this._waterFxEl.remove(); this._waterFxEl = null; }
         this._waterParticles = [];
         this._waterWaves = [];
-        this._scratchCanvas = null;
         if (this._raidLayer) {
             this._raidLayer.remove();
             this._raidLayer = null;
@@ -4388,44 +4385,8 @@ class CityScreen {
         ctx.lineTo(dx, dy + dh);
         ctx.closePath();
         ctx.clip();
-        if (this._isWaterAsset(a)) {
-            const sc = this._featherTileOnScratch(img, sx, sy, sw, sh, gf.ox0, gf.ox1, gf.oy0, gf.oy1, 1, 1);
-            ctx.drawImage(sc, dx, dy, dw, dh);
-        } else {
-            ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-        }
+        ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
         ctx.restore();
-    }
-
-    // Desenha o recorte de agua num canvas temporario com o topo dissolvido (feather):
-    // mascara por coluna em altura total (0 acima da linha da onda, 1 logo abaixo),
-    // depois o caller faz o blit no canvas final. Feito num canvas proprio para que o
-    // fade NAO apague outros pixels ja desenhados (o erro do destination-in direto).
-    _featherTileOnScratch(img, sx, sy, sw, sh, ox0, ox1, oy0, oy1, scaleX, scaleY) {
-        const pw = Math.max(1, Math.round((ox1 - ox0) * scaleX));
-        const ph = Math.max(1, Math.round((oy1 - oy0) * scaleY));
-        let sc = this._scratchCanvas;
-        if (!sc) { sc = this._scratchCanvas = document.createElement('canvas'); }
-        sc.width = pw; sc.height = ph;
-        const c = sc.getContext('2d');
-        c.clearRect(0, 0, pw, ph);
-        c.drawImage(img, sx, sy, sw, sh, 0, 0, pw, ph);
-        const feather = (this.waterFeather || 0) * scaleY;
-        if (feather > 1) {
-            const step = 8;
-            c.globalCompositeOperation = 'destination-in';
-            for (let x = ox0; x < ox1; x += step) {
-                const topW = this._grassWaveTop(x, oy0, oy1);
-                const sy2 = (topW - oy0) * scaleY;
-                const grad = c.createLinearGradient(0, sy2, 0, sy2 + feather);
-                grad.addColorStop(0, 'rgba(0,0,0,0)');
-                grad.addColorStop(1, 'rgba(0,0,0,1)');
-                c.fillStyle = grad;
-                c.fillRect((x - ox0) * scaleX, 0, step * scaleX + 1, ph);
-            }
-            c.globalCompositeOperation = 'source-over';
-        }
-        return sc;
     }
 
     // Faixa de grama na frente para entidades DOM (followers animados e pokemons
@@ -4510,12 +4471,7 @@ class CityScreen {
             cctx.lineTo(px0, py0 + ph);
             cctx.closePath();
             cctx.clip();
-            if (this._isWaterAsset(c.a)) {
-                const sc = this._featherTileOnScratch(img, sx, sy, sw, sh, c.ox0, c.ox1, c.oy0, c.oy1, scaleX, scaleY);
-                cctx.drawImage(sc, px0, py0, pw, ph);
-            } else {
-                cctx.drawImage(img, sx, sy, sw, sh, px0, py0, pw, ph);
-            }
+            cctx.drawImage(img, sx, sy, sw, sh, px0, py0, pw, ph);
             cctx.restore();
         }
     }
