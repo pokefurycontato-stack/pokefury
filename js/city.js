@@ -481,6 +481,8 @@ class CityScreen {
         }
         this.wildPokemon = [];
         if (this._nightOverlayEl) { this._nightOverlayEl.remove(); this._nightOverlayEl = null; }
+        if (this._labelsOverlayEl) { this._labelsOverlayEl.remove(); this._labelsOverlayEl = null; }
+        this._playerLabels = [];
         if (this._grassFxEl) { this._grassFxEl.remove(); this._grassFxEl = null; }
         this._grassParticles = [];
         if (this._waterFxEl) { this._waterFxEl.remove(); this._waterFxEl = null; }
@@ -4946,6 +4948,51 @@ class CityScreen {
         }
     }
 
+    // Desenha nome/titulo dos jogadores numa overlay propria (z 26) acima do overlay
+    // de dia/noite (z 25): os sprites escurecem, mas nomes/titulos continuam legiveis.
+    _drawPlayerLabels() {
+        const labels = this._playerLabels;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        if (!labels || labels.length === 0) {
+            if (this._labelsOverlayEl) {
+                const c2 = this._labelsOverlayEl.getContext('2d');
+                c2.clearRect(0, 0, this._labelsOverlayEl.width, this._labelsOverlayEl.height);
+            }
+            return;
+        }
+        let ovEl = this._labelsOverlayEl;
+        if (!ovEl && this.canvas && this.canvas.parentElement) {
+            ovEl = document.createElement('canvas');
+            ovEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:26;';
+            this.canvas.parentElement.appendChild(ovEl);
+            this._labelsOverlayEl = ovEl;
+        }
+        if (!ovEl) return;
+        if (ovEl.width !== cw) ovEl.width = cw;
+        if (ovEl.height !== ch) ovEl.height = ch;
+        const ctx = ovEl.getContext('2d');
+        ctx.clearRect(0, 0, cw, ch);
+        for (const l of labels) {
+            ctx.fillStyle = l.group ? '#38bdf8' : '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.9)';
+            ctx.shadowBlur = 4;
+            ctx.fillText(l.name, l.x, l.y);
+            ctx.shadowBlur = 0;
+            if (l.title && l.titleColor) {
+                ctx.fillStyle = l.titleColor;
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                ctx.shadowBlur = 3;
+                ctx.fillText(l.title, l.x, l.y - 12);
+                ctx.shadowBlur = 0;
+            }
+        }
+    }
+
     drawPlayerSprite(ctx, p, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY, band) {
         const ps = this.playerSize;
         let drawX, drawY;
@@ -5011,33 +5058,28 @@ class CityScreen {
             ctx.fillRect(drawX + 4, drawY + 4, ps - 8, ps - 8);
         }
 
-        ctx.fillStyle = (window.GroupSystem && window.GroupSystem.isMember(p.character_id)) ? '#38bdf8' : '#fff';
-        ctx.font = 'bold 11px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(0,0,0,0.9)';
-        ctx.shadowBlur = 4;
-        ctx.fillText(p.character_name || '?', drawX + ps / 2, drawY - 8);
-        ctx.shadowBlur = 0;
-
+        // Nome/titulo nao sofrem o escurecimento do dia/noite: vao para uma overlay
+        // propria (z 26, acima do overlay de noite z 25) desenhada no fim do render.
         const title = p.isMe ? (this.myEquippedTitle || null) : (p.equipped_title || null);
+        let titleColor = null;
         if (title) {
             const titleId = p.isMe ? (this.myEquippedTitleId || null) : (p.equipped_title_id || null);
             const rarity = window.Titles ? window.Titles.getRarity(titleId) : 'common';
-            let color;
             if (rarity === 'mythic') {
                 const hue = (Date.now() / 12) % 360;
-                color = `hsl(${hue}, 100%, 65%)`;
+                titleColor = `hsl(${hue}, 100%, 65%)`;
             } else {
-                color = (window.Titles && window.Titles.getRarityStyle(titleId)) ? window.Titles.getRarityStyle(titleId).color : '#fbbf24';
+                titleColor = (window.Titles && window.Titles.getRarityStyle(titleId)) ? window.Titles.getRarityStyle(titleId).color : '#fbbf24';
             }
-            ctx.fillStyle = color;
-            ctx.font = 'bold 10px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.shadowColor = 'rgba(0,0,0,0.9)';
-            ctx.shadowBlur = 3;
-            ctx.fillText(title, drawX + ps / 2, drawY - 20);
-            ctx.shadowBlur = 0;
         }
+        (this._playerLabels = this._playerLabels || []).push({
+            x: drawX + ps / 2,
+            y: drawY - 8,
+            name: p.character_name || '?',
+            group: !!(window.GroupSystem && window.GroupSystem.isMember(p.character_id)),
+            title,
+            titleColor
+        });
     }
 
     // ---- Faixas de profundidade ----
@@ -5268,6 +5310,7 @@ class CityScreen {
         const fOffY = _canvasRect.top - (_wrapRect ? _wrapRect.top : 0);
 
         const depthPool = [];
+        this._playerLabels = [];
         this.assets.forEach(a => {
             if ((a.layer || 0) === 3) depthPool.push({ kind: 'asset', ref: a });
         });
@@ -5508,6 +5551,9 @@ class CityScreen {
                 ovCtx.restore();
             }
         }
+
+        // Nome/titulo dos jogadores acima do overlay de dia/noite (nao escurecem)
+        this._drawPlayerLabels();
     }
 }
 
