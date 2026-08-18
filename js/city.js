@@ -4,6 +4,16 @@ const GRASS_ASSET_IDS = new Set([
     'gramapraia', 'gramapsi', 'gramavoa', 'gramavulc'
 ]);
 
+// Agua (praia/lagoa): oculta como a grama + efeito de boiar, bolhas contínuas e ondas
+const WATER_ASSET_IDS = new Set([
+    'praiacerto1'
+]);
+
+// Cores das bolhas de agua
+const WATER_FX = {
+    bubble: ['#eaf6ff', '#c9e8ff', '#ffffff', '#d8f0ff']
+};
+
 // Config das particulas ao andar sobre cada tipo de grama
 const GRASS_FX = {
     grama:      { kind: 'blade', colors: ['#5cc048', '#6fd457', '#3f9c33'] },
@@ -33,6 +43,8 @@ class CityScreen {
         this._loadedSpawn = false;
         this.playerFromX = 400;
         this._grassParticles = [];
+        this._waterParticles = [];
+        this._animTime = 0;
         this.playerFromY = 400;
         this.playerDir = 'down';
         this.playerMoving = false;
@@ -52,6 +64,10 @@ class CityScreen {
         this.grassForegroundHalf = 40;
         this.grassForegroundPad = 8;
         this.grassWaveAmp = 8;
+        // Agua: corte mais profundo (submerge ate a cintura) pra parecer boiando
+        this.waterForegroundOffset = 42;
+        this.waterForegroundHalf = 46;
+        this.waterForegroundPad = 6;
         this.cameraX = 400;
         this.cameraY = 400;
         this.collisionZones = [];
@@ -462,6 +478,8 @@ class CityScreen {
         if (this._nightOverlayEl) { this._nightOverlayEl.remove(); this._nightOverlayEl = null; }
         if (this._grassFxEl) { this._grassFxEl.remove(); this._grassFxEl = null; }
         this._grassParticles = [];
+        if (this._waterFxEl) { this._waterFxEl.remove(); this._waterFxEl = null; }
+        this._waterParticles = [];
         if (this._raidLayer) {
             this._raidLayer.remove();
             this._raidLayer = null;
@@ -607,6 +625,8 @@ class CityScreen {
                 };
             }).filter(Boolean);
             this._grassTiles = this.assets.filter(a => this._isGrassAsset(a));
+            this._waterTiles = this.assets.filter(a => this._isWaterAsset(a));
+            this._occluderTiles = [...(this._grassTiles || []), ...(this._waterTiles || [])];
             this.assets.forEach(a => {
                 if (a.has_collision && a._img) {
                     const checkReady = () => { if (a._img.complete && a._img.naturalWidth) a._ready = true; };
@@ -1412,8 +1432,9 @@ class CityScreen {
             if (natW > 0 && natH > 0) aspect = Math.min(1.5, Math.max(0.6, natW / natH));
             const w = Math.max(1, Math.round(sz * aspect));
             const h = sz;
+            const _wBob = this._waterBobAt(p.pos_x, p.pos_y);
             const sx = p.pos_x - camX;
-            const sy = p.pos_y - camY;
+            const sy = p.pos_y - camY + _wBob;
             if (sx + w < -50 || sx > this.canvas.width + 50 || sy + h < -50 || sy > this.canvas.height + 50) {
                 el.style.display = 'none';
                 if (p._grassEl) p._grassEl.style.display = 'none';
@@ -1425,12 +1446,16 @@ class CityScreen {
             el.style.width = (w * scaleX) + 'px';
             el.style.height = (h * scaleY) + 'px';
 
-            // Grama na frente do pokemon selvagem (recorte alinhado da mesma textura)
+            // Grama/agua na frente do pokemon selvagem (recorte alinhado da mesma textura)
             if (p._grassEl) {
-                const fOff = Math.max(8, Math.round(sz * 0.4));
+                const _inW = this._inWaterAt(p.pos_x, p.pos_y);
+                const _off0 = _inW ? this.waterForegroundOffset : this.grassForegroundOffset;
+                const _half0 = _inW ? this.waterForegroundHalf : this.grassForegroundHalf;
+                const _pad0 = _inW ? this.waterForegroundPad : this.grassForegroundPad;
+                const fOff = Math.max(8, Math.round(_off0 * (sz / this.playerSize)));
                 const fHalf = Math.max(16, Math.round(Math.max(sz, w) * 0.55));
-                const fPad = Math.max(2, Math.round(sz * 0.12));
-                this._drawGrassFrontOverlay(p._grassEl, this._grassTiles || [], p.pos_x, p.pos_y, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
+                const fPad = Math.max(2, Math.round(_pad0 * (sz / this.playerSize)));
+                this._drawGrassFrontOverlay(p._grassEl, this._occluderTiles || this._grassTiles || [], p.pos_x, p.pos_y + _wBob, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
             }
         }
     }
@@ -3401,8 +3426,10 @@ class CityScreen {
         // Sem deslocamento lateral: follower centrado nas costas do jogador
         const downOffsetX = 0;
 
+        // Boiado na agua: balanco vertical suave (se nao estiver na agua, retorna 0)
+        const _fBob = this._waterBobAt(this.pokemonFollowRenderX, this.pokemonFollowRenderY);
         const px = this.pokemonFollowRenderX - camX - spriteSize / 2;
-        const py = this.pokemonFollowRenderY - camY - spriteSize;
+        const py = this.pokemonFollowRenderY - camY - spriteSize + _fBob;
 
         const drawLeft = offsetX + px * scaleX + downOffsetX;
         const drawTop = offsetY + py * scaleY;
@@ -3452,12 +3479,17 @@ class CityScreen {
             }
         }
         if (this.pokemonFollowGrassEl) {
-            const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (spriteSize / this.playerSize)));
-            const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (spriteSize / this.playerSize)));
-            const fPad = Math.max(2, Math.round(this.grassForegroundPad * (spriteSize / this.playerSize)));
+            // Na agua o corte e mais profundo (submerge ate a cintura)
+            const _fInW = this._inWaterAt(this.pokemonFollowRenderX, this.pokemonFollowRenderY);
+            const _fOff0 = _fInW ? this.waterForegroundOffset : this.grassForegroundOffset;
+            const _fHalf0 = _fInW ? this.waterForegroundHalf : this.grassForegroundHalf;
+            const _fPad0 = _fInW ? this.waterForegroundPad : this.grassForegroundPad;
+            const fOff = Math.max(8, Math.round(_fOff0 * (spriteSize / this.playerSize)));
+            const fHalf = Math.max(12, Math.round(_fHalf0 * (spriteSize / this.playerSize)));
+            const fPad = Math.max(2, Math.round(_fPad0 * (spriteSize / this.playerSize)));
             // Centra o recorte na posicao VISUAL do sprite (follower sempre centralizado)
             const visualFeetX = this.pokemonFollowRenderX + downOffsetX / scaleX;
-            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
+            this._drawGrassFrontOverlay(this.pokemonFollowGrassEl, this._occluderTiles || this._grassTiles || [], visualFeetX, this.pokemonFollowRenderY + _fBob, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
         }
     }
 
@@ -3558,15 +3590,16 @@ class CityScreen {
         shadowEl.style.height = shadowH + 'px';
         shadowEl.style.transform = tf;
 
-        // Grama na frente do follower (recorte alinhado da mesma textura), acima do seu z
+        // Grama/agua na frente do follower (recorte alinhado da mesma textura), acima do seu z
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
         const fX = cX + size / 2 + camX;
         const fY = cY + size + camY;
-        const fOff = Math.max(8, Math.round(this.grassForegroundOffset * (size / ps)));
-        const fHalf = Math.max(12, Math.round(this.grassForegroundHalf * (size / ps)));
-        const fPad = Math.max(2, Math.round(this.grassForegroundPad * (size / ps)));
-        this._drawGrassFrontOverlay(grassEl, this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
+        const _fInW = this._inWaterAt(fX, fY);
+        const fOff = Math.max(8, Math.round((_fInW ? this.waterForegroundOffset : this.grassForegroundOffset) * (size / ps)));
+        const fHalf = Math.max(12, Math.round((_fInW ? this.waterForegroundHalf : this.grassForegroundHalf) * (size / ps)));
+        const fPad = Math.max(2, Math.round((_fInW ? this.waterForegroundPad : this.grassForegroundPad) * (size / ps)));
+        this._drawGrassFrontOverlay(grassEl, this._occluderTiles || this._grassTiles || [], fX, fY, fOff, fHalf, fPad, camX, camY, scaleX, scaleY, offsetX, offsetY, z);
     }
 
     teleportToGymType(gymType) {
@@ -4278,6 +4311,38 @@ class CityScreen {
         return null;
     }
 
+    _isWaterAsset(a) {
+        if (!a) return false;
+        if (a._isWater !== undefined) return a._isWater;
+        const id = String(a.asset_id || '').replace(/\.png$/i, '');
+        const url = a.asset_url || '';
+        const name = (url.split('/').pop() || '').replace(/\.png$/i, '');
+        const is = WATER_ASSET_IDS.has(id) || WATER_ASSET_IDS.has(name);
+        a._isWater = is;
+        return is;
+    }
+
+    // O ponto (x,y) esta dentro de um tile de agua?
+    _inWaterAt(x, y) {
+        if (!this._waterTiles || this._waterTiles.length === 0) return false;
+        for (const a of this._waterTiles) {
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            if (x >= a.pos_x && x <= a.pos_x + aw && y >= a.pos_y && y <= a.pos_y + ah) return true;
+        }
+        return false;
+    }
+
+    // Boiado: pequeno balanco vertical suave (sine) quando a entidade esta na agua.
+    // Fase depende do X do mundo para entidades nao balancarem sincronizadas.
+    _waterBobAt(x, y) {
+        if (!this._inWaterAt(x, y)) return 0;
+        const t = this._animTime || 0;
+        return Math.sin(t * 3.4 + x * 0.045) * 2.6;
+    }
+
     // Topo ondulado da faixa frontal por coluna do MUNDO (estavel ao mover a camera e
     // continuo entre tiles). So desce (cobre menos) para nao precisar recortar acima.
     _grassWaveTop(x, baseY, maxY) {
@@ -4502,6 +4567,138 @@ class CityScreen {
         }
     }
 
+    // ---- Agua: bolhas contínuas (mesmo parado) + ondas animadas na superficie ----
+    // A agua oculta como a grama (front-cut) e as entidades boiam; aqui ficam as bolhas
+    // subindo do corpo de quem esta dentro d'agua e linhas de onda suaves deslizando.
+
+    _spawnWaterBubble(x, y) {
+        const colors = WATER_FX.bubble;
+        this._waterParticles.push({
+            x: x + (Math.random() - 0.5) * 18,
+            y: y + (Math.random() - 0.5) * 14,
+            vx: (Math.random() - 0.5) * 6,
+            vy: -(22 + Math.random() * 34),
+            wobA: 5 + Math.random() * 7,
+            wobF: 1.5 + Math.random() * 1.6,
+            wobP: Math.random() * Math.PI * 2,
+            life: 0,
+            maxLife: 0.7 + Math.random() * 0.8,
+            size: 1.5 + Math.random() * 3,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        });
+        if (this._waterParticles.length > 130) this._waterParticles.splice(0, this._waterParticles.length - 130);
+    }
+
+    // Linhas de onda suaves que deslizam horizontalmente sobre cada tile de agua visivel
+    _drawWaterWaves(ctx, cw, ch, camX, camY) {
+        const tiles = this._waterTiles || [];
+        if (tiles.length === 0) return;
+        const t = this._animTime || 0;
+        for (const a of tiles) {
+            const img = a._img;
+            if (!img || !img.complete || !img.naturalWidth) continue;
+            const aw = img.naturalWidth * (a.scale || 1);
+            const ah = img.naturalHeight * (a.scale || 1);
+            const sx = a.pos_x - camX;
+            const sy = a.pos_y - camY;
+            if (sx + aw < -40 || sx > cw + 40 || sy + ah < -40 || sy > ch + 40) continue;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(sx, sy, aw, ah);
+            ctx.clip();
+            const off = (t * 14) % (aw + 80);
+            for (let i = 0; i < 3; i++) {
+                const yy = sy + ah * (0.3 + i * 0.28);
+                ctx.beginPath();
+                for (let x = -60; x <= aw + 60; x += 12) {
+                    const px2 = sx + x;
+                    const py2 = yy + Math.sin((x + off + i * 70) * 0.03) * 4;
+                    if (x === -60) ctx.moveTo(px2, py2);
+                    else ctx.lineTo(px2, py2);
+                }
+                ctx.strokeStyle = `rgba(255,255,255,${0.05 + i * 0.02})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+    }
+
+    _updateWaterFx() {
+        const hasWater = (this._waterTiles || []).length > 0;
+        if (!hasWater && this._waterParticles.length === 0) return;
+        let fxEl = this._waterFxEl;
+        if (!fxEl && this.canvas && this.canvas.parentElement) {
+            fxEl = document.createElement('canvas');
+            fxEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:24;';
+            this.canvas.parentElement.appendChild(fxEl);
+            this._waterFxEl = fxEl;
+        }
+        if (!fxEl) return;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        if (fxEl.width !== cw) fxEl.width = cw;
+        if (fxEl.height !== ch) fxEl.height = ch;
+        const ctx = fxEl.getContext('2d');
+        ctx.clearRect(0, 0, cw, ch);
+        const camX = this.cameraX - cw / 2;
+        const camY = this.cameraY - ch / 2;
+        const dt = this._dt || 1;
+        const k = dt / 60;
+
+        // Ondas na superficie da agua
+        this._drawWaterWaves(ctx, cw, ch, camX, camY);
+
+        // Bolhas contínuas (mesmo parado) saindo de quem esta dentro d'agua
+        const gmp = this.moveProgress || 0;
+        const pfx = this.playerFromX + (this.playerX - this.playerFromX) * gmp;
+        const pfy = (this.playerFromY + (this.playerY - this.playerFromY) * gmp) + this.playerSize / 2;
+        if (this._inWaterAt(pfx, pfy) && Math.random() < k * 3.2) {
+            this._spawnWaterBubble(pfx, pfy - this.playerSize * 0.5);
+        }
+        if (this.pokemonFollowing && this.pokemonFollowEl && this.pokemonFollowEl.style.display !== 'none') {
+            if (this._inWaterAt(this.pokemonFollowRenderX, this.pokemonFollowRenderY) && Math.random() < k * 3.2) {
+                const fScale = this._cityFollowerScale(this.pokemonFollowing);
+                const spriteSize = this.playerSize * fScale;
+                this._spawnWaterBubble(this.pokemonFollowRenderX, this.pokemonFollowRenderY - spriteSize * 0.5);
+            }
+        }
+        for (const p of (this.wildPokemon || [])) {
+            if (!p.active || !p._el || p._el.style.display === 'none') continue;
+            if (this._inWaterAt(p.pos_x, p.pos_y) && Math.random() < k * 2.6) {
+                const sz = this.getWildPokemonSize(p);
+                this._spawnWaterBubble(p.pos_x, p.pos_y - sz * 0.5);
+            }
+        }
+
+        const list = this._waterParticles;
+        for (let i = list.length - 1; i >= 0; i--) {
+            const p = list[i];
+            p.life += k;
+            if (p.life >= p.maxLife) { list.splice(i, 1); continue; }
+            const t = p.life / p.maxLife;
+            p.x += p.vx * k + Math.sin(p.life * p.wobF + p.wobP) * p.wobA * k * 1.5;
+            p.y += p.vy * k;
+            p.vy -= 8 * k;
+            const size = p.size * (1 + t * 0.4);
+            const sx = p.x - camX;
+            const sy = p.y - camY;
+            if (sy < -20 || sx < -20 || sx > cw + 20 || sy > ch + 20) { list.splice(i, 1); continue; }
+            const alpha = Math.sin(Math.min(1, t * 1.4) * Math.PI) * 0.6;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(sx, sy, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.beginPath();
+            ctx.arc(sx - size * 0.3, sy - size * 0.35, Math.max(0.5, size * 0.3), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
     drawNpcSprite(ctx, n, camX, camY, cw, ch, shadowOffX, shadowOffY) {
         if (n.npc_type !== 'nurse' && n.npc_type !== 'professor' && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'banker') return;
         const sx = n.pos_x - camX;
@@ -4567,8 +4764,12 @@ class CityScreen {
         const fy = p.isMe ? this.playerFromY : (p.fromY ?? p.pos_y);
         const tx = p.isMe ? this.playerX : p.pos_x;
         const ty = p.isMe ? this.playerY : p.pos_y;
-        drawX = (fx + (tx - fx) * mp) - camX - ps / 2;
-        drawY = (fy + (ty - fy) * mp) - camY - ps / 2;
+        const _ix = fx + (tx - fx) * mp;
+        const _iy = fy + (ty - fy) * mp;
+        // Boiado na agua (pelo X/Y interpolado + pés); 0 fora da agua
+        const _bob = this._waterBobAt(_ix, _iy + ps / 2);
+        drawX = _ix - camX - ps / 2;
+        drawY = _iy - camY - ps / 2 + _bob;
 
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
@@ -4734,6 +4935,7 @@ class CityScreen {
         const cw = this.canvas.width;
         const ch = this.canvas.height;
         if (cw === 0 || ch === 0) return;
+        this._animTime = (this._animTime || 0) + (this._dt || 1) / 60;
 
         this._ensureDepthCanvases();
 
@@ -4752,15 +4954,20 @@ class CityScreen {
         const bandCtx = (i) => (this.depthCtxs && this.depthCtxs[i]) ? this.depthCtxs[i] : ctx;
         const topCtx = bandCtx(bandCount - 1);
 
-        // Grama alta: posicao dos pes do personagem (interpolada) para o corte
+        // Grama alta/agua: posicao dos pes do personagem (interpolada) para o corte
         this._grassFronts = [];
         const _gmp = this.moveProgress || 0;
         const _grassPfx = this.playerFromX + (this.playerX - this.playerFromX) * _gmp;
         const _grassPfy = (this.playerFromY + (this.playerY - this.playerFromY) * _gmp) + this.playerSize / 2;
-        const _grassTiles = this._grassTiles || [];
-        if (_grassTiles.length > 0) {
-            const _cutY = _grassPfy - this.grassForegroundOffset;
-            const _anyIn = _grassTiles.some(a => {
+        // Na agua o corte e mais profundo (submerge ate a cintura, parecendo boiando)
+        const _inWater = this._inWaterAt(_grassPfx, _grassPfy);
+        const _cutOff = _inWater ? this.waterForegroundOffset : this.grassForegroundOffset;
+        const _cutHalf = _inWater ? this.waterForegroundHalf : this.grassForegroundHalf;
+        const _cutPad = _inWater ? this.waterForegroundPad : this.grassForegroundPad;
+        const _occl = this._occluderTiles || [];
+        if (_occl.length > 0) {
+            const _cutY = _grassPfy - _cutOff;
+            const _anyIn = _occl.some(a => {
                 const img = a._img;
                 if (!img || !img.complete || !img.naturalWidth) return false;
                 const aw = img.naturalWidth * (a.scale || 1);
@@ -4768,10 +4975,10 @@ class CityScreen {
                 return _grassPfx >= a.pos_x && _grassPfx <= a.pos_x + aw && _grassPfy >= a.pos_y && _grassPfy <= a.pos_y + ah;
             });
             if (_anyIn) {
-                const _bx0 = _grassPfx - this.grassForegroundHalf;
-                const _bx1 = _grassPfx + this.grassForegroundHalf;
-                const _by1 = _grassPfy + this.grassForegroundPad;
-                for (const a of _grassTiles) {
+                const _bx0 = _grassPfx - _cutHalf;
+                const _bx1 = _grassPfx + _cutHalf;
+                const _by1 = _grassPfy + _cutPad;
+                for (const a of _occl) {
                     const img = a._img;
                     if (!img || !img.complete || !img.naturalWidth) continue;
                     const aw = img.naturalWidth * (a.scale || 1);
@@ -5033,6 +5240,7 @@ class CityScreen {
 
         // Particulas de grama ao andar (jogador + pokemon que segue)
         this._updateGrassFx();
+        this._updateWaterFx();
 
         // Day/night overlay (ACIMA de todas as entidades DOM, mesma cor, sem mascara):
         // canvas transparente z 25, abaixo dos layers de raid/teleport (z 40+).
