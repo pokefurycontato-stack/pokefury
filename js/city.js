@@ -2912,6 +2912,24 @@ class CityScreen {
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
         this.syncPosition();
+        this._snapFollowerBehind();
+    }
+
+    // Teleporta junto o pokemon que segue: coloca ele na posicao "atras do jogador"
+    // no destino (mesma regra do _updateCityFollowerMove), sem ficar atravessando o mapa.
+    _snapFollowerBehind() {
+        if (!this.pokemonFollowing || !this.pokemonFollowEl) return;
+        const feetY = this.playerY + this.playerSize / 2;
+        let behindX = this.playerX;
+        let behindY = feetY;
+        if (this.playerDir === 'down') behindY = this.playerY - this.followerDownOffset;
+        else if (this.playerDir === 'up') behindY = feetY + this.followerBehind;
+        else if (this.playerDir === 'left') behindX = this.playerX + this.followerSideOffset;
+        else if (this.playerDir === 'right') behindX = this.playerX - this.followerSideOffset;
+        this.pokemonFollowRenderX = behindX;
+        this.pokemonFollowRenderY = behindY;
+        this.pokemonFollowIdleTimer = 0;
+        this.pokemonFollowIdleFlip = false;
     }
 
     teleportToCityPokemonCenter() {
@@ -3617,6 +3635,7 @@ class CityScreen {
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
         this.syncPosition();
+        this._snapFollowerBehind();
     }
 
     teleportToGymNpc() {
@@ -3628,6 +3647,7 @@ class CityScreen {
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
         this.syncPosition();
+        this._snapFollowerBehind();
     }
 
     teleportToRaidArena() {
@@ -3639,6 +3659,7 @@ class CityScreen {
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
         this.syncPosition();
+        this._snapFollowerBehind();
         this.raidCooldownUntil = Date.now() + 2000;
     }
 
@@ -3651,6 +3672,7 @@ class CityScreen {
         this.cameraX = this.playerX;
         this.cameraY = this.playerY;
         this.syncPosition();
+        this._snapFollowerBehind();
     }
 
     async showRaidRank(boss) {
