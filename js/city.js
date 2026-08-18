@@ -1108,18 +1108,40 @@ class CityScreen {
             });
         }
 
-        const sfxSlider = document.getElementById('city-settings-sfx-volume');
-        if (sfxSlider) {
-            sfxSlider.addEventListener('input', () => {
-                const v = parseInt(sfxSlider.value, 10) / 100;
-                const game = window.pokefury;
-                if (game) {
-                    game.sfxVolume = v;
-                    if (game.sfx) game.sfx.setVolume(v);
-                    else localStorage.setItem('pokefury_sfx_volume', String(v));
-                }
+        this._renderSfxList();
+    }
+
+    // Renderiza uma barra de volume por efeito sonoro (registro dinamico do SfxManager).
+    // Sons novos adicionados ao registro aparecem aqui automaticamente.
+    _renderSfxList() {
+        const game = window.pokefury;
+        const list = document.getElementById('city-settings-sfx-list');
+        if (!list) return;
+        if (!game || !game.sfx) { list.innerHTML = ''; return; }
+        this._sfxSliders = {};
+        list.innerHTML = '';
+        game.sfx.getSoundIds().forEach(id => {
+            const meta = game.sfx.getSoundMeta(id);
+            if (!meta) return;
+            const wrap = document.createElement('div');
+            wrap.style.margin = '16px 0 2px';
+            const label = document.createElement('div');
+            label.style.cssText = 'font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;';
+            label.textContent = meta.label;
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.min = '0';
+            slider.max = '100';
+            slider.value = Math.round(game.sfx.getVolume(id) * 100);
+            slider.style.cssText = 'width:100%;cursor:pointer;accent-color:#38bdf8;';
+            slider.addEventListener('input', () => {
+                game.sfx.setVolume(id, parseInt(slider.value, 10) / 100);
             });
-        }
+            this._sfxSliders[id] = slider;
+            wrap.appendChild(label);
+            wrap.appendChild(slider);
+            list.appendChild(wrap);
+        });
     }
 
     _syncSettingsForm() {
@@ -1149,8 +1171,12 @@ class CityScreen {
         const game = window.pokefury;
         const ms = document.getElementById('city-settings-music-volume');
         if (ms && game && game.music) ms.value = Math.round(game.music.volume * 100);
-        const ss = document.getElementById('city-settings-sfx-volume');
-        if (ss) ss.value = Math.round(parseFloat(localStorage.getItem('pokefury_sfx_volume') || '0.8') * 100);
+        if (game && game.sfx && this._sfxSliders) {
+            game.sfx.getSoundIds().forEach(id => {
+                const slider = this._sfxSliders[id];
+                if (slider) slider.value = Math.round(game.sfx.getVolume(id) * 100);
+            });
+        }
     }
 
     // ==================== SCANNER ====================

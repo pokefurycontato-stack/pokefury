@@ -1,81 +1,92 @@
 /* =============================================================
-   sfx.js — Efeitos sonoros de ambiente (passos, noite, chuva)
-   Volumes complementares: nunca cobrem a musica do jogo.
+   sfx.js — Efeitos sonoros de ambiente (passos, noite, chuva, ...)
+   Volume individual por som, armazenado em localStorage.
+   Capacidade (cap) baixa por som: nunca cobrem a musica do jogo.
+   Para adicionar um som novo: registre aqui e chame set<Nome>() no city.
    ============================================================= */
 
 export class SfxManager {
     constructor() {
-        this.volume = parseFloat(localStorage.getItem('pokefury_sfx_volume') || '0.8');
-        this._steps = null;
-        this._night = null;
-        this._rain = null;
-        this._stepsOn = false;
-        this._nightOn = false;
-        this._rainOn = false;
-        // Volume efetivo de cada som = slider do jogador * cap.
-        // Caps baixos: som ambiente de apoio, sem esconder a musica (maximo ~0.22).
-        this._caps = {
-            steps: 0.22,
-            night: 0.16,
-            rain: 0.18
+        // Volume antigo global (uma barra so): usado como default enquanto o
+        // jogador nao mexer nas barras individuais (migracao suave).
+        this._legacyVolume = parseFloat(localStorage.getItem('pokefury_sfx_volume') || '0.8');
+        this._sounds = {
+            steps: { label: 'Passos', file: 'assets/sounds/passos.MP3', cap: 0.22 },
+            night: { label: 'Coruja (noite)', file: 'assets/sounds/noite.MP3', cap: 0.16 },
+            rain: { label: 'Chuva', file: 'assets/sounds/chuva.MP3', cap: 0.18 }
         };
+        this._audios = {};
+        this._on = {};
     }
 
-    _ensure() {
-        if (this._steps) return;
-        this._steps = new Audio('assets/sounds/passos.MP3');
-        this._steps.loop = true;
-        this._steps.volume = this._eff('steps');
-        this._night = new Audio('assets/sounds/noite.MP3');
-        this._night.loop = true;
-        this._night.volume = this._eff('night');
-        this._rain = new Audio('assets/sounds/chuva.MP3');
-        this._rain.loop = true;
-        this._rain.volume = this._eff('rain');
+    // ---- Metadados (usados pelo menu Som para renderizar uma barra por som) ----
+    getSoundIds() {
+        return Object.keys(this._sounds);
     }
 
-    _eff(kind) {
-        return Math.max(0, Math.min(1, this.volume)) * this._caps[kind];
+    getSoundMeta(id) {
+        return this._sounds[id];
     }
 
-    setVolume(v) {
-        this.volume = Math.max(0, Math.min(1, v));
-        localStorage.setItem('pokefury_sfx_volume', String(this.volume));
-        if (this._steps) this._steps.volume = this._eff('steps');
-        if (this._night) this._night.volume = this._eff('night');
-        if (this._rain) this._rain.volume = this._eff('rain');
+    // ---- Volume individual ----
+    getVolume(id) {
+        const raw = localStorage.getItem('pokefury_sfx_volume_' + id);
+        if (raw === null) return this._legacyVolume; // fallback p/ config antiga
+        const v = parseFloat(raw);
+        return Number.isFinite(v) ? v : this._legacyVolume;
     }
 
-    _play(kind, stateKey) {
-        if (this[stateKey]) return;
-        this._ensure();
-        const a = this['_' + kind];
+    setVolume(id, v) {
+        v = Math.max(0, Math.min(1, v));
+        localStorage.setItem('pokefury_sfx_volume_' + id, String(v));
+        if (this._audios[id]) this._audios[id].volume = this._eff(id);
+    }
+
+    // Volume efetivo = barra do jogador * cap do som (cap baixo = nao cobrir musica)
+    _eff(id) {
+        const meta = this._sounds[id];
+        if (!meta) return 0;
+        return Math.max(0, Math.min(1, this.getVolume(id))) * meta.cap;
+    }
+
+    _ensure(id) {
+        if (this._audios[id]) return;
+        const meta = this._sounds[id];
+        if (!meta) return;
+        const a = new Audio(meta.file);
+        a.loop = true;
+        a.volume = this._eff(id);
+        this._audios[id] = a;
+    }
+
+    _play(id) {
+        if (this._on[id]) return;
+        this._ensure(id);
+        const a = this._audios[id];
         if (!a) return;
-        this[stateKey] = true;
+        this._on[id] = true;
         const p = a.play();
         // Se o navegador bloquear (autoplay), marca como nao tocando para
         // tentar de novo no proximo frame (quando ja houver interacao do usuario).
-        if (p && p.catch) p.catch(() => { this[stateKey] = false; });
+        if (p && p.catch) p.catch(() => { this._on[id] = false; });
     }
 
-    _pause(kind, stateKey) {
-        if (!this[stateKey]) return;
-        this[stateKey] = false;
-        try { this['_' + kind].pause(); } catch (e) {}
+    _pause(id) {
+        if (!this._on[id]) return;
+        this._on[id] = false;
+        try { this._audios[id].pause(); } catch (e) {}
     }
 
-    setSteps(on) { this._playOrPause(on, 'steps', '_stepsOn'); }
-    setNight(on) { this._playOrPause(on, 'night', '_nightOn'); }
-    setRain(on) { this._playOrPause(on, 'rain', '_rainOn'); }
-
-    _playOrPause(on, kind, stateKey) {
-        if (on) this._play(kind, stateKey);
-        else this._pause(kind, stateKey);
+    _toggle(id, on) {
+        if (on) this._play(id);
+        else this._pause(id);
     }
+
+    setSteps(on) { this._toggle('steps', on); }
+    setNight(on) { this._toggle('night', on); }
+    setRain(on) { this._toggle('rain', on); }
 
     stopAll() {
-        this.setSteps(false);
-        this.setNight(false);
-        this.setRain(false);
+        Object.keys(this._sounds).forEach(id => this._pause(id));
     }
 }

@@ -24,7 +24,7 @@ import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
 import { RaidBossManager } from './raid-boss.js';
 import { MusicManager } from './music.js';
-import { SfxManager } from './sfx.js';
+import { SfxManager } from './sfx.js?v=20260816cc';
 
 const SHINY_CHANCE = 128;
 
