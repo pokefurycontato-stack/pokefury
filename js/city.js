@@ -30,6 +30,7 @@ class CityScreen {
     constructor() {
         this.canvas = null;
         this.ctx = null;
+        this.cameraZoom = 1.5;
         this.assets = [];
         this.players = {};
         this.myPlayer = null;
@@ -574,12 +575,15 @@ class CityScreen {
         if (!wrap || !this.canvas) return;
         const rect = wrap.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
-            this.canvas.width = rect.width;
-            this.canvas.height = rect.height;
+            // Backing store menor + CSS 100% = zoom (1.5x aproxima a camera).
+            // Todos os overlays DOM usam canvas.width/scaleX derivados daqui, entao escalam junto.
+            const z = this.cameraZoom || 1;
+            this.canvas.width = Math.round(rect.width / z);
+            this.canvas.height = Math.round(rect.height / z);
             if (this.depthCanvases) {
                 for (const c of this.depthCanvases) {
-                    c.width = rect.width;
-                    c.height = rect.height;
+                    c.width = this.canvas.width;
+                    c.height = this.canvas.height;
                 }
             }
         }
