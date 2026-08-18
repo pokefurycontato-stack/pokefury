@@ -71,7 +71,7 @@ class CityScreen {
         // Suaviza a linha do recorte da agua no corpo (feather do topo)
         this.waterFeather = 7;
         // Ondas de espuma que quebram nas entidades dentro d'agua
-        this.waterWaveInterval = 3.5;
+        this.waterWaveInterval = 1.6;
         this._waterWaves = [];
         this._waveTimer = 0;
         this.cameraX = 400;
@@ -487,6 +487,7 @@ class CityScreen {
         if (this._waterFxEl) { this._waterFxEl.remove(); this._waterFxEl = null; }
         this._waterParticles = [];
         this._waterWaves = [];
+        this._scratchCanvas = null;
         if (this._raidLayer) {
             this._raidLayer.remove();
             this._raidLayer = null;
@@ -4387,28 +4388,44 @@ class CityScreen {
         ctx.lineTo(dx, dy + dh);
         ctx.closePath();
         ctx.clip();
-        ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-        if (this._isWaterAsset(a)) this._featherWaterTop(ctx, gf, camX, camY);
+        if (this._isWaterAsset(a)) {
+            const sc = this._featherTileOnScratch(img, sx, sy, sw, sh, gf.ox0, gf.ox1, gf.oy0, gf.oy1, 1, 1);
+            ctx.drawImage(sc, dx, dy, dw, dh);
+        } else {
+            ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+        }
         ctx.restore();
     }
 
-    // Suaviza a borda superior do recorte de agua: dissolve o topo em faixas de coluna
-    // (destination-in), removendo a linha dura que cortava o corpo do personagem.
-    _featherWaterTop(ctx, gf, camX, camY) {
-        const feather = this.waterFeather || 0;
-        if (feather <= 0) return;
-        const step = 8;
-        ctx.globalCompositeOperation = 'destination-in';
-        for (let x = gf.ox0; x < gf.ox1; x += step) {
-            const topW = this._grassWaveTop(x, gf.oy0, gf.oy1);
-            const sy = topW - camY;
-            const grad = ctx.createLinearGradient(0, sy, 0, sy + feather);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,1)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(x - camX, sy, step + 1, feather);
+    // Desenha o recorte de agua num canvas temporario com o topo dissolvido (feather):
+    // mascara por coluna em altura total (0 acima da linha da onda, 1 logo abaixo),
+    // depois o caller faz o blit no canvas final. Feito num canvas proprio para que o
+    // fade NAO apague outros pixels ja desenhados (o erro do destination-in direto).
+    _featherTileOnScratch(img, sx, sy, sw, sh, ox0, ox1, oy0, oy1, scaleX, scaleY) {
+        const pw = Math.max(1, Math.round((ox1 - ox0) * scaleX));
+        const ph = Math.max(1, Math.round((oy1 - oy0) * scaleY));
+        let sc = this._scratchCanvas;
+        if (!sc) { sc = this._scratchCanvas = document.createElement('canvas'); }
+        sc.width = pw; sc.height = ph;
+        const c = sc.getContext('2d');
+        c.clearRect(0, 0, pw, ph);
+        c.drawImage(img, sx, sy, sw, sh, 0, 0, pw, ph);
+        const feather = (this.waterFeather || 0) * scaleY;
+        if (feather > 1) {
+            const step = 8;
+            c.globalCompositeOperation = 'destination-in';
+            for (let x = ox0; x < ox1; x += step) {
+                const topW = this._grassWaveTop(x, oy0, oy1);
+                const sy2 = (topW - oy0) * scaleY;
+                const grad = c.createLinearGradient(0, sy2, 0, sy2 + feather);
+                grad.addColorStop(0, 'rgba(0,0,0,0)');
+                grad.addColorStop(1, 'rgba(0,0,0,1)');
+                c.fillStyle = grad;
+                c.fillRect((x - ox0) * scaleX, 0, step * scaleX + 1, ph);
+            }
+            c.globalCompositeOperation = 'source-over';
         }
-        ctx.globalCompositeOperation = 'source-over';
+        return sc;
     }
 
     // Faixa de grama na frente para entidades DOM (followers animados e pokemons
@@ -4493,24 +4510,11 @@ class CityScreen {
             cctx.lineTo(px0, py0 + ph);
             cctx.closePath();
             cctx.clip();
-            cctx.drawImage(img, sx, sy, sw, sh, px0, py0, pw, ph);
-            // Suaviza a linha do recorte de agua no corpo da entidade (feather)
             if (this._isWaterAsset(c.a)) {
-                const feather = (this.waterFeather || 0) * scaleY;
-                if (feather > 1) {
-                    cctx.globalCompositeOperation = 'destination-in';
-                    const step = 8;
-                    for (let x = c.ox0; x < c.ox1; x += step) {
-                        const topW = this._grassWaveTop(x, c.oy0, c.oy1);
-                        const sy = (topW - minY) * scaleY;
-                        const grad = cctx.createLinearGradient(0, sy, 0, sy + feather);
-                        grad.addColorStop(0, 'rgba(0,0,0,0)');
-                        grad.addColorStop(1, 'rgba(0,0,0,1)');
-                        cctx.fillStyle = grad;
-                        cctx.fillRect((x - minX) * scaleX, sy, step * scaleX + 1, feather);
-                    }
-                    cctx.globalCompositeOperation = 'source-over';
-                }
+                const sc = this._featherTileOnScratch(img, sx, sy, sw, sh, c.ox0, c.ox1, c.oy0, c.oy1, scaleX, scaleY);
+                cctx.drawImage(sc, px0, py0, pw, ph);
+            } else {
+                cctx.drawImage(img, sx, sy, sw, sh, px0, py0, pw, ph);
             }
             cctx.restore();
         }
@@ -4635,24 +4639,24 @@ class CityScreen {
         if (this._waterParticles.length > 130) this._waterParticles.splice(0, this._waterParticles.length - 130);
     }
 
-    // Onda de espuma que cruza a agua em direcao a um alvo (entidade dentro d'agua).
-    // Quando a linha de espuma passa por cima de uma entidade, quebra nela (foam burst).
+    // Onda de espuma que nasce na parte de baixo da agua e sobe (sentido unico),
+// passando por cima da entidade alvo — quando cruza, quebra nela (foam burst).
     _spawnWaterWave(tx, ty) {
-        const ang = Math.random() * Math.PI * 2;
-        const dirX = Math.cos(ang), dirY = Math.sin(ang);
-        const dist = 140 + Math.random() * 120;
-        this._waterWaves.push({
-            x: tx - dirX * dist,
-            y: ty - dirY * dist,
-            nx: dirX,
-            ny: dirY,
-            len: 55 + Math.random() * 40,
-            speed: 34 + Math.random() * 18,
-            t: 0,
-            life: 0,
-            maxLife: 2.2 + Math.random() * 0.9,
-            hit: new Set()
-        });
+        const dist = 240 + Math.random() * 160;
+        if (this._waterWaves.length < 10) {
+            this._waterWaves.push({
+                x: tx,
+                y: ty + dist,
+                nx: 0,
+                ny: -1,
+                len: 55 + Math.random() * 40,
+                speed: 34 + Math.random() * 18,
+                t: 0,
+                life: 0,
+                maxLife: 2.2 + Math.random() * 0.9,
+                hit: new Set()
+            });
+        }
     }
 
     // Espuma que espirra quando a onda quebra na entidade (particulas + anel que expande)
@@ -4780,15 +4784,18 @@ class CityScreen {
         const dt = this._dt || 1;
         const k = dt / 60;
 
-        // Ondas de espuma: spawn periodico mirando entidades dentro d'agua
+        // Ondas de espuma: spawn periodico (mais frequente) mirando entidades dentro d'agua
         this._waveTimer = (this._waveTimer || 0) + k;
         if (this._waveTimer >= this.waterWaveInterval) {
             this._waveTimer = 0;
             const targets = this._waterWaveTargets();
             if (targets.length > 0) {
-                const tgt = targets[Math.floor(Math.random() * targets.length)];
-                this._spawnWaterWave(tgt.x, tgt.y);
-                this._waveTimer = -(Math.random() * 1.2);
+                const n = Math.min(2, targets.length);
+                for (let i = 0; i < n; i++) {
+                    const tgt = targets[Math.floor(Math.random() * targets.length)];
+                    this._spawnWaterWave(tgt.x, tgt.y);
+                }
+                this._waveTimer = -(Math.random() * 0.5);
             }
         }
         this._updateWaterWaves(ctx, k, camX, camY);
