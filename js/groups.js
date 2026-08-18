@@ -174,6 +174,11 @@ class GroupSystem {
 
     showInvitePopup(inv) {
         if (this._activeInvite) return; // só um convite por vez
+        // Auto recusa de convites de grupo (configuração Gameplay)
+        if (window.CitySettings && window.CitySettings.getAutoDeclineGroup()) {
+            this.declineInvite(inv);
+            return;
+        }
         this._activeInvite = inv;
         const overlay = document.getElementById('city-group-invite-popup');
         if (!overlay) return;

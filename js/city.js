@@ -1031,8 +1031,10 @@ class CityScreen {
         if (!btn || !popup) return;
 
         const showTab = (tab) => {
+            const gp = document.getElementById('city-settings-gameplay');
             const g = document.getElementById('city-settings-graphics');
             const s = document.getElementById('city-settings-sound');
+            if (gp) gp.classList.toggle('hidden', tab !== 'gameplay');
             if (g) g.classList.toggle('hidden', tab !== 'graphics');
             if (s) s.classList.toggle('hidden', tab !== 'sound');
             document.querySelectorAll('.city-settings-tab').forEach(t => {
@@ -1079,6 +1081,22 @@ class CityScreen {
             });
         }
 
+        const saveGameplayBtn = document.getElementById('city-settings-save-gameplay');
+        if (saveGameplayBtn) {
+            saveGameplayBtn.addEventListener('click', () => {
+                const gSel = document.querySelector('input[name="city-auto-group"]:checked');
+                const pSel = document.querySelector('input[name="city-auto-pvp"]:checked');
+                localStorage.setItem('pokefury_auto_decline_group', gSel ? gSel.value : 'false');
+                localStorage.setItem('pokefury_auto_decline_pvp', pSel ? pSel.value : 'false');
+                const msg = document.getElementById('city-settings-save-msg-gameplay');
+                if (msg) {
+                    msg.style.opacity = '1';
+                    clearTimeout(this._saveGpTimer);
+                    this._saveGpTimer = setTimeout(() => { msg.style.opacity = '0'; }, 1600);
+                }
+            });
+        }
+
         const musicSlider = document.getElementById('city-settings-music-volume');
         if (musicSlider) {
             musicSlider.addEventListener('input', () => {
@@ -1109,6 +1127,19 @@ class CityScreen {
             l.style.background = on ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.04)';
             const label = l.querySelector('span');
             if (label && on) label.style.color = '#7dd3fc';
+        });
+        document.querySelectorAll('.city-gameplay-opt').forEach(l => {
+            const r = l.querySelector('input[type="radio"]');
+            if (!r) return;
+            const current = l.dataset.key === 'pvp'
+                ? localStorage.getItem('pokefury_auto_decline_pvp')
+                : localStorage.getItem('pokefury_auto_decline_group');
+            const on = (current === 'true') === (r.value === 'true');
+            r.checked = on;
+            l.style.borderColor = on ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.14)';
+            l.style.background = on ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.04)';
+            const label = l.querySelector('span');
+            if (label) label.style.color = on ? '#7dd3fc' : '#fff';
         });
         const game = window.pokefury;
         const ms = document.getElementById('city-settings-music-volume');
@@ -5657,6 +5688,12 @@ class CityScreen {
 document.addEventListener('DOMContentLoaded', () => {
     window.cityScreen = new CityScreen();
 });
+
+// Preferências de Gameplay (auto recusa de convites). Default: recusas desligadas.
+window.CitySettings = {
+    getAutoDeclineGroup: () => localStorage.getItem('pokefury_auto_decline_group') === 'true',
+    getAutoDeclinePvp: () => localStorage.getItem('pokefury_auto_decline_pvp') === 'true'
+};
 
 window._cityOpenPremiumShop = function(shop) {
     document.getElementById('city-premium-modal')?.classList.add('hidden');

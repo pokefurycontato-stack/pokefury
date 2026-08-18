@@ -683,6 +683,11 @@ class PokeFuryGame {
             } else if (challenge.status === 'declined' && challenge.challenger_id === this.currentCharacterId) {
                 this.showToast(`${challenge.challenged_name} recusou seu desafio.`, 'info');
             } else if (challenge.status === 'pending' && challenge.challenged_id === this.currentCharacterId) {
+                // Auto recusa de desafios PVP (configuração Gameplay)
+                if (window.CitySettings && window.CitySettings.getAutoDeclinePvp()) {
+                    this.pvp.respondToChallenge(challenge.id, false);
+                    return;
+                }
                 this.showChallengePopup(challenge);
             }
         });

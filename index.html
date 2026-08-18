@@ -1257,12 +1257,43 @@
             <!-- Popup de configurações (Gráfico / Som) -->
             <div id="city-settings-popup" class="hidden" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:560px;max-width:92vw;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid rgba(255,255,255,0.15);border-radius:14px;z-index:875;box-shadow:0 10px 40px rgba(0,0,0,0.7);display:flex;overflow:hidden;">
                 <div style="width:130px;flex-shrink:0;background:rgba(0,0,0,0.3);padding:16px 10px;display:flex;flex-direction:column;gap:6px;border-right:1px solid rgba(255,255,255,0.08);">
-                    <button class="city-settings-tab active" data-tab="graphics" style="pointer-events:auto;width:100%;padding:9px 10px;border:none;border-radius:8px;background:rgba(56,189,248,0.18);color:#7dd3fc;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;">Gráfico</button>
+                    <button class="city-settings-tab active" data-tab="gameplay" style="pointer-events:auto;width:100%;padding:9px 10px;border:none;border-radius:8px;background:rgba(56,189,248,0.18);color:#7dd3fc;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;">Gameplay</button>
+                    <button class="city-settings-tab" data-tab="graphics" style="pointer-events:auto;width:100%;padding:9px 10px;border:none;border-radius:8px;background:none;color:rgba(255,255,255,0.6);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;">Gráfico</button>
                     <button class="city-settings-tab" data-tab="sound" style="pointer-events:auto;width:100%;padding:9px 10px;border:none;border-radius:8px;background:none;color:rgba(255,255,255,0.6);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;">Som</button>
                 </div>
                 <div style="flex:1;padding:18px 20px 16px;position:relative;min-height:240px;">
                     <button id="city-settings-close" title="Fechar" style="pointer-events:auto;position:absolute;top:8px;right:10px;background:none;border:none;color:#aaa;font-size:18px;cursor:pointer;line-height:1;">✕</button>
-                    <div id="city-settings-graphics" style="max-width:380px;">
+                    <div id="city-settings-gameplay" style="max-width:380px;">
+                        <div style="font-size:15px;font-weight:600;color:#fff;margin:2px 0 4px;">Gameplay</div>
+                        <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:14px;">Recusas automáticas de convites</div>
+                        <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;">Auto recusa de grupo</div>
+                        <div style="display:flex;gap:10px;margin-bottom:20px;">
+                            <label class="city-gameplay-opt" data-key="group" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:1px solid rgba(255,255,255,0.14);border-radius:10px;cursor:pointer;background:rgba(255,255,255,0.04);">
+                                <input type="radio" name="city-auto-group" value="true" style="width:16px;height:16px;accent-color:#38bdf8;cursor:pointer;">
+                                <span style="color:#fff;font-size:14px;font-weight:700;">Sim</span>
+                            </label>
+                            <label class="city-gameplay-opt" data-key="group" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:1px solid rgba(56,189,248,0.5);border-radius:10px;cursor:pointer;background:rgba(56,189,248,0.08);">
+                                <input type="radio" name="city-auto-group" value="false" checked style="width:16px;height:16px;accent-color:#38bdf8;cursor:pointer;">
+                                <span style="color:#7dd3fc;font-size:14px;font-weight:700;">Não</span>
+                            </label>
+                        </div>
+                        <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;">Auto recusa de PVP</div>
+                        <div style="display:flex;gap:10px;margin-bottom:20px;">
+                            <label class="city-gameplay-opt" data-key="pvp" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:1px solid rgba(255,255,255,0.14);border-radius:10px;cursor:pointer;background:rgba(255,255,255,0.04);">
+                                <input type="radio" name="city-auto-pvp" value="true" style="width:16px;height:16px;accent-color:#38bdf8;cursor:pointer;">
+                                <span style="color:#fff;font-size:14px;font-weight:700;">Sim</span>
+                            </label>
+                            <label class="city-gameplay-opt" data-key="pvp" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:1px solid rgba(56,189,248,0.5);border-radius:10px;cursor:pointer;background:rgba(56,189,248,0.08);">
+                                <input type="radio" name="city-auto-pvp" value="false" checked style="width:16px;height:16px;accent-color:#38bdf8;cursor:pointer;">
+                                <span style="color:#7dd3fc;font-size:14px;font-weight:700;">Não</span>
+                            </label>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <button id="city-settings-save-gameplay" style="pointer-events:auto;padding:9px 26px;border:none;border-radius:9px;background:linear-gradient(135deg,#38bdf8,#6366f1);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">Salvar</button>
+                            <span id="city-settings-save-msg-gameplay" style="font-size:12px;color:#34d399;opacity:0;transition:opacity .3s;">Salvo!</span>
+                        </div>
+                    </div>
+                    <div id="city-settings-graphics" class="hidden" style="max-width:380px;">
                         <div style="font-size:15px;font-weight:600;color:#fff;margin:2px 0 4px;">Zoom da tela</div>
                         <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:14px;">Ajuste a aproximação da câmera</div>
                         <div style="display:flex;gap:10px;">
@@ -1564,7 +1595,7 @@
     <script src="js/loading-screen.js"></script>
     <script src="js/rank.js?v=20260816a"></script>
     <script src="js/groups.js?v=20260816f"></script>
-    <script src="js/city.js?v=20260816bz"></script>
+    <script src="js/city.js?v=20260816ca"></script>
     <script src="js/professor-quests.js?v=20260815c"></script>
     <script src="js/city-builder.js?v=20260816j"></script>
     <script src="js/profile.js?v=20260816a"></script>
