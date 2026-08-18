@@ -522,6 +522,8 @@ class CityScreen {
         if (window._cityBeforeUnload) {
             window.removeEventListener('beforeunload', window._cityBeforeUnload);
         }
+        const sfx = window.pokefury && window.pokefury.sfx;
+        if (sfx) sfx.stopAll();
     }
 
     openPremiumModal() {
@@ -1110,9 +1112,12 @@ class CityScreen {
         if (sfxSlider) {
             sfxSlider.addEventListener('input', () => {
                 const v = parseInt(sfxSlider.value, 10) / 100;
-                localStorage.setItem('pokefury_sfx_volume', String(v));
                 const game = window.pokefury;
-                if (game) game.sfxVolume = v;
+                if (game) {
+                    game.sfxVolume = v;
+                    if (game.sfx) game.sfx.setVolume(v);
+                    else localStorage.setItem('pokefury_sfx_volume', String(v));
+                }
             });
         }
     }
@@ -3328,6 +3333,23 @@ class CityScreen {
         this.updateNpcPatrols(0.016 * this._dt);
         this.updateRaidInteraction();
         this.updateGymInteraction();
+
+        this._updateSfx();
+    }
+
+    // Efeitos sonoros de ambiente: passos sincronizados com a caminhada,
+    // noite e chuva. Volumes limitados (nao cobrem a musica).
+    _updateSfx() {
+        const sfx = window.pokefury && window.pokefury.sfx;
+        if (!sfx) return;
+        const moveHeld = !!(this.keys['ArrowUp'] || this.keys['w'] || this.keys['W'] ||
+            this.keys['ArrowDown'] || this.keys['s'] || this.keys['S'] ||
+            this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A'] ||
+            this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']);
+        const walking = moveHeld || this.playerMoving;
+        sfx.setSteps(walking);
+        sfx.setNight(this.getDayNight().isNight);
+        sfx.setRain((this._weather || this.getWeather()) === 'rain');
     }
 
     updateRaidInteraction() {

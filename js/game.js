@@ -24,6 +24,7 @@ import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
 import { RaidBossManager } from './raid-boss.js';
 import { MusicManager } from './music.js';
+import { SfxManager } from './sfx.js';
 
 const SHINY_CHANCE = 128;
 
@@ -140,6 +141,7 @@ class PokeFuryGame {
         this._isGymBattle = false;
         this._currentGymLeader = null;
         this.music = new MusicManager();
+        this.sfx = new SfxManager();
         this.music.init();
 
         this.init();
