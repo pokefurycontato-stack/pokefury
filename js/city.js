@@ -30,7 +30,7 @@ class CityScreen {
     constructor() {
         this.canvas = null;
         this.ctx = null;
-        this.cameraZoom = 1.5;
+        this.cameraZoom = parseFloat(localStorage.getItem('pokefury_camera_zoom') || '1.5');
         this.assets = [];
         this.players = {};
         this.myPlayer = null;
@@ -340,6 +340,7 @@ class CityScreen {
             if (LS) LS.setProgress(80);
             this.subscribeRealtime();
             this._setupCityChat();
+            this._setupSettings();
             this.resizeCanvas();
             this.running = true;
             requestAnimationFrame(() => { this.resizeCanvas(); this.loop(); });
@@ -396,6 +397,7 @@ class CityScreen {
         this.subscribeRealtime();
         this._startSpriteReaper();
         this._setupCityChat();
+        this._setupSettings();
         if (window.GroupSystem) window.GroupSystem.init();
         this.loadForcedWeather();
         // Pokemon seguindo o jogador na cidade
@@ -1018,6 +1020,101 @@ class CityScreen {
             }
         }
         return encounters;
+    }
+
+    _setupSettings() {
+        if (this._settingsBound) return;
+        this._settingsBound = true;
+
+        const btn = document.getElementById('city-settings-btn');
+        const popup = document.getElementById('city-settings-popup');
+        if (!btn || !popup) return;
+
+        const showTab = (tab) => {
+            const g = document.getElementById('city-settings-graphics');
+            const s = document.getElementById('city-settings-sound');
+            if (g) g.classList.toggle('hidden', tab !== 'graphics');
+            if (s) s.classList.toggle('hidden', tab !== 'sound');
+            document.querySelectorAll('.city-settings-tab').forEach(t => {
+                const active = t.dataset.tab === tab;
+                t.style.background = active ? 'rgba(56,189,248,0.18)' : 'none';
+                t.style.color = active ? '#7dd3fc' : 'rgba(255,255,255,0.6)';
+            });
+        };
+
+        btn.addEventListener('click', () => {
+            popup.classList.remove('hidden');
+            this._syncSettingsForm();
+        });
+
+        const closeBtn = document.getElementById('city-settings-close');
+        if (closeBtn) closeBtn.addEventListener('click', () => popup.classList.add('hidden'));
+
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) popup.classList.add('hidden');
+        });
+
+        document.querySelectorAll('.city-settings-tab').forEach(t => {
+            t.addEventListener('click', () => showTab(t.dataset.tab));
+        });
+
+        const saveBtn = document.getElementById('city-settings-save');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                const sel = document.querySelector('input[name="city-zoom"]:checked');
+                if (sel) {
+                    const v = parseFloat(sel.value);
+                    if (Number.isFinite(v) && v > 0 && this.cameraZoom !== v) {
+                        this.cameraZoom = v;
+                        localStorage.setItem('pokefury_camera_zoom', String(v));
+                        this.resizeCanvas();
+                    }
+                }
+                const msg = document.getElementById('city-settings-save-msg');
+                if (msg) {
+                    msg.style.opacity = '1';
+                    clearTimeout(this._saveMsgTimer);
+                    this._saveMsgTimer = setTimeout(() => { msg.style.opacity = '0'; }, 1600);
+                }
+            });
+        }
+
+        const musicSlider = document.getElementById('city-settings-music-volume');
+        if (musicSlider) {
+            musicSlider.addEventListener('input', () => {
+                const v = parseInt(musicSlider.value, 10) / 100;
+                const game = window.pokefury;
+                if (game && game.music) game.music.setVolume(v);
+            });
+        }
+
+        const sfxSlider = document.getElementById('city-settings-sfx-volume');
+        if (sfxSlider) {
+            sfxSlider.addEventListener('input', () => {
+                const v = parseInt(sfxSlider.value, 10) / 100;
+                localStorage.setItem('pokefury_sfx_volume', String(v));
+                const game = window.pokefury;
+                if (game) game.sfxVolume = v;
+            });
+        }
+    }
+
+    _syncSettingsForm() {
+        document.querySelectorAll('.city-zoom-opt').forEach(l => {
+            const r = l.querySelector('input[name="city-zoom"]');
+            if (!r) return;
+            const on = Math.abs(parseFloat(r.value) - this.cameraZoom) < 0.01;
+            r.checked = on;
+            l.style.borderColor = on ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.14)';
+            l.style.background = on ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.04)';
+            const label = l.querySelector('span');
+            if (label && on) label.style.color = '#7dd3fc';
+        });
+        const game = window.pokefury;
+        const ms = document.getElementById('city-settings-music-volume');
+        if (ms && game && game.music) ms.value = Math.round(game.music.volume * 100);
+        const ss = document.getElementById('city-settings-sfx-volume');
+        if (ss) ss.value = Math.round(parseFloat(localStorage.getItem('pokefury_sfx_volume') || '0.8') * 100);
     }
 
     // ==================== SCANNER ====================
