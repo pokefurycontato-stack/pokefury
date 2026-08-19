@@ -7,8 +7,6 @@ const $$ = (sel) => document.querySelectorAll(sel);
 let battlePokemonContainer = null;
 const battlePokemonSprites = { player: null, enemy: null };
 const battlePokemonState = { player: null, enemy: null };
-let battleMessageInterval = null;
-let battleMessageResolve = null;
 let skipPlayerRender = false;
 let skipEnemyRender = false;
 let battlePositions = null;
@@ -449,65 +447,14 @@ export function setBattleLogVisible(visible) {
 
 export function showBattleMessage(message, autoHideMs = 0) {
     return new Promise(resolve => {
-        try {
-            const msgEl = $('#battle-message');
-            if (!msgEl) { resolve(); return; }
-            if (message) appendBattleLog(message);
-
-            // Quando a aba está em segundo plano, pula a animação de digitação
-            // para a batalha não congelar (browsers pausam setInterval/rAF).
-            if (document.hidden) {
-                msgEl.innerText = message;
-                msgEl.classList.add('visible');
-                resolve();
-                return;
-            }
-
-            if (battleMessageInterval) {
-                clearInterval(battleMessageInterval);
-                battleMessageInterval = null;
-            }
-            if (battleMessageResolve) {
-                battleMessageResolve();
-                battleMessageResolve = null;
-            }
-
-            if (!message) { resolve(); return; }
-
-            msgEl.classList.remove('visible');
-
-            let i = 0;
-            const fullText = String(message);
-            const charDelay = Math.round(25 / _battleSpeedMultiplier);
-            battleMessageInterval = setInterval(() => {
-                try {
-                    if (i < fullText.length) {
-                        i++;
-                        msgEl.innerText = fullText.substring(0, i);
-                        if (i === 1) msgEl.classList.add('visible');
-                    } else {
-                        clearInterval(battleMessageInterval);
-                        battleMessageInterval = null;
-                        const waitMs = autoHideMs > 0 ? Math.round(autoHideMs / _battleSpeedMultiplier) : Math.round(600 / _battleSpeedMultiplier);
-                        if (autoHideMs > 0) {
-                            setTimeout(() => {
-                                msgEl.classList.remove('visible');
-                                setTimeout(resolve, Math.round(300 / _battleSpeedMultiplier));
-                            }, waitMs);
-                        } else {
-                            setTimeout(resolve, waitMs);
-                        }
-                    }
-                } catch (e) {
-                    clearInterval(battleMessageInterval);
-                    battleMessageInterval = null;
-                    resolve();
-                }
-            }, charDelay);
-            battleMessageResolve = resolve;
-        } catch (e) {
-            resolve();
-        }
+        if (!message) { resolve(); return; }
+        appendBattleLog(message);
+        if (document.hidden) { resolve(); return; }
+        const speed = Math.max(0.1, _battleSpeedMultiplier);
+        const typingMs = Math.round(String(message).length * 25 / speed);
+        const pauseMs = autoHideMs > 0 ? Math.round(autoHideMs / speed) : Math.round(600 / speed);
+        const extraMs = autoHideMs > 0 ? Math.round(300 / speed) : 0;
+        setTimeout(resolve, typingMs + pauseMs + extraMs);
     });
 }
 
@@ -996,10 +943,6 @@ function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {
 }
 
 export function hideBattlePokemonSprites() {
-    if (battleMessageInterval) {
-        clearInterval(battleMessageInterval);
-        battleMessageInterval = null;
-    }
     if (battlePokemonSprites.player) {
         battlePokemonSprites.player.style.display = 'none';
         battlePokemonSprites.player.remove();
