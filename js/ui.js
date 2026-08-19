@@ -487,7 +487,7 @@ export function showMoveSelection(moves, onSelect, onCancel = null) {
 
     moveButtons.innerHTML = '';
     // Posiciona o painel logo acima do menu de acoes (mede a altura do menu antes de esconder)
-    moveSelection.style.bottom = ((battleActions.offsetHeight || 0) + 18) + 'px';
+    moveSelection.style.bottom = (Math.max(0, (battleActions.offsetHeight || 0) * 0.5) + 10) + 'px';
     battleActions.classList.add('hidden');
     moveSelection.classList.remove('hidden');
 
@@ -985,7 +985,7 @@ export function showBagSelection(items, onSelect, onCancel = null) {
 
     moveButtons.innerHTML = '';
     // Posiciona o painel logo acima do menu de acoes (mede a altura do menu antes de esconder)
-    moveSelection.style.bottom = ((battleActions.offsetHeight || 0) + 18) + 'px';
+    moveSelection.style.bottom = (Math.max(0, (battleActions.offsetHeight || 0) * 0.5) + 10) + 'px';
     battleActions.classList.add('hidden');
     moveSelection.classList.remove('hidden');
 

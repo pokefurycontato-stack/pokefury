@@ -792,7 +792,7 @@ body {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    bottom: 155px;
+    bottom: 80px;
     width: 300px;
     max-width: 48%;
     display: flex;
