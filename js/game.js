@@ -8731,6 +8731,7 @@ if (myPokemon) {
             this.typeEffects._resize();
         }
         if (pvpFullscreen) pvpFullscreen.remove();
+        hideBattlePokemonSprites();
 
         if (canvas) {
             canvas.style.position = 'absolute';
