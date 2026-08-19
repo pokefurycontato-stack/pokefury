@@ -714,7 +714,7 @@ body {
 
 .player-hp-box {
     position: absolute;
-    bottom: 25px;
+    bottom: 55px;
     left: 90px;
     background: rgba(0,0,0,0.85);
     backdrop-filter: blur(10px);
