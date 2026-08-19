@@ -2127,6 +2127,9 @@ body {
 #weather-label.active {
     opacity: 1;
 }
+#pvp-fullscreen #weather-label {
+    top: 42px;
+}
 #weather-label.weather-rain {
     color: #7ec8e3;
     background: rgba(30,80,120,0.7);
