@@ -198,7 +198,7 @@ class PokeFuryGame {
     showToast(msg, type = 'info') {
         const toast = document.createElement('div');
         const colors = { success: '#4caf50', error: '#f44336', info: '#2196f3', warning: '#ff9800' };
-        toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;padding:12px 20px;background:${colors[type] || colors.info};color:#fff;border-radius:8px;font-size:13px;font-weight:600;font-family:Inter,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:350px;`;
+        toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:200000;padding:12px 20px;background:${colors[type] || colors.info};color:#fff;border-radius:8px;font-size:13px;font-weight:600;font-family:Inter,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:350px;`;
         toast.textContent = msg;
         document.body.appendChild(toast);
         setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; }, 2500);
@@ -3274,6 +3274,7 @@ class PokeFuryGame {
                 <div style="color:#fff;font-size:15px;font-weight:800;">📊 Barras de vida por fundo de batalha</div>
                 <div style="color:rgba(255,255,255,0.45);font-size:11px;">Escolha um fundo para arrastar a posição das barras (jogador + inimigo) e salvar para todos</div>
                 <div style="flex:1"></div>
+                <span id="bbp-status" style="color:#4caf50;font-size:12px;font-weight:700;"></span>
                 <button id="bbp-close" style="padding:7px 16px;background:rgba(244,67,54,0.85);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Fechar</button>
             </div>
             <div id="bbp-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:16px;align-content:start;"></div>
@@ -3304,6 +3305,8 @@ class PokeFuryGame {
                 card.onmouseleave = () => { card.style.borderColor = 'rgba(255,255,255,0.12)'; card.style.transform = 'scale(1)'; };
                 const bgUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bg.name}`;
                 card.onclick = () => {
+                    const status = overlay.querySelector('#bbp-status');
+                    if (status) status.textContent = '';
                     overlay.style.display = 'none';
                     this.openBattleBarEditor(bgUrl, bg.name, overlay);
                 };
@@ -3415,6 +3418,12 @@ class PokeFuryGame {
                     this.battleBarSettings = { player_left: pLeft, player_bottom: pBottom, enemy_right: eRight, enemy_top: eTop };
                     this.applyBattleBarSettings();
                 }
+                if (pickerOverlay) {
+                    pickerOverlay.style.display = '';
+                    const status = pickerOverlay.querySelector('#bbp-status');
+                    if (status) status.textContent = '✓ Posição salva para ' + bgName + '!';
+                }
+                overlay.remove();
                 this.showToast(`Posição salva para ${bgName}!`, 'success');
             } catch (err) {
                 this.showToast('Erro ao salvar: ' + (err?.message || 'desconhecido'), 'error');
