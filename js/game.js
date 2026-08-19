@@ -3,7 +3,7 @@ import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTur
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import { getEffectiveMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd, activateTerastal } from './battle-mechanics.js';
 import {
-    showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
+    showScreen, preloadBattleSprites, preloadBattleBgImage, isBattleBgCached, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
@@ -8009,6 +8009,17 @@ openEventsPanel() {
         if (LS) LS.setProgress(85);
 
         this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
+
+        // Garante 100% de carregamento antes de revelar a batalha: fundo + sprites.
+        if (this.currentBattleBg) {
+            await preloadBattleBgImage(this.currentBattleBg);
+        }
+        if (LS) LS.setProgress(90);
+        if (this.pvpBattle.visibleMyActivePokemon && this.pvpBattle.enemyActivePokemon) {
+            await preloadBattleSprites(this.pvpBattle.visibleMyActivePokemon, this.pvpBattle.enemyActivePokemon);
+        }
+        if (LS) LS.setProgress(95);
+
         await this.showPVPBattleUI();
         try {
             await this.pvpBattle.start();
@@ -8072,8 +8083,9 @@ openEventsPanel() {
         }
 
         const clip = this.getBattleClipRect();
-        if (this.currentBattleBg && this.ctx && this.canvas) {
-            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
+        if (this.ctx && this.canvas) {
+            console.log('[PVP] bg:', this.currentBattleBg, '| cached:', this.currentBattleBg ? isBattleBgCached(this.currentBattleBg) : false);
+            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg || null, clip);
         }
 
         const pvpUI = document.createElement('div');
@@ -8107,7 +8119,7 @@ openEventsPanel() {
                     <button id="pvp-switch-btn" style="padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🔄 Trocar</button>
                     <button id="pvp-forfeit-btn" style="padding:8px 20px;background:rgba(244,67,54,0.2);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🏳️ Desistir</button>
                 </div>
-                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;pointer-events:auto;"></div>
+                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;grid-template-columns:1fr 1fr;gap:4px;pointer-events:auto;"></div>
         `;
         pvpFullscreen.appendChild(pvpUI);
 
@@ -8355,9 +8367,9 @@ openEventsPanel() {
             if (teraBtn) teraBtn.disabled = true;
         }
 
-        if (this.currentBattleBg && this.ctx && this.canvas) {
+        if (this.ctx && this.canvas) {
             const clip = this.getBattleClipRect();
-            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
+            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg || null, clip);
         }
     }
 

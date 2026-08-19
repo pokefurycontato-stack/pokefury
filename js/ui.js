@@ -661,16 +661,26 @@ const bgCache = new Map();
 const videoCache = new Map();
 let currentBattleVideo = null;
 
+export function isBattleBgCached(url) {
+    if (!url) return false;
+    const img = bgCache.get(url);
+    return !!(img && img.complete && img.naturalWidth > 0);
+}
+
 export function preloadBattleBgImage(url) {
     return new Promise((resolve) => {
         if (!url) { resolve(); return; }
         if (/\.(mp4|webm|ogg)$/i.test(url)) { resolve(); return; }
         let img = bgCache.get(url);
-        if (img && img.complete && img.naturalWidth > 0) { loadBattleMask(url).then(resolve); return; }
+        if (img && img.complete && img.naturalWidth > 0) {
+            loadBattleMask(url).catch(() => {});
+            resolve();
+            return;
+        }
         img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => { bgCache.set(url, img); loadBattleMask(url).then(resolve); };
-        img.onerror = () => { loadBattleMask(url).then(resolve); };
+        img.onload = () => { bgCache.set(url, img); loadBattleMask(url).catch(() => {}); resolve(); };
+        img.onerror = () => { loadBattleMask(url).catch(() => {}); resolve(); };
         img.src = url;
     });
 }
