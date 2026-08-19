@@ -1387,11 +1387,11 @@ class CityScreen {
                 isShiny = (typeof getShinyChance === 'function') ? (Math.random() < (1 / getShinyChance())) : false;
             }
 
-            const spriteUrl = serverSprite || ((window.PokeAPI && encounter.pokemon_id)
-                ? (isShiny
-                    ? `${window.PokeAPI.supabaseStorageUrl}/animated-front-shiny/${encounter.pokemon_id}.gif`
-                    : window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id))
-                : (encounter.sprite_url || null));
+            const spriteUrl = (isShiny && window.PokeAPI && encounter.pokemon_id)
+                ? `${window.PokeAPI.supabaseStorageUrl}/animated-front-shiny/${encounter.pokemon_id}.gif`
+                : (serverSprite || ((window.PokeAPI && encounter.pokemon_id)
+                    ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id)
+                    : (encounter.sprite_url || null)));
             const el = document.createElement('img');
             el.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;display:none;';
             if (spriteUrl) el.src = spriteUrl;
@@ -1511,11 +1511,11 @@ class CityScreen {
             if (!isShiny) {
                 isShiny = (typeof getShinyChance === 'function') ? (Math.random() < (1 / getShinyChance())) : false;
             }
-            const spriteUrl = serverSprite || ((window.PokeAPI && encounter.pokemon_id)
-                ? (isShiny
-                    ? `${window.PokeAPI.supabaseStorageUrl}/animated-front-shiny/${encounter.pokemon_id}.gif`
-                    : window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id))
-                : (encounter.sprite_url || null));
+            const spriteUrl = (isShiny && window.PokeAPI && encounter.pokemon_id)
+                ? `${window.PokeAPI.supabaseStorageUrl}/animated-front-shiny/${encounter.pokemon_id}.gif`
+                : (serverSprite || ((window.PokeAPI && encounter.pokemon_id)
+                    ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id)
+                    : (encounter.sprite_url || null)));
             p.isShiny = isShiny;
             p.spriteUrl = spriteUrl;
             if (p._el && spriteUrl) p._el.src = spriteUrl;
