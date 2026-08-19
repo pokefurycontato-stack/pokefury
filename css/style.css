@@ -835,8 +835,7 @@ body {
     gap: 4px;
     padding: 8px;
     box-sizing: border-box;
-    background: rgba(6, 10, 20, 0.78);
-    backdrop-filter: blur(10px);
+    background: #0a101d;
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
     box-shadow: 0 6px 24px rgba(0,0,0,0.45);
@@ -875,8 +874,7 @@ body {
     gap: 4px;
     padding: 8px;
     box-sizing: border-box;
-    background: rgba(6, 10, 20, 0.78);
-    backdrop-filter: blur(10px);
+    background: #0a101d;
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
     box-shadow: 0 6px 24px rgba(0,0,0,0.45);
@@ -907,7 +905,6 @@ body {
 .move-btn:hover {
     background: rgba(233,69,96,0.25);
     border-color: #e94560;
-    transform: scale(1.02);
 }
 .move-btn .move-name {
     flex: 1;
