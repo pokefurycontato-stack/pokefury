@@ -93,17 +93,22 @@ export class PVPBattle {
 
     async start() {
         await this.syncInitialState();
+        const entryLogs = [
+            ...processEntryAbilities(this.myActivePokemon, this.enemyActivePokemon, this.battleState),
+            ...processEntryAbilities(this.enemyActivePokemon, this.myActivePokemon, this.battleState)
+        ];
+        this.game.addPVPBattleLog?.(entryLogs);
+        this.syncBattleWeather();
         if (this.challenge.challenger_id === this.game.currentCharacterId) {
-            const entryLogs = [
-                ...processEntryAbilities(this.myActivePokemon, this.enemyActivePokemon, this.battleState),
-                ...processEntryAbilities(this.enemyActivePokemon, this.myActivePokemon, this.battleState)
-            ];
             await this.persistReadyState();
-            this.game.addPVPBattleLog?.(entryLogs);
         }
         this.subscribeToEnemyActions();
         this.startFallbackPolling();
         this.onStateUpdate?.();
+    }
+
+    syncBattleWeather() {
+        if (this.game?.syncBattleWeather) this.game.syncBattleWeather(this.battleState?.weather || null);
     }
 
     async syncInitialState() {
@@ -171,6 +176,7 @@ export class PVPBattle {
             if (state.player_team.battleState) this.battleState = { ...this.battleState, ...state.player_team.battleState };
             if (state.player_team.fieldEffects) this.enemyFieldEffects = { ...this.enemyFieldEffects, ...state.player_team.fieldEffects };
             this.enemyTeam.forEach(p => { p._teamEffects = this.enemyFieldEffects; });
+            this.syncBattleWeather();
         }
         await this.tryResolveRound();
         this.onStateUpdate?.();
@@ -388,9 +394,29 @@ export class PVPBattle {
             }
 
             if (action.action === 'switch') {
+                const team = isChallenger ? this.myTeam : this.enemyTeam;
+                const outgoing = team[isChallenger ? this.myIndex : this.enemyIndex];
+                const outgoingAbility = (outgoing?.currentAbilityName || '').toLowerCase();
+                if (outgoingAbility === 'regenerator') {
+                    outgoing.currentHp = Math.min(outgoing.stats.hp, outgoing.currentHp + Math.floor(outgoing.stats.hp / 3));
+                    result.logs.push(`${outgoing.name} recuperou HP com Regenerator!`);
+                }
+                if (outgoingAbility === 'natural cure') {
+                    outgoing.statusEffect = null;
+                    result.logs.push(`${outgoing.name} foi curado por Natural Cure!`);
+                }
+                clearChoiceLock(outgoing);
                 if (isChallenger) this.myIndex = action.newIndex;
                 else this.enemyIndex = action.newIndex;
                 result.logs.push(`${sideName} enviou ${isChallenger ? this.myActivePokemon.name : this.enemyActivePokemon.name}!`);
+                const incoming = isChallenger ? this.myActivePokemon : this.enemyActivePokemon;
+                const fieldEffects = isChallenger ? this.myFieldEffects : this.enemyFieldEffects;
+                result.logs.push(...processEntryHazards(incoming, fieldEffects, isGrounded(incoming)));
+                result.logs.push(...processEntryAbilities(
+                    incoming,
+                    isChallenger ? this.enemyActivePokemon : this.myActivePokemon,
+                    this.battleState
+                ));
                 continue;
             }
             if (action.action !== 'attack' || defender.currentHp <= 0) continue;
@@ -530,6 +556,7 @@ export class PVPBattle {
         this.teraUsed = isChallenger ? !!payload.challengerTeraUsed : !!payload.challengedTeraUsed;
         this.enemyTeraUsed = isChallenger ? !!payload.challengedTeraUsed : !!payload.challengerTeraUsed;
         this.battleState = { ...this.battleState, ...(payload.battleState || {}) };
+        this.syncBattleWeather();
         const myFieldEffects = isChallenger ? payload.challengerFieldEffects : payload.challengedFieldEffects;
         const enemyFieldEffects = isChallenger ? payload.challengedFieldEffects : payload.challengerFieldEffects;
         if (myFieldEffects) this.myFieldEffects = { ...this.myFieldEffects, ...myFieldEffects };

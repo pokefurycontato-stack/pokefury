@@ -1336,6 +1336,14 @@ class PokeFuryGame {
                 updateBattleUI(this.playerTeam, this.enemyTeam);
                 await this.playPVPEntrance('player', switchedPokemon);
 
+                const switchEntryMsgs = processEntryAbilities(switchedPokemon, enemyPokemon, this._battleState);
+                for (const msg of switchEntryMsgs) {
+                    await showBattleMessage(msg);
+                }
+                if (this.weatherAnim && this._battleState) {
+                    this.weatherAnim.setWeather(this._battleState.weather);
+                }
+
                 await this.enemyTurn();
             } catch (error) {
                 console.error('[Battle] Switch error:', error);
@@ -8106,6 +8114,12 @@ openEventsPanel() {
         setBattleBgViaDom(true);
         document.body.appendChild(pvpFullscreen);
 
+        const weatherWrap = document.getElementById('weather-canvas-wrap');
+        if (weatherWrap) {
+            pvpFullscreen.appendChild(weatherWrap);
+            if (this.weatherAnim) this.weatherAnim._resize();
+        }
+
         const canvas = document.getElementById('game-canvas');
         canvas.width = VIRTUAL_W;
         canvas.height = VIRTUAL_H;
@@ -8714,6 +8728,11 @@ if (myPokemon) {
         }
     }
 
+    syncBattleWeather(weather) {
+        if (!this.weatherAnim) this.weatherAnim = new WeatherAnimations();
+        this.weatherAnim.setWeather(weather || null);
+    }
+
     endPVPBattle(result) {
         this.state = 'overworld';
         this.pvpBattle = null;
@@ -8732,6 +8751,15 @@ if (myPokemon) {
         }
         if (pvpFullscreen) pvpFullscreen.remove();
         hideBattlePokemonSprites();
+        const battleScreen = document.getElementById('battle-screen');
+        const weatherWrap = document.getElementById('weather-canvas-wrap');
+        if (weatherWrap && battleScreen && weatherWrap.parentElement !== battleScreen) {
+            battleScreen.appendChild(weatherWrap);
+        }
+        if (this.weatherAnim) {
+            this.weatherAnim.setWeather(null);
+            this.weatherAnim._resize();
+        }
 
         if (canvas) {
             canvas.style.position = 'absolute';

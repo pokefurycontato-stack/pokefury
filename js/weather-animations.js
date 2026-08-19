@@ -64,6 +64,14 @@ export class WeatherAnimations {
 
     _resize() {
         if (!this.canvas) return;
+        const pvpFullscreen = document.getElementById('pvp-fullscreen');
+        const wildFullscreen = document.getElementById('wild-fullscreen');
+        const host = pvpFullscreen || wildFullscreen;
+        if (host) {
+            this.canvas.width = host.clientWidth || window.innerWidth;
+            this.canvas.height = host.clientHeight || window.innerHeight;
+            return;
+        }
         const battleScreen = document.getElementById('battle-screen');
         if (battleScreen) {
             this.canvas.width = battleScreen.offsetWidth;
