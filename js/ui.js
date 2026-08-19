@@ -806,6 +806,26 @@ function getBattleSpriteUrl(pokemon, isPlayer) {
         if (isShiny) return shinyUrls.back || shinyUrls.front || spriteUrls.back || spriteUrls.front;
         return spriteUrls.back || spriteUrls.front;
     } else {
+        if (document.getElementById('pvp-fullscreen') && window.PokeAPI && pokemon.id) {
+            return isShiny
+                ? window.PokeAPI.getAnimatedFrontShinyUrl(pokemon.id)
+                : window.PokeAPI.getAnimatedFrontUrl(pokemon.id);
+        }
+        if (isShiny) return shinyUrls.front || shinyUrls.home || shinyUrls.official || spriteUrls.front;
+        return spriteUrls.front || spriteUrls.home || spriteUrls.official;
+    }
+}
+
+function getStaticBattleSpriteUrl(pokemon, isPlayer) {
+    if (!pokemon) return null;
+    const spriteUrls = pokemon.spriteUrls || {};
+    const shinyUrls = pokemon.shinySpriteUrls || {};
+    const isShiny = pokemon.isShiny;
+
+    if (isPlayer) {
+        if (isShiny) return shinyUrls.back || shinyUrls.front || spriteUrls.back || spriteUrls.front;
+        return spriteUrls.back || spriteUrls.front;
+    } else {
         if (isShiny) return shinyUrls.front || shinyUrls.home || shinyUrls.official || spriteUrls.front;
         return spriteUrls.front || spriteUrls.home || spriteUrls.official;
     }
@@ -836,6 +856,10 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     }
 
     if (battlePokemonState[side] !== stateKey) {
+        const fallbackUrl = getStaticBattleSpriteUrl(pokemon, isPlayer);
+        el.onerror = () => {
+            if (fallbackUrl && el.src !== fallbackUrl) el.src = fallbackUrl;
+        };
         el.src = url;
         battlePokemonState[side] = stateKey;
     }
