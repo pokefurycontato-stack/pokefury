@@ -471,6 +471,7 @@ class CityScreen {
         this.players = {};
         if (this.pokemonFollowEl) { this.pokemonFollowEl.remove(); this.pokemonFollowEl = null; }
         if (this.pokemonFollowShadowEl) { this.pokemonFollowShadowEl.remove(); this.pokemonFollowShadowEl = null; }
+        if (this.pokemonFollowShinyEl) { this.pokemonFollowShinyEl.remove(); this.pokemonFollowShinyEl = null; }
         if (this.pokemonFollowGrassEl) { this.pokemonFollowGrassEl.remove(); this.pokemonFollowGrassEl = null; }
         for (const uid of Object.keys(this._otherFollowerEls || {})) this._removeOtherFollowerEls(uid);
         this._otherFollowerEls = {};
@@ -480,6 +481,7 @@ class CityScreen {
         for (const p of (this.wildPokemon || [])) {
             if (p._el) { try { p._el.remove(); } catch (e) {} }
             if (p._grassEl) { try { p._grassEl.remove(); } catch (e) {} }
+            if (p._shinyEl) { try { p._shinyEl.remove(); } catch (e) {} }
         }
         this.wildPokemon = [];
         if (this._nightOverlayEl) { this._nightOverlayEl.remove(); this._nightOverlayEl = null; }
@@ -1330,6 +1332,7 @@ class CityScreen {
         for (const p of (this.wildPokemon || [])) {
             if (p._el) { try { p._el.remove(); } catch (e) {} }
             if (p._grassEl) { try { p._grassEl.remove(); } catch (e) {} }
+            if (p._shinyEl) { try { p._shinyEl.remove(); } catch (e) {} }
         }
         this.wildPokemon = [];
         if (!this.spawnPoints || this.spawnPoints.length === 0) return;
@@ -1399,6 +1402,10 @@ class CityScreen {
             const grassEl = document.createElement('canvas');
             grassEl.style.cssText = 'position:absolute;pointer-events:none;';
             wrap.appendChild(grassEl);
+            // Container de brilho/estrelinhas do shiny (sempre criado; só aparece
+            // quando isShiny) para acompanhar o pokemon no overworld.
+            const shinyEl = window.createShinyFxElement ? window.createShinyFxElement() : null;
+            if (shinyEl) wrap.appendChild(shinyEl);
             this.wildPokemon.push({
                 point,
                 biome,
@@ -1407,6 +1414,7 @@ class CityScreen {
                 isShiny,
                 _el: el,
                 _grassEl: grassEl,
+                _shinyEl: shinyEl,
                 pos_x: point.pos_x,
                 pos_y: point.pos_y,
                 baseX: point.pos_x,
@@ -1570,6 +1578,7 @@ class CityScreen {
             p.respawnTimer = 20;
             if (p._el) p._el.style.display = 'none';
             if (p._grassEl) p._grassEl.style.display = 'none';
+            if (p._shinyEl) p._shinyEl.style.display = 'none';
         }
     }
 
@@ -1608,6 +1617,7 @@ class CityScreen {
             if (sx + w < -50 || sx > this.canvas.width + 50 || sy + h < -50 || sy > this.canvas.height + 50) {
                 el.style.display = 'none';
                 if (p._grassEl) p._grassEl.style.display = 'none';
+                if (p._shinyEl) p._shinyEl.style.display = 'none';
                 continue;
             }
             el.style.display = 'block';
@@ -1615,6 +1625,20 @@ class CityScreen {
             el.style.top = (offsetY + (sy - h) * scaleY) + 'px';
             el.style.width = (w * scaleX) + 'px';
             el.style.height = (h * scaleY) + 'px';
+
+            // Brilho/estrelinhas ao redor de pokemon shiny no overworld
+            if (p._shinyEl) {
+                if (p.isShiny) {
+                    p._shinyEl.style.display = 'block';
+                    p._shinyEl.style.zIndex = z;
+                    p._shinyEl.style.left = (offsetX + (sx - w / 2) * scaleX) + 'px';
+                    p._shinyEl.style.top = (offsetY + (sy - h) * scaleY) + 'px';
+                    p._shinyEl.style.width = (w * scaleX) + 'px';
+                    p._shinyEl.style.height = (h * scaleY) + 'px';
+                } else {
+                    p._shinyEl.style.display = 'none';
+                }
+            }
 
             // Grama/agua na frente do pokemon selvagem (recorte alinhado da mesma textura)
             if (p._grassEl) {
@@ -2165,6 +2189,18 @@ class CityScreen {
                     shadowEl.style.cssText = 'position:absolute;left:50%;bottom:1px;transform:translateX(-50%);width:58%;height:9px;border-radius:50%;background:rgba(0,0,0,0.38);filter:blur(1.5px);';
                     wrap.appendChild(shadowEl);
                 }
+                // Brilho/estrelinhas de pokemon shiny no rank (pokemon, nao treinador)
+                el._shinyFx = null;
+                if (!isTrainer && window.createShinyFxElement) {
+                    const sfx = window.createShinyFxElement();
+                    sfx.style.left = '0px';
+                    sfx.style.top = '0px';
+                    sfx.style.width = '100%';
+                    sfx.style.height = '100%';
+                    sfx.style.zIndex = '3';
+                    wrap.appendChild(sfx);
+                    el._shinyFx = sfx;
+                }
                 const line1 = document.createElement('div');
                 line1.style.cssText = 'color:#fff;font:bold 11px Inter,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,0.9);white-space:nowrap;';
                 const line2 = document.createElement('div');
@@ -2203,6 +2239,11 @@ class CityScreen {
             }
             el._wrap.style.width = wpx + 'px';
             el._wrap.style.height = hpx + 'px';
+            // Brilho/estrelinhas shiny em pokemon do rank
+            if (el._shinyFx) {
+                const shiny = sp.rank_type !== 'trainer' && entry && entry.is_shiny;
+                el._shinyFx.style.display = shiny ? 'block' : 'none';
+            }
             if (sp.rank_type === 'trainer') {
                 el._img.style.width = (wpx * 4) + 'px';
                 el._img.style.height = (hpx * 4) + 'px';
@@ -3456,6 +3497,7 @@ class CityScreen {
         this.pokemonFollowStaticUrl = staticFront || null;
         this.pokemonFollowSpriteUrl = animUrl || staticFront;
         this.pokemonFollowBackSpriteUrl = pokemon.spriteUrls?.back || null;
+        this.pokemonFollowShiny = !!(pokemon.isShiny || pokemon.shiny);
 
         if (!this.pokemonFollowEl) {
             const wrap = this.canvas.parentElement;
@@ -3476,6 +3518,9 @@ class CityScreen {
                 }
             };
             wrap.appendChild(this.pokemonFollowEl);
+            // Brilho/estrelinhas do follower (só aparece quando shiny)
+            this.pokemonFollowShinyEl = window.createShinyFxElement ? window.createShinyFxElement() : null;
+            if (this.pokemonFollowShinyEl) wrap.appendChild(this.pokemonFollowShinyEl);
         }
         this.pokemonFollowEl.dataset.fallback = this.pokemonFollowStaticUrl || '';
         delete this.pokemonFollowEl.dataset.fallbackUsed;
@@ -3667,6 +3712,16 @@ class CityScreen {
         const z = (3 + 2 * f) + '';
         this.pokemonFollowEl.style.zIndex = z;
         if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.zIndex = z;
+
+        // Brilho/estrelinhas shiny ao redor do follower
+        if (this.pokemonFollowShinyEl) {
+            if (this.pokemonFollowShiny) {
+                window.positionShinyElement(this.pokemonFollowShinyEl, this.pokemonFollowEl);
+                this.pokemonFollowShinyEl.style.zIndex = z;
+            } else {
+                this.pokemonFollowShinyEl.style.display = 'none';
+            }
+        }
 
         // Dia/noite: o overlay de noite vive em um canvas acima de tudo (z 25),
         // cobrindo TODAS as entidades DOM (followers e selvagens) com a mesma cor,

@@ -609,7 +609,47 @@ export function getPokemonSpriteAdjust(pokemonId) {
     if (id === 23) return { scaleX: 0.5, scaleY: 0.5 };    // Ekans: metade do tamanho
     return null;
 }
-if (typeof window !== 'undefined') { window.getPokemonScale = getPokemonScale; window.getPokemonSpriteAdjust = getPokemonSpriteAdjust; }
+
+// ===== Efeito de brilho/estrelinhas de pokemon shiny (reutilizado em batalha,
+// overworld, follower, rank etc.) =====
+// Cria o container DOM (.wild-shiny-fx) com as particulas de brilho.
+// glyphEvery: a cada N particulas usa um simbolo ✦; count: total de particulas.
+export function createShinyFxElement(glyphEvery = 3, count = 9) {
+    const fx = document.createElement('div');
+    fx.className = 'wild-shiny-fx';
+    fx.style.display = 'none';
+    for (let i = 0; i < count; i++) {
+        const s = document.createElement('span');
+        s.className = 'spark' + (i % glyphEvery === 0 ? ' glyph' : '');
+        s.style.setProperty('--s', (3 + (i % 3)) + 'px');
+        s.style.setProperty('--dx', ((i % 2 === 0 ? 1 : -1) * (16 + (i % 4) * 9)) + 'px');
+        s.style.setProperty('--dy', (-(14 + ((i * 3) % 5) * 8)) + 'px');
+        s.style.animationDelay = ((i % count) * 0.28) + 's';
+        fx.appendChild(s);
+    }
+    return fx;
+}
+
+// Espelha posicao/tamanho/zIndex do host <img>/elemento posicionado no fx,
+// seguindo o show/hide do host.
+export function positionShinyElement(fxEl, hostEl) {
+    if (!fxEl || !hostEl) return;
+    const hs = hostEl.style;
+    const shown = hs.display && hs.display !== 'none';
+    fxEl.style.display = shown ? 'block' : 'none';
+    fxEl.style.left = hs.left || '';
+    fxEl.style.top = hs.top || '';
+    fxEl.style.width = hs.width || '';
+    fxEl.style.height = hs.height || '';
+    if (hs.zIndex) fxEl.style.zIndex = hs.zIndex;
+}
+
+if (typeof window !== 'undefined') {
+    window.getPokemonScale = getPokemonScale;
+    window.getPokemonSpriteAdjust = getPokemonSpriteAdjust;
+    window.createShinyFxElement = createShinyFxElement;
+    window.positionShinyElement = positionShinyElement;
+}
 
 // Aplica as regras de sprite GLOBALMENTE: toda vez que um <img> com sprite de pokemon
 // for adicionado ao DOM (rank, perfil, PC, party, shiny, etc.), o ajuste é aplicado.

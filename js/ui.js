@@ -1,5 +1,5 @@
 import { TYPE_COLORS } from './data.js';
-import { getPokemonScale, getPokemonSpriteAdjust } from './utils.js';
+import { getPokemonScale, getPokemonSpriteAdjust, createShinyFxElement, positionShinyElement } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -7,6 +7,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 let battlePokemonContainer = null;
 const battlePokemonSprites = { player: null, enemy: null };
 const battlePokemonState = { player: null, enemy: null };
+const battlePokemonFx = { player: null, enemy: null };
 let skipPlayerRender = false;
 let skipEnemyRender = false;
 let battlePositions = null;
@@ -842,6 +843,7 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     let el = battlePokemonSprites[side];
     if (!url || !pokemon) {
         if (el) el.style.display = 'none';
+        if (battlePokemonFx[side]) battlePokemonFx[side].style.display = 'none';
         return;
     }
 
@@ -853,6 +855,11 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
         container.appendChild(el);
         battlePokemonSprites[side] = el;
         battlePokemonState[side] = null;
+        if (!battlePokemonFx[side]) {
+            const sfx = createShinyFxElement();
+            container.appendChild(sfx);
+            battlePokemonFx[side] = sfx;
+        }
     }
 
     if (battlePokemonState[side] !== stateKey) {
@@ -895,6 +902,17 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     el.dataset.x = x;
     el.dataset.y = y;
     el.dataset.w = maxDim;
+
+    // Brilho/estrelinhas shiny ao redor do sprite de batalha
+    const sfx = battlePokemonFx[side];
+    if (sfx) {
+        if (pokemon.isShiny) {
+            positionShinyElement(sfx, el);
+            sfx.style.zIndex = '5';
+        } else {
+            sfx.style.display = 'none';
+        }
+    }
 }
 
 export function positionHpBarsAboveSprites() {
@@ -977,6 +995,8 @@ export function hideBattlePokemonSprites() {
         battlePokemonSprites.enemy.remove();
         battlePokemonSprites.enemy = null;
     }
+    if (battlePokemonFx.player) { battlePokemonFx.player.remove(); battlePokemonFx.player = null; }
+    if (battlePokemonFx.enemy) { battlePokemonFx.enemy.remove(); battlePokemonFx.enemy = null; }
     battlePokemonState.player = null;
     battlePokemonState.enemy = null;
     if (battlePokemonContainer) {

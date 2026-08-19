@@ -3209,3 +3209,43 @@ body {
   z-index: 50;
 }
 .battle-type-ic:hover .battle-type-tip { display: flex; gap: 4px; align-items: center; }
+/* ===== Shiny wild pokemon sparkle effect (overworld) ===== */
+.wild-shiny-fx {
+    position: absolute;
+    pointer-events: none;
+    z-index: 4;
+    filter: drop-shadow(0 0 5px rgba(255,215,0,0.5)) drop-shadow(0 0 12px rgba(255,215,0,0.2));
+}
+.wild-shiny-fx .spark {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: var(--s, 5px);
+    height: var(--s, 5px);
+    margin-left: calc(var(--s, 5px) / -2);
+    margin-top: calc(var(--s, 5px) / -2);
+    border-radius: 50%;
+    background: radial-gradient(circle, #fffbe6 0%, #ffe9a3 35%, #ffd700 62%, rgba(255,215,0,0) 80%);
+    box-shadow: 0 0 6px rgba(255,215,0,0.9), 0 0 13px rgba(255,215,0,0.4);
+    opacity: 0;
+    animation: shinySparks 2.4s ease-out infinite;
+}
+.wild-shiny-fx .spark.glyph {
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    font-size: 10px;
+    line-height: 10px;
+    text-align: center;
+    color: #ffe08a;
+    text-shadow: 0 0 5px rgba(255,215,0,0.95), 0 0 11px rgba(255,215,0,0.5);
+}
+.wild-shiny-fx .spark.glyph::before {
+    content: "✦";
+}
+@keyframes shinySparks {
+    0%   { opacity: 0; transform: translate(0, 0) scale(0.1) rotate(0deg); }
+    22%  { opacity: 0.95; transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(1) rotate(14deg); }
+    58%  { opacity: 0.7; transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(0.95) rotate(34deg); }
+    100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(0.05) rotate(78deg); }
+}
