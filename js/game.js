@@ -8132,7 +8132,6 @@ openEventsPanel() {
         pvpUI.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;';
         pvpUI.innerHTML = `
                 <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);pointer-events:auto;">Sua vez!</div>
-                <div id="pvp-battle-log" style="position:absolute;left:50%;bottom:58px;transform:translateX(-50%);z-index:30;width:min(520px,80vw);max-height:116px;overflow-y:auto;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.68);color:rgba(255,255,255,.82);font-size:10px;line-height:1.45;font-family:Inter;pointer-events:none;"></div>
                 <div id="pvp-enemy-info" class="enemy-hp-box" style="z-index:30;pointer-events:auto;">
                     <div class="hp-trainer" id="pvp-enemy-name"></div>
                     <div class="hp-head">

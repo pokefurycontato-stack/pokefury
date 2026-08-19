@@ -29,6 +29,7 @@ export class PVPBattle {
         this.subscription = null;
         this.onStateUpdate = null;
         this.onBattleEnd = null;
+        this._fallbackTimer = null;
     }
 
     get myActivePokemon() { return this.myTeam[this.myIndex] || null; }
@@ -101,6 +102,7 @@ export class PVPBattle {
             this.game.addPVPBattleLog?.(entryLogs);
         }
         this.subscribeToEnemyActions();
+        this.startFallbackPolling();
         this.onStateUpdate?.();
     }
 
@@ -130,6 +132,27 @@ export class PVPBattle {
                 filter: `challenge_id=eq.${this.challenge.id}`
             }, payload => this.handleStateUpdate(payload.new))
             .subscribe();
+    }
+
+    startFallbackPolling() {
+        if (this._fallbackTimer) return;
+        this._fallbackTimer = setInterval(async () => {
+            try {
+                if (this.isFinished || (!this.pendingAction && this.phase !== 'switch')) return;
+                const { data: rows, error: readError } = await window.db.from('pvp_battle_state')
+                    .select('*').eq('challenge_id', this.challenge.id);
+                if (readError || !rows || rows.length < 2) return;
+                const challengerRow = rows.find(r => r.player_id === this.challenge.challenger_id);
+                if (!challengerRow) return;
+                if (challengerRow.last_action === 'resolved' && challengerRow.last_action_data) {
+                    await this.applyResolution(challengerRow.last_action_data);
+                } else if (this.challenge.challenger_id === this.game.currentCharacterId) {
+                    await this.tryResolveRound();
+                }
+            } catch (e) {
+                console.error('[PVP] Fallback polling error:', e);
+            }
+        }, 1500);
     }
 
     async handleStateUpdate(state) {
@@ -572,6 +595,7 @@ export class PVPBattle {
         if (this.isFinished) return;
         this.isFinished = true;
         this.subscription?.unsubscribe();
+        if (this._fallbackTimer) { clearInterval(this._fallbackTimer); this._fallbackTimer = null; }
 
         const { data: finishedChallenge } = await window.db.from('pvp_challenges').update({
             status: 'finished',
