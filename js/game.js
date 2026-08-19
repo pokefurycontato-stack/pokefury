@@ -8073,7 +8073,7 @@ openEventsPanel() {
         pvpFullscreen.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#000;';
         if (this.currentBattleBg) {
             pvpFullscreen.style.backgroundImage = `url("${this.currentBattleBg}")`;
-            pvpFullscreen.style.backgroundSize = 'cover';
+            pvpFullscreen.style.backgroundSize = 'contain';
             pvpFullscreen.style.backgroundPosition = 'center';
             pvpFullscreen.style.backgroundRepeat = 'no-repeat';
             console.log('[PVP] bg via DOM:', this.currentBattleBg);
