@@ -806,6 +806,69 @@ body {
 .battle-action-zone:hover {
     background: rgba(255,255,255,0.12);
 }
+#pvp-actions {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    max-width: 350px;
+    z-index: 30;
+    pointer-events: auto;
+}
+.battle-log-box {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 58px;
+    width: min(520px, 80vw);
+    max-height: 116px;
+    overflow-y: auto;
+    z-index: 35;
+    background: rgba(0, 0, 0, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #e8e8e8;
+    box-sizing: border-box;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+}
+.battle-log-box .battle-log-line {
+    padding: 1px 0;
+}
+#pvp-move-selection {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 80px;
+    width: 300px;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    box-sizing: border-box;
+    background: rgba(6, 10, 20, 0.78);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+    z-index: 40;
+    pointer-events: auto;
+}
+#pvp-move-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+#pvp-move-back {
+    margin-top: 4px;
+}
 .action-btn {
     padding: 14px 16px; border: none; border-radius: 12px;
     background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);

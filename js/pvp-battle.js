@@ -208,11 +208,17 @@ export class PVPBattle {
         if (this.phase === 'switch') {
             if (action === 'switch_ready' && this.needsForcedSwitch) return false;
             if (action === 'switch' && !this.needsForcedSwitch) return false;
+            if (action === 'use_item') return false;
         } else if (action === 'attack' && (!this.myActivePokemon || this.myActivePokemon.currentHp <= 0)) return false;
         if (action === 'switch') {
             const next = this.myTeam[data.newIndex];
             if (this.myActivePokemon?._rooted) return false;
             if (!next || data.newIndex === this.myIndex || next.currentHp <= 0) return false;
+        }
+        if (action === 'use_item') {
+            const target = this.myTeam[data.targetIndex];
+            if (!target || !data.item) return false;
+            if (this.needsForcedSwitch) return false;
         }
         if (action === 'attack' && data.tera && this.teraUsed) return false;
         if (action === 'attack') {
@@ -312,7 +318,7 @@ export class PVPBattle {
         const challengedMove = this.enemyActivePokemon?.moves.find(m => String(m.id) === String(challengedAction.moveId));
         const challengerSpeed = this.getEffectiveSpeed(this.myActivePokemon);
         const challengedSpeed = this.getEffectiveSpeed(this.enemyActivePokemon);
-        const priority = (action, move, pokemon) => action.action === 'switch' ? 6 : 1 + getEffectiveMovePriority(move, pokemon, this.battleState);
+        const priority = (action, move, pokemon) => (action.action === 'switch' || action.action === 'use_item') ? 6 : 1 + getEffectiveMovePriority(move, pokemon, this.battleState);
         const challengerPriority = priority(challengerAction, challengerMove, this.myActivePokemon);
         const challengedPriority = priority(challengedAction, challengedMove, this.enemyActivePokemon);
         const challengerFirst = challengerPriority !== challengedPriority
@@ -334,6 +340,25 @@ export class PVPBattle {
             const attacker = isChallenger ? this.myActivePokemon : this.enemyActivePokemon;
             const defender = isChallenger ? this.enemyActivePokemon : this.myActivePokemon;
             const sideName = isChallenger ? this.challenge.challenger_name : this.challenge.challenged_name;
+            if (action.action === 'use_item') {
+                const team = isChallenger ? this.myTeam : this.enemyTeam;
+                const target = team[action.targetIndex] || attacker;
+                const item = action.item || {};
+                if (item.subcategory === 'heal') {
+                    const heal = (item.effect === 'heal_full' || item.effect === 'heal_full_status') ? target.stats.hp : (Number(item.effect_value) || 0);
+                    target.currentHp = Math.min(target.stats.hp, target.currentHp + heal);
+                    if (item.effect === 'heal_full_status') target.statusEffect = null;
+                } else if (item.subcategory === 'status') {
+                    target.statusEffect = null;
+                } else if (item.subcategory === 'revive') {
+                    if (target.currentHp <= 0) {
+                        target.fainted = false;
+                        target.currentHp = Math.max(1, Math.round(target.stats.hp * (Number(item.effect_value) || 0.5)));
+                    }
+                }
+                result.logs.push(`${sideName} usou ${item.name || 'um item'} em ${target.name}!`);
+                continue;
+            }
             if (!attacker || attacker.currentHp <= 0) {
                 if (action.action === 'attack') result.logs.push(`${sideName} não pode agir porque seu Pokémon está fora de combate.`);
                 continue;

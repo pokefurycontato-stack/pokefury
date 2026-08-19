@@ -422,11 +422,30 @@ export function getBattleSpeed() {
     return _battleSpeedMultiplier;
 }
 
+export function appendBattleLog(line) {
+    const box = document.getElementById('battle-log-box');
+    if (!box || !line) return;
+    box.classList.remove('hidden');
+    const div = document.createElement('div');
+    div.className = 'battle-log-line';
+    div.textContent = line;
+    box.appendChild(div);
+    while (box.children.length > 32) box.removeChild(box.firstChild);
+    box.scrollTop = box.scrollHeight;
+}
+
+export function setBattleLogVisible(visible) {
+    document.querySelectorAll('.battle-log-box').forEach(box => {
+        box.classList.toggle('hidden', !visible);
+    });
+}
+
 export function showBattleMessage(message, autoHideMs = 0) {
     return new Promise(resolve => {
         try {
             const msgEl = $('#battle-message');
             if (!msgEl) { resolve(); return; }
+            if (message) appendBattleLog(message);
 
             // Quando a aba está em segundo plano, pula a animação de digitação
             // para a batalha não congelar (browsers pausam setInterval/rAF).
@@ -495,6 +514,7 @@ export function showMoveSelection(moves, onSelect, onCancel = null) {
     moveSelection.style.bottom = (Math.max(0, (battleActions.offsetHeight || 0) * 0.5) + 10) + 'px';
     battleActions.classList.add('hidden');
     moveSelection.classList.remove('hidden');
+    setBattleLogVisible(false);
 
     moves.forEach(move => {
         if (move.currentPp <= 0) return;
@@ -523,6 +543,7 @@ export function showMoveSelection(moves, onSelect, onCancel = null) {
 export function hideMoveSelection() {
     $('#move-selection').classList.add('hidden');
     $('#battle-actions').classList.remove('hidden');
+    setBattleLogVisible(true);
 }
 
 export function showSwitchPokemonSelection(team, activeIndex, onSelect, onCancel = null) {
@@ -1011,6 +1032,13 @@ export function initBattleUI(onFight, onBag, onSwitch, onRun) {
     let battleReady = false;
     setTimeout(() => { battleReady = true; }, 800);
 
+    const logBox = document.getElementById('battle-log-box');
+    if (logBox) {
+        logBox.innerHTML = '';
+        logBox.classList.add('hidden');
+    }
+    setBattleLogVisible(true);
+
     $$('.battle-action-zone[data-action]').forEach(zone => {
         zone.addEventListener('click', () => {
             if (!battleReady) return;
@@ -1033,6 +1061,7 @@ export function showBagSelection(items, onSelect, onCancel = null) {
     moveSelection.style.bottom = (Math.max(0, (battleActions.offsetHeight || 0) * 0.5) + 10) + 'px';
     battleActions.classList.add('hidden');
     moveSelection.classList.remove('hidden');
+    setBattleLogVisible(false);
 
     items.forEach(inv => {
         const item = inv.items;

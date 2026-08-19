@@ -7,7 +7,8 @@ import {
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites, formatHpText,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
-    showTargetSelection, VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride, positionHpBarsAboveSprites
+    showTargetSelection, VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride, positionHpBarsAboveSprites,
+    setBattleLogVisible
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js?v=20260816b';
@@ -8160,16 +8161,23 @@ openEventsPanel() {
                         <div class="hp-bar-text" id="pvp-my-hp-text"></div>
                     </div>
                 </div>
-                <div id="pvp-actions" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;pointer-events:auto;">
-                    <button id="pvp-fight-btn" style="padding:8px 20px;background:linear-gradient(135deg,#e94560,#c23152);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">⚔️ Lutar</button>
-                    <button id="pvp-tera-btn" style="padding:8px 14px;background:rgba(106,90,205,.25);border:1px solid rgba(147,112,219,.7);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">💎 Tera</button>
-                    <button id="pvp-switch-btn" style="padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🔄 Trocar</button>
-                    <button id="pvp-forfeit-btn" style="padding:8px 20px;background:rgba(244,67,54,0.2);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🏳️ Desistir</button>
+                <div id="pvp-battle-log" class="battle-log-box"></div>
+                <div id="pvp-actions">
+                    <img src="assets/botoesataque.png" class="battle-actions-img" draggable="false">
+                    <div class="battle-action-zone" data-pvp-action="fight" style="top:8%;left:3%;width:45%;height:42%"></div>
+                    <div class="battle-action-zone" data-pvp-action="bag" style="top:8%;right:3%;width:45%;height:42%"></div>
+                    <div class="battle-action-zone" data-pvp-action="switch" style="bottom:8%;left:3%;width:45%;height:42%"></div>
+                    <div class="battle-action-zone" data-pvp-action="forfeit" style="bottom:8%;right:3%;width:45%;height:42%"></div>
                 </div>
-                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;pointer-events:auto;"></div>
+                <button id="pvp-tera-btn" style="position:absolute;top:10px;left:270px;z-index:30;padding:4px 10px;background:rgba(106,90,205,.25);border:1px solid rgba(147,112,219,.7);border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter;backdrop-filter:blur(4px);pointer-events:auto;">💎 Tera</button>
+                <div id="pvp-move-selection" class="hidden">
+                    <div id="pvp-move-buttons"></div>
+                    <button id="pvp-move-back" class="action-btn small">VOLTAR</button>
+                </div>
         `;
         pvpFullscreen.appendChild(pvpUI);
 
+        this._pvpSubmenuOpen = false;
         await this.loadBattleBarSettings();
         positionHpBarsAboveSprites();
 
@@ -8320,8 +8328,10 @@ openEventsPanel() {
     addPVPBattleLog(lines) {
         const log = document.getElementById('pvp-battle-log');
         if (!log || !Array.isArray(lines)) return;
+        log.classList.remove('hidden');
         lines.filter(Boolean).forEach(line => {
             const entry = document.createElement('div');
+            entry.className = 'battle-log-line';
             entry.textContent = line;
             log.appendChild(entry);
         });
@@ -8367,41 +8377,32 @@ if (myPokemon) {
 
         const turnIndicator = document.getElementById('pvp-turn-indicator');
         const actions = document.getElementById('pvp-actions');
-        const fightBtn = document.getElementById('pvp-fight-btn');
         const teraBtn = document.getElementById('pvp-tera-btn');
-        const switchBtn = document.getElementById('pvp-switch-btn');
+        setBattleLogVisible(!this._pvpSubmenuOpen);
         if (battle.needsForcedSwitch && !battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Escolha o próximo Pokémon';
             turnIndicator.style.borderColor = '#ff9800';
             actions.style.opacity = '0';
             actions.style.pointerEvents = 'none';
-            if (fightBtn) fightBtn.disabled = true;
-            if (switchBtn) switchBtn.disabled = true;
-            if (teraBtn) teraBtn.disabled = true;
+            if (teraBtn) { teraBtn.disabled = true; teraBtn.style.opacity = '.45'; }
             this.openPVPSwitchSelector(true);
         } else if (battle.phase === 'switch' && !battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Aguardando a troca do oponente...';
             turnIndicator.style.borderColor = '#ff9800';
             actions.style.opacity = '0.5';
             actions.style.pointerEvents = 'none';
-            if (fightBtn) fightBtn.disabled = true;
-            if (switchBtn) switchBtn.disabled = true;
-            if (teraBtn) teraBtn.disabled = true;
+            if (teraBtn) { teraBtn.disabled = true; teraBtn.style.opacity = '.45'; }
         } else if (battle.pendingAction && !battle.isFinished) {
             turnIndicator.textContent = 'Ação enviada. Aguardando o oponente...';
             turnIndicator.style.borderColor = '#ff9800';
             actions.style.opacity = '0.5';
             actions.style.pointerEvents = 'none';
-            if (fightBtn) fightBtn.disabled = true;
-            if (switchBtn) switchBtn.disabled = true;
-            if (teraBtn) teraBtn.disabled = true;
+            if (teraBtn) { teraBtn.disabled = true; teraBtn.style.opacity = '.45'; }
         } else if (battle.isMyTurn && !battle.isFinished) {
             turnIndicator.textContent = 'Escolha sua ação';
             turnIndicator.style.borderColor = '#4caf50';
             actions.style.opacity = '1';
             actions.style.pointerEvents = 'auto';
-            if (fightBtn) fightBtn.disabled = !myPokemon || myPokemon.currentHp <= 0;
-            if (switchBtn) switchBtn.disabled = false;
             if (teraBtn) {
                 teraBtn.disabled = battle.teraUsed;
                 teraBtn.style.opacity = battle.teraUsed ? '.45' : '1';
@@ -8413,9 +8414,7 @@ if (myPokemon) {
             turnIndicator.style.borderColor = '#ff9800';
             actions.style.opacity = '0.5';
             actions.style.pointerEvents = 'none';
-            if (fightBtn) fightBtn.disabled = true;
-            if (switchBtn) switchBtn.disabled = true;
-            if (teraBtn) teraBtn.disabled = true;
+            if (teraBtn) { teraBtn.disabled = true; teraBtn.style.opacity = '.45'; }
         }
 
         if (this.currentBattleBg && this.ctx && this.canvas) {
@@ -8513,50 +8512,24 @@ if (myPokemon) {
     }
 
     setupPVPBattleEvents() {
-        const fightBtn = document.getElementById('pvp-fight-btn');
         const teraBtn = document.getElementById('pvp-tera-btn');
-        const switchBtn = document.getElementById('pvp-switch-btn');
-        const forfeitBtn = document.getElementById('pvp-forfeit-btn');
-        const moveSelection = document.getElementById('pvp-move-selection');
+        const moveBack = document.getElementById('pvp-move-back');
+        const zones = document.querySelectorAll('#pvp-actions .battle-action-zone[data-pvp-action]');
 
-        if (fightBtn) {
-            fightBtn.onclick = () => {
-                const myPokemon = this.pvpBattle.myActivePokemon;
-                if (!myPokemon || !myPokemon.moves) return;
-
-                moveSelection.innerHTML = '';
-                moveSelection.style.display = 'grid';
-                document.getElementById('pvp-actions').style.display = 'none';
-
-                myPokemon.moves.forEach(move => {
-                    if (!move || move.currentPp <= 0) return;
-                    const btn = document.createElement('button');
-                    const typeColor = TYPE_COLORS[move.type] || '#686868';
-                    btn.style.cssText = `padding:6px;border:1px solid ${typeColor}40;border-radius:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:Inter;text-align:center;`;
-                    btn.innerHTML = `<div style="font-size:10px">${move.name}</div><div style="font-size:8px;color:rgba(255,255,255,0.5);">${move.type.toUpperCase()} | PP ${move.currentPp}/${move.pp}</div>`;
-                    btn.onclick = async () => {
-                        moveSelection.style.display = 'none';
-                        document.getElementById('pvp-actions').style.display = 'flex';
-                        try {
-                            await this.pvpBattle.executeMyTurn('attack', { moveId: move.id, tera: this.pvpBattle.teraSelected });
-                            this.pvpBattle.teraSelected = false;
-                        } catch (error) {
-                            this.showToast(`Não foi possível enviar a ação: ${error.message || error}`, 'error');
-                        }
-                    };
-                    moveSelection.appendChild(btn);
-                });
-
-                const backBtn = document.createElement('button');
-                backBtn.style.cssText = 'padding:6px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;background:rgba(255,255,255,0.06);color:#fff;font-size:10px;cursor:pointer;font-family:Inter;';
-                backBtn.textContent = 'Voltar';
-                backBtn.onclick = () => {
-                    moveSelection.style.display = 'none';
-                    document.getElementById('pvp-actions').style.display = 'flex';
-                };
-                moveSelection.appendChild(backBtn);
-            };
-        }
+        const actionHandlers = {
+            fight: () => this.openPVPMoveList(),
+            bag: () => this.openPVPBag(),
+            switch: () => this.openPVPSwitchSelector(false),
+            forfeit: async () => {
+                if (confirm('Tem certeza que deseja desistir?')) {
+                    await this.pvpBattle.forfeit();
+                }
+            }
+        };
+        zones.forEach(zone => {
+            const action = zone.dataset.pvpAction;
+            zone.addEventListener('click', () => actionHandlers[action]?.());
+        });
 
         if (teraBtn) {
             teraBtn.onclick = () => {
@@ -8566,16 +8539,172 @@ if (myPokemon) {
             };
         }
 
-        if (switchBtn) {
-            switchBtn.onclick = () => this.openPVPSwitchSelector(false);
+        if (moveBack) {
+            moveBack.onclick = () => this.closePVPSubmenu();
+        }
+    }
+
+    closePVPSubmenu() {
+        const moveSelection = document.getElementById('pvp-move-selection');
+        if (moveSelection) moveSelection.classList.add('hidden');
+        const actions = document.getElementById('pvp-actions');
+        if (actions) actions.classList.remove('hidden');
+        this._pvpSubmenuOpen = false;
+        setBattleLogVisible(true);
+    }
+
+    openPVPMoveList() {
+        const battle = this.pvpBattle;
+        if (!battle || !battle.isMyTurn || battle.needsForcedSwitch || battle.isFinished) return;
+        const myPokemon = battle.myActivePokemon;
+        if (!myPokemon || !myPokemon.moves) return;
+
+        const moveSelection = document.getElementById('pvp-move-selection');
+        const moveButtons = document.getElementById('pvp-move-buttons');
+        if (!moveSelection || !moveButtons) return;
+
+        const usable = myPokemon.moves.filter(m => m && m.currentPp > 0);
+        if (usable.length === 0) {
+            this.showToast('Nenhum movimento com PP disponível!', 'info');
+            return;
         }
 
-        if (forfeitBtn) {
-            forfeitBtn.onclick = async () => {
-                if (confirm('Tem certeza que deseja desistir?')) {
-                    await this.pvpBattle.forfeit();
+        this._pvpSubmenuOpen = true;
+        setBattleLogVisible(false);
+        moveButtons.innerHTML = '';
+        usable.forEach(move => {
+            const typeColor = TYPE_COLORS[move.type] || '#686868';
+            const btn = document.createElement('button');
+            btn.className = `move-btn type-${move.type}`;
+            btn.style.borderColor = typeColor + '40';
+            btn.innerHTML = `
+                <span class="move-name">${move.name}</span>
+                <span class="move-type" style="background:${typeColor}">${move.type.toUpperCase()}</span>
+                <span class="move-pp">PP ${move.currentPp}/${move.pp}</span>
+            `;
+            btn.onclick = async () => {
+                this.closePVPSubmenu();
+                try {
+                    await battle.executeMyTurn('attack', { moveId: move.id, tera: battle.teraSelected });
+                    battle.teraSelected = false;
+                } catch (error) {
+                    this.showToast(`Não foi possível enviar a ação: ${error.message || error}`, 'error');
                 }
             };
+            moveButtons.appendChild(btn);
+        });
+        document.getElementById('pvp-actions').classList.add('hidden');
+        moveSelection.classList.remove('hidden');
+    }
+
+    async openPVPBag() {
+        const battle = this.pvpBattle;
+        if (!battle || !battle.isMyTurn || battle.needsForcedSwitch || battle.isFinished) return;
+
+        const items = await window.GameData.getInventory();
+        const usable = (items || []).filter(inv => inv.items
+            && inv.items.usable_in_battle
+            && inv.items.category === 'medicine'
+            && (inv.items.subcategory === 'heal' || inv.items.subcategory === 'status' || inv.items.subcategory === 'revive')
+            && inv.quantity > 0);
+        if (usable.length === 0) {
+            this.showToast('Nenhum item medicinal disponível!', 'info');
+            return;
+        }
+
+        const moveSelection = document.getElementById('pvp-move-selection');
+        const moveButtons = document.getElementById('pvp-move-buttons');
+        if (!moveSelection || !moveButtons) return;
+
+        this._pvpSubmenuOpen = true;
+        setBattleLogVisible(false);
+        moveButtons.innerHTML = '';
+        usable.forEach(inv => {
+            const item = inv.items;
+            const btn = document.createElement('button');
+            btn.className = 'move-btn';
+            btn.style.borderColor = '#78c85060';
+            btn.title = item.description || '';
+            btn.innerHTML = `
+                <span class="move-name">${item.name}</span>
+                <span class="move-type">${(item.subcategory || item.category || '').toUpperCase()}</span>
+                <span class="move-pp">x${inv.quantity}</span>
+            `;
+            btn.onclick = () => {
+                this.closePVPSubmenu();
+                this.selectPVPItemTarget(inv);
+            };
+            moveButtons.appendChild(btn);
+        });
+        document.getElementById('pvp-actions').classList.add('hidden');
+        moveSelection.classList.remove('hidden');
+    }
+
+    selectPVPItemTarget(item) {
+        const battle = this.pvpBattle;
+        if (!battle) return;
+        const isRevive = item.items && item.items.subcategory === 'revive';
+        showTargetSelection(battle.myTeam, `Usar ${item.items.name} em qual Pokémon?`, (targetIdx) => {
+            this.useItemPVP(item, targetIdx);
+        }, null, { includeFainted: isRevive });
+    }
+
+    async useItemPVP(item, targetIndex) {
+        const battle = this.pvpBattle;
+        if (!battle || battle.isFinished) return;
+        const target = battle.myTeam[targetIndex];
+        if (!target) return;
+        const itemData = item.items;
+
+        let consumed = false;
+        if (itemData.subcategory === 'heal') {
+            const heal = itemData.effect === 'heal_full' || itemData.effect === 'heal_full_status'
+                ? target.stats.hp
+                : (itemData.effect_value || 0);
+            const hadStatus = itemData.effect === 'heal_full_status' && !!target.statusEffect;
+            if (target.currentHp < target.stats.hp || hadStatus) {
+                consumed = true;
+                target.currentHp = Math.min(target.stats.hp, target.currentHp + heal);
+                if (hadStatus) target.statusEffect = null;
+            } else {
+                this.showToast(`HP de ${target.name} já está cheio.`, 'info');
+                return;
+            }
+        } else if (itemData.subcategory === 'status') {
+            const cures = {
+                cure_poison: ['poison', 'toxic'],
+                cure_paralyze: ['paralyze'],
+                cure_sleep: ['sleep'],
+                cure_burn: ['burn'],
+                cure_freeze: ['freeze'],
+                cure_all_status: ['poison', 'toxic', 'paralyze', 'sleep', 'burn', 'freeze']
+            };
+            if (!(cures[itemData.effect] || []).includes(target.statusEffect)) {
+                this.showToast(`${itemData.name} não teve efeito em ${target.name}.`, 'info');
+                return;
+            }
+            consumed = true;
+            target.statusEffect = null;
+        } else if (itemData.subcategory === 'revive') {
+            if (!target.fainted) {
+                this.showToast(`${itemData.name} não teve efeito em ${target.name}.`, 'info');
+                return;
+            }
+            consumed = true;
+            target.fainted = false;
+            target.currentHp = Math.max(1, Math.round(target.stats.hp * (itemData.effect_value || 0.5)));
+            target.statusEffect = null;
+        }
+
+        if (!consumed) return;
+        await window.GameData.removeItem(item.item_id, 1);
+        try {
+            await battle.executeMyTurn('use_item', {
+                item: { name: itemData.name, subcategory: itemData.subcategory, effect: itemData.effect, effect_value: itemData.effect_value },
+                targetIndex
+            });
+        } catch (error) {
+            this.showToast(`Não foi possível usar o item: ${error.message || error}`, 'error');
         }
     }
 
