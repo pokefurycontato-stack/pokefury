@@ -661,6 +661,15 @@ const bgCache = new Map();
 const videoCache = new Map();
 let currentBattleVideo = null;
 
+export function isBattleBgCached(url) {
+    if (!url) return false;
+    const img = bgCache.get(url);
+    return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+let battleBgViaDom = false;
+export function setBattleBgViaDom(v) { battleBgViaDom = !!v; }
+
 export function preloadBattleBgImage(url) {
     return new Promise((resolve) => {
         if (!url) { resolve(); return; }
@@ -669,8 +678,8 @@ export function preloadBattleBgImage(url) {
         if (img && img.complete && img.naturalWidth > 0) { loadBattleMask(url).then(resolve); return; }
         img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => { bgCache.set(url, img); loadBattleMask(url).then(resolve); };
-        img.onerror = () => { loadBattleMask(url).then(resolve); };
+        img.onload = () => { bgCache.set(url, img); console.log('[BattleBg] loaded:', url); loadBattleMask(url).then(resolve); };
+        img.onerror = () => { console.warn('[BattleBg] FAILED:', url); loadBattleMask(url).then(resolve); };
         img.src = url;
     });
 }
@@ -683,19 +692,21 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     ctx.save();
     ctx.clearRect(0, 0, VIRTUAL_W, VIRTUAL_H);
 
-    // Always paint a fallback first so a failed/late background request cannot leave a black canvas.
-    const fallbackSky = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.52);
-    fallbackSky.addColorStop(0, '#102a43');
-    fallbackSky.addColorStop(1, '#1d4f63');
-    ctx.fillStyle = fallbackSky;
-    ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.52);
-    const fallbackGround = ctx.createLinearGradient(0, VIRTUAL_H * 0.52, 0, VIRTUAL_H);
-    fallbackGround.addColorStop(0, '#245b32');
-    fallbackGround.addColorStop(1, '#0b2415');
-    ctx.fillStyle = fallbackGround;
-    ctx.fillRect(0, VIRTUAL_H * 0.52, VIRTUAL_W, VIRTUAL_H * 0.48);
+    if (!battleBgViaDom) {
+        // Always paint a fallback first so a failed/late background request cannot leave a black canvas.
+        const fallbackSky = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.52);
+        fallbackSky.addColorStop(0, '#102a43');
+        fallbackSky.addColorStop(1, '#1d4f63');
+        ctx.fillStyle = fallbackSky;
+        ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.52);
+        const fallbackGround = ctx.createLinearGradient(0, VIRTUAL_H * 0.52, 0, VIRTUAL_H);
+        fallbackGround.addColorStop(0, '#245b32');
+        fallbackGround.addColorStop(1, '#0b2415');
+        ctx.fillStyle = fallbackGround;
+        ctx.fillRect(0, VIRTUAL_H * 0.52, VIRTUAL_W, VIRTUAL_H * 0.48);
+    }
 
-    if (backgroundUrl) {
+    if (backgroundUrl && !battleBgViaDom) {
         const isVideo = /\.(mp4|webm|ogg)$/i.test(backgroundUrl);
         if (isVideo) {
             let video = videoCache.get(backgroundUrl);

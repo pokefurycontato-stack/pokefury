@@ -3,7 +3,7 @@ import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTur
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import { getEffectiveMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd, activateTerastal } from './battle-mechanics.js';
 import {
-    showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
+    showScreen, preloadBattleSprites, preloadBattleBgImage, isBattleBgCached, setBattleBgViaDom, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
@@ -8043,6 +8043,14 @@ openEventsPanel() {
         const pvpFullscreen = document.createElement('div');
         pvpFullscreen.id = 'pvp-fullscreen';
         pvpFullscreen.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#000;';
+        if (this.currentBattleBg) {
+            pvpFullscreen.style.backgroundImage = `url("${this.currentBattleBg}")`;
+            pvpFullscreen.style.backgroundSize = '100% 100%';
+            pvpFullscreen.style.backgroundPosition = 'center';
+            pvpFullscreen.style.backgroundRepeat = 'no-repeat';
+            console.log('[PVP] fundo via DOM (stretch):', this.currentBattleBg, '| cached:', isBattleBgCached(this.currentBattleBg));
+        }
+        setBattleBgViaDom(true);
         document.body.appendChild(pvpFullscreen);
 
         const canvas = document.getElementById('game-canvas');
@@ -8513,6 +8521,7 @@ openEventsPanel() {
     endPVPBattle(result) {
         this.state = 'overworld';
         this.pvpBattle = null;
+        setBattleBgViaDom(false);
 
         const pvpFullscreen = document.getElementById('pvp-fullscreen');
         const canvas = document.getElementById('game-canvas') || this.canvas;
