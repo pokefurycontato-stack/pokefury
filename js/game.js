@@ -3278,19 +3278,23 @@ class PokeFuryGame {
     applyBattleBarSettings() {
         const s = this.battleBarSettings;
         if (!s) return;
-        const player = document.getElementById('player-info');
-        const enemy = document.getElementById('enemy-info');
         const opacity = s.box_opacity != null ? Number(s.box_opacity) : 0.85;
-        if (player) {
-            player.style.left = (Number(s.player_left) * 100) + '%';
-            player.style.bottom = (Number(s.player_bottom) * 100) + '%';
-            player.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
-        }
-        if (enemy) {
-            enemy.style.right = (Number(s.enemy_right) * 100) + '%';
-            enemy.style.top = (Number(s.enemy_top) * 100) + '%';
-            enemy.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
-        }
+        const clamped = Math.max(0, Math.min(1, opacity));
+        const applyTo = (el, isPlayer) => {
+            if (!el) return;
+            if (isPlayer) {
+                el.style.left = (Number(s.player_left) * 100) + '%';
+                el.style.bottom = (Number(s.player_bottom) * 100) + '%';
+            } else {
+                el.style.right = (Number(s.enemy_right) * 100) + '%';
+                el.style.top = (Number(s.enemy_top) * 100) + '%';
+            }
+            el.style.background = `rgba(0,0,0,${clamped})`;
+        };
+        applyTo(document.getElementById('player-info'), true);
+        applyTo(document.getElementById('pvp-my-info'), true);
+        applyTo(document.getElementById('enemy-info'), false);
+        applyTo(document.getElementById('pvp-enemy-info'), false);
     }
 
     async openBattleBarPicker() {
@@ -8072,25 +8076,21 @@ openEventsPanel() {
         pvpUI.innerHTML = `
                 <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);pointer-events:auto;">Sua vez!</div>
                 <div id="pvp-battle-log" style="position:absolute;left:50%;bottom:58px;transform:translateX(-50%);z-index:30;width:min(520px,80vw);max-height:116px;overflow-y:auto;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.68);color:rgba(255,255,255,.82);font-size:10px;line-height:1.45;font-family:Inter;pointer-events:none;"></div>
-                <div id="pvp-enemy-info" style="position:absolute;top:10px;right:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;pointer-events:auto;">
-                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-enemy-name"></div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-enemy-pokemon"></div>
-                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
-                        <div id="pvp-enemy-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
-                    </div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;text-align:right;" id="pvp-enemy-hp-text"></div>
+                <div id="pvp-enemy-info" class="enemy-hp-box" style="pointer-events:auto;">
+                    <div class="enemy-hp-name" id="pvp-enemy-name"></div>
+                    <div class="enemy-hp-level" id="pvp-enemy-pokemon"></div>
+                    <div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="pvp-enemy-hp-bar"></div></div>
+                    <div class="enemy-hp-text" id="pvp-enemy-hp-text"></div>
                     <div class="battle-type-ic" id="pvp-enemy-type-ic">
                         <img src="assets/ferramentas/pokedex.png" alt="Tipos">
                         <div class="battle-type-tip" id="pvp-enemy-type-tip"></div>
                     </div>
                 </div>
-                <div id="pvp-my-info" style="position:absolute;top:10px;left:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
-                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-my-name"></div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-my-pokemon"></div>
-                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
-                        <div id="pvp-my-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
-                    </div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-my-hp-text"></div>
+                <div id="pvp-my-info" class="player-hp-box" style="pointer-events:auto;">
+                    <div class="player-hp-name" id="pvp-my-name"></div>
+                    <div class="player-hp-level" id="pvp-my-pokemon"></div>
+                    <div class="player-hp-bar-bg"><div class="player-hp-bar-fill" id="pvp-my-hp-bar"></div></div>
+                    <div class="player-hp-text" id="pvp-my-hp-text"></div>
                     <div class="battle-type-ic" id="pvp-my-type-ic">
                         <img src="assets/ferramentas/pokedex.png" alt="Tipos">
                         <div class="battle-type-tip" id="pvp-my-type-tip"></div>
@@ -8115,6 +8115,7 @@ openEventsPanel() {
         battle.onStateUpdate = () => this.updatePVPBattleUI();
         battle.onBattleEnd = (result) => this.endPVPBattle(result);
 
+        await this.loadBattleBarSettings();
         this.updatePVPBattleUI();
         this.setupPVPBattleEvents();
     }
