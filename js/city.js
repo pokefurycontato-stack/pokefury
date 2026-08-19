@@ -70,7 +70,7 @@ class CityScreen {
         this.waterForegroundHalf = 46;
         this.waterForegroundPad = 6;
         // Ondas de espuma que quebram nas entidades dentro d'agua
-        this.waterWaveInterval = 1.6;
+        this.waterWaveInterval = 2.6;
         this._waterWaves = [];
         this._waveTimer = 0;
         this.cameraX = 400;
@@ -4837,21 +4837,34 @@ class CityScreen {
     // Onda de espuma que nasce na parte de baixo da agua e sobe (sentido unico),
 // passando por cima da entidade alvo — quando cruza, quebra nela (foam burst).
     _spawnWaterWave(tx, ty) {
-        const dist = 240 + Math.random() * 160;
-        if (this._waterWaves.length < 10) {
-            this._waterWaves.push({
-                x: tx,
-                y: ty + dist,
-                nx: 0,
-                ny: -1,
-                len: 55 + Math.random() * 40,
-                speed: 34 + Math.random() * 18,
-                t: 0,
-                life: 0,
-                maxLife: 2.2 + Math.random() * 0.9,
-                hit: new Set()
-            });
-        }
+        if (this._waterWaves.length >= 24) return;
+        this._waterWaves.push({
+            x: tx + (Math.random() - 0.5) * 140,
+            y: ty + (Math.random() - 0.5) * 60,
+            nx: 0,
+            ny: -1,
+            len: 55 + Math.random() * 40,
+            speed: 34 + Math.random() * 18,
+            t: 0,
+            life: 0,
+            maxLife: 2.2 + Math.random() * 0.9,
+            hit: new Set()
+        });
+    }
+
+    // Ponto aleatorio dentro de um tile de agua (base para espalhar as ondas)
+    _randomWaterPoint() {
+        const tiles = this._waterTiles || [];
+        if (tiles.length === 0) return null;
+        const a = tiles[Math.floor(Math.random() * tiles.length)];
+        const img = a._img;
+        if (!img || !img.complete || !img.naturalWidth) return { x: a.pos_x + 32, y: a.pos_y + 32 };
+        const aw = img.naturalWidth * (a.scale || 1);
+        const ah = img.naturalHeight * (a.scale || 1);
+        return {
+            x: a.pos_x + Math.random() * aw,
+            y: a.pos_y + Math.random() * ah
+        };
     }
 
     // Espuma que espirra quando a onda quebra na entidade (particulas + anel que expande)
@@ -4979,19 +4992,19 @@ class CityScreen {
         const dt = this._dt || 1;
         const k = dt / 60;
 
-        // Ondas de espuma: spawn periodico (mais frequente) mirando entidades dentro d'agua
+        // Ondas de espuma: 8 por leva, espalhadas por pontos aleatorios da agua,
+        // subindo na direcao ja existente (as que cruzam entidades quebram em espuma).
         this._waveTimer = (this._waveTimer || 0) + k;
         if (this._waveTimer >= this.waterWaveInterval) {
             this._waveTimer = 0;
-            const targets = this._waterWaveTargets();
-            if (targets.length > 0) {
-                const n = Math.min(2, targets.length);
-                for (let i = 0; i < n; i++) {
-                    const tgt = targets[Math.floor(Math.random() * targets.length)];
-                    this._spawnWaterWave(tgt.x, tgt.y);
-                }
-                this._waveTimer = -(Math.random() * 0.5);
+            let spawned = 0;
+            for (let i = 0; i < 8 && spawned < 24; i++) {
+                const pt = this._randomWaterPoint();
+                if (!pt) break;
+                this._spawnWaterWave(pt.x, pt.y);
+                spawned++;
             }
+            if (spawned > 0) this._waveTimer = -(Math.random() * 0.5);
         }
         this._updateWaterWaves(ctx, k, camX, camY);
 
