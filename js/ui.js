@@ -434,6 +434,13 @@ export function appendBattleLog(line) {
     box.scrollTop = box.scrollHeight;
 }
 
+export function clearBattleLog() {
+    const box = document.getElementById('battle-log-box');
+    if (!box) return;
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+}
+
 export function setBattleLogVisible(visible) {
     document.querySelectorAll('.battle-log-box').forEach(box => {
         box.classList.toggle('hidden', !visible);
@@ -942,6 +949,31 @@ export function positionHpBarsAboveSprites() {
         bar.style.top = Math.round(spriteTop - offset) + 'px';
         bar.style.transform = 'translate(-50%, -100%)';
     }
+    positionBattleLogCenter();
+}
+
+export function positionBattleLogCenter() {
+    const pvpFullscreen = document.getElementById('pvp-fullscreen');
+    const wildFullscreen = document.getElementById('wild-fullscreen');
+    const fullscreen = pvpFullscreen || wildFullscreen;
+    if (!fullscreen) return;
+    const logBox = pvpFullscreen ? document.getElementById('pvp-battle-log') : document.getElementById('battle-log-box');
+    if (!logBox) return;
+    const p = battlePokemonSprites['player'];
+    const e = battlePokemonSprites['enemy'];
+    if (!p || !e || !p.dataset.x || !e.dataset.x) return;
+    if (p.style.display === 'none' || e.style.display === 'none') return;
+    const sx = window.innerWidth / VIRTUAL_W;
+    const sy = window.innerHeight / VIRTUAL_H;
+    const pw = Number(p.dataset.w) || 120;
+    const ew = Number(e.dataset.w) || 120;
+    const px = Number(p.dataset.x) * sx;
+    const py = Number(p.dataset.y) * sy - pw / 2;
+    const ex = Number(e.dataset.x) * sx;
+    const ey = Number(e.dataset.y) * sy - ew / 2;
+    logBox.style.left = Math.round((px + ex) / 2) + 'px';
+    logBox.style.top = Math.round((py + ey) / 2) + 'px';
+    logBox.style.transform = 'translate(-50%, -50%)';
 }
 
 function drawBattlePokemonName(ctx, x, y, pokemon, sizeScale) {
@@ -1417,3 +1449,7 @@ export function clearMaskFx() {
     maskParticles.length = 0;
     maskAnimFrame = 0;
 }
+
+window.addEventListener('resize', () => {
+    positionHpBarsAboveSprites();
+});

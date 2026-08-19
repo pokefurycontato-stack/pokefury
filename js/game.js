@@ -8,7 +8,7 @@ import {
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites, formatHpText,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
     showTargetSelection, VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride, positionHpBarsAboveSprites,
-    setBattleLogVisible
+    setBattleLogVisible, clearBattleLog
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js?v=20260816b';
@@ -1283,6 +1283,7 @@ class PokeFuryGame {
 
         const newPokemon = this.playerTeam[newIndex];
         if (!newPokemon || newPokemon.fainted) return;
+        clearBattleLog();
         const temp = this.playerTeam[activeIndex];
         this.playerTeam[activeIndex] = newPokemon;
         this.playerTeam[newIndex] = temp;
@@ -1313,6 +1314,7 @@ class PokeFuryGame {
                 return;
             }
 
+            clearBattleLog();
             try {
                 const temp = this.playerTeam[activeIndex];
                 const outgoingAbility = (playerPokemon.currentAbilityName || '').toLowerCase();
@@ -1347,6 +1349,7 @@ class PokeFuryGame {
     async onRun() {
         if (this._turnLocked) return;
         this._turnLocked = true;
+        clearBattleLog();
         const playerPokemon = getFirstAlive(this.playerTeam);
         if (!playerPokemon) { this._turnLocked = false; return; }
         const escaped = Math.random() < 0.5;
@@ -1365,6 +1368,7 @@ class PokeFuryGame {
         const pokemon = getFirstAlive(this.playerTeam);
         if (!pokemon || this._battleState?.teraUsedPlayer) return;
         if (!activateTerastal(pokemon)) return;
+        clearBattleLog();
         this._battleState.teraUsedPlayer = true;
         await showBattleMessage(`${pokemon.name} Terastalizou! Tipo Tera: ${pokemon.teraType}!`);
         drawBattleScene(this.ctx, this.canvas, pokemon, getFirstAlive(this.enemyTeam), this.currentBattleBg, this.getBattleClipRect());
@@ -1405,6 +1409,7 @@ class PokeFuryGame {
         const enemyPokemon = getFirstAlive(this.enemyTeam);
         if (!playerPokemon || !enemyPokemon) return;
         const itemData = item.items;
+        clearBattleLog();
 
         let consumed = false;
 
@@ -1572,6 +1577,7 @@ class PokeFuryGame {
 
     async executeBattleTurn(playerPokemon, enemyPokemon, playerMove) {
         if (!playerPokemon || !enemyPokemon) return;
+        clearBattleLog();
         try {
             clearProtect(playerPokemon);
             clearProtect(enemyPokemon);
@@ -8329,6 +8335,7 @@ openEventsPanel() {
         const log = document.getElementById('pvp-battle-log');
         if (!log || !Array.isArray(lines)) return;
         log.classList.remove('hidden');
+        log.innerHTML = '';
         lines.filter(Boolean).forEach(line => {
             const entry = document.createElement('div');
             entry.className = 'battle-log-line';
