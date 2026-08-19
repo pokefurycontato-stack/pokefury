@@ -661,29 +661,16 @@ const bgCache = new Map();
 const videoCache = new Map();
 let currentBattleVideo = null;
 
-export function isBattleBgCached(url) {
-    if (!url) return false;
-    const img = bgCache.get(url);
-    return !!(img && img.complete && img.naturalWidth > 0);
-}
-
-let battleBgViaDom = false;
-export function setBattleBgViaDom(v) { battleBgViaDom = !!v; }
-
 export function preloadBattleBgImage(url) {
     return new Promise((resolve) => {
         if (!url) { resolve(); return; }
         if (/\.(mp4|webm|ogg)$/i.test(url)) { resolve(); return; }
         let img = bgCache.get(url);
-        if (img && img.complete && img.naturalWidth > 0) {
-            loadBattleMask(url).catch(() => {});
-            resolve();
-            return;
-        }
+        if (img && img.complete && img.naturalWidth > 0) { loadBattleMask(url).then(resolve); return; }
         img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => { bgCache.set(url, img); console.log('[BattleBg] loaded:', url); loadBattleMask(url).catch(() => {}); resolve(); };
-        img.onerror = () => { bgCache.delete(url); console.warn('[BattleBg] failed:', url); loadBattleMask(url).catch(() => {}); resolve(); };
+        img.onload = () => { bgCache.set(url, img); loadBattleMask(url).then(resolve); };
+        img.onerror = () => { loadBattleMask(url).then(resolve); };
         img.src = url;
     });
 }
@@ -696,21 +683,19 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     ctx.save();
     ctx.clearRect(0, 0, VIRTUAL_W, VIRTUAL_H);
 
-if (!battleBgViaDom) {
-        // Always paint a fallback first so a failed/late background request cannot leave a black canvas.
-        const fallbackSky = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.52);
-        fallbackSky.addColorStop(0, '#102a43');
-        fallbackSky.addColorStop(1, '#1d4f63');
-        ctx.fillStyle = fallbackSky;
-        ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.52);
-        const fallbackGround = ctx.createLinearGradient(0, VIRTUAL_H * 0.52, 0, VIRTUAL_H);
-        fallbackGround.addColorStop(0, '#245b32');
-        fallbackGround.addColorStop(1, '#0b2415');
-        ctx.fillStyle = fallbackGround;
-        ctx.fillRect(0, VIRTUAL_H * 0.52, VIRTUAL_W, VIRTUAL_H * 0.48);
-    }
+    // Always paint a fallback first so a failed/late background request cannot leave a black canvas.
+    const fallbackSky = ctx.createLinearGradient(0, 0, 0, VIRTUAL_H * 0.52);
+    fallbackSky.addColorStop(0, '#102a43');
+    fallbackSky.addColorStop(1, '#1d4f63');
+    ctx.fillStyle = fallbackSky;
+    ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H * 0.52);
+    const fallbackGround = ctx.createLinearGradient(0, VIRTUAL_H * 0.52, 0, VIRTUAL_H);
+    fallbackGround.addColorStop(0, '#245b32');
+    fallbackGround.addColorStop(1, '#0b2415');
+    ctx.fillStyle = fallbackGround;
+    ctx.fillRect(0, VIRTUAL_H * 0.52, VIRTUAL_W, VIRTUAL_H * 0.48);
 
-    if (backgroundUrl && !battleBgViaDom) {
+    if (backgroundUrl) {
         const isVideo = /\.(mp4|webm|ogg)$/i.test(backgroundUrl);
         if (isVideo) {
             let video = videoCache.get(backgroundUrl);
@@ -724,22 +709,13 @@ if (!battleBgViaDom) {
             currentBattleVideo = video;
             if (video.readyState >= 2) { ctx.drawImage(video, 0, 0, VIRTUAL_W, VIRTUAL_H); }
             else { if (video.paused) video.play().catch(() => {}); ctx.fillStyle = '#16213e'; ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H); }
-} else {
+        } else {
             let img = bgCache.get(backgroundUrl);
-            if (!img || (img.complete && img.naturalWidth === 0)) {
-                img = new Image();
-                img.crossOrigin = 'anonymous';
-                bgCache.set(backgroundUrl, img);
-                img.onload = () => {
-                    if (canvas && canvas._onBattleBgLoaded) canvas._onBattleBgLoaded();
-                };
-                img.onerror = () => {
-                    bgCache.delete(backgroundUrl);
-                };
-                img.src = backgroundUrl;
-            }
+            if (!img) { img = new Image(); img.crossOrigin = 'anonymous'; img.src = backgroundUrl; bgCache.set(backgroundUrl, img); }
             if (img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, 0, 0, VIRTUAL_W, VIRTUAL_H);
+            } else {
+                // Fallback was painted before attempting the background.
             }
         }
     } else {

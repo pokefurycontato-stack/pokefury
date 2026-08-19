@@ -3,7 +3,7 @@ import { randomInt, loadTypeEffectiveness, calculateAllStats, processHeldItemTur
 import { createPokemon, createTeam, determineTurnOrder, executeTurn, getAIMove, getEffectivenessText, isTeamFainted, getFirstAlive, awardExp, expForLevel, learnLevelUpMoves, checkAbilityChange } from './battle.js';
 import { getEffectiveMovePriority, canPokemonAct, processEndOfTurn, clearProtect, resetTurnState, STATUS_INFO, initFieldEffects, processEntryHazards, processEntryAbilities, getWeatherSpeed, applyWeatherDamageModifier, applyTerrainDamageModifier, applyScreenReduction, getWeatherMoveBoost, WEATHER, TERRAIN, processFieldTurnEnd, activateTerastal } from './battle-mechanics.js';
 import {
-    showScreen, preloadBattleSprites, preloadBattleBgImage, isBattleBgCached, setBattleBgViaDom, updateBattleUI, showBattleMessage, showMoveSelection,
+    showScreen, preloadBattleSprites, preloadBattleBgImage, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
     detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
@@ -3229,18 +3229,6 @@ class PokeFuryGame {
         return 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png';
     }
 
-    async preloadPvpBattleBg() {
-        const url = this.currentBattleBg;
-        if (!url) return false;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            await preloadBattleBgImage(url);
-            if (isBattleBgCached(url)) return true;
-            console.warn('[PVP] fundo falhou, tentando de novo (tentativa', attempt + ')');
-            await new Promise(r => setTimeout(r, 300));
-        }
-        return false;
-    }
-
     async loadWildBattleLayout() {
         const map = this.currentMap || {};
         const fallback = {
@@ -3290,23 +3278,19 @@ class PokeFuryGame {
     applyBattleBarSettings() {
         const s = this.battleBarSettings;
         if (!s) return;
+        const player = document.getElementById('player-info');
+        const enemy = document.getElementById('enemy-info');
         const opacity = s.box_opacity != null ? Number(s.box_opacity) : 0.85;
-        const clamped = Math.max(0, Math.min(1, opacity));
-        const applyTo = (el, isPlayer) => {
-            if (!el) return;
-            if (isPlayer) {
-                el.style.left = (Number(s.player_left) * 100) + '%';
-                el.style.bottom = (Number(s.player_bottom) * 100) + '%';
-            } else {
-                el.style.right = (Number(s.enemy_right) * 100) + '%';
-                el.style.top = (Number(s.enemy_top) * 100) + '%';
-            }
-            el.style.background = `rgba(0,0,0,${clamped})`;
-        };
-        applyTo(document.getElementById('player-info'), true);
-        applyTo(document.getElementById('pvp-my-info'), true);
-        applyTo(document.getElementById('enemy-info'), false);
-        applyTo(document.getElementById('pvp-enemy-info'), false);
+        if (player) {
+            player.style.left = (Number(s.player_left) * 100) + '%';
+            player.style.bottom = (Number(s.player_bottom) * 100) + '%';
+            player.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
+        }
+        if (enemy) {
+            enemy.style.right = (Number(s.enemy_right) * 100) + '%';
+            enemy.style.top = (Number(s.enemy_top) * 100) + '%';
+            enemy.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
+        }
     }
 
     async openBattleBarPicker() {
@@ -7929,7 +7913,7 @@ openEventsPanel() {
             const randomBg = await this.getRandomPvpBattleBg();
             if (randomBg) {
                 this.currentBattleBg = randomBg;
-                await this.preloadPvpBattleBg();
+                await preloadBattleBgImage(randomBg);
                 this.applyBattleNeonFromBg(randomBg);
             }
 
@@ -8021,18 +8005,6 @@ openEventsPanel() {
         if (LS) LS.setProgress(85);
 
         this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
-
-        // Garante 100% de carregamento antes de revelar a batalha: fundo + sprites.
-        const bgLoaded = await this.preloadPvpBattleBg();
-        if (!bgLoaded && this.currentBattleBg) {
-            console.warn('[PVP] Fundo nao carregou apos 3 tentativas; usara fallback gradiente.');
-        }
-        if (LS) LS.setProgress(90);
-        if (this.pvpBattle.visibleMyActivePokemon && this.pvpBattle.enemyActivePokemon) {
-            await preloadBattleSprites(this.pvpBattle.visibleMyActivePokemon, this.pvpBattle.enemyActivePokemon);
-        }
-        if (LS) LS.setProgress(95);
-
         await this.showPVPBattleUI();
         try {
             await this.pvpBattle.start();
@@ -8071,14 +8043,6 @@ openEventsPanel() {
         const pvpFullscreen = document.createElement('div');
         pvpFullscreen.id = 'pvp-fullscreen';
         pvpFullscreen.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#000;';
-        if (this.currentBattleBg) {
-            pvpFullscreen.style.backgroundImage = `url("${this.currentBattleBg}")`;
-            pvpFullscreen.style.backgroundSize = 'contain';
-            pvpFullscreen.style.backgroundPosition = 'center';
-            pvpFullscreen.style.backgroundRepeat = 'no-repeat';
-            console.log('[PVP] bg via DOM:', this.currentBattleBg);
-        }
-        setBattleBgViaDom(true);
         document.body.appendChild(pvpFullscreen);
 
         const canvas = document.getElementById('game-canvas');
@@ -8098,16 +8062,9 @@ openEventsPanel() {
         await this.loadPvpPositionSettings();
         setBattleEffects('none', 'none');
 
-        // Garante que o fundo esteja carregado antes do primeiro desenho (evita tela preta).
-        if (this.currentBattleBg) {
-            await preloadBattleBgImage(this.currentBattleBg);
-        }
-
         const clip = this.getBattleClipRect();
-        if (this.ctx && this.canvas) {
-            if (this.canvas) this.canvas._onBattleBgLoaded = () => this.updatePVPBattleUI();
-            console.log('[PVP] bg:', this.currentBattleBg, '| cached:', this.currentBattleBg ? isBattleBgCached(this.currentBattleBg) : false);
-            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg || null, clip);
+        if (this.currentBattleBg && this.ctx && this.canvas) {
+            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
 
         const pvpUI = document.createElement('div');
@@ -8115,21 +8072,25 @@ openEventsPanel() {
         pvpUI.innerHTML = `
                 <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);pointer-events:auto;">Sua vez!</div>
                 <div id="pvp-battle-log" style="position:absolute;left:50%;bottom:58px;transform:translateX(-50%);z-index:30;width:min(520px,80vw);max-height:116px;overflow-y:auto;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.68);color:rgba(255,255,255,.82);font-size:10px;line-height:1.45;font-family:Inter;pointer-events:none;"></div>
-                <div id="pvp-enemy-info" class="enemy-hp-box" style="pointer-events:auto;">
-                    <div class="enemy-hp-name" id="pvp-enemy-name"></div>
-                    <div class="enemy-hp-level" id="pvp-enemy-pokemon"></div>
-                    <div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" id="pvp-enemy-hp-bar"></div></div>
-                    <div class="enemy-hp-text" id="pvp-enemy-hp-text"></div>
+                <div id="pvp-enemy-info" style="position:absolute;top:10px;right:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;pointer-events:auto;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-enemy-name"></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-enemy-pokemon"></div>
+                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
+                        <div id="pvp-enemy-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
+                    </div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;text-align:right;" id="pvp-enemy-hp-text"></div>
                     <div class="battle-type-ic" id="pvp-enemy-type-ic">
                         <img src="assets/ferramentas/pokedex.png" alt="Tipos">
                         <div class="battle-type-tip" id="pvp-enemy-type-tip"></div>
                     </div>
                 </div>
-                <div id="pvp-my-info" class="player-hp-box" style="pointer-events:auto;">
-                    <div class="player-hp-name" id="pvp-my-name"></div>
-                    <div class="player-hp-level" id="pvp-my-pokemon"></div>
-                    <div class="player-hp-bar-bg"><div class="player-hp-bar-fill" id="pvp-my-hp-bar"></div></div>
-                    <div class="player-hp-text" id="pvp-my-hp-text"></div>
+                <div id="pvp-my-info" style="position:absolute;top:10px;left:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
+                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-my-name"></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-my-pokemon"></div>
+                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
+                        <div id="pvp-my-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
+                    </div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-my-hp-text"></div>
                     <div class="battle-type-ic" id="pvp-my-type-ic">
                         <img src="assets/ferramentas/pokedex.png" alt="Tipos">
                         <div class="battle-type-tip" id="pvp-my-type-tip"></div>
@@ -8141,7 +8102,7 @@ openEventsPanel() {
                     <button id="pvp-switch-btn" style="padding:8px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🔄 Trocar</button>
                     <button id="pvp-forfeit-btn" style="padding:8px 20px;background:rgba(244,67,54,0.2);border:1px solid rgba(244,67,54,0.3);border-radius:8px;color:#f44336;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter;">🏳️ Desistir</button>
                 </div>
-                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;grid-template-columns:1fr 1fr;gap:4px;pointer-events:auto;"></div>
+                <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;pointer-events:auto;"></div>
         `;
         pvpFullscreen.appendChild(pvpUI);
 
@@ -8154,7 +8115,6 @@ openEventsPanel() {
         battle.onStateUpdate = () => this.updatePVPBattleUI();
         battle.onBattleEnd = (result) => this.endPVPBattle(result);
 
-        await this.loadBattleBarSettings();
         this.updatePVPBattleUI();
         this.setupPVPBattleEvents();
     }
@@ -8389,9 +8349,9 @@ openEventsPanel() {
             if (teraBtn) teraBtn.disabled = true;
         }
 
-        if (this.ctx && this.canvas) {
+        if (this.currentBattleBg && this.ctx && this.canvas) {
             const clip = this.getBattleClipRect();
-            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg || null, clip);
+            drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
         }
     }
 
@@ -8553,7 +8513,6 @@ openEventsPanel() {
     endPVPBattle(result) {
         this.state = 'overworld';
         this.pvpBattle = null;
-        setBattleBgViaDom(false);
 
         const pvpFullscreen = document.getElementById('pvp-fullscreen');
         const canvas = document.getElementById('game-canvas') || this.canvas;
