@@ -679,8 +679,8 @@ export function preloadBattleBgImage(url) {
         }
         img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => { bgCache.set(url, img); loadBattleMask(url).catch(() => {}); resolve(); };
-        img.onerror = () => { loadBattleMask(url).catch(() => {}); resolve(); };
+        img.onload = () => { bgCache.set(url, img); console.log('[BattleBg] loaded:', url); loadBattleMask(url).catch(() => {}); resolve(); };
+        img.onerror = () => { bgCache.delete(url); console.warn('[BattleBg] failed:', url); loadBattleMask(url).catch(() => {}); resolve(); };
         img.src = url;
     });
 }
@@ -719,13 +719,22 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
             currentBattleVideo = video;
             if (video.readyState >= 2) { ctx.drawImage(video, 0, 0, VIRTUAL_W, VIRTUAL_H); }
             else { if (video.paused) video.play().catch(() => {}); ctx.fillStyle = '#16213e'; ctx.fillRect(0, 0, VIRTUAL_W, VIRTUAL_H); }
-        } else {
+} else {
             let img = bgCache.get(backgroundUrl);
-            if (!img) { img = new Image(); img.crossOrigin = 'anonymous'; img.src = backgroundUrl; bgCache.set(backgroundUrl, img); }
+            if (!img || (img.complete && img.naturalWidth === 0)) {
+                img = new Image();
+                img.crossOrigin = 'anonymous';
+                bgCache.set(backgroundUrl, img);
+                img.onload = () => {
+                    if (canvas && canvas._onBattleBgLoaded) canvas._onBattleBgLoaded();
+                };
+                img.onerror = () => {
+                    bgCache.delete(backgroundUrl);
+                };
+                img.src = backgroundUrl;
+            }
             if (img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, 0, 0, VIRTUAL_W, VIRTUAL_H);
-            } else {
-                // Fallback was painted before attempting the background.
             }
         }
     } else {

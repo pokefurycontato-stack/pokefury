@@ -3229,6 +3229,18 @@ class PokeFuryGame {
         return 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png';
     }
 
+    async preloadPvpBattleBg() {
+        const url = this.currentBattleBg;
+        if (!url) return false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            await preloadBattleBgImage(url);
+            if (isBattleBgCached(url)) return true;
+            console.warn('[PVP] fundo falhou, tentando de novo (tentativa', attempt + ')');
+            await new Promise(r => setTimeout(r, 300));
+        }
+        return false;
+    }
+
     async loadWildBattleLayout() {
         const map = this.currentMap || {};
         const fallback = {
@@ -7917,7 +7929,7 @@ openEventsPanel() {
             const randomBg = await this.getRandomPvpBattleBg();
             if (randomBg) {
                 this.currentBattleBg = randomBg;
-                await preloadBattleBgImage(randomBg);
+                await this.preloadPvpBattleBg();
                 this.applyBattleNeonFromBg(randomBg);
             }
 
@@ -8011,8 +8023,9 @@ openEventsPanel() {
         this.pvpBattle = new PVPBattle(this, challenge, myTeam, enemyTeam);
 
         // Garante 100% de carregamento antes de revelar a batalha: fundo + sprites.
-        if (this.currentBattleBg) {
-            await preloadBattleBgImage(this.currentBattleBg);
+        const bgLoaded = await this.preloadPvpBattleBg();
+        if (!bgLoaded && this.currentBattleBg) {
+            console.warn('[PVP] Fundo nao carregou apos 3 tentativas; usara fallback gradiente.');
         }
         if (LS) LS.setProgress(90);
         if (this.pvpBattle.visibleMyActivePokemon && this.pvpBattle.enemyActivePokemon) {
@@ -8084,6 +8097,7 @@ openEventsPanel() {
 
         const clip = this.getBattleClipRect();
         if (this.ctx && this.canvas) {
+            if (this.canvas) this.canvas._onBattleBgLoaded = () => this.updatePVPBattleUI();
             console.log('[PVP] bg:', this.currentBattleBg, '| cached:', this.currentBattleBg ? isBattleBgCached(this.currentBattleBg) : false);
             drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg || null, clip);
         }
