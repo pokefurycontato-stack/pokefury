@@ -831,6 +831,7 @@ class CityScreen {
                     existing.follower_back_url = p.follower_back_url;
                     existing.follower_static_url = p.follower_static_url;
                     existing.follower_scale = p.follower_scale;
+                    existing.follower_is_shiny = p.follower_is_shiny;
                     if (p.skin_url && p.skin_url !== existing.skin_url) {
                         existing.skin_url = p.skin_url;
                         const img = new Image();
@@ -3543,6 +3544,7 @@ class CityScreen {
     async _syncFollowerToDb() {
         if (!this.authUserId || this.authUserId === 'local') return;
         const poke = this.pokemonFollowing;
+        const isShiny = !!(poke && (poke.isShiny || poke.shiny));
         const base = {
             follower_id: poke ? poke.id : null,
             follower_sprite_url: poke ? (this.pokemonFollowSpriteUrl || null) : null,
@@ -3550,18 +3552,28 @@ class CityScreen {
             follower_scale: poke ? this._cityFollowerScale(poke) : null
         };
         const withStatic = { ...base, follower_static_url: poke ? (this.pokemonFollowStaticUrl || null) : null };
+        // follower_is_shiny e follower_static_url vivem em colunas novas (add via SQL no
+        // Supabase). Tenta com tudo; se a coluna ainda nao existir, o UPDATE falha e a
+        // gente degrada gradualmente ate o conjunto minimo para nunca quebrar o follower.
+        const withShiny = { ...withStatic, follower_is_shiny: isShiny };
         let res = null;
         try {
-            res = await window.db.from('city_players').update(withStatic).eq('user_id', this.authUserId);
+            res = await window.db.from('city_players').update(withShiny).eq('user_id', this.authUserId);
         } catch (e) {
             res = { error: e };
         }
-        // Se a coluna follower_static_url ainda nao existir no banco, o UPDATE inteiro falha
-        // (e o follower some p/ os outros). Nesse caso, tenta de novo sem essa coluna.
+        if (res && res.error) {
+            try {
+                res = await window.db.from('city_players').update(withStatic).eq('user_id', this.authUserId);
+            } catch (e2) {
+                res = { error: e2 };
+            }
+        }
+        // Conjunto minimo (colunas originais de sempre).
         if (res && res.error) {
             try {
                 await window.db.from('city_players').update(base).eq('user_id', this.authUserId);
-            } catch (e2) {}
+            } catch (e3) {}
         }
     }
 
@@ -3582,6 +3594,7 @@ class CityScreen {
         } else {
             if (this.pokemonFollowEl) this.pokemonFollowEl.style.display = 'none';
             if (this.pokemonFollowShadowEl) this.pokemonFollowShadowEl.style.display = 'none';
+            if (this.pokemonFollowShinyEl) this.pokemonFollowShinyEl.style.display = 'none';
             this._syncFollowerToDb();
         }
     }
