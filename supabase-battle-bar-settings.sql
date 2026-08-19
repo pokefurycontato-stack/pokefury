@@ -11,8 +11,12 @@ CREATE TABLE battle_bar_settings (
     player_bottom NUMERIC NOT NULL DEFAULT 0.06,
     enemy_right NUMERIC NOT NULL DEFAULT 0.06,
     enemy_top NUMERIC NOT NULL DEFAULT 0.49,
+    box_opacity NUMERIC NOT NULL DEFAULT 0.85,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Compatibilidade: se a tabela ja existia sem a coluna de opacidade, adiciona agora.
+ALTER TABLE battle_bar_settings ADD COLUMN IF NOT EXISTS box_opacity NUMERIC NOT NULL DEFAULT 0.85;
 
 ALTER TABLE battle_bar_settings ENABLE ROW LEVEL SECURITY;
 

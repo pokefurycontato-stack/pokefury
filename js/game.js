@@ -3265,7 +3265,7 @@ class PokeFuryGame {
         let data = null;
         try {
             const { data: row } = await window.db.from('battle_bar_settings')
-                .select('player_left, player_bottom, enemy_right, enemy_top')
+                .select('player_left, player_bottom, enemy_right, enemy_top, box_opacity')
                 .eq('background_url', this.currentBattleBg)
                 .maybeSingle();
             data = row;
@@ -3280,13 +3280,16 @@ class PokeFuryGame {
         if (!s) return;
         const player = document.getElementById('player-info');
         const enemy = document.getElementById('enemy-info');
+        const opacity = s.box_opacity != null ? Number(s.box_opacity) : 0.85;
         if (player) {
             player.style.left = (Number(s.player_left) * 100) + '%';
             player.style.bottom = (Number(s.player_bottom) * 100) + '%';
+            player.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
         }
         if (enemy) {
             enemy.style.right = (Number(s.enemy_right) * 100) + '%';
             enemy.style.top = (Number(s.enemy_top) * 100) + '%';
+            enemy.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
         }
     }
 
@@ -3388,19 +3391,23 @@ class PokeFuryGame {
             <div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" style="width:80%"></div></div>
             <div class="enemy-hp-text">160/200</div>`;
 
-        const d = { player_left: 0.06, player_bottom: 0.06, enemy_right: 0.06, enemy_top: 0.49 };
+        const d = { player_left: 0.06, player_bottom: 0.06, enemy_right: 0.06, enemy_top: 0.49, box_opacity: 0.85 };
         let pLeft = d.player_left, pBottom = d.player_bottom, eRight = d.enemy_right, eTop = d.enemy_top;
+        let boxOpacity = d.box_opacity;
 
         (async () => {
             try {
                 const { data: row } = await window.db.from('battle_bar_settings')
-                    .select('player_left, player_bottom, enemy_right, enemy_top')
+                    .select('player_left, player_bottom, enemy_right, enemy_top, box_opacity')
                     .eq('background_url', bgUrl)
                     .maybeSingle();
                 if (row && overlay.isConnected) {
                     pLeft = Number(row.player_left); pBottom = Number(row.player_bottom);
                     eRight = Number(row.enemy_right); eTop = Number(row.enemy_top);
+                    boxOpacity = Number(row.box_opacity != null ? row.box_opacity : 0.85);
                     placeBars();
+                    opacitySlider.value = boxOpacity;
+                    opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
                 }
             } catch (e) {}
         })();
@@ -3410,8 +3417,36 @@ class PokeFuryGame {
             pBar.style.bottom = (pBottom * 100) + '%';
             eBar.style.right = (eRight * 100) + '%';
             eBar.style.top = (eTop * 100) + '%';
+            pBar.style.background = `rgba(0,0,0,${boxOpacity})`;
+            eBar.style.background = `rgba(0,0,0,${boxOpacity})`;
         };
         placeBars();
+
+        const opacityRow = document.createElement('div');
+        opacityRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        const opacityLabel = document.createElement('span');
+        opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
+        opacityLabel.style.cssText = 'color:rgba(255,255,255,0.8);font-size:11px;font-weight:700;min-width:38px;text-align:right;';
+        const opacitySlider = document.createElement('input');
+        opacitySlider.type = 'range';
+        opacitySlider.min = '0.1';
+        opacitySlider.max = '1';
+        opacitySlider.step = '0.05';
+        opacitySlider.value = boxOpacity;
+        opacitySlider.style.cssText = 'width:110px;accent-color:#58a6ff;cursor:pointer;';
+        opacitySlider.title = 'Opacidade do fundo das caixas (jogador + inimigo)';
+        opacitySlider.addEventListener('input', () => {
+            boxOpacity = Number(opacitySlider.value);
+            opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
+            placeBars();
+        });
+        const opacityText = document.createElement('span');
+        opacityText.textContent = 'Opacidade';
+        opacityText.style.cssText = 'color:rgba(255,255,255,0.7);font-size:12px;';
+        opacityRow.appendChild(opacityText);
+        opacityRow.appendChild(opacitySlider);
+        opacityRow.appendChild(opacityLabel);
+        bar.appendChild(opacityRow);
 
         const makeDraggable = (el, onMove) => {
             let dragging = false;
@@ -3439,10 +3474,11 @@ class PokeFuryGame {
                     background_url: bgUrl,
                     player_left: pLeft, player_bottom: pBottom,
                     enemy_right: eRight, enemy_top: eTop,
+                    box_opacity: boxOpacity,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'background_url' });
                 if (this.currentBattleBg === bgUrl) {
-                    this.battleBarSettings = { player_left: pLeft, player_bottom: pBottom, enemy_right: eRight, enemy_top: eTop };
+                    this.battleBarSettings = { player_left: pLeft, player_bottom: pBottom, enemy_right: eRight, enemy_top: eTop, box_opacity: boxOpacity };
                     this.applyBattleBarSettings();
                 }
                 if (pickerOverlay) {
@@ -3459,6 +3495,9 @@ class PokeFuryGame {
 
         bar.querySelector('#bb-reset').addEventListener('click', async () => {
             pLeft = d.player_left; pBottom = d.player_bottom; eRight = d.enemy_right; eTop = d.enemy_top;
+            boxOpacity = d.box_opacity;
+            opacitySlider.value = boxOpacity;
+            opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
             placeBars();
             try {
                 await window.db.from('battle_bar_settings').delete().eq('background_url', bgUrl);
