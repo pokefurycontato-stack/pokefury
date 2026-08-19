@@ -486,6 +486,8 @@ export function showMoveSelection(moves, onSelect, onCancel = null) {
     const battleActions = $('#battle-actions');
 
     moveButtons.innerHTML = '';
+    // Posiciona o painel logo acima do menu de acoes (mede a altura do menu antes de esconder)
+    moveSelection.style.bottom = ((battleActions.offsetHeight || 0) + 18) + 'px';
     battleActions.classList.add('hidden');
     moveSelection.classList.remove('hidden');
 
@@ -496,7 +498,7 @@ export function showMoveSelection(moves, onSelect, onCancel = null) {
         const typeColor = TYPE_COLORS[move.type] || '#686868';
         btn.style.borderColor = typeColor + '40';
         btn.innerHTML = `
-            <span style="font-size:11px">${move.name}</span>
+            <span class="move-name">${move.name}</span>
             <span class="move-type" style="background:${typeColor}">${move.type.toUpperCase()}</span>
             <span class="move-pp">PP ${move.currentPp}/${move.pp}</span>
         `;
@@ -982,6 +984,8 @@ export function showBagSelection(items, onSelect, onCancel = null) {
     const battleActions = $('#battle-actions');
 
     moveButtons.innerHTML = '';
+    // Posiciona o painel logo acima do menu de acoes (mede a altura do menu antes de esconder)
+    moveSelection.style.bottom = ((battleActions.offsetHeight || 0) + 18) + 'px';
     battleActions.classList.add('hidden');
     moveSelection.classList.remove('hidden');
 
@@ -990,11 +994,12 @@ export function showBagSelection(items, onSelect, onCancel = null) {
         const btn = document.createElement('button');
         btn.className = 'move-btn';
         btn.style.borderColor = '#78c85060';
+        btn.title = item.description || '';
         btn.innerHTML = `
             <span class="move-name">${item.name}</span>
             <span class="move-type">${item.category.toUpperCase()}</span>
             <span class="move-pp">x${inv.quantity}</span>
-            <span class="move-pp">${item.description || ''}</span>
+            <span class="move-pp move-desc">${item.description || ''}</span>
         `;
         btn.addEventListener('click', () => {
             onSelect(inv);
