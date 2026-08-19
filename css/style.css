@@ -684,7 +684,7 @@ body {
 
 .enemy-hp-box {
     position: absolute;
-    top: 310px;
+    top: 440px;
     right: 90px;
     background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
     border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;
