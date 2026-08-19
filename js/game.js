@@ -3195,20 +3195,24 @@ class PokeFuryGame {
         const biome = String(this._currentBiome || '').trim().toLowerCase();
         if (biome) {
             const biomeBgs = {
-                'floresta': 'grama.png',
-                'grama': 'grama.png',
-                'praia': 'agua.png',
-                'agua': 'agua.png',
-                'aqua': 'agua.png',
-                'montanha': 'pedra.png',
-                'penhasco': 'pedra.png',
-                'pedra': 'pedra.png',
+                'floresta': 'gramav1.png',
+                'grama': 'gramav1.png',
+                'praia': 'aguav1.png',
+                'agua': 'aguav1.png',
+                'aqua': 'aguav1.png',
+                'montanha': 'pedrav1.png',
+                'penhasco': 'pedrav1.png',
+                'voador': 'pedrav1.png',
+                'pedra': 'pedrav1.png',
                 'vulcao': 'vulcv1.png',
                 'vulcão': 'vulcv1.png',
+                'fogo': 'vulcv1.png',
                 'geleira': 'icev1.png',
                 'gelo': 'icev1.png',
+                'nevasca': 'icev1.png',
                 'industrial': 'eletricov1.png',
-                'torre': 'pvpcasual.png'
+                'eletrico': 'eletricov1.png',
+                'torre': 'psiv1.png'
             };
             const bgName = biomeBgs[biome];
             if (bgName) {
