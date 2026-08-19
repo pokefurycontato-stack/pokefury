@@ -1,22 +1,23 @@
--- PokeFury - Posição das barras de vida da batalha POR FUNDO (jogador + inimigo)
--- As barras usam porcentagem da tela, então ficam no MESMO lugar em qualquer monitor.
+-- PokeFury - Configuração das barras de vida da batalha POR FUNDO
+-- As barras agora ficam COLADAS ACIMA DO SPRITE do pokémon (jogador + inimigo).
+-- A ferramenta admin ajusta apenas:
+--   * bar_offset  -> altura (em px) da barra acima do sprite
+--   * box_opacity -> opacidade do fundo da caixa
 -- Rode no SQL Editor do Supabase (logado como admin).
--- OBS: recria a tabela. Se já rodou a versão anterior (id único), ela será recriada sem dados.
+-- OBS: recria a tabela (a versão antiga de posição fixa é substituída).
 
 DROP TABLE IF EXISTS battle_bar_settings;
 
 CREATE TABLE battle_bar_settings (
     background_url TEXT PRIMARY KEY,
-    player_left NUMERIC NOT NULL DEFAULT 0.06,
-    player_bottom NUMERIC NOT NULL DEFAULT 0.06,
-    enemy_right NUMERIC NOT NULL DEFAULT 0.06,
-    enemy_top NUMERIC NOT NULL DEFAULT 0.49,
+    bar_offset NUMERIC NOT NULL DEFAULT 24,
     box_opacity NUMERIC NOT NULL DEFAULT 0.85,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Compatibilidade: se a tabela ja existia sem a coluna de opacidade, adiciona agora.
+-- Compatibilidade: se a coluna de opacidade já existia, garante que está presente.
 ALTER TABLE battle_bar_settings ADD COLUMN IF NOT EXISTS box_opacity NUMERIC NOT NULL DEFAULT 0.85;
+ALTER TABLE battle_bar_settings ADD COLUMN IF NOT EXISTS bar_offset NUMERIC NOT NULL DEFAULT 24;
 
 ALTER TABLE battle_bar_settings ENABLE ROW LEVEL SECURITY;
 

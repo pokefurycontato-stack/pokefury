@@ -342,6 +342,11 @@ export async function preloadBattleSprites(playerPokemon, enemyPokemon) {
     await PokeAPI.preloadSprites(urls);
 }
 
+export function formatHpText(current, max) {
+    if (max >= 1000000) return `${(current / 1000000).toFixed(1)}M / ${(max / 1000000).toFixed(1)}M`;
+    if (max >= 100000) return `${Math.round(current / 1000)}k / ${Math.round(max / 1000)}k`;
+    return `${current} / ${max}`;
+}
 export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activeEnemyIdx = 0) {
     const playerPokemon = playerTeam[activePlayerIdx];
     const enemyPokemon = enemyTeam[activeEnemyIdx];
@@ -361,7 +366,7 @@ export function updateBattleUI(playerTeam, enemyTeam, activePlayerIdx = 0, activ
             else if (hpPct > 20) hpBarFill.style.background = '#ff9800';
             else hpBarFill.style.background = '#f44336';
         }
-if (hpText) hpText.textContent = `${playerPokemon.currentHp} / ${playerPokemon.stats.hp}`;
+if (hpText) hpText.textContent = formatHpText(playerPokemon.currentHp, playerPokemon.stats.hp);
         updateBattleTypeTip('player', playerPokemon.types);
     }
 
@@ -381,7 +386,7 @@ if (hpText) hpText.textContent = `${playerPokemon.currentHp} / ${playerPokemon.s
             else if (hpPct > 20) hpBarFill.style.background = '#ff9800';
             else hpBarFill.style.background = '#f44336';
         }
-        if (hpText) hpText.textContent = `${enemyPokemon.currentHp} / ${enemyPokemon.stats.hp}`;
+        if (hpText) hpText.textContent = formatHpText(enemyPokemon.currentHp, enemyPokemon.stats.hp);
         updateBattleTypeTip('enemy', enemyPokemon.types);
     }
 }
@@ -756,6 +761,7 @@ export function drawBattleScene(ctx, canvas, playerPokemon, enemyPokemon, backgr
     const wildEnemyScale = document.getElementById('wild-fullscreen') ? 0.35 : 0.45;
     updateBattlePokemonDom('player', playerPokemon, playerX, playerY, 0.5 * playerScale);
     updateBattlePokemonDom('enemy', enemyPokemon, enemyX, enemyY, wildEnemyScale * enemyScale);
+    positionHpBarsAboveSprites();
 
     drawBattleFx(ctx, 'player', battleEffects.player, playerX, playerY + 50, 16);
     drawBattleFx(ctx, 'enemy', battleEffects.enemy, enemyX, enemyY + 50, 16);
@@ -886,6 +892,34 @@ function updateBattlePokemonDom(side, pokemon, x, y, sizeScale) {
     } else {
         el.style.left = Math.round(x * sx - maxDim / 2) + 'px';
         el.style.top = Math.round(y * sy - maxDim / 2) + 'px';
+    }
+    el.dataset.x = x;
+    el.dataset.y = y;
+    el.dataset.w = maxDim;
+}
+
+export function positionHpBarsAboveSprites() {
+    const pvpFullscreen = document.getElementById('pvp-fullscreen');
+    const wildFullscreen = document.getElementById('wild-fullscreen');
+    const fullscreen = pvpFullscreen || wildFullscreen;
+    if (!fullscreen) return;
+    let sx, sy;
+    sx = window.innerWidth / VIRTUAL_W;
+    sy = window.innerHeight / VIRTUAL_H;
+    const offset = (window.pokefury && window.pokefury.battleBarOffset != null) ? Number(window.pokefury.battleBarOffset) : 24;
+    const config = [
+        { sprite: battlePokemonSprites['player'], bar: document.getElementById(pvpFullscreen ? 'pvp-my-info' : 'player-info') },
+        { sprite: battlePokemonSprites['enemy'], bar: document.getElementById(pvpFullscreen ? 'pvp-enemy-info' : 'enemy-info') }
+    ];
+    for (const { sprite, bar } of config) {
+        if (!sprite || !bar || !sprite.dataset.x || sprite.style.display === 'none') continue;
+        const x = Number(sprite.dataset.x);
+        const y = Number(sprite.dataset.y);
+        const w = Number(sprite.dataset.w) || 120;
+        const spriteTop = y * sy - w;
+        bar.style.left = Math.round(x * sx) + 'px';
+        bar.style.top = Math.round(spriteTop - offset) + 'px';
+        bar.style.transform = 'translate(-50%, -100%)';
     }
 }
 

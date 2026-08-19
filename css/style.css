@@ -682,54 +682,82 @@ body {
     position: relative;
 }
 
-.enemy-hp-box {
+.enemy-hp-box, .player-hp-box {
     position: absolute;
-    top: 440px;
-    right: 90px;
-    background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;
-    padding: 11px 16px; min-width: 235px; max-width: 325px;
-    z-index: 30;
-}
-.enemy-hp-name {
-    color: #fff; font-size: 17px; font-weight: 700;
-    margin-bottom: 3px;
-}
-.enemy-hp-level {
-    color: rgba(255,255,255,0.5); font-size: 14px; font-weight: 600;
-    margin-bottom: 8px;
-}
-.enemy-hp-bar-bg {
-    width: 100%; height: 11px; background: rgba(255,255,255,0.1);
-    border-radius: 6px; overflow: hidden;
-}
-.enemy-hp-bar-fill {
-    height: 100%; width: 100%; background: #4caf50;
-    border-radius: 6px; transition: width 0.4s ease-out, background 0.4s ease-out;
-}
-.enemy-hp-text {
-    color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 600;
-    text-align: right; margin-top: 5px;
-}
-
-.player-hp-box {
-    position: absolute;
-    bottom: 55px;
-    left: 90px;
     background: rgba(0,0,0,0.85);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.22);
     border-radius: 10px;
-    padding: 11px 16px;
-    min-width: 235px;
-    max-width: 325px;
+    padding: 7px 11px;
+    min-width: 190px;
+    max-width: 300px;
     z-index: 30;
 }
-.player-hp-name { color:#fff; font-size:17px; font-weight:700; margin-bottom:3px; }
-.player-hp-level { color:rgba(255,255,255,0.5); font-size:14px; font-weight:600; margin-bottom:8px; }
-.player-hp-bar-bg { width:100%; height:11px; background:rgba(255,255,255,0.1); border-radius:6px; overflow:hidden; }
-.player-hp-bar-fill { height:100%; width:100%; background:#4caf50; border-radius:6px; transition:width .4s ease-out,background .4s ease-out; }
-.player-hp-text { color:rgba(255,255,255,0.5); font-size:13px; font-weight:600; text-align:left; margin-top:5px; }
+.hp-trainer {
+    color: rgba(255,255,255,0.55);
+    font-size: 9px;
+    font-weight: 700;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.hp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    white-space: nowrap;
+}
+.enemy-hp-box .hp-head { flex-direction: row-reverse; }
+.hp-meta { display: flex; align-items: baseline; gap: 6px; min-width: 0; overflow: hidden; }
+.hp-name { color: #fff; font-size: 13px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hp-level { color: rgba(255,255,255,0.55); font-size: 11px; font-weight: 700; flex: 0 0 auto; }
+.hp-head .battle-type-ic {
+    position: static;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+}
+.hp-head .battle-type-ic img { width: 16px; height: 16px; }
+.hp-bar-bg {
+    position: relative;
+    width: 100%;
+    height: 18px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 9px;
+    overflow: hidden;
+    margin-top: 5px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+.hp-bar-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: #4caf50;
+    border-radius: 9px;
+    transition: width 0.4s ease-out, background 0.4s ease-out;
+}
+.hp-bar-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: Inter, sans-serif;
+    letter-spacing: 0.4px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.7);
+    z-index: 1;
+    pointer-events: none;
+}
 
 #battle-log {
     position: absolute; top: 10px; left: 50%; transform: translateX(-50%);

@@ -5,9 +5,9 @@ import { getEffectiveMovePriority, canPokemonAct, processEndOfTurn, clearProtect
 import {
     showScreen, preloadBattleSprites, preloadBattleBgImage, isBattleBgCached, setBattleBgViaDom, updateBattleUI, showBattleMessage, showMoveSelection,
     drawBattleScene, initBattleUI, updateHpBar, showBagSelection, hideBattlePokemonSprites, stopBattleVideo, showMoveLearnPopup,
-    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites,
+    detectBattleCircles, setBattlePositions, setBattleEffects, resetBattleFx, getBattlePokemonSprites, formatHpText,
     removePlayerSprite, setPlayerSpriteRef, setSkipPlayerRender, setSkipEnemyRender, setBattleSpeed, showSwitchPokemonSelection,
-    showTargetSelection, VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride
+    showTargetSelection, VIRTUAL_W, VIRTUAL_H, clearMaskFx, setMaskEffectOverride, clearMaskEffectOverride, positionHpBarsAboveSprites
 } from './ui.js';
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js?v=20260816b';
@@ -3265,7 +3265,7 @@ class PokeFuryGame {
         let data = null;
         try {
             const { data: row } = await window.db.from('battle_bar_settings')
-                .select('player_left, player_bottom, enemy_right, enemy_top, box_opacity')
+                .select('bar_offset, box_opacity')
                 .eq('background_url', this.currentBattleBg)
                 .maybeSingle();
             data = row;
@@ -3277,19 +3277,14 @@ class PokeFuryGame {
 
     applyBattleBarSettings() {
         const s = this.battleBarSettings;
-        if (!s) return;
-        const player = document.getElementById('player-info');
-        const enemy = document.getElementById('enemy-info');
-        const opacity = s.box_opacity != null ? Number(s.box_opacity) : 0.85;
-        if (player) {
-            player.style.left = (Number(s.player_left) * 100) + '%';
-            player.style.bottom = (Number(s.player_bottom) * 100) + '%';
-            player.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
-        }
-        if (enemy) {
-            enemy.style.right = (Number(s.enemy_right) * 100) + '%';
-            enemy.style.top = (Number(s.enemy_top) * 100) + '%';
-            enemy.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
+        const opacity = s && s.box_opacity != null ? Number(s.box_opacity) : 0.85;
+        const offset = s && s.bar_offset != null ? Number(s.bar_offset) : 24;
+        this.battleBarOffset = offset;
+        const bars = ['player-info', 'enemy-info', 'pvp-my-info', 'pvp-enemy-info']
+            .map(id => document.getElementById(id))
+            .filter(Boolean);
+        for (const el of bars) {
+            el.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, opacity))})`;
         }
     }
 
@@ -3355,10 +3350,10 @@ class PokeFuryGame {
         overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001;background:#000;';
 
         const bar = document.createElement('div');
-        bar.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10002;display:flex;gap:8px;background:rgba(0,0,0,0.65);padding:8px 16px;border-radius:8px;backdrop-filter:blur(4px);align-items:center;flex-wrap:wrap;justify-content:center;';
+        bar.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10002;display:flex;gap:10px;background:rgba(0,0,0,0.65);padding:8px 16px;border-radius:8px;backdrop-filter:blur(4px);align-items:center;flex-wrap:wrap;justify-content:center;';
         bar.innerHTML = `
             <span style="color:#fff;font-size:12px;font-weight:700;">${bgName}</span>
-            <span style="color:rgba(255,255,255,0.5);font-size:12px;">— Arraste as barras de vida para a posição desejada</span>
+            <span style="color:rgba(255,255,255,0.5);font-size:11px;">Opacidade da caixa + altura acima do sprite</span>
             <button id="bb-save" style="padding:6px 14px;background:linear-gradient(135deg,#4caf50,#388e3c);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Salvar</button>
             <button id="bb-reset" style="padding:6px 14px;background:rgba(255,255,255,0.15);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Resetar</button>
             <button id="bb-back" style="padding:6px 14px;background:rgba(88,166,255,0.2);border:1px solid rgba(88,166,255,0.5);border-radius:6px;color:#58a6ff;font-size:12px;cursor:pointer;">Voltar</button>
@@ -3373,60 +3368,97 @@ class PokeFuryGame {
         img.style.cssText = 'width:100%;height:100%;object-fit:fill;pointer-events:none;position:absolute;inset:0;display:block;';
         preview.appendChild(img);
 
-        const pBar = document.createElement('div');
-        pBar.className = 'player-hp-box';
-        pBar.style.cssText = 'z-index:10001;cursor:grab;user-select:none;touch-action:none;';
-        pBar.innerHTML = `
-            <div class="player-hp-name">Seu Pokémon</div>
-            <div class="player-hp-level">Nv. 50</div>
-            <div class="player-hp-bar-bg"><div class="player-hp-bar-fill" style="width:65%"></div></div>
-            <div class="player-hp-text">130/200</div>`;
+        const defaults = { playerX: 0.25, playerY: 0.75, enemyX: 0.72, enemyY: 0.4 };
+        let spritePos = { ...defaults };
+        let barOffset = 24;
+        let boxOpacity = 0.85;
 
-        const eBar = document.createElement('div');
-        eBar.className = 'enemy-hp-box';
-        eBar.style.cssText = 'z-index:10001;cursor:grab;user-select:none;touch-action:none;';
-        eBar.innerHTML = `
-            <div class="enemy-hp-name">Pokémon Selvagem</div>
-            <div class="enemy-hp-level">Nv. 48</div>
-            <div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" style="width:80%"></div></div>
-            <div class="enemy-hp-text">160/200</div>`;
+        const spriteBox = (label, x, y) => {
+            const el = document.createElement('div');
+            el.textContent = label;
+            el.style.cssText = `position:absolute;left:${x * 100}%;top:${y * 100}%;width:120px;height:120px;transform:translate(-50%,-100%);border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;background:rgba(255,255,255,0.08);pointer-events:none;text-align:center;`;
+            return el;
+        };
+        const pSprite = spriteBox('Seu\nPokémon', defaults.playerX, defaults.playerY);
+        const eSprite = spriteBox('Inimigo', defaults.enemyX, defaults.enemyY);
 
-        const d = { player_left: 0.06, player_bottom: 0.06, enemy_right: 0.06, enemy_top: 0.49, box_opacity: 0.85 };
-        let pLeft = d.player_left, pBottom = d.player_bottom, eRight = d.enemy_right, eTop = d.enemy_top;
-        let boxOpacity = d.box_opacity;
-
-        (async () => {
-            try {
-                const { data: row } = await window.db.from('battle_bar_settings')
-                    .select('player_left, player_bottom, enemy_right, enemy_top, box_opacity')
-                    .eq('background_url', bgUrl)
-                    .maybeSingle();
-                if (row && overlay.isConnected) {
-                    pLeft = Number(row.player_left); pBottom = Number(row.player_bottom);
-                    eRight = Number(row.enemy_right); eTop = Number(row.enemy_top);
-                    boxOpacity = Number(row.box_opacity != null ? row.box_opacity : 0.85);
-                    placeBars();
-                    opacitySlider.value = boxOpacity;
-                    opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
-                }
-            } catch (e) {}
-        })();
+        const makeBar = (cls, name, level, hp) => {
+            const el = document.createElement('div');
+            el.className = cls;
+            el.style.cssText = 'pointer-events:none;';
+            el.innerHTML = `
+                <div class="hp-head">
+                    <div class="hp-meta">
+                        <span class="hp-name">${name}</span>
+                        <span class="hp-level">${level}</span>
+                    </div>
+                    <div class="battle-type-ic">
+                        <img src="assets/ferramentas/pokedex.png" alt="Tipos">
+                        <div class="battle-type-tip"></div>
+                    </div>
+                </div>
+                <div class="hp-bar-bg">
+                    <div class="hp-bar-fill" style="width:65%"></div>
+                    <div class="hp-bar-text">${hp}</div>
+                </div>`;
+            return el;
+        };
+        const pBar = makeBar('player-hp-box', 'Seu Pokémon', 'Lv. 50', '130 / 200');
+        const eBar = makeBar('enemy-hp-box', 'Pokémon Selvagem', 'Lv. 48', '160 / 200');
 
         const placeBars = () => {
-            pBar.style.left = (pLeft * 100) + '%';
-            pBar.style.bottom = (pBottom * 100) + '%';
-            eBar.style.right = (eRight * 100) + '%';
-            eBar.style.top = (eTop * 100) + '%';
-            pBar.style.background = `rgba(0,0,0,${boxOpacity})`;
-            eBar.style.background = `rgba(0,0,0,${boxOpacity})`;
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            const placeOne = (barEl, sX, sY) => {
+                const spriteTop = sY * H - 120;
+                barEl.style.left = Math.round(sX * W) + 'px';
+                barEl.style.top = Math.round(spriteTop - barOffset) + 'px';
+                barEl.style.transform = 'translate(-50%, -100%)';
+            };
+            placeOne(pBar, spritePos.playerX, spritePos.playerY);
+            placeOne(eBar, spritePos.enemyX, spritePos.enemyY);
+            pBar.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, boxOpacity))})`;
+            eBar.style.background = `rgba(0,0,0,${Math.max(0, Math.min(1, boxOpacity))})`;
         };
+
+        const placeSprites = () => {
+            pSprite.style.left = (spritePos.playerX * 100) + '%';
+            pSprite.style.top = (spritePos.playerY * 100) + '%';
+            eSprite.style.left = (spritePos.enemyX * 100) + '%';
+            eSprite.style.top = (spritePos.enemyY * 100) + '%';
+        };
+        placeSprites();
         placeBars();
 
-        const opacityRow = document.createElement('div');
-        opacityRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;';
+
+        const offsetLabel = document.createElement('span');
+        offsetLabel.textContent = barOffset + 'px';
+        offsetLabel.style.cssText = 'color:rgba(255,255,255,0.8);font-size:11px;font-weight:700;min-width:40px;text-align:right;';
+        const offsetSlider = document.createElement('input');
+        offsetSlider.type = 'range';
+        offsetSlider.min = '0';
+        offsetSlider.max = '200';
+        offsetSlider.step = '2';
+        offsetSlider.value = barOffset;
+        offsetSlider.style.cssText = 'width:110px;accent-color:#58a6ff;cursor:pointer;';
+        offsetSlider.title = 'Altura da barra acima do sprite (px)';
+        offsetSlider.addEventListener('input', () => {
+            barOffset = Number(offsetSlider.value);
+            offsetLabel.textContent = barOffset + 'px';
+            placeBars();
+        });
+        const offsetText = document.createElement('span');
+        offsetText.textContent = 'Altura';
+        offsetText.style.cssText = 'color:rgba(255,255,255,0.7);font-size:12px;';
+        row.appendChild(offsetText);
+        row.appendChild(offsetSlider);
+        row.appendChild(offsetLabel);
+
         const opacityLabel = document.createElement('span');
         opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
-        opacityLabel.style.cssText = 'color:rgba(255,255,255,0.8);font-size:11px;font-weight:700;min-width:38px;text-align:right;';
+        opacityLabel.style.cssText = 'color:rgba(255,255,255,0.8);font-size:11px;font-weight:700;min-width:40px;text-align:right;';
         const opacitySlider = document.createElement('input');
         opacitySlider.type = 'range';
         opacitySlider.min = '0.1';
@@ -3443,59 +3475,71 @@ class PokeFuryGame {
         const opacityText = document.createElement('span');
         opacityText.textContent = 'Opacidade';
         opacityText.style.cssText = 'color:rgba(255,255,255,0.7);font-size:12px;';
-        opacityRow.appendChild(opacityText);
-        opacityRow.appendChild(opacitySlider);
-        opacityRow.appendChild(opacityLabel);
-        bar.appendChild(opacityRow);
+        row.appendChild(opacityText);
+        row.appendChild(opacitySlider);
+        row.appendChild(opacityLabel);
+        bar.appendChild(row);
 
-        const makeDraggable = (el, onMove) => {
-            let dragging = false;
-            const move = (cx, cy) => {
-                const rect = preview.getBoundingClientRect();
-                const x = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
-                const y = Math.max(0, Math.min(1, (cy - rect.top) / rect.height));
-                onMove(x, y);
-            };
-            el.addEventListener('mousedown', (e) => { e.preventDefault(); dragging = true; el.style.cursor = 'grabbing'; });
-            el.addEventListener('touchstart', () => { dragging = true; }, { passive: true });
-            window.addEventListener('mousemove', (e) => { if (dragging) move(e.clientX, e.clientY); });
-            window.addEventListener('touchmove', (e) => { if (dragging) move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
-            const up = () => { dragging = false; el.style.cursor = 'grab'; };
-            window.addEventListener('mouseup', up);
-            window.addEventListener('touchend', up);
-        };
-
-        makeDraggable(pBar, (x, y) => { pLeft = x; pBottom = 1 - y; placeBars(); });
-        makeDraggable(eBar, (x, y) => { eRight = 1 - x; eTop = y; placeBars(); });
+        (async () => {
+            try {
+                const { data: pos } = await window.db.from('battle_position_settings')
+                    .select('player_x, player_y, enemy_x, enemy_y')
+                    .eq('background_url', bgUrl)
+                    .maybeSingle();
+                if (pos && overlay.isConnected) {
+                    spritePos = {
+                        playerX: Number(pos.player_x), playerY: Number(pos.player_y),
+                        enemyX: Number(pos.enemy_x), enemyY: Number(pos.enemy_y)
+                    };
+                    placeSprites();
+                }
+            } catch (e) {}
+            try {
+                const { data: srow } = await window.db.from('battle_bar_settings')
+                    .select('bar_offset, box_opacity')
+                    .eq('background_url', bgUrl)
+                    .maybeSingle();
+                if (srow && overlay.isConnected) {
+                    barOffset = Number(srow.bar_offset != null ? srow.bar_offset : 24);
+                    boxOpacity = Number(srow.box_opacity != null ? srow.box_opacity : 0.85);
+                    offsetSlider.value = barOffset;
+                    offsetLabel.textContent = barOffset + 'px';
+                    opacitySlider.value = boxOpacity;
+                    opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
+                    placeBars();
+                }
+            } catch (e) {}
+        })();
 
         bar.querySelector('#bb-save').addEventListener('click', async () => {
             try {
                 await window.db.from('battle_bar_settings').upsert({
                     background_url: bgUrl,
-                    player_left: pLeft, player_bottom: pBottom,
-                    enemy_right: eRight, enemy_top: eTop,
+                    bar_offset: barOffset,
                     box_opacity: boxOpacity,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'background_url' });
                 if (this.currentBattleBg === bgUrl) {
-                    this.battleBarSettings = { player_left: pLeft, player_bottom: pBottom, enemy_right: eRight, enemy_top: eTop, box_opacity: boxOpacity };
+                    this.battleBarSettings = { bar_offset: barOffset, box_opacity: boxOpacity };
                     this.applyBattleBarSettings();
                 }
                 if (pickerOverlay) {
                     pickerOverlay.style.display = '';
                     const status = pickerOverlay.querySelector('#bbp-status');
-                    if (status) status.textContent = '✓ Posição salva para ' + bgName + '!';
+                    if (status) status.textContent = '✓ Barras salvas para ' + bgName + '!';
                 }
                 overlay.remove();
-                this.showToast(`Posição salva para ${bgName}!`, 'success');
+                this.showToast(`Barras salvas para ${bgName}!`, 'success');
             } catch (err) {
                 this.showToast('Erro ao salvar: ' + (err?.message || 'desconhecido'), 'error');
             }
         });
 
         bar.querySelector('#bb-reset').addEventListener('click', async () => {
-            pLeft = d.player_left; pBottom = d.player_bottom; eRight = d.enemy_right; eTop = d.enemy_top;
-            boxOpacity = d.box_opacity;
+            barOffset = 24;
+            boxOpacity = 0.85;
+            offsetSlider.value = barOffset;
+            offsetLabel.textContent = barOffset + 'px';
             opacitySlider.value = boxOpacity;
             opacityLabel.textContent = Math.round(boxOpacity * 100) + '%';
             placeBars();
@@ -3505,7 +3549,7 @@ class PokeFuryGame {
                     this.battleBarSettings = null;
                     this.applyBattleBarSettings();
                 }
-                this.showToast('Posições resetadas!', 'info');
+                this.showToast('Barras resetadas!', 'info');
             } catch (err) {
                 this.showToast('Erro ao resetar: ' + (err?.message || 'desconhecido'), 'error');
             }
@@ -3521,6 +3565,8 @@ class PokeFuryGame {
             if (pickerOverlay) pickerOverlay.remove();
         });
 
+        preview.appendChild(pSprite);
+        preview.appendChild(eSprite);
         preview.appendChild(pBar);
         preview.appendChild(eBar);
         overlay.appendChild(bar);
@@ -8080,28 +8126,38 @@ openEventsPanel() {
         pvpUI.innerHTML = `
                 <div id="pvp-turn-indicator" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;padding:4px 16px;background:rgba(0,0,0,0.7);border-radius:6px;color:#fff;font-size:12px;font-weight:700;font-family:Inter;border:1px solid rgba(233,69,96,0.4);pointer-events:auto;">Sua vez!</div>
                 <div id="pvp-battle-log" style="position:absolute;left:50%;bottom:58px;transform:translateX(-50%);z-index:30;width:min(520px,80vw);max-height:116px;overflow-y:auto;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.68);color:rgba(255,255,255,.82);font-size:10px;line-height:1.45;font-family:Inter;pointer-events:none;"></div>
-                <div id="pvp-enemy-info" style="position:absolute;top:10px;right:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;pointer-events:auto;">
-                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-enemy-name"></div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-enemy-pokemon"></div>
-                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
-                        <div id="pvp-enemy-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
+                <div id="pvp-enemy-info" class="enemy-hp-box" style="z-index:30;pointer-events:auto;">
+                    <div class="hp-trainer" id="pvp-enemy-name"></div>
+                    <div class="hp-head">
+                        <div class="hp-meta">
+                            <span class="hp-name" id="pvp-enemy-pokemon"></span>
+                            <span class="hp-level" id="pvp-enemy-hp-level"></span>
+                        </div>
+                        <div class="battle-type-ic" id="pvp-enemy-type-ic">
+                            <img src="assets/ferramentas/pokedex.png" alt="Tipos">
+                            <div class="battle-type-tip" id="pvp-enemy-type-tip"></div>
+                        </div>
                     </div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;text-align:right;" id="pvp-enemy-hp-text"></div>
-                    <div class="battle-type-ic" id="pvp-enemy-type-ic">
-                        <img src="assets/ferramentas/pokedex.png" alt="Tipos">
-                        <div class="battle-type-tip" id="pvp-enemy-type-tip"></div>
+                    <div class="hp-bar-bg">
+                        <div class="hp-bar-fill" id="pvp-enemy-hp-bar"></div>
+                        <div class="hp-bar-text" id="pvp-enemy-hp-text"></div>
                     </div>
                 </div>
-                <div id="pvp-my-info" style="position:absolute;top:10px;left:10px;z-index:30;background:rgba(0,0,0,0.8);border-radius:8px;padding:8px 12px;min-width:150px;">
-                    <div style="font-size:11px;font-weight:700;color:#fff;" id="pvp-my-name"></div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);" id="pvp-my-pokemon"></div>
-                    <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;overflow:hidden;">
-                        <div id="pvp-my-hp-bar" style="height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>
+                <div id="pvp-my-info" class="player-hp-box" style="z-index:30;pointer-events:auto;">
+                    <div class="hp-trainer" id="pvp-my-name"></div>
+                    <div class="hp-head">
+                        <div class="hp-meta">
+                            <span class="hp-name" id="pvp-my-pokemon"></span>
+                            <span class="hp-level" id="pvp-my-hp-level"></span>
+                        </div>
+                        <div class="battle-type-ic" id="pvp-my-type-ic">
+                            <img src="assets/ferramentas/pokedex.png" alt="Tipos">
+                            <div class="battle-type-tip" id="pvp-my-type-tip"></div>
+                        </div>
                     </div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;" id="pvp-my-hp-text"></div>
-                    <div class="battle-type-ic" id="pvp-my-type-ic">
-                        <img src="assets/ferramentas/pokedex.png" alt="Tipos">
-                        <div class="battle-type-tip" id="pvp-my-type-tip"></div>
+                    <div class="hp-bar-bg">
+                        <div class="hp-bar-fill" id="pvp-my-hp-bar"></div>
+                        <div class="hp-bar-text" id="pvp-my-hp-text"></div>
                     </div>
                 </div>
                 <div id="pvp-actions" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;pointer-events:auto;">
@@ -8113,6 +8169,9 @@ openEventsPanel() {
                 <div id="pvp-move-selection" style="display:none;position:absolute;bottom:10px;left:10px;right:10px;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;pointer-events:auto;"></div>
         `;
         pvpFullscreen.appendChild(pvpUI);
+
+        await this.loadBattleBarSettings();
+        positionHpBarsAboveSprites();
 
         if (this.typeEffects?.canvas) {
             this.typeEffects.canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:40;';
@@ -8277,13 +8336,14 @@ openEventsPanel() {
         const myPokemon = battle.visibleMyActivePokemon;
         const enemyPokemon = battle.enemyActivePokemon;
 
-        if (myPokemon) {
-            document.getElementById('pvp-my-name').textContent = this.playerName || 'Você';
-            document.getElementById('pvp-my-pokemon').textContent = `${myPokemon.name} Lv.${myPokemon.level}`;
+if (myPokemon) {
+            document.getElementById('pvp-my-name').textContent = this.playerName || 'Voc�';
+            document.getElementById('pvp-my-pokemon').textContent = myPokemon.name;
+            document.getElementById('pvp-my-hp-level').textContent = `Lv.${myPokemon.level}`;
             const myHpPct = (myPokemon.currentHp / myPokemon.stats.hp) * 100;
             document.getElementById('pvp-my-hp-bar').style.width = myHpPct + '%';
             document.getElementById('pvp-my-hp-bar').style.background = myHpPct > 50 ? '#4caf50' : myHpPct > 25 ? '#ff9800' : '#f44336';
-            document.getElementById('pvp-my-hp-text').textContent = `HP ${myPokemon.currentHp}/${myPokemon.stats.hp}`;
+            document.getElementById('pvp-my-hp-text').textContent = formatHpText(myPokemon.currentHp, myPokemon.stats.hp);
             const myTypes = myPokemon.isTerastallized ? [myPokemon.teraType] : (myPokemon.types || []);
             const myTip = document.getElementById('pvp-my-type-tip');
             if (myTip) myTip.innerHTML = myTypes.map(t => `<span class="type-badge type-${t}">${t}</span>`).join('');
@@ -8294,11 +8354,12 @@ openEventsPanel() {
             document.getElementById('pvp-enemy-name').textContent = isChallenger
                 ? battle.challenge.challenged_name
                 : battle.challenge.challenger_name;
-            document.getElementById('pvp-enemy-pokemon').textContent = `${enemyPokemon.name} Lv.${enemyPokemon.level}`;
+            document.getElementById('pvp-enemy-pokemon').textContent = enemyPokemon.name;
+            document.getElementById('pvp-enemy-hp-level').textContent = `Lv.${enemyPokemon.level}`;
             const enemyHpPct = (enemyPokemon.currentHp / enemyPokemon.stats.hp) * 100;
             document.getElementById('pvp-enemy-hp-bar').style.width = enemyHpPct + '%';
             document.getElementById('pvp-enemy-hp-bar').style.background = enemyHpPct > 50 ? '#4caf50' : enemyHpPct > 25 ? '#ff9800' : '#f44336';
-            document.getElementById('pvp-enemy-hp-text').textContent = `HP ${enemyPokemon.currentHp}/${enemyPokemon.stats.hp}`;
+            document.getElementById('pvp-enemy-hp-text').textContent = formatHpText(enemyPokemon.currentHp, enemyPokemon.stats.hp);
             const enemyTypes = enemyPokemon.isTerastallized ? [enemyPokemon.teraType] : (enemyPokemon.types || []);
             const enemyTip = document.getElementById('pvp-enemy-type-tip');
             if (enemyTip) enemyTip.innerHTML = enemyTypes.map(t => `<span class="type-badge type-${t}">${t}</span>`).join('');

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PokeFury - Combates Fréneticos</title>
-    <link rel="stylesheet" href="css/style.css?v=20260816ck">
+    <link rel="stylesheet" href="css/style.css?v=20260819a">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -278,27 +278,35 @@
                     <div id="battle-screen" class="hidden">
                         <div id="battle-ui">
                             <div id="enemy-info" class="enemy-hp-box">
-                                <div class="enemy-hp-name" id="enemy-hp-name"></div>
-                                <div class="enemy-hp-level" id="enemy-hp-level"></div>
-                                <div class="enemy-hp-bar-bg">
-                                    <div class="enemy-hp-bar-fill" id="enemy-hp-bar-fill"></div>
+                                <div class="hp-head">
+                                    <div class="hp-meta">
+                                        <span class="hp-name" id="enemy-hp-name"></span>
+                                        <span class="hp-level" id="enemy-hp-level"></span>
+                                    </div>
+                                    <div class="battle-type-ic" id="enemy-type-ic">
+                                        <img src="assets/ferramentas/pokedex.png" alt="Tipos">
+                                        <div class="battle-type-tip" id="enemy-type-tip"></div>
+                                    </div>
                                 </div>
-                                <div class="enemy-hp-text" id="enemy-hp-text"></div>
-                                <div class="battle-type-ic" id="enemy-type-ic">
-                                    <img src="assets/ferramentas/pokedex.png" alt="Tipos">
-                                    <div class="battle-type-tip" id="enemy-type-tip"></div>
+                                <div class="hp-bar-bg">
+                                    <div class="hp-bar-fill" id="enemy-hp-bar-fill"></div>
+                                    <div class="hp-bar-text" id="enemy-hp-text"></div>
                                 </div>
                             </div>
                             <div id="player-info" class="player-hp-box">
-                                <div class="player-hp-name" id="player-hp-name"></div>
-                                <div class="player-hp-level" id="player-hp-level"></div>
-                                <div class="player-hp-bar-bg">
-                                    <div class="player-hp-bar-fill" id="player-hp-bar-fill"></div>
+                                <div class="hp-head">
+                                    <div class="hp-meta">
+                                        <span class="hp-name" id="player-hp-name"></span>
+                                        <span class="hp-level" id="player-hp-level"></span>
+                                    </div>
+                                    <div class="battle-type-ic" id="player-type-ic">
+                                        <img src="assets/ferramentas/pokedex.png" alt="Tipos">
+                                        <div class="battle-type-tip" id="player-type-tip"></div>
+                                    </div>
                                 </div>
-                                <div class="player-hp-text" id="player-hp-text"></div>
-                                <div class="battle-type-ic" id="player-type-ic">
-                                    <img src="assets/ferramentas/pokedex.png" alt="Tipos">
-                                    <div class="battle-type-tip" id="player-type-tip"></div>
+                                <div class="hp-bar-bg">
+                                    <div class="hp-bar-fill" id="player-hp-bar-fill"></div>
+                                    <div class="hp-bar-text" id="player-hp-text"></div>
                                 </div>
                             </div>
                             <div id="battle-log"><p id="battle-message"></p></div>
@@ -854,8 +862,8 @@
     <script type="module" src="js/data.js"></script>
     <script type="module" src="js/utils.js?v=20260816g"></script>
     <script type="module" src="js/battle.js?v=20260816g"></script>
-<script type="module" src="js/ui.js?v=20260816m"></script>
-<script type="module" src="js/game.js?v=20260816ar"></script>
+<script type="module" src="js/ui.js?v=20260819a"></script>
+<script type="module" src="js/game.js?v=20260819a"></script>
     <script type="module" src="js/security.js?v=20260816l"></script>
     <script type="module" src="js/afk.js"></script>
     <script src="js/pvp-system.js"></script>
