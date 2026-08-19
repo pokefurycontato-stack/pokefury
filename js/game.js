@@ -3234,11 +3234,12 @@ class PokeFuryGame {
     }
 
     async loadBattleBarSettings() {
+        if (!this.currentBattleBg) return null;
         let data = null;
         try {
             const { data: row } = await window.db.from('battle_bar_settings')
                 .select('player_left, player_bottom, enemy_right, enemy_top')
-                .eq('id', 1)
+                .eq('background_url', this.currentBattleBg)
                 .maybeSingle();
             data = row;
         } catch (e) {}
@@ -3262,19 +3263,72 @@ class PokeFuryGame {
         }
     }
 
-    openBattleBarEditor() {
+    async openBattleBarPicker() {
+        if (!window.isAdmin) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'battle-bar-picker';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10000;background:#0a0a1e;display:flex;flex-direction:column;';
+        overlay.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08);flex-wrap:wrap;">
+                <div style="color:#fff;font-size:15px;font-weight:800;">📊 Barras de vida por fundo de batalha</div>
+                <div style="color:rgba(255,255,255,0.45);font-size:11px;">Escolha um fundo para arrastar a posição das barras (jogador + inimigo) e salvar para todos</div>
+                <div style="flex:1"></div>
+                <button id="bbp-close" style="padding:7px 16px;background:rgba(244,67,54,0.85);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Fechar</button>
+            </div>
+            <div id="bbp-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:16px;align-content:start;"></div>
+        `;
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('#bbp-close').addEventListener('click', () => overlay.remove());
+
+        const grid = overlay.querySelector('#bbp-grid');
+        grid.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:12px;grid-column:1/-1;text-align:center;padding:40px;">Carregando fundos...</div>';
+
+        try {
+            const backgrounds = await this.regionManager.listBattleBackgrounds();
+            if (!overlay.isConnected) return;
+            if (!backgrounds || backgrounds.length === 0) {
+                grid.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:12px;grid-column:1/-1;text-align:center;padding:40px;">Nenhum background encontrado em sprites/battle_backgrounds no storage.</div>';
+                return;
+            }
+            grid.innerHTML = '';
+            backgrounds.forEach(bg => {
+                const card = document.createElement('div');
+                card.style.cssText = 'border:1px solid rgba(255,255,255,0.12);border-radius:10px;overflow:hidden;cursor:pointer;background:rgba(255,255,255,0.04);transition:transform .12s,border-color .12s;';
+                card.innerHTML = `
+                    <img src="${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bg.name}" alt="${bg.name}" style="width:100%;height:130px;object-fit:cover;display:block;" loading="lazy">
+                    <div style="padding:8px 10px;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bg.name}</div>
+                `;
+                card.onmouseenter = () => { card.style.borderColor = 'rgba(88,166,255,0.7)'; card.style.transform = 'scale(1.02)'; };
+                card.onmouseleave = () => { card.style.borderColor = 'rgba(255,255,255,0.12)'; card.style.transform = 'scale(1)'; };
+                const bgUrl = `${window.SUPABASE_URL}/storage/v1/object/public/sprites/battle_backgrounds/${bg.name}`;
+                card.onclick = () => {
+                    overlay.style.display = 'none';
+                    this.openBattleBarEditor(bgUrl, bg.name, overlay);
+                };
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            grid.innerHTML = '<div style="color:rgba(244,67,54,0.8);font-size:12px;grid-column:1/-1;text-align:center;padding:40px;">Erro ao listar fundos.</div>';
+        }
+    }
+
+    openBattleBarEditor(bgUrl, bgName, pickerOverlay) {
         if (!window.isAdmin) return;
 
         const overlay = document.createElement('div');
         overlay.id = 'battle-bar-editor';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10000;background:#000;';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001;background:#000;';
 
         const bar = document.createElement('div');
-        bar.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10002;display:flex;gap:8px;background:rgba(0,0,0,0.65);padding:8px 16px;border-radius:8px;backdrop-filter:blur(4px);align-items:center;';
+        bar.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10002;display:flex;gap:8px;background:rgba(0,0,0,0.65);padding:8px 16px;border-radius:8px;backdrop-filter:blur(4px);align-items:center;flex-wrap:wrap;justify-content:center;';
         bar.innerHTML = `
-            <span style="color:#fff;font-size:12px;font-weight:700;">Arraste as barras de vida para a posição desejada</span>
+            <span style="color:#fff;font-size:12px;font-weight:700;">${bgName}</span>
+            <span style="color:rgba(255,255,255,0.5);font-size:12px;">— Arraste as barras de vida para a posição desejada</span>
             <button id="bb-save" style="padding:6px 14px;background:linear-gradient(135deg,#4caf50,#388e3c);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Salvar</button>
             <button id="bb-reset" style="padding:6px 14px;background:rgba(255,255,255,0.15);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Resetar</button>
+            <button id="bb-back" style="padding:6px 14px;background:rgba(88,166,255,0.2);border:1px solid rgba(88,166,255,0.5);border-radius:6px;color:#58a6ff;font-size:12px;cursor:pointer;">Voltar</button>
             <button id="bb-close" style="padding:6px 14px;background:rgba(244,67,54,0.8);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;">Fechar</button>`;
 
         const preview = document.createElement('div');
@@ -3282,7 +3336,7 @@ class PokeFuryGame {
 
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.src = this.currentBattleBg || 'https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/pvpcasual.png';
+        img.src = bgUrl;
         img.style.cssText = 'width:100%;height:100%;object-fit:fill;pointer-events:none;position:absolute;inset:0;display:block;';
         preview.appendChild(img);
 
@@ -3304,11 +3358,22 @@ class PokeFuryGame {
             <div class="enemy-hp-bar-bg"><div class="enemy-hp-bar-fill" style="width:80%"></div></div>
             <div class="enemy-hp-text">160/200</div>`;
 
-        const s = this.battleBarSettings || {};
-        let pLeft = Number(s.player_left ?? 0.06);
-        let pBottom = Number(s.player_bottom ?? 0.06);
-        let eRight = Number(s.enemy_right ?? 0.06);
-        let eTop = Number(s.enemy_top ?? 0.49);
+        const d = { player_left: 0.06, player_bottom: 0.06, enemy_right: 0.06, enemy_top: 0.49 };
+        let pLeft = d.player_left, pBottom = d.player_bottom, eRight = d.enemy_right, eTop = d.enemy_top;
+
+        (async () => {
+            try {
+                const { data: row } = await window.db.from('battle_bar_settings')
+                    .select('player_left, player_bottom, enemy_right, enemy_top')
+                    .eq('background_url', bgUrl)
+                    .maybeSingle();
+                if (row && overlay.isConnected) {
+                    pLeft = Number(row.player_left); pBottom = Number(row.player_bottom);
+                    eRight = Number(row.enemy_right); eTop = Number(row.enemy_top);
+                    placeBars();
+                }
+            } catch (e) {}
+        })();
 
         const placeBars = () => {
             pBar.style.left = (pLeft * 100) + '%';
@@ -3341,37 +3406,45 @@ class PokeFuryGame {
         bar.querySelector('#bb-save').addEventListener('click', async () => {
             try {
                 await window.db.from('battle_bar_settings').upsert({
-                    id: 1,
+                    background_url: bgUrl,
                     player_left: pLeft, player_bottom: pBottom,
                     enemy_right: eRight, enemy_top: eTop,
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'id' });
-                this.battleBarSettings = { player_left: pLeft, player_bottom: pBottom, enemy_right: eRight, enemy_top: eTop };
-                this.applyBattleBarSettings();
-                this.showToast('Posição das barras salva para todos!', 'success');
+                }, { onConflict: 'background_url' });
+                if (this.currentBattleBg === bgUrl) {
+                    this.battleBarSettings = { player_left: pLeft, player_bottom: pBottom, enemy_right: eRight, enemy_top: eTop };
+                    this.applyBattleBarSettings();
+                }
+                this.showToast(`Posição salva para ${bgName}!`, 'success');
             } catch (err) {
                 this.showToast('Erro ao salvar: ' + (err?.message || 'desconhecido'), 'error');
             }
         });
 
         bar.querySelector('#bb-reset').addEventListener('click', async () => {
-            pLeft = 0.06; pBottom = 0.06; eRight = 0.06; eTop = 0.49;
+            pLeft = d.player_left; pBottom = d.player_bottom; eRight = d.enemy_right; eTop = d.enemy_top;
             placeBars();
             try {
-                await window.db.from('battle_bar_settings').upsert({
-                    id: 1, player_left: pLeft, player_bottom: pBottom,
-                    enemy_right: eRight, enemy_top: eTop,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'id' });
-                this.battleBarSettings = { player_left: pLeft, player_bottom: pBottom, enemy_right: eRight, enemy_top: eTop };
-                this.applyBattleBarSettings();
+                await window.db.from('battle_bar_settings').delete().eq('background_url', bgUrl);
+                if (this.currentBattleBg === bgUrl) {
+                    this.battleBarSettings = null;
+                    this.applyBattleBarSettings();
+                }
                 this.showToast('Posições resetadas!', 'info');
             } catch (err) {
                 this.showToast('Erro ao resetar: ' + (err?.message || 'desconhecido'), 'error');
             }
         });
 
-        bar.querySelector('#bb-close').addEventListener('click', () => overlay.remove());
+        bar.querySelector('#bb-back').addEventListener('click', () => {
+            overlay.remove();
+            if (pickerOverlay) pickerOverlay.style.display = '';
+        });
+
+        bar.querySelector('#bb-close').addEventListener('click', () => {
+            overlay.remove();
+            if (pickerOverlay) pickerOverlay.remove();
+        });
 
         preview.appendChild(pBar);
         preview.appendChild(eBar);
@@ -4338,7 +4411,7 @@ class PokeFuryGame {
 
         const battleBarsBtn = document.getElementById('admin-btn-battle-bars');
         if (battleBarsBtn) {
-            battleBarsBtn.onclick = () => this.openBattleBarEditor();
+            battleBarsBtn.onclick = () => this.openBattleBarPicker();
         }
 
         const profileAdminBtn = document.getElementById('admin-btn-profile');

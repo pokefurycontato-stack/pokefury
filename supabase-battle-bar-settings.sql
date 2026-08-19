@@ -1,9 +1,12 @@
--- PokeFury - Posição global das barras de vida da batalha (jogador + inimigo)
+-- PokeFury - Posição das barras de vida da batalha POR FUNDO (jogador + inimigo)
 -- As barras usam porcentagem da tela, então ficam no MESMO lugar em qualquer monitor.
 -- Rode no SQL Editor do Supabase (logado como admin).
+-- OBS: recria a tabela. Se já rodou a versão anterior (id único), ela será recriada sem dados.
 
-CREATE TABLE IF NOT EXISTS battle_bar_settings (
-    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+DROP TABLE IF EXISTS battle_bar_settings;
+
+CREATE TABLE battle_bar_settings (
+    background_url TEXT PRIMARY KEY,
     player_left NUMERIC NOT NULL DEFAULT 0.06,
     player_bottom NUMERIC NOT NULL DEFAULT 0.06,
     enemy_right NUMERIC NOT NULL DEFAULT 0.06,
@@ -24,7 +27,3 @@ CREATE POLICY "battle_bar_settings_admin_write" ON battle_bar_settings
     ) WITH CHECK (
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
     );
-
-INSERT INTO battle_bar_settings (id)
-VALUES (1)
-ON CONFLICT (id) DO NOTHING;
