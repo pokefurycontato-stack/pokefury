@@ -8066,6 +8066,11 @@ openEventsPanel() {
         await this.loadPvpPositionSettings();
         setBattleEffects('none', 'none');
 
+        // Garante que o fundo esteja carregado antes do primeiro desenho (evita tela preta).
+        if (this.currentBattleBg) {
+            await preloadBattleBgImage(this.currentBattleBg);
+        }
+
         const clip = this.getBattleClipRect();
         if (this.currentBattleBg && this.ctx && this.canvas) {
             drawBattleScene(this.ctx, this.canvas, battle.visibleMyActivePokemon, battle.enemyActivePokemon, this.currentBattleBg, clip);
