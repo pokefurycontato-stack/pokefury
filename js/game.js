@@ -1196,8 +1196,15 @@ class PokeFuryGame {
                 () => this.onRun()
             );
 
-            let introMsg = `Um ${pokemon.name} selvagem apareceu!`;
-            if (isShiny) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
+            const gymLeader = this._isGymBattle ? this._currentGymLeader : null;
+            let introMsg;
+            if (gymLeader) {
+                const shinyTag = isShiny ? 'SHINY ' : '';
+                introMsg = `${pokemon.name} ${shinyTag}do Líder de Ginásio ${gymLeader.name} apareceu, prepare-se para a luta!`;
+            } else {
+                introMsg = `Um ${pokemon.name} selvagem apareceu!`;
+                if (isShiny) introMsg = `Um ${pokemon.name} SHINY selvagem apareceu!`;
+            }
 
             setSkipPlayerRender(false);
             drawBattleScene(this.ctx, this.canvas, activePlayer, pokemon, this.currentBattleBg, clipRect2);
@@ -7714,7 +7721,7 @@ openEventsPanel() {
                 pokemonData.id,
                 level,
                 null,
-                `${leader.name} - Líder de Ginásio`
+                false
             );
             if (this.enemyTeam[0]) this.enemyTeam[0].isGymLeader = true;
         }
