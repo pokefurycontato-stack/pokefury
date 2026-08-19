@@ -3192,6 +3192,29 @@ class PokeFuryGame {
     }
 
     getNormalizedBattleBg() {
+        const biome = String(this._currentBiome || '').trim().toLowerCase();
+        if (biome) {
+            const biomeBgs = {
+                'floresta': 'grama.png',
+                'grama': 'grama.png',
+                'praia': 'agua.png',
+                'agua': 'agua.png',
+                'aqua': 'agua.png',
+                'montanha': 'pedra.png',
+                'penhasco': 'pedra.png',
+                'pedra': 'pedra.png',
+                'vulcao': 'vulcv1.png',
+                'vulcão': 'vulcv1.png',
+                'geleira': 'icev1.png',
+                'gelo': 'icev1.png',
+                'industrial': 'eletricov1.png',
+                'torre': 'pvpcasual.png'
+            };
+            const bgName = biomeBgs[biome];
+            if (bgName) {
+                return `https://odevwnnpzsoltbrrjdts.supabase.co/storage/v1/object/public/sprites/battle_backgrounds/${bgName}`;
+            }
+        }
         if (this.currentMap && this.currentMap.battle_bg_url) {
             return this.currentMap.battle_bg_url;
         }
