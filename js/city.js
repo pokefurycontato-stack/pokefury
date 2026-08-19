@@ -4852,21 +4852,6 @@ class CityScreen {
         });
     }
 
-    // Ponto aleatorio dentro de um tile de agua (base para espalhar as ondas)
-    _randomWaterPoint() {
-        const tiles = this._waterTiles || [];
-        if (tiles.length === 0) return null;
-        const a = tiles[Math.floor(Math.random() * tiles.length)];
-        const img = a._img;
-        if (!img || !img.complete || !img.naturalWidth) return { x: a.pos_x + 32, y: a.pos_y + 32 };
-        const aw = img.naturalWidth * (a.scale || 1);
-        const ah = img.naturalHeight * (a.scale || 1);
-        return {
-            x: a.pos_x + Math.random() * aw,
-            y: a.pos_y + Math.random() * ah
-        };
-    }
-
     // Espuma que espirra quando a onda quebra na entidade (particulas + anel que expande)
     _spawnFoamBurst(x, y) {
         const n = 9 + Math.floor(Math.random() * 5);
@@ -4992,19 +4977,19 @@ class CityScreen {
         const dt = this._dt || 1;
         const k = dt / 60;
 
-        // Ondas de espuma: 8 por leva, espalhadas por pontos aleatorios da agua,
-        // subindo na direcao ja existente (as que cruzam entidades quebram em espuma).
+        // Ondas de espuma: 8 por leva, agrupadas nas entidades dentro d'agua
+        // (sobem na direcao ja existente e quebram em espuma ao cruzar o alvo).
         this._waveTimer = (this._waveTimer || 0) + k;
         if (this._waveTimer >= this.waterWaveInterval) {
             this._waveTimer = 0;
-            let spawned = 0;
-            for (let i = 0; i < 8 && spawned < 24; i++) {
-                const pt = this._randomWaterPoint();
-                if (!pt) break;
-                this._spawnWaterWave(pt.x, pt.y);
-                spawned++;
+            const targets = this._waterWaveTargets();
+            if (targets.length > 0) {
+                for (let i = 0; i < 8; i++) {
+                    const tgt = targets[Math.floor(Math.random() * targets.length)];
+                    this._spawnWaterWave(tgt.x, tgt.y);
+                }
+                this._waveTimer = -(Math.random() * 0.5);
             }
-            if (spawned > 0) this._waveTimer = -(Math.random() * 0.5);
         }
         this._updateWaterWaves(ctx, k, camX, camY);
 
