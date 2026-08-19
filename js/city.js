@@ -3776,7 +3776,9 @@ class CityScreen {
         const grassEl = document.createElement('canvas');
         grassEl.style.cssText = 'position:absolute;pointer-events:none;';
         wrap.appendChild(grassEl);
-        const entry = { el, shadowEl, grassEl };
+        const shinyEl = window.createShinyFxElement ? window.createShinyFxElement() : null;
+        if (shinyEl) wrap.appendChild(shinyEl);
+        const entry = { el, shadowEl, grassEl, shinyEl };
         this._otherFollowerEls[userId] = entry;
         return entry;
     }
@@ -3787,6 +3789,7 @@ class CityScreen {
         try { entry.el.remove(); } catch (e) {}
         try { entry.shadowEl.remove(); } catch (e) {}
         try { entry.grassEl && entry.grassEl.remove(); } catch (e) {}
+        try { entry.shinyEl && entry.shinyEl.remove(); } catch (e) {}
         delete this._otherFollowerEls[userId];
     }
 
@@ -3849,6 +3852,19 @@ class CityScreen {
         shadowEl.style.width = shadowW + 'px';
         shadowEl.style.height = shadowH + 'px';
         shadowEl.style.transform = tf;
+
+        // Brilho/estrelinhas shiny ao redor do follower de OUTRO jogador
+        // (detecta shiny pelo campo follower_is_shiny se existir, ou pela URL shiny)
+        if (entry.shinyEl) {
+            const isShiny = p.follower_is_shiny != null ? !!p.follower_is_shiny
+                : /shiny/.test(p.follower_sprite_url || '');
+            if (isShiny) {
+                window.positionShinyElement(entry.shinyEl, el);
+                entry.shinyEl.style.zIndex = z;
+            } else {
+                entry.shinyEl.style.display = 'none';
+            }
+        }
 
         // Grama/agua na frente do follower (recorte alinhado da mesma textura), acima do seu z
         const camX = this.cameraX - this.canvas.width / 2;
@@ -5255,7 +5271,7 @@ class CityScreen {
                 this.drawOtherPlayerFollowerDom(p, drawX, drawY, ps, fScaleX, fScaleY, fOffX, fOffY, fband);
             } else {
                 const _entry = this._otherFollowerEls && this._otherFollowerEls[p.user_id];
-                if (_entry) { _entry.el.style.display = 'none'; _entry.shadowEl.style.display = 'none'; }
+                if (_entry) { _entry.el.style.display = 'none'; _entry.shadowEl.style.display = 'none'; if (_entry.shinyEl) _entry.shinyEl.style.display = 'none'; }
             }
         }
 
