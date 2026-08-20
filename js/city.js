@@ -3598,6 +3598,30 @@ class CityScreen {
         this.npcDialogueOpen = true;
         simBtn.onclick = () => {
             this.closeNpcDialogue();
+            this.showTowerStartPopup();
+        };
+        naoBtn.onclick = () => this.closeNpcDialogue();
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
+    }
+
+    async showTowerStartPopup() {
+        const overlay = document.getElementById('city-tower-start-overlay');
+        const msg = document.getElementById('city-tower-start-msg');
+        const btnContinue = document.getElementById('city-tower-start-continue');
+        const btnRestart = document.getElementById('city-tower-start-restart');
+        const btnCancel = document.getElementById('city-tower-start-cancel');
+        if (!overlay || !msg || !btnContinue || !btnRestart) return;
+        const tower = window.pokefury?.tower;
+        if (tower && typeof tower.loadProgress === 'function') {
+            try { await tower.loadProgress(); } catch (e) {}
+        }
+        const charName = this.myPlayer?.character_name || 'Treinador';
+        const best = (tower && tower.bestFloor) || 1;
+        msg.textContent = `${charName}, você chegou até o andar ${best}. Gostaria de continuar no último andar que você chegou ou gostaria de iniciar do nível 1 da torre?`;
+        const startRun = (floor) => {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
             const lay = this.towerLayout || {};
             const p = lay.entry || lay.npc;
             if (p) {
@@ -3606,9 +3630,14 @@ class CityScreen {
                 this.playerFromX = this.playerX;
                 this.playerFromY = this.playerY;
             }
-            window.pokefury?.tower?.beginRun?.();
+            window.pokefury?.tower?.beginRun?.(floor);
         };
-        naoBtn.onclick = () => this.closeNpcDialogue();
+        btnContinue.onclick = () => startRun(best + 1);
+        btnRestart.onclick = () => startRun(1);
+        if (btnCancel) btnCancel.onclick = () => {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
+        };
         overlay.classList.remove('hidden');
         overlay.style.display = 'flex';
     }

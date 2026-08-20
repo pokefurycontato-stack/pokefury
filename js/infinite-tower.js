@@ -62,9 +62,9 @@ export class InfiniteTowerManager {
         } catch (e) { return Promise.resolve([]); }
     }
 
-    async beginRun() {
+    async beginRun(fromFloor = 1) {
         await this.loadProgress();
-        this.currentFloor = 1;
+        this.currentFloor = Math.max(1, Number(fromFloor) || 1);
         this._towerActive = true;
         const team = this.game?.playerTeam;
         if (team) {
