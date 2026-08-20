@@ -3696,6 +3696,7 @@ class CityScreen {
         this._towerWildTeam = null;
         this._towerWildSpriteUrl = null;
         if (this._towerWildEl) this._towerWildEl.style.display = 'none';
+        if (this._towerRankBox) this._towerRankBox.style.display = 'none';
     }
 
     renderTowerWildPokemon() {
@@ -3742,6 +3743,11 @@ class CityScreen {
 
     async renderTowerRankBox() {
         if (!this._towerRankBox) return;
+        const tower = window.pokefury?.tower;
+        if (!tower?._towerActive) {
+            if (this._towerRankBox.style.display !== 'none') this._towerRankBox.style.display = 'none';
+            return;
+        }
         try {
             const rank = await window.pokefury?.tower?.fetchRank?.(5);
             if (!rank || rank.length === 0) { this._towerRankBox.style.display = 'none'; return; }
