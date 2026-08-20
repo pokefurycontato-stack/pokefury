@@ -2452,21 +2452,38 @@ class PokeFuryGame {
         }
 
         if (result === 'win' && this.playerTeam && this.enemyTeam.length > 0) {
-            const enemyLevel = this.enemyTeam[0].level;
             const activePokemon = getFirstAlive(this.playerTeam);
+            const towerMult = this._isTowerBattle ? 3 : 1;
+            const expAccum = new Map();
+            const levelUps = new Map();
 
-            for (const p of this.playerTeam) {
-                if (p.fainted) continue;
-                const isAttacker = p === activePokemon;
-                const hasExpShare = p.heldItemId === 99;
-                if (!isAttacker && !hasExpShare) continue;
+            // Cada Pokémon do andar conta como um selvagem individual (EXP base própria).
+            for (const enemy of this.enemyTeam) {
+                const enemyLevel = enemy.level || this.enemyTeam[0].level || 0;
+                if (!enemyLevel) continue;
+                for (const p of this.playerTeam) {
+                    if (p.fainted) continue;
+                    const isAttacker = p === activePokemon;
+                    const hasExpShare = p.heldItemId === 99;
+                    if (!isAttacker && !hasExpShare) continue;
+                    if (!levelUps.has(p)) levelUps.set(p, p.level);
 
-                let baseExp = Math.floor((enemyLevel * 15) / 9) * 3;
-                if (window.boostsManager && window.boostsManager.isActive('exp_pokemon')) baseExp *= 2;
-                let expGain = baseExp;
-                if (p.heldItemId === 219) expGain = Math.floor(expGain * 1.5);
+                    let baseExp = Math.floor((enemyLevel * 15) / 9) * 3;
+                    baseExp *= towerMult;
+                    if (window.boostsManager && window.boostsManager.isActive('exp_pokemon')) baseExp *= 2;
+                    let expGain = baseExp;
+                    if (p.heldItemId === 219) expGain = Math.floor(expGain * 1.5);
 
-                const prevLevel = p.level;
+                    if (p.dbId) {
+                        expAccum.set(p, (expAccum.get(p) || 0) + expGain);
+                    } else {
+                        awardExp([p], enemyLevel, isAttacker ? p : null, towerMult);
+                    }
+                }
+            }
+
+            // Aplica a EXP acumulada por Pokémon do jogador (1 chamada cada).
+            for (const [p, expGain] of expAccum) {
                 const res = p.dbId ? await window.GameData.grantExp(p.dbId, expGain) : null;
                 if (res && res.level != null) {
                     p.level = res.level;
@@ -2474,39 +2491,38 @@ class PokeFuryGame {
                     if (res.stats_hp != null) {
                         p.stats = { hp: res.stats_hp, attack: res.stats_attack, defense: res.stats_defense, spAtk: res.stats_sp_atk, spDef: res.stats_sp_def, speed: res.stats_speed };
                     }
-                } else {
-                    const levelMsgs = awardExp([p], enemyLevel, isAttacker ? p : null);
-                    for (const msg of levelMsgs) await showBattleMessage(msg);
                 }
-                if (p.level > prevLevel) {
-                    await showBattleMessage(`${p.name} subiu para Nv. ${p.level}!`);
-                    const learnableMoves = await learnLevelUpMoves(p, prevLevel, p.level);
-                    for (const newMove of learnableMoves) {
-                        await showBattleMessage(`${p.name} quer aprender ${newMove.name}!`);
-                        const result = await showMoveLearnPopup(p, newMove, p.moves);
-                        if (result.teach) {
-                            if (result.replaceIndex >= 0) {
-                                const oldName = p.moves[result.replaceIndex].name;
-                                p.moves[result.replaceIndex] = {
-                                    ...newMove,
-                                    id: newMove.id,
-                                    currentPp: newMove.pp || 35
-                                };
-                                await showBattleMessage(`${p.name} esqueceu ${oldName} e aprendeu ${newMove.name}!`);
-                            } else {
-                                p.moves.push({
-                                    ...newMove,
-                                    id: newMove.id,
-                                    currentPp: newMove.pp || 35
-                                });
-                                await showBattleMessage(`${p.name} aprendeu ${newMove.name}!`);
-                            }
+            }
+
+            for (const [p, prevLevel] of levelUps) {
+                if (p.level <= prevLevel) continue;
+                await showBattleMessage(`${p.name} subiu para Nv. ${p.level}!`);
+                const learnableMoves = await learnLevelUpMoves(p, prevLevel, p.level);
+                for (const newMove of learnableMoves) {
+                    await showBattleMessage(`${p.name} quer aprender ${newMove.name}!`);
+                    const result = await showMoveLearnPopup(p, newMove, p.moves);
+                    if (result.teach) {
+                        if (result.replaceIndex >= 0) {
+                            const oldName = p.moves[result.replaceIndex].name;
+                            p.moves[result.replaceIndex] = {
+                                ...newMove,
+                                id: newMove.id,
+                                currentPp: newMove.pp || 35
+                            };
+                            await showBattleMessage(`${p.name} esqueceu ${oldName} e aprendeu ${newMove.name}!`);
                         } else {
-                            await showBattleMessage(`${p.name} não aprendeu ${newMove.name}.`);
+                            p.moves.push({
+                                ...newMove,
+                                id: newMove.id,
+                                currentPp: newMove.pp || 35
+                            });
+                            await showBattleMessage(`${p.name} aprendeu ${newMove.name}!`);
                         }
+                    } else {
+                        await showBattleMessage(`${p.name} não aprendeu ${newMove.name}.`);
                     }
-                    await checkAbilityChange(p);
                 }
+                await checkAbilityChange(p);
             }
             await this.checkEvolutions();
             if (this.enemyTeam.length > 0) {
@@ -2514,27 +2530,60 @@ class PokeFuryGame {
             }
 
             this._winStreak++;
-            const enemy = this.enemyTeam[0];
             const hasAmuletCoin = this.playerTeam.some(p => p.heldItemId === 220);
             if (window.SecurityWatchdog) window.SecurityWatchdog.check();
-            const { data: rewardData, error: rewardError } = await window.db.rpc('calculate_battle_reward', {
-                p_character_id: this.currentCharacterId,
-                p_enemy_pokemon_id: enemy.id || enemy.pokemonId || 0,
-                p_enemy_level: enemy.level,
-                p_win_streak: this._winStreak,
-                p_amulet_coin: hasAmuletCoin
-            });
-            if (rewardError || !rewardData?.success) {
-                if (window.SecurityWatchdog) window.SecurityWatchdog.onRpcError(rewardError || rewardData, 'calculate_battle_reward');
-                console.error('[Battle] Reward delivery failed:', rewardError);
-                this.showToast('A recompensa será sincronizada novamente.', 'warning');
-            }
-            await this.refreshCurrencies();
-            if (rewardData?.success) {
-                this.showToast(`+${rewardData.silver_earned || 0} Prata recebida!`, 'success');
-                if (rewardData.awarded_titles && rewardData.awarded_titles.length > 0) {
-                    window.Titles?.queueAward(rewardData.awarded_titles);
+
+            // Prata: cada Pokémon do andar recebe o cálculo individual de selvagem.
+            let totalSilver = 0;
+            const awardedTitles = [];
+            let anyRewardError = false;
+            for (const enemy of this.enemyTeam) {
+                const { data: rewardData, error: rewardError } = await window.db.rpc('calculate_battle_reward', {
+                    p_character_id: this.currentCharacterId,
+                    p_enemy_pokemon_id: enemy.id || enemy.pokemonId || 0,
+                    p_enemy_level: enemy.level,
+                    p_win_streak: this._winStreak,
+                    p_amulet_coin: hasAmuletCoin
+                });
+                if (rewardError || !rewardData?.success) {
+                    if (window.SecurityWatchdog) window.SecurityWatchdog.onRpcError(rewardError || rewardData, 'calculate_battle_reward');
+                    console.error('[Battle] Reward delivery failed:', rewardError);
+                    anyRewardError = true;
+                    continue;
                 }
+                totalSilver += rewardData.silver_earned || 0;
+                if (rewardData.awarded_titles && Array.isArray(rewardData.awarded_titles)) {
+                    for (const t of rewardData.awarded_titles) awardedTitles.push(t);
+                }
+            }
+
+            // Bônus 3x de Prata exclusivo da Torre Infinita.
+            if (towerMult > 1 && totalSilver > 0) {
+                const bonusSilver = totalSilver * (towerMult - 1);
+                const bonusRes = await window.db.rpc('add_currency', {
+                    p_character_id: this.currentCharacterId,
+                    p_currency_type: 'silver',
+                    p_amount: bonusSilver,
+                    p_action: 'reward',
+                    p_description: 'Torre Infinita — bônus 3x Prata',
+                    p_created_by: window.GameData?.userId || null
+                });
+                if (bonusRes.error) {
+                    if (window.SecurityWatchdog) window.SecurityWatchdog.onRpcError(bonusRes.error, 'add_currency');
+                    console.error('[Battle] Tower silver bonus failed:', bonusRes.error);
+                } else {
+                    totalSilver += bonusSilver;
+                }
+            }
+
+            await this.refreshCurrencies();
+            if (anyRewardError) {
+                this.showToast('A recompensa será sincronizada novamente.', 'warning');
+            } else if (totalSilver > 0) {
+                this.showToast(`+${totalSilver.toLocaleString()} Prata recebida!`, 'success');
+            }
+            if (awardedTitles.length > 0) {
+                window.Titles?.queueAward(awardedTitles);
             }
         }
 
