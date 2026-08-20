@@ -7,7 +7,7 @@
 -- 1. Produto na Loja de Diamantes (50 diamantes)
 DELETE FROM premium_products WHERE name = 'Professor Acompanhante';
 INSERT INTO premium_products (name, description, price_diamonds, price_brl, image_url, destination, active, sort_order)
-VALUES ('Professor Acompanhante', 'Auto Farm inteligente por 30 dias: envia primeiro o Pokémon com vantagem de tipo na batalha!', 50, 0, '', 'diamond_shop', true, 6);
+VALUES ('Professor Acompanhante', 'Auto Farm inteligente por 30 dias: envia primeiro o Pokémon com vantagem de tipo na batalha!', 50, 0, 'assets/ferramentas/professoracompanhante.png', 'diamond_shop', true, 6);
 
 -- 2. Libera o novo tipo no CHECK constraint de character_boosts
 ALTER TABLE character_boosts DROP CONSTRAINT IF EXISTS character_boosts_boost_type_check;
