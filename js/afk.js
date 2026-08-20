@@ -377,28 +377,36 @@ export class AFKManager {
 
         if (playerPokemon.currentHp <= 0) return;
 
-        const hpPct = (playerPokemon.currentHp / playerPokemon.stats.hp) * 100;
+        // Lock o turno durante todo o executeBattleTurn (incluindo animacoes de troca
+        // de inimigo na Torre) para o loop de 200ms nao iniciar um turno concorrente
+        // que desenharia o sprite do novo inimigo antes da barra de HP zerar.
+        game._turnLocked = true;
+        try {
+            const hpPct = (playerPokemon.currentHp / playerPokemon.stats.hp) * 100;
 
-        if (this.autoHeal && hpPct <= this.healThreshold) {
-            const healed = await this._tryHealSmart(playerPokemon);
-            if (healed) return;
-        }
-
-        if (this._allMovesExhausted(playerPokemon)) {
-            await game.executeBattleTurn(playerPokemon, enemyPokemon, {
-                id: 'struggle', name: 'Struggle', type: 'normal', category: 'physical',
-                power: 50, accuracy: 100, pp: 1, currentPp: 1
-            });
-            return;
-        }
-
-        const bestMove = this._chooseBestMove(playerPokemon, enemyPokemon);
-        if (bestMove) {
-            try {
-                await game.executeBattleTurn(playerPokemon, enemyPokemon, bestMove);
-            } catch (e) {
-                console.error('[AFK] Battle turn error:', e);
+            if (this.autoHeal && hpPct <= this.healThreshold) {
+                const healed = await this._tryHealSmart(playerPokemon);
+                if (healed) return;
             }
+
+            if (this._allMovesExhausted(playerPokemon)) {
+                await game.executeBattleTurn(playerPokemon, enemyPokemon, {
+                    id: 'struggle', name: 'Struggle', type: 'normal', category: 'physical',
+                    power: 50, accuracy: 100, pp: 1, currentPp: 1
+                });
+                return;
+            }
+
+            const bestMove = this._chooseBestMove(playerPokemon, enemyPokemon);
+            if (bestMove) {
+                try {
+                    await game.executeBattleTurn(playerPokemon, enemyPokemon, bestMove);
+                } catch (e) {
+                    console.error('[AFK] Battle turn error:', e);
+                }
+            }
+        } finally {
+            game._turnLocked = false;
         }
     }
 
