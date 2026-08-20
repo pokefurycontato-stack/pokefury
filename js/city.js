@@ -181,7 +181,7 @@ class CityScreen {
                     this.teleportToRaidArena();
                 } else if (this.nearRaidExit) {
                     this.teleportOutOfRaid();
-                } else if (this.nearTowerEntry) {
+                } else if (this.nearTowerNpc || this.nearTowerEntry) {
                     this.openTowerPortal();
                 } else if (this.nearestNpc) {
                     this.handleNpcInteraction(this.nearestNpc);
@@ -3555,12 +3555,19 @@ updateTowerInteraction() {
         if (okBtn) { okBtn.style.display = 'none'; okBtn.onclick = null; }
         simBtn.style.display = '';
         naoBtn.style.display = '';
-        const best = window.pokefury?.tower?.bestFloor || 1;
         const charName = this.myPlayer?.character_name || 'Treinador';
-        msg.textContent = `Torre Infinita: cada vez que entras comezas polo andar 1 e sobes todo o que poidas. O teu mellor andar é o ${best}. Queres entrar agora?`;
+        msg.textContent = `Olá ${charName}, eu sou a chefe da Torre Infinita! Aqui o desafio nunca acaba, lembre-se aqui é um ótimo lugar para ganhar experiência e dinheiro mas não é possível capturar Pokémons, está preparado para esse desafio?`;
         this.npcDialogueOpen = true;
         simBtn.onclick = () => {
             this.closeNpcDialogue();
+            const lay = this.towerLayout || {};
+            const p = lay.entry || lay.npc;
+            if (p) {
+                this.playerX = p.pos_x;
+                this.playerY = (p.pos_y || 0) + 70;
+                this.playerFromX = this.playerX;
+                this.playerFromY = this.playerY;
+            }
             window.pokefury?.tower?.beginRun?.();
         };
         naoBtn.onclick = () => this.closeNpcDialogue();
@@ -3600,19 +3607,21 @@ updateTowerInteraction() {
         mark(lay.entry, 'Portal', '#7b2ff7');
         mark(lay.exit, 'Saída', '#38bdf8');
         mark(lay.wild, 'Selvagem', '#e94560');
-        if (this.nearTowerEntry || this.nearTowerNpc) {
-            const p = lay.entry || lay.npc;
+        if (this.nearTowerNpc || this.nearTowerEntry) {
+            const p = this.nearTowerNpc ? (lay.npc || lay.entry) : (lay.entry || lay.npc);
             if (p) {
                 const sx = p.pos_x - camX;
                 const sy = p.pos_y - camY - 40;
+                const label = this.nearTowerNpc ? 'Pressione E para falar' : 'Pressione E para entrar na torre';
+                const boxW = this.nearTowerNpc ? 160 : 200;
                 ctx.fillStyle = 'rgba(123, 47, 247, 0.9)';
                 ctx.beginPath();
-                ctx.roundRect(sx - 90, sy - 14, 180, 22, 6);
+                ctx.roundRect(sx - boxW / 2, sy - 14, boxW, 22, 6);
                 ctx.fill();
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 11px Inter, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('Pressione E para entrar na torre', sx, sy + 1);
+                ctx.fillText(label, sx, sy + 1);
             }
         }
     }
