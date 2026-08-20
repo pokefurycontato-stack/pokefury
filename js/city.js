@@ -183,7 +183,7 @@ class CityScreen {
                     this.teleportToRaidArena();
                 } else if (this.nearRaidExit) {
                     this.teleportOutOfRaid();
-                } else if (this.nearTowerNpc || this.nearTowerEntry) {
+                } else if (this.nearTowerNpc) {
                     this.openTowerPortal();
                 } else if (this.nearTowerExit) {
                     window.pokefury?.tower?.onTowerLeft?.();
@@ -1900,14 +1900,22 @@ class CityScreen {
         }
         if (!this._towerWildEl) {
             const el = document.createElement('img');
-            el.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;z-index:700;';
+            el.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;z-index:40;';
             this._towerWildEl = el;
-            const layer = document.getElementById('city-overlay-layer') || document.body;
-            layer.appendChild(el);
+            const wrap = document.getElementById('city-canvas-wrap');
+            (wrap || document.body).appendChild(el);
+        }
+        if (!this._towerExitEl) {
+            const el = document.createElement('img');
+            el.src = 'assets/ferramentas/portal2.gif';
+            el.style.cssText = 'position:absolute;pointer-events:none;display:none;z-index:40;';
+            this._towerExitEl = el;
+            const wrap = document.getElementById('city-canvas-wrap');
+            (wrap || document.body).appendChild(el);
         }
         if (!this._towerRankBox) {
             this._towerRankBox = document.createElement('div');
-            this._towerRankBox.style.cssText = 'position:absolute;pointer-events:none;display:none;z-index:800;background:rgba(10,10,20,0.92);border:1px solid rgba(245,158,11,0.4);border-radius:10px;padding:8px 10px;width:190px;';
+            this._towerRankBox.style.cssText = 'position:fixed;pointer-events:none;display:none;z-index:800;background:rgba(10,10,20,0.3);border:1px solid rgba(245,158,11,0.4);border-radius:10px;padding:8px 10px;width:190px;color:#fff;';
             document.body.appendChild(this._towerRankBox);
         }
         if (this.towerLayout?.rank && !this._towerRankTimer) {
@@ -3620,24 +3628,19 @@ class CityScreen {
             ctx.fillText(label, sx + ps / 2, sy - 4);
         };
         mark(lay.npc, 'Torre', '#22c55e');
-        mark(lay.entry, 'Portal', '#7b2ff7');
-        mark(lay.exit, 'Saída', '#38bdf8');
-        mark(lay.wild, 'Selvagem', '#e94560');
-        if (this.nearTowerNpc || this.nearTowerEntry) {
-            const p = this.nearTowerNpc ? (lay.npc || lay.entry) : (lay.entry || lay.npc);
+        if (this.nearTowerNpc) {
+            const p = lay.npc;
             if (p) {
                 const sx = p.pos_x - camX;
                 const sy = p.pos_y - camY - 40;
-                const label = this.nearTowerNpc ? 'Pressione E para falar' : 'Pressione E para entrar na torre';
-                const boxW = this.nearTowerNpc ? 160 : 200;
                 ctx.fillStyle = 'rgba(123, 47, 247, 0.9)';
                 ctx.beginPath();
-                ctx.roundRect(sx - boxW / 2, sy - 14, boxW, 22, 6);
+                ctx.roundRect(sx - 80, sy - 14, 160, 22, 6);
                 ctx.fill();
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 11px Inter, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(label, sx, sy + 1);
+                ctx.fillText('Pressione E para falar', sx, sy + 1);
             }
         }
         if (this.nearTowerExit && lay.exit) {
@@ -3675,42 +3678,57 @@ class CityScreen {
 
     renderTowerWildPokemon() {
         const lay = this.towerLayout || {};
-        const el = this._towerWildEl;
-        if (!el || !lay.wild || !this._towerWildSpriteUrl) return;
-        if (el.style.display === 'none') return;
         const canvasRect = this.canvas.getBoundingClientRect();
         if (!canvasRect.width || !canvasRect.height) return;
+        const wrap = this.wildPokemonLayer || document.getElementById('city-canvas-wrap');
+        if (!wrap) return;
+        const wrapRect = wrap.getBoundingClientRect();
         const scaleX = canvasRect.width / this.canvas.width;
         const scaleY = canvasRect.height / this.canvas.height;
+        const offsetX = canvasRect.left - wrapRect.left;
+        const offsetY = canvasRect.top - wrapRect.top;
         const camX = this.cameraX - this.canvas.width / 2;
         const camY = this.cameraY - this.canvas.height / 2;
-        const sz = 52;
-        const sx = lay.wild.pos_x - camX;
-        const sy = lay.wild.pos_y - camY;
-        el.style.left = (canvasRect.left + (sx - sz / 2) * scaleX) + 'px';
-        el.style.top = (canvasRect.top + (sy - sz) * scaleY) + 'px';
-        el.style.width = (sz * scaleX) + 'px';
-        el.style.height = (sz * scaleY) + 'px';
+
+        // Pokemon do andar no spawn selvagem
+        const el = this._towerWildEl;
+        if (el && lay.wild && this._towerWildSpriteUrl && el.style.display !== 'none') {
+            const sz = 52;
+            const sx = lay.wild.pos_x - camX;
+            const sy = lay.wild.pos_y - camY;
+            el.style.left = (offsetX + (sx - sz / 2) * scaleX) + 'px';
+            el.style.top = (offsetY + (sy - sz) * scaleY) + 'px';
+            el.style.width = (sz * scaleX) + 'px';
+            el.style.height = (sz * scaleY) + 'px';
+        }
+
+        // Portal de saida (mesma imagem dos teleports da cidade)
+        const ex = this._towerExitEl;
+        if (ex && lay.exit) {
+            const psz = 64;
+            const sx = lay.exit.pos_x - camX;
+            const sy = lay.exit.pos_y - camY;
+            ex.style.display = 'block';
+            ex.style.left = (offsetX + (sx - psz / 2) * scaleX) + 'px';
+            ex.style.top = (offsetY + (sy - psz) * scaleY) + 'px';
+            ex.style.width = (psz * scaleX) + 'px';
+            ex.style.height = (psz * scaleY) + 'px';
+        } else if (ex) {
+            ex.style.display = 'none';
+        }
     }
 
     async renderTowerRankBox() {
-        const lay = this.towerLayout || {};
-        if (!lay.rank || !this._towerRankBox) return;
+        if (!this._towerRankBox) return;
         try {
             const rank = await window.pokefury?.tower?.fetchRank?.(5);
             if (!rank || rank.length === 0) { this._towerRankBox.style.display = 'none'; return; }
-            const camX = this.cameraX - this.canvas.width / 2;
-            const camY = this.cameraY - this.canvas.height / 2;
-            const sx = lay.rank.pos_x - camX;
-            const sy = lay.rank.pos_y - camY;
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = (rect.width || 1) / (this.canvas.width || 1);
-            const scaleY = (rect.height || 1) / (this.canvas.height || 1);
             this._towerRankBox.style.display = 'block';
-            this._towerRankBox.style.left = (rect.left + sx * scaleX) + 'px';
-            this._towerRankBox.style.top = (rect.top + sy * scaleY) + 'px';
+            this._towerRankBox.style.left = '20px';
+            this._towerRankBox.style.top = '50%';
+            this._towerRankBox.style.transform = 'translateY(-50%)';
             this._towerRankBox.innerHTML = '<b style="color:#f59e0b">🏆 Top 5 Torre</b><br>' +
-                rank.map(r => `${this.escapeHtml(String(r.player_name || '???'))}: ${r.best_floor}`).join('<br>');
+                rank.map(r => `<span style="color:#fff">${this.escapeHtml(String(r.player_name || '???'))}: ${r.best_floor}</span>`).join('<br>');
         } catch (e) {}
     }
 
