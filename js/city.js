@@ -3614,6 +3614,7 @@ class CityScreen {
     }
 
     teleportToTowerNpc() {
+        if (this.teleportToSafariPortal()) return;
         const lay = this.towerLayout || {};
         const p = lay.npc || lay.entry || lay.exit;
         if (p) {
@@ -3622,6 +3623,13 @@ class CityScreen {
             this.playerFromX = this.playerX;
             this.playerFromY = this.playerY;
         }
+    }
+
+    teleportToSafariPortal() {
+        const tp = (this.teleports || []).find(t => String(t.name || '').trim().toLowerCase() === 'safari');
+        if (!tp) return false;
+        this.teleportPlayer(tp);
+        return true;
     }
 
     renderTowerElements(ctx, camX, camY, cw, ch) {
