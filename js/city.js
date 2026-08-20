@@ -3565,6 +3565,20 @@ class CityScreen {
         if (this.nearTowerWild && window.pokefury?.tower?._floorReady) {
             window.pokefury.tower.startFloorBattle();
         }
+        this.updateTowerFloorHud();
+    }
+
+    updateTowerFloorHud() {
+        const el = document.getElementById('city-tower-floor-hud');
+        if (!el) return;
+        const tower = window.pokefury?.tower;
+        if (tower?._towerActive && tower.currentFloor) {
+            const span = el.querySelector('span');
+            if (span) span.textContent = `Andar - ${tower.currentFloor}`;
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
     }
 
     openTowerPortal() {
