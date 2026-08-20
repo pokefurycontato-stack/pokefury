@@ -2481,18 +2481,24 @@ if (this._professorOriginalOrder) {
     async switchToNextTowerEnemy(prevEnemy, playerActive) {
         const next = getFirstAlive(this.enemyTeam);
         if (!next || next === prevEnemy) return null;
+        const pl = playerActive || getFirstAlive(this.playerTeam);
+        // 1) Mostra a barra de HP do inimigo derrotado em 0 e aguarda a animacao da barra
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        this.updatePartyPanel();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // 2) Animacao de recolher o inimigo derrotado (pokebola)
+        try { await this.playPVPExit('enemy', prevEnemy); } catch (e) {}
+        await preloadBattleSprites(pl, next);
+        // 3) Campo vazio antes da entrada do proximo inimigo
+        await new Promise(resolve => setTimeout(resolve, 500));
         // Move o novo inimigo para o inicio do time para que a UI mostre o ativo
         const idx = this.enemyTeam.indexOf(next);
         if (idx > 0) {
             this.enemyTeam.splice(idx, 1);
             this.enemyTeam.unshift(next);
         }
-        const pl = playerActive || getFirstAlive(this.playerTeam);
-        try { await this.playPVPExit('enemy', prevEnemy); } catch (e) {}
-        await preloadBattleSprites(pl, next);
-        // Campo vazio antes da entrada do proximo inimigo
-        await new Promise(resolve => setTimeout(resolve, 500));
         drawBattleScene(this.ctx, this.canvas, pl, next, this.currentBattleBg, this.getBattleClipRect());
+        // 4) Animacao de entrada do novo inimigo (pokebola)
         await this.playPVPEntrance('enemy', next);
         // Professor Acompanhante: troca o pokemon do jogador para manter a vantagem de tipo
         this._professorSwitchedPlayer = null;
