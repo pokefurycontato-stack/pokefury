@@ -10,6 +10,8 @@ export class InfiniteTowerManager {
         this.bestFloor = 1;
         this.rank = [];
         this._towerActive = false;
+        this.currentTeam = null;
+        this._floorReady = false;
     }
 
     async loadLayout() {
@@ -67,19 +69,31 @@ export class InfiniteTowerManager {
         this.startCurrentFloor();
     }
 
-    startCurrentFloor() {
+    async startCurrentFloor() {
         const game = this.game;
         if (!game || game.state === 'battle' || game._battleStarting || game._battleEnding) return;
         if (!this._towerActive) return;
-        this.getFloorTeam(this.currentFloor).then((team) => {
-            if (!team || team.length === 0) {
-                this._towerActive = false;
-                if (game.showToast) game.showToast('Rematada a Torre!', 'success');
-                this.onTowerLeft(false);
-                return;
-            }
-            if (game.startTowerBattle) game.startTowerBattle(this.currentFloor, team);
-        });
+        const team = await this.getFloorTeam(this.currentFloor);
+        if (!team || team.length === 0) {
+            this._towerActive = false;
+            if (game.showToast) game.showToast('Rematada a Torre!', 'success');
+            this.onTowerLeft(false);
+            return;
+        }
+        this.currentTeam = team;
+        this._floorReady = true;
+        if (window.cityScreen?.showTowerWildPokemon) window.cityScreen.showTowerWildPokemon(this.currentFloor, team);
+    }
+
+    startFloorBattle() {
+        if (!this._towerActive || !this._floorReady || !this.currentTeam) return;
+        const game = this.game;
+        if (game && (game.state === 'battle' || game._battleStarting || game._battleEnding)) return;
+        const team = this.currentTeam;
+        const floor = this.currentFloor;
+        this._floorReady = false;
+        this.currentTeam = null;
+        if (game && game.startTowerBattle) game.startTowerBattle(floor, team);
     }
 
     onFloorCleared(clearedFloor) {
@@ -99,12 +113,15 @@ export class InfiniteTowerManager {
     onTowerLeft() {
         this._towerActive = false;
         this.currentFloor = 1;
+        this._floorReady = false;
+        this.currentTeam = null;
         const game = this.game;
         if (game) {
             game._inTower = false;
             game._towerFloor = null;
             game._isTowerBattle = false;
         }
+        if (window.cityScreen?.hideTowerWildPokemon) window.cityScreen.hideTowerWildPokemon();
         if (window.cityScreen?.teleportToTowerNpc) window.cityScreen.teleportToTowerNpc();
     }
 

@@ -24,7 +24,7 @@ import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
 import { RaidBossManager } from './raid-boss.js';
-import { InfiniteTowerManager } from './infinite-tower.js';
+import { InfiniteTowerManager } from './infinite-tower.js?v=20260819o';
 import { MusicManager } from './music.js';
 import { SfxManager } from './sfx.js?v=20260816cc';
 

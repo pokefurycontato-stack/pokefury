@@ -137,6 +137,8 @@ class CityScreen {
         this.nearGymNpc = false;
         this.nearTowerEntry = false;
         this.nearTowerNpc = false;
+        this.nearTowerExit = false;
+        this.nearTowerWild = false;
         this.towerLayout = null;
         this._towerRankTimer = null;
         this.nearGymTeleportType = null;
@@ -183,6 +185,8 @@ class CityScreen {
                     this.teleportOutOfRaid();
                 } else if (this.nearTowerNpc || this.nearTowerEntry) {
                     this.openTowerPortal();
+                } else if (this.nearTowerExit) {
+                    window.pokefury?.tower?.onTowerLeft?.();
                 } else if (this.nearestNpc) {
                     this.handleNpcInteraction(this.nearestNpc);
                 } else if (this.nearestTeleport) {
@@ -1896,7 +1900,7 @@ class CityScreen {
         }
         if (!this._towerWildEl) {
             const el = document.createElement('img');
-            el.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;';
+            el.style.cssText = 'position:absolute;pointer-events:none;display:none;image-rendering:auto;z-index:700;';
             this._towerWildEl = el;
             const layer = document.getElementById('city-overlay-layer') || document.body;
             layer.appendChild(el);
@@ -3531,15 +3535,27 @@ class CityScreen {
             }
         }
     }
-updateTowerInteraction() {
+    updateTowerInteraction() {
         this.nearTowerEntry = false;
         this.nearTowerNpc = false;
+        this.nearTowerExit = false;
+        this.nearTowerWild = false;
         const lay = this.towerLayout || {};
         if (lay.entry && Math.hypot(this.playerX - lay.entry.pos_x, this.playerY - lay.entry.pos_y) < 70) {
             this.nearTowerEntry = true;
         }
         if (lay.npc && Math.hypot(this.playerX - lay.npc.pos_x, this.playerY - lay.npc.pos_y) < 70) {
             this.nearTowerNpc = true;
+        }
+        if (lay.exit && Math.hypot(this.playerX - lay.exit.pos_x, this.playerY - lay.exit.pos_y) < 70) {
+            this.nearTowerExit = true;
+        }
+        if (lay.wild && Math.hypot(this.playerX - lay.wild.pos_x, this.playerY - lay.wild.pos_y) < 70) {
+            this.nearTowerWild = true;
+        }
+        // Batalha da torre: inicia quando o jogador se aproxima do pokemon do andar
+        if (this.nearTowerWild && window.pokefury?.tower?._floorReady) {
+            window.pokefury.tower.startFloorBattle();
         }
     }
 
@@ -3624,6 +3640,57 @@ updateTowerInteraction() {
                 ctx.fillText(label, sx, sy + 1);
             }
         }
+        if (this.nearTowerExit && lay.exit) {
+            const sx = lay.exit.pos_x - camX;
+            const sy = lay.exit.pos_y - camY - 40;
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(sx - 90, sy - 14, 180, 22, 6);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Pressione E para sair da torre', sx, sy + 1);
+        }
+    }
+
+    showTowerWildPokemon(floor, team) {
+        this._towerWildFloor = floor;
+        this._towerWildTeam = team || null;
+        const first = (team && team[0]) || null;
+        this._towerWildSpriteUrl = (first && (first.sprite_url ||
+            (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(first.pokemon_id) : null))) || null;
+        if (this._towerWildEl && this._towerWildSpriteUrl) {
+            this._towerWildEl.src = this._towerWildSpriteUrl;
+            this._towerWildEl.style.display = 'block';
+        }
+    }
+
+    hideTowerWildPokemon() {
+        this._towerWildFloor = null;
+        this._towerWildTeam = null;
+        this._towerWildSpriteUrl = null;
+        if (this._towerWildEl) this._towerWildEl.style.display = 'none';
+    }
+
+    renderTowerWildPokemon() {
+        const lay = this.towerLayout || {};
+        const el = this._towerWildEl;
+        if (!el || !lay.wild || !this._towerWildSpriteUrl) return;
+        if (el.style.display === 'none') return;
+        const canvasRect = this.canvas.getBoundingClientRect();
+        if (!canvasRect.width || !canvasRect.height) return;
+        const scaleX = canvasRect.width / this.canvas.width;
+        const scaleY = canvasRect.height / this.canvas.height;
+        const camX = this.cameraX - this.canvas.width / 2;
+        const camY = this.cameraY - this.canvas.height / 2;
+        const sz = 52;
+        const sx = lay.wild.pos_x - camX;
+        const sy = lay.wild.pos_y - camY;
+        el.style.left = (canvasRect.left + (sx - sz / 2) * scaleX) + 'px';
+        el.style.top = (canvasRect.top + (sy - sz) * scaleY) + 'px';
+        el.style.width = (sz * scaleX) + 'px';
+        el.style.height = (sz * scaleY) + 'px';
     }
 
     async renderTowerRankBox() {
@@ -5681,6 +5748,7 @@ updateTowerInteraction() {
         this.drawRaidElements(ctx, camX, camY, cw, ch);
         this.drawGymElements(ctx, camX, camY, cw, ch);
         this.renderTowerElements(ctx, camX, camY, cw, ch);
+        this.renderTowerWildPokemon();
         this.renderRankDom();
 
         ctx.restore();
