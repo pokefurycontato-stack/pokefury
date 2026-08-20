@@ -16,12 +16,27 @@ const PokeAPI = {
         return `${this.supabaseStorageUrl}/animated-front-shiny/${pokemonId}.gif`;
     },
 
+    getAnimatedBackUrl(pokemonId) {
+        return `${this.supabaseStorageUrl}/animated-back/${pokemonId}.gif`;
+    },
+
+    getAnimatedBackShinyUrl(pokemonId) {
+        return `${this.supabaseStorageUrl}/animated-back-shiny/${pokemonId}.gif`;
+    },
+
+    getHomeUrl(pokemonId) {
+        return `${this.supabaseStorageUrl}/home-front/${pokemonId}.png`;
+    },
+
+    getHomeShinyUrl(pokemonId) {
+        return `${this.supabaseStorageUrl}/home-front-shiny/${pokemonId}.png`;
+    },
+
     _gifBlobCache: {},
 
     // Baixa o GIF e cria um Blob URL (cache local, evita revalidação do Supabase)
     async getGifBlobUrl(pokemonId) {
-        // Variantes/formas (IDs >= 10000) não têm GIF animado
-        if (!pokemonId || pokemonId >= 10000) return null;
+        if (!pokemonId) return null;
         const gifUrl = this.getAnimatedFrontUrl(pokemonId);
         if (this._gifBlobCache[gifUrl]) return this._gifBlobCache[gifUrl];
         try {
@@ -126,16 +141,16 @@ const PokeAPI = {
                 speed: row.speed
             },
             spriteUrls: {
-                front: row.sprite_front,
-                back: row.sprite_back,
-                official: row.sprite_official,
-                home: row.sprite_home
+                front: row.sprite_front || (row.id ? this.getAnimatedFrontUrl(row.id) : null),
+                back: row.sprite_back || (row.id ? this.getAnimatedBackUrl(row.id) : null),
+                official: row.sprite_official || null,
+                home: row.sprite_home || (row.id ? this.getHomeUrl(row.id) : null)
             },
             shinySpriteUrls: {
-                front: row.sprite_front_shiny,
-                back: row.sprite_back_shiny,
-                official: row.sprite_official_shiny,
-                home: row.sprite_home_shiny
+                front: row.sprite_front_shiny || (row.id ? this.getAnimatedFrontShinyUrl(row.id) : null),
+                back: row.sprite_back_shiny || (row.id ? this.getAnimatedBackShinyUrl(row.id) : null),
+                official: row.sprite_official_shiny || null,
+                home: row.sprite_home_shiny || (row.id ? this.getHomeShinyUrl(row.id) : null)
             },
             variant: row.variant || 'normal',
             basePokemonId: row.base_pokemon_id || null,

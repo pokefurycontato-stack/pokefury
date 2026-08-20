@@ -4524,8 +4524,10 @@ if (this._professorOriginalOrder) {
             const p = boxMap[i];
             if (p) {
                 const pokeData = await PokeAPI.ensurePokemon(p.pokemon_id || p.species);
-                const spriteUrl = pokeData?.spriteUrls?.front || pokeData?.spriteUrls?.home || '';
-                slot.innerHTML = `<img src="${spriteUrl}" draggable="false" style="width:80%;height:80%;object-fit:contain;pointer-events:none;" alt="${p.nickname || p.species}" onerror="this.style.display='none'">`;
+                const baseSprite = pokeData?.spriteUrls?.front || pokeData?.spriteUrls?.home || pokeData?.spriteUrls?.official || '';
+                const gifUrl = (window.PokeAPI && pokeData?.id) ? (p.is_shiny ? window.PokeAPI.getAnimatedFrontShinyUrl(pokeData.id) : window.PokeAPI.getAnimatedFrontUrl(pokeData.id)) : '';
+                const fallbackSprite = (baseSprite && baseSprite !== gifUrl) ? baseSprite : '';
+                slot.innerHTML = `<img src="${gifUrl || fallbackSprite}" draggable="false" data-fallback="${fallbackSprite}" style="width:80%;height:80%;object-fit:contain;pointer-events:none;" alt="${p.nickname || p.species}" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">`;
                 slot.title = `${p.nickname || p.species} Lv.${p.level}`;
                 slot.style.borderColor = p.is_shiny ? '#ffd700' : 'rgba(255,255,255,0.2)';
 
@@ -4587,8 +4589,10 @@ if (this._professorOriginalOrder) {
             slot.style.cssText = 'width:48px;height:48px;border-radius:6px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:grab;transition:transform 0.15s,opacity 0.15s;position:relative;';
             if (p.fainted) slot.style.opacity = '0.4';
 
-            const spriteUrl = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
-            slot.innerHTML = `<img src="${spriteUrl}" style="width:80%;height:80%;object-fit:contain;" alt="${p.name}" onerror="this.style.display='none'">`;
+            const baseSprite = p.spriteUrls?.front || p.spriteUrls?.home || p.spriteUrls?.official || '';
+            const gifUrl = (window.PokeAPI && p.id) ? (p.isShiny ? window.PokeAPI.getAnimatedFrontShinyUrl(p.id) : window.PokeAPI.getAnimatedFrontUrl(p.id)) : '';
+            const fallbackSprite = (baseSprite && baseSprite !== gifUrl) ? baseSprite : '';
+            slot.innerHTML = `<img src="${gifUrl || fallbackSprite}" data-fallback="${fallbackSprite}" style="width:80%;height:80%;object-fit:contain;" alt="${p.name}" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">`;
             slot.title = `${p.name} Lv.${p.level} - Arraste para a box`;
 
             slot.ondragstart = (e) => {
@@ -5576,9 +5580,12 @@ openEventsPanel() {
                         const pokemonData = await PokeAPI.ensurePokemon(poke.id);
                         this._donateSelectedPokemonData = pokemonData;
 
-                        const spriteUrl = pokemonData?.spriteUrls?.front || pokemonData?.spriteUrls?.home || '';
+                        const baseSprite = pokemonData?.spriteUrls?.front || pokemonData?.spriteUrls?.home || pokemonData?.spriteUrls?.official || '';
+                        const gifUrl = (window.PokeAPI && pokemonData?.id) ? window.PokeAPI.getAnimatedFrontUrl(pokemonData.id) : '';
+                        const fallbackSprite = (baseSprite && baseSprite !== gifUrl) ? baseSprite : '';
+                        const spriteUrl = gifUrl || fallbackSprite;
                         preview.innerHTML = spriteUrl
-                            ? `<img src="${spriteUrl}" style="width:72px;height:72px;image-rendering:pixelated" onerror="this.parentElement.innerHTML='Erro'">`
+                            ? `<img src="${spriteUrl}" data-fallback="${fallbackSprite}" style="width:72px;height:72px;image-rendering:pixelated" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.parentElement.innerHTML='Erro'}">`
                             : '<span style="color:rgba(255,255,255,0.3)">Sem sprite</span>';
 
                         this.loadPokemonAbilities(pokemonData);
