@@ -21,7 +21,8 @@ const STARTER_RARITY_IDS = [1,4,7,10,13,16,152,155,158,252,255,258,387,390,393,4
 export function computeRarity(baseStats, id) {
     if (STARTER_RARITY_IDS.includes(id)) return 'inicial';
     const bst = (baseStats?.hp || 0) + (baseStats?.attack || 0) + (baseStats?.defense || 0)
-        + (baseStats?.sp_atk || 0) + (baseStats?.sp_def || 0) + (baseStats?.speed || 0);
+        + ((baseStats?.spAtk ?? baseStats?.sp_atk) || 0) + ((baseStats?.spDef ?? baseStats?.sp_def) || 0)
+        + (baseStats?.speed || 0);
     if (bst >= 600) return 'legendary';
     if (bst >= 500) return 'rare';
     if (bst >= 400) return 'uncommon';
