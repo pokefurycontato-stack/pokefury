@@ -24,7 +24,7 @@ import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
 import { RaidBossManager } from './raid-boss.js';
-import { InfiniteTowerManager } from './infinite-tower.js?v=20260819o';
+import { InfiniteTowerManager } from './infinite-tower.js?v=20260819u';
 import { MusicManager } from './music.js';
 import { SfxManager } from './sfx.js?v=20260816cc';
 
@@ -1700,9 +1700,11 @@ class PokeFuryGame {
                 if (attacker.currentHp <= 0) attacker.fainted = true;
                 if (defender.currentHp <= 0) defender.fainted = true;
 
-                attacker.moves.forEach(m => {
-                    if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
-                });
+                if (!(this._inTower && isPlayer)) {
+                    attacker.moves.forEach(m => {
+                        if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
+                    });
+                }
 
                 if (result.protected) {
                     await showBattleMessage(`${defender.name} se protegeu!`);
@@ -2002,9 +2004,11 @@ class PokeFuryGame {
             const isBoss = enemyPokemon.isAlpha || enemyPokemon.isRaidBoss || enemyPokemon.isGymLeader;
             const result = await executeTurn(enemyPokemon, playerPokemon, move, this._battleState, this.isWildBattle && !isBoss ? 0.75 : 1);
 
-            enemyPokemon.moves.forEach(m => {
-                if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
-            });
+            if (!this._inTower) {
+                enemyPokemon.moves.forEach(m => {
+                    if (String(m.id) === String(move.id)) m.currentPp = Math.max(0, (m.currentPp || 0) - 1);
+                });
+            }
 
             if (result.statusMove) {
                 await showBattleMessage(`${enemyPokemon.name} usou ${move.name}!`);

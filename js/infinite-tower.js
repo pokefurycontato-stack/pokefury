@@ -66,6 +66,12 @@ export class InfiniteTowerManager {
         await this.loadProgress();
         this.currentFloor = 1;
         this._towerActive = true;
+        const team = this.game?.playerTeam;
+        if (team) {
+            for (const p of team) {
+                if (p?.moves) p.moves.forEach(m => { if (m) m.currentPp = m.pp || 35; });
+            }
+        }
         this.startCurrentFloor();
     }
 
