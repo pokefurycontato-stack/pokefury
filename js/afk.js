@@ -643,6 +643,14 @@ export class AFKManager {
     // inimigo. Assim, se o 2º tipo do Pokémon for imune ou resistente ao
     // golpe, isso é considerado — impedindo que o Professor envie um Pokémon
     // cujos ataques não tenham efeito.
+    //
+    // Transform (Ditto/Imposter): se o inimigo pode usar Transform/Mudança ou
+    // tem a habilidade Imposter, ele COPIA a tipagem (e golpes) do Pokémon que
+    // o Professor envia primeiro. Nesse caso o Professor também avalia o
+    // "espelho": assegura que o escolhido tenha pelo menos um golpe efetivo
+    // contra a PRÓPRIA tipagem dele — senão, depois do Transform, ele ficaria
+    // usando ataques sem efeito (ex.: Marshadow [ghost,fighting] é imune ao
+    // próprio Fighting).
     pickProfessorCounter(enemyTypes) {
         const team = this.game.playerTeam;
         if (!team || !enemyTypes || enemyTypes.length === 0) return null;
@@ -651,24 +659,45 @@ export class AFKManager {
         const chart = this._typeChart;
         if (!chart) return null;
 
-        // Efetividade de um tipo de ataque contra TODOS os tipos de defesa
-        // do inimigo (multiplicado), igual ao jogo.
-        const effectiveness = (attackType) => {
+        // Efetividade de um tipo de ataque contra uma lista de TIPOS DE DEFESA
+        // (multiplicado), igual ao jogo (getEffectiveness em utils.js).
+        const effectiveness = (attackType, targetTypes) => {
             let eff = 1;
             const row = chart[attackType];
             if (!row) return 0;
-            for (const dt of enemyTypes) {
+            for (const dt of targetTypes) {
                 if (row[dt] !== undefined) eff *= row[dt];
             }
             return eff;
         };
 
-        // Melhor efetividade considerando também o STAB (mesmo tipo do Pokémon).
-        const bestMoveScore = (poke) => {
+        // Detecta se o inimigo pode copiar a tipagem do nosso Pokémon (Transform
+        // / Mudança / Imposter). Usamos o inimigo em campo real do jogo.
+        let enemyCanTransform = false;
+        const enemyPokemon = this.game && this.game.enemyTeam && this.game.enemyTeam[0];
+        if (enemyPokemon) {
+            const isDitto = enemyPokemon.id === 132
+                || enemyPokemon.basePokemonId === 132
+                || /^ditto($|\s)/i.test(enemyPokemon.name || '');
+            const hasTransformMove = (enemyPokemon.moves || []).some(m =>
+                m && /^transform$/i.test(String(m.name || '').trim()));
+            const hasImposter = /^imposter$/i.test(String(enemyPokemon.currentAbilityName || ''));
+            enemyCanTransform = isDitto || hasTransformMove || hasImposter;
+        }
+
+        // Melhor efetividade ofensiva de um Pokémon contra uma lista de alvos,
+        // considerando STAB. Se `alsoMirror` estiver ativo, o golpe precisa ser
+        // efetivo contra o inimigo E contra a própria tipagem do Pokémon
+        // (porque um transform-copy vai assumir exatamente essa tipagem).
+        const bestMoveScore = (poke, targetTypes, alsoMirror) => {
             let best = 0;
             for (const move of poke.moves) {
                 if (!move || !move.power || move.power <= 0 || move.category === 'status' || !move.type) continue;
-                const eff = effectiveness(move.type);
+                let eff = effectiveness(move.type, targetTypes);
+                if (alsoMirror) {
+                    // Espelho: o Transform copia a tipagem do próprio Pokémon enviado.
+                    eff *= effectiveness(move.type, poke.types || []);
+                }
                 const stab = (poke.types || []).includes(move.type) ? 1.5 : 1;
                 const score = eff * stab;
                 if (score > best) best = score;
@@ -678,15 +707,21 @@ export class AFKManager {
 
         let best = null;
         let bestScore = 0;
-        // Desempate: resistência do próprio Pokémon (tipos dele contra o inimigo)
-        // e potência bruta do golpe, para evitar empates divididos.
+        // Desempate: potência bruta do golpe e resistência defensiva do próprio
+        // Pokémon, para evitar empates divididos.
         let bestDefense = 0;
         let bestPower = 0;
         for (const p of alive) {
-            const score = bestMoveScore(p);
+            // Com inimigo que transforma, exigimos golpe efetivo contra o inimigo
+            // E contra a própria tipagem (espelho); sem isso o Pokémon travaria.
+            const score = enemyCanTransform
+                ? bestMoveScore(p, enemyTypes, true)
+                : bestMoveScore(p, enemyTypes, false);
             if (score <= 0) continue; // sem NENHUM golpe eficaz -> nem candidato
             const defense = (p.types || [])
-                .map(t => effectiveness(t) > 1 ? effectiveness(t) : 1 / Math.max(0.1, effectiveness(t)))
+                .map(t => effectiveness(t, enemyTypes) > 1
+                    ? effectiveness(t, enemyTypes)
+                    : 1 / Math.max(0.1, effectiveness(t, enemyTypes)))
                 .reduce((a, b) => a * b, 1);
             const power = (p.moves || []).reduce((memo, m) =>
                 (m && m.power && m.power > memo) ? m.power : memo, 0);
