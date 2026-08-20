@@ -1911,10 +1911,8 @@ if (this._professorOriginalOrder) {
                         return;
                     }
                     if (this._isTowerBattle && !isTeamFainted(this.enemyTeam)) {
-                        const nextEnemy = getFirstAlive(this.enemyTeam);
-                        if (nextEnemy && nextEnemy !== defender) {
-                            await this.switchToNextTowerEnemy(defender, playerPokemon);
-                        }
+                        const switched = await this.towerSwitchEnemy(defender, playerPokemon);
+                        if (switched) enemyPokemon = switched;
                     }
                     if (playerPokemon.fainted) await this.forceWildSwitch(playerPokemon, enemyPokemon);
                 }
@@ -1939,6 +1937,10 @@ if (this._professorOriginalOrder) {
                         this.endBattle('lose');
                         return;
                     }
+                    if (pokemon === enemyPokemon && this._isTowerBattle) {
+                        const switched = await this.towerSwitchEnemy(pokemon, playerPokemon);
+                        if (switched) enemyPokemon = switched;
+                    }
                 }
             }
 
@@ -1962,6 +1964,10 @@ if (this._professorOriginalOrder) {
                         await showBattleMessage('Todos seus Pokémon desmaiaram...');
                         this.endBattle('lose');
                         return;
+                    }
+                    if (pokemon === enemyPokemon && this._isTowerBattle) {
+                        const switched = await this.towerSwitchEnemy(pokemon, playerPokemon);
+                        if (switched) enemyPokemon = switched;
                     }
                 }
             }
@@ -2422,16 +2428,33 @@ if (this._professorOriginalOrder) {
         );
     }
 
+    async towerSwitchEnemy(prevEnemy, playerActive) {
+        if (!this._isTowerBattle || isTeamFainted(this.enemyTeam)) return null;
+        const next = getFirstAlive(this.enemyTeam);
+        if (!next || next === prevEnemy) return null;
+        return await this.switchToNextTowerEnemy(prevEnemy, playerActive);
+    }
+
     async switchToNextTowerEnemy(prevEnemy, playerActive) {
         const next = getFirstAlive(this.enemyTeam);
-        if (!next || next === prevEnemy) return;
+        if (!next || next === prevEnemy) return null;
+        // Move o novo inimigo para o inicio do time para que a UI mostre o ativo
+        const idx = this.enemyTeam.indexOf(next);
+        if (idx > 0) {
+            this.enemyTeam.splice(idx, 1);
+            this.enemyTeam.unshift(next);
+        }
         const pl = playerActive || getFirstAlive(this.playerTeam);
         try { await this.playPVPExit('enemy', prevEnemy); } catch (e) {}
         await preloadBattleSprites(pl, next);
+        // Campo vazio antes da entrada do proximo inimigo
+        await new Promise(resolve => setTimeout(resolve, 500));
         drawBattleScene(this.ctx, this.canvas, pl, next, this.currentBattleBg, this.getBattleClipRect());
         await this.playPVPEntrance('enemy', next);
         updateBattleUI(this.playerTeam, this.enemyTeam);
         this.updatePartyPanel();
+        this._lastBattleEnemy = next;
+        return next;
     }
 
     async endBattle(result) {
