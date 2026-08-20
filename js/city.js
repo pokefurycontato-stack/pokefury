@@ -1585,7 +1585,7 @@ class CityScreen {
         if (game.afkManager && game.afkManager._recordCityFight) {
             game.afkManager._recordCityFight(p.pos_x, p.pos_y);
         }
-        await game.startBattleWithPokemon(pokemonId, level, spriteUrl, !!p.isShiny);
+        await game.startBattleWithPokemon(pokemonId, level, spriteUrl, !!p.isShiny, { rarity: encounter.rarity });
         if (game.state === 'battle') {
             p.active = false;
             p.respawnTimer = 20;
@@ -1713,7 +1713,7 @@ class CityScreen {
 
         game._cityBattle = true;
         game._currentBiome = zone.biome || null;
-        await game.startBattleWithPokemon(pokemonId, level, spriteUrl, isShiny);
+        await game.startBattleWithPokemon(pokemonId, level, spriteUrl, isShiny, { rarity: encounter.rarity });
         this.spawnZoneCooldown = 240;
     }
 

@@ -583,21 +583,27 @@ export class AFKManager {
     // CAPTURE: Post-battle auto-capture
     // ============================================================
 
+    // Decide a configuração (pokebola) para capturar um Pokemon inimigo.
+    // Prioridade ABSOLUTA: Shiny sempre antes da raridade.
+    // Se é shiny e o jogador marcou "Shiny", usa a bola shiny SEMPRE,
+    // mesmo que a raridade natural do Pokemon não esteja na lista.
+    getCaptureConfigForPokemon(enemyPokemon) {
+        if (!enemyPokemon) return null;
+        if (enemyPokemon.isShiny && this.captureRarities['shiny']) {
+            return this.captureRarities['shiny'];
+        }
+        const rarity = enemyPokemon.rarity || 'common';
+        if (this.captureRarities[rarity]) {
+            return this.captureRarities[rarity];
+        }
+        return null;
+    }
+
     async tryAutoCapture(enemyPokemon) {
         if (!this.autoCapture || !enemyPokemon) return false;
         if (enemyPokemon.isAlpha || enemyPokemon.isRaidBoss) return false;
 
-        const isShiny = enemyPokemon.isShiny;
-        const rarity = enemyPokemon.rarity || 'common';
-
-        let ballConfig = null;
-
-        // Shiny takes priority - use shiny ball config if enabled
-        if (isShiny && this.captureRarities['shiny']) {
-            ballConfig = this.captureRarities['shiny'];
-        } else if (!isShiny && this.captureRarities[rarity]) {
-            ballConfig = this.captureRarities[rarity];
-        }
+        const ballConfig = this.getCaptureConfigForPokemon(enemyPokemon);
 
         if (!ballConfig) return false;
 

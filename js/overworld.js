@@ -893,7 +893,7 @@ export class Overworld2D {
         const battleId = enc.pokemon_id || enc.pokemon_name;
         const battleSprite = (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(enc.pokemon_id) : null) || entity.spriteUrl;
         this.game._currentBiome = null;
-        await this.game.startBattleWithPokemon(battleId, level, battleSprite);
+        await this.game.startBattleWithPokemon(battleId, level, battleSprite, undefined, { rarity: enc.rarity });
 
         if (this.game.state === 'battle') {
             entity.active = false;

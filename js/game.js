@@ -996,7 +996,7 @@ if (this._professorOriginalOrder) {
                         const level = minWild + Math.floor(Math.random() * (maxWild - minWild + 1));
                         const pokemonData = await PokeAPI.ensurePokemon(enc.pokemon_name);
                         const isShiny = Math.random() < (1 / getShinyChance());
-                        pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
+                        pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny, enc.rarity);
                         break;
                     }
                 }
@@ -1163,7 +1163,7 @@ if (this._professorOriginalOrder) {
                 this.enemyTeam = team;
                 pokemon = team[0];
             } else {
-                pokemon = await createPokemon(pokemonData, level, ivs, null, null, isShiny);
+                pokemon = await createPokemon(pokemonData, level, ivs, null, null, isShiny, opts.rarity);
                 if (!pokemon || pokemon.currentHp <= 0) {
                     console.error('[PokeFury] Pokemon created with 0 HP, fixing...');
                     pokemon.currentHp = pokemon.stats.hp;
@@ -2192,13 +2192,8 @@ if (this._professorOriginalOrder) {
                 const isShiny = enemyPokemon.isShiny;
                 const rarity = enemyPokemon.rarity || 'common';
 
-                let captureConfig = null;
-                // Shiny takes priority
-                if (isShiny && this.afkManager.captureRarities['shiny']) {
-                    captureConfig = this.afkManager.captureRarities['shiny'];
-                } else if (!isShiny && this.afkManager.captureRarities[rarity]) {
-                    captureConfig = this.afkManager.captureRarities[rarity];
-                }
+                // Shiny tem prioridade absoluta sobre a raridade (lógica centralizada no AFKManager)
+                const captureConfig = this.afkManager.getCaptureConfigForPokemon(enemyPokemon);
 
                 if (!captureConfig || !captureConfig.ballId) {
                     const label = isShiny ? 'Shiny' : rarity;

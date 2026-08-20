@@ -13,7 +13,22 @@ export function randomNature() {
     return NATURE_NAMES[randomInt(0, NATURE_NAMES.length - 1)];
 }
 
-export async function createPokemon(apiData, level, savedIvs = null, savedEvs = null, savedNature = null, savedShiny = false) {
+const STARTER_RARITY_IDS = [1,4,7,10,13,16,152,155,158,252,255,258,387,390,393,495,498,501,650,653,656,722,725,728,810,813,816,906,909,912];
+
+// Calcula a raridade base de um Pokemon a partir de seus stats base e id.
+// Usada como fallback quando o encontro não traz raridade para poder distinguir
+// always Common/Uncommon/Rare/Legendary/Inicial en batalha y na captura automatica.
+export function computeRarity(baseStats, id) {
+    if (STARTER_RARITY_IDS.includes(id)) return 'inicial';
+    const bst = (baseStats?.hp || 0) + (baseStats?.attack || 0) + (baseStats?.defense || 0)
+        + (baseStats?.sp_atk || 0) + (baseStats?.sp_def || 0) + (baseStats?.speed || 0);
+    if (bst >= 600) return 'legendary';
+    if (bst >= 500) return 'rare';
+    if (bst >= 400) return 'uncommon';
+    return 'common';
+}
+
+export async function createPokemon(apiData, level, savedIvs = null, savedEvs = null, savedNature = null, savedShiny = false, savedRarity = null) {
     const ivs = savedIvs || generateIVs();
     const evs = savedEvs || generateEVs();
     const nature = savedNature || randomNature();
@@ -165,7 +180,8 @@ export async function createPokemon(apiData, level, savedIvs = null, savedEvs = 
         currentAbilityName: null,
         teraType: apiData.teraType || apiData.types?.[0] || 'normal',
         isTerastallized: false,
-        _preTeraTypes: null
+        _preTeraTypes: null,
+        rarity: savedRarity || computeRarity(apiData.baseStats, apiData.id),
     };
 }
 
