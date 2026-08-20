@@ -1913,6 +1913,10 @@ if (this._professorOriginalOrder) {
                     if (this._isTowerBattle && !isTeamFainted(this.enemyTeam)) {
                         const switched = await this.towerSwitchEnemy(defender, playerPokemon);
                         if (switched) enemyPokemon = switched;
+                        if (this._professorSwitchedPlayer) {
+                            playerPokemon = this._professorSwitchedPlayer;
+                            this._professorSwitchedPlayer = null;
+                        }
                     }
                     if (playerPokemon.fainted) await this.forceWildSwitch(playerPokemon, enemyPokemon);
                 }
@@ -1940,6 +1944,10 @@ if (this._professorOriginalOrder) {
                     if (pokemon === enemyPokemon && this._isTowerBattle) {
                         const switched = await this.towerSwitchEnemy(pokemon, playerPokemon);
                         if (switched) enemyPokemon = switched;
+                        if (this._professorSwitchedPlayer) {
+                            playerPokemon = this._professorSwitchedPlayer;
+                            this._professorSwitchedPlayer = null;
+                        }
                     }
                 }
             }
@@ -1968,6 +1976,10 @@ if (this._professorOriginalOrder) {
                     if (pokemon === enemyPokemon && this._isTowerBattle) {
                         const switched = await this.towerSwitchEnemy(pokemon, playerPokemon);
                         if (switched) enemyPokemon = switched;
+                        if (this._professorSwitchedPlayer) {
+                            playerPokemon = this._professorSwitchedPlayer;
+                            this._professorSwitchedPlayer = null;
+                        }
                     }
                 }
             }
@@ -2435,6 +2447,37 @@ if (this._professorOriginalOrder) {
         return await this.switchToNextTowerEnemy(prevEnemy, playerActive);
     }
 
+    async professorSwitchPlayer(enemyPokemon) {
+        if (!this.afkManager || !this.afkManager.professorMode) return null;
+        if (!window.boostsManager || !window.boostsManager.isActive('professor_acompanhante')) return null;
+        if (this._inRaidBossBattle || this._isInGym) return null;
+        const current = getFirstAlive(this.playerTeam);
+        if (!current || !enemyPokemon || !Array.isArray(enemyPokemon.types) || enemyPokemon.types.length === 0) return null;
+        const enemyTypes = enemyPokemon.types.filter(Boolean);
+        if (enemyTypes.length === 0) return null;
+        const counter = this.afkManager.pickProfessorCounter(enemyTypes);
+        if (!counter || counter === current) return null;
+        const activeIndex = this.playerTeam.indexOf(current);
+        const counterIndex = this.playerTeam.indexOf(counter);
+        if (activeIndex < 0 || counterIndex < 0) return null;
+        try {
+            this.playerTeam[activeIndex] = counter;
+            this.playerTeam[counterIndex] = current;
+            clearChoiceLock(current);
+            await showBattleMessage(`Professor Acompanhante: ${current.name} para fora, ${counter.name} na frente!`);
+            await preloadBattleSprites(counter, enemyPokemon);
+            drawBattleScene(this.ctx, this.canvas, current, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+            await this.playPVPExit('player', current);
+            drawBattleScene(this.ctx, this.canvas, counter, enemyPokemon, this.currentBattleBg, this.getBattleClipRect());
+            updateBattleUI(this.playerTeam, this.enemyTeam);
+            await this.playPVPEntrance('player', counter);
+            this._lastBattlePlayer = counter;
+            return counter;
+        } catch (e) {
+            return null;
+        }
+    }
+
     async switchToNextTowerEnemy(prevEnemy, playerActive) {
         const next = getFirstAlive(this.enemyTeam);
         if (!next || next === prevEnemy) return null;
@@ -2451,6 +2494,11 @@ if (this._professorOriginalOrder) {
         await new Promise(resolve => setTimeout(resolve, 500));
         drawBattleScene(this.ctx, this.canvas, pl, next, this.currentBattleBg, this.getBattleClipRect());
         await this.playPVPEntrance('enemy', next);
+        // Professor Acompanhante: troca o pokemon do jogador para manter a vantagem de tipo
+        this._professorSwitchedPlayer = null;
+        if (pl && !pl.fainted && pl.currentHp > 0) {
+            try { this._professorSwitchedPlayer = await this.professorSwitchPlayer(next); } catch (e) {}
+        }
         updateBattleUI(this.playerTeam, this.enemyTeam);
         this.updatePartyPanel();
         this._lastBattleEnemy = next;
