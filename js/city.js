@@ -3593,7 +3593,7 @@ class CityScreen {
 
     teleportToTowerNpc() {
         const lay = this.towerLayout || {};
-        const p = lay.exit || lay.entry || lay.npc;
+        const p = lay.npc || lay.entry || lay.exit;
         if (p) {
             this.playerX = p.pos_x;
             this.playerY = (p.pos_y || 0) + 70;
