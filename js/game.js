@@ -1181,7 +1181,7 @@ if (this._professorOriginalOrder) {
             const profAfk = this.afkManager;
             if (profAfk && profAfk.running && profAfk.professorMode
                 && window.boostsManager && window.boostsManager.isActive('professor_acompanhante')
-                && !opts.infiniteTower && !this._isTowerBattle && !this._inRaidBossBattle && !this._isInGym) {
+                && !this._inRaidBossBattle && !this._isInGym) {
                 const enemyTypes = ((this.enemyTeam[0] && this.enemyTeam[0].types) || []).filter(Boolean);
                 if (enemyTypes.length) {
                     const counter = profAfk.pickProfessorCounter(enemyTypes);
@@ -2439,6 +2439,11 @@ if (this._professorOriginalOrder) {
         if (this._battleEnding) return;
         this._battleEnding = true;
         this._battleStarting = false;
+        // Professor Acompanhante: restaura a ordem original do time antes de salvar
+        if (this._professorOriginalOrder) {
+            this.playerTeam = this._professorOriginalOrder;
+            this._professorOriginalOrder = null;
+        }
         if (this.weatherAnim) this.weatherAnim.setWeather(null);
 
         // Restore the overworld immediately; rewards and persistence can take time.
