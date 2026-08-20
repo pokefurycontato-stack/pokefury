@@ -1308,6 +1308,13 @@ toggleVendorMode() {
 
     deleteSelectedNpcRegion() {
         if (this.npcRegionSelectedIdx >= 0) {
+            const n = this.npcRegions[this.npcRegionSelectedIdx];
+            // Professores nunca podem ser removidos (protegeria as quests ja criadas).
+            // Para movelos usar arrastre ou editar Pos X/Pos Y.
+            if (n && n.npc_type === 'professor') {
+                alert('O professor Carvalho não pode ser removido. Arrasta o NPC para mudar sua localização (ou edita Pos X/Pos Y).');
+                return;
+            }
             this.npcRegions.splice(this.npcRegionSelectedIdx, 1);
             this.npcRegionSelectedIdx = -1;
             this.render();
@@ -2349,8 +2356,10 @@ toggleVendorMode() {
                             Sprite URL
                             <input type="text" value="${n.sprite_url || ''}" onchange="window.cityBuilder.npcRegions[window.cityBuilder.npcRegionSelectedIdx].sprite_url=this.value;window.cityBuilder.render();" style="width:100%;padding:6px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#fff;font-size:12px;box-sizing:border-box;">
                         </label>
-                        ${n.npc_type === 'professor' ? `<button onclick="window.cityBuilder.saveAndOpenProfessorQuests()" style="padding:8px;border:none;border-radius:6px;background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;font-size:12px;font-weight:700;cursor:pointer;"> Gerenciar Quests</button>` : ''}
-                        <button onclick="window.cityBuilder.deleteSelectedNpcRegion();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover NPC</button>
+                        ${n.npc_type === 'professor'
+                            ? `<button onclick="window.cityBuilder.saveAndOpenProfessorQuests()" style="padding:8px;border:none;border-radius:6px;background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Gerenciar Quests</button>
+                               <div style="color:rgba(255,255,255,0.35);font-size:10px;margin-top:2px;">Não removível — arrasta o NPC para mudar de lugar.</div>`
+                            : `<button onclick="window.cityBuilder.deleteSelectedNpcRegion();" style="padding:6px;border:none;border-radius:4px;background:#e94560;color:#fff;font-size:11px;cursor:pointer;">Remover NPC</button>`}
                     </div>
                 `;
                 return;
@@ -2846,11 +2855,14 @@ toggleVendorMode() {
 
             await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
             await deleteMissingRows('city_teleports', tpIds, tpToSave);
-            // Protege NPCs que possuem quests do professor: nunca deixa o salvar do mapa
-            // apagar a linha desse NPC (o ON DELETE CASCADE apagaria as quests junto).
+            // Protege o professor: nunca deixa o salvar do mapa apagar a sua linha (o
+            // ON DELETE CASCADE apagaria as quests junto). Vale também para os que ainda
+            // não têm quests criadas: o professor nunca se remove do mapa.
             try {
                 const { data: questNpcRows } = await window.db.from('city_professor_quests').select('npc_id');
                 for (const r of (questNpcRows || [])) if (r.npc_id) npcIds.add(r.npc_id);
+                const { data: profRows } = await window.db.from('city_npcs').select('id').eq('npc_type', 'professor');
+                for (const r of (profRows || [])) if (r.id) npcIds.add(r.id);
             } catch (e) {}
             await deleteMissingRows('city_npcs', npcIds, npcToSave);
             await deleteMissingRows('city_battle_zones', bzIds, bzToSave);
