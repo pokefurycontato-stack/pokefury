@@ -19,7 +19,7 @@ import { Chat } from './chat.js';
 window.Chat = Chat;
 import { BattleAnimations } from './battle-animations.js';
 import { EventManager } from './events.js';
-import { AFKManager } from './afk.js?v=20260819w';
+import { AFKManager } from './afk.js?v=20260819z';
 import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';

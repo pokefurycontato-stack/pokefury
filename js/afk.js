@@ -631,8 +631,21 @@ export class AFKManager {
         const chart = this._typeChart;
         if (!chart) return null;
 
-        const effectiveness = (poke) => {
-            let best = 0;
+        const typeEffectiveness = (poke) => {
+            let best = 1;
+            for (const pt of (poke.types || [])) {
+                let eff = 1;
+                for (const dt of enemyTypes) {
+                    const row = chart[pt];
+                    if (row && row[dt] != null) eff *= row[dt];
+                }
+                if (eff > best) best = eff;
+            }
+            return best;
+        };
+
+        const moveEffectiveness = (poke) => {
+            let best = 1;
             for (const move of poke.moves) {
                 if (!move || !move.power || move.power <= 0 || move.category === 'status' || !move.type) continue;
                 let eff = 1;
@@ -646,11 +659,15 @@ export class AFKManager {
         };
 
         let best = null;
-        let bestScore = 1.01;
+        let bestType = 1.01;
+        let bestMove = 0;
         for (const p of alive) {
-            const s = effectiveness(p);
-            if (s > bestScore) {
-                bestScore = s;
+            const t = typeEffectiveness(p);
+            if (t < bestType) continue;
+            const m = moveEffectiveness(p);
+            if (t > bestType || (t === bestType && m > bestMove)) {
+                bestType = t;
+                bestMove = m;
                 best = p;
             }
         }
