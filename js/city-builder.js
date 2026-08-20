@@ -1328,7 +1328,30 @@ toggleVendorMode() {
                 sprite_url: n.sprite_url || null
             }).select('id').maybeSingle();
             if (error) { alert('Erro ao salvar NPC: ' + error.message); return; }
-            if (data) { n.id = data.id; }
+            if (data) {
+                n.id = data.id;
+                // Re-vincula quests do professor que ficaram orfas (npc_id apontando para um
+                // NPC que ja nao existe) ou sem dono (npc_id nulo), passando-as ao professor novo.
+                try {
+                    const { data: npcRows } = await window.db.from('city_npcs').select('id');
+                    const existingIds = new Set((npcRows || []).map(r => r.id).filter(Boolean));
+                    const { data: questRows } = await window.db.from('city_professor_quests').select('npc_id');
+                    const orphans = new Set();
+                    let hasNull = false;
+                    for (const r of (questRows || [])) {
+                        if (!r.npc_id) { hasNull = true; }
+                        else if (!existingIds.has(r.npc_id)) orphans.add(r.npc_id);
+                    }
+                    for (const oldId of orphans) {
+                        await window.db.from('city_professor_quests').update({ npc_id: data.id }).eq('npc_id', oldId);
+                        await window.db.from('player_professor_quests').update({ npc_id: data.id }).eq('npc_id', oldId);
+                    }
+                    if (hasNull) {
+                        await window.db.from('city_professor_quests').update({ npc_id: data.id }).is('npc_id', null);
+                        await window.db.from('player_professor_quests').update({ npc_id: data.id }).is('npc_id', null);
+                    }
+                } catch (e) {}
+            }
         }
         if (n.id && window.ProfessorQuests) {
             window.ProfessorQuests.openProfessorAdminOverlay(n.id);
@@ -2823,6 +2846,12 @@ toggleVendorMode() {
 
             await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
             await deleteMissingRows('city_teleports', tpIds, tpToSave);
+            // Protege NPCs que possuem quests do professor: nunca deixa o salvar do mapa
+            // apagar a linha desse NPC (o ON DELETE CASCADE apagaria as quests junto).
+            try {
+                const { data: questNpcRows } = await window.db.from('city_professor_quests').select('npc_id');
+                for (const r of (questNpcRows || [])) if (r.npc_id) npcIds.add(r.npc_id);
+            } catch (e) {}
             await deleteMissingRows('city_npcs', npcIds, npcToSave);
             await deleteMissingRows('city_battle_zones', bzIds, bzToSave);
             await deleteMissingRows('city_spawn_zones', spawnIds, spawnToSave);
