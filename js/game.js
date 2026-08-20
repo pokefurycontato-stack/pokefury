@@ -24,6 +24,7 @@ import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
 import { RaidBossManager } from './raid-boss.js';
+import { InfiniteTowerManager } from './infinite-tower.js';
 import { MusicManager } from './music.js';
 import { SfxManager } from './sfx.js?v=20260816cc';
 
@@ -141,6 +142,8 @@ class PokeFuryGame {
         this._raidBossEntryHp = null;
         this._isGymBattle = false;
         this._currentGymLeader = null;
+        this._isTowerBattle = false;
+        this._towerFloor = null;
         this.music = new MusicManager();
         this.sfx = new SfxManager();
         this.music.init();
@@ -730,6 +733,10 @@ class PokeFuryGame {
         };
         this.raidBoss.init();
 
+        if (!this.tower) {
+            this.tower = new InfiniteTowerManager(this);
+        }
+
         this.music.init();
         this.setupMusicControls();
         if (!this._musicWatcher) {
@@ -1095,7 +1102,7 @@ class PokeFuryGame {
         this._turnLocked = false;
     }
 
-    async startBattleWithPokemon(pokemonName, level, spriteUrl, isShinyOverride) {
+    async startBattleWithPokemon(pokemonName, level, spriteUrl, isShinyOverride, opts = {}) {
         if (this._battleStarting || this._battleEnding || this.state === 'battle') return;
         this._battleStarting = true;
         this._wildInitialEntrances = { player: false, enemy: false };
@@ -1108,6 +1115,9 @@ class PokeFuryGame {
         this.isWildBattle = true;
         this._playerSpriteReady = false;
         this._capturePromptOpen = false;
+        // Estado da Torre Infinita: permítese opt-out de captura e bloquear curar
+        this._inTower = !!opts.infiniteTower;
+        this._towerFloor = opts.floor || null;
 
         try {
             const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
@@ -1117,18 +1127,44 @@ class PokeFuryGame {
                 return;
             }
             const isShiny = isShinyOverride != null ? isShinyOverride : (Math.random() < (1 / getShinyChance()));
-            const pokemon = await createPokemon(pokemonData, level, null, null, null, isShiny);
-            if (!pokemon || pokemon.currentHp <= 0) {
-                console.error('[PokeFury] Pokemon created with 0 HP, fixing...');
-                pokemon.currentHp = pokemon.stats.hp;
+            // Torre: IVs perfectos (31 en todas) para que sexa un reto xusto
+            const ivs = (opts.perfectIVs)
+                ? { hp: 31, attack: 31, defense: 31, spAtk: 31, spDef: 31, speed: 31 }
+                : null;
+            let pokemon;
+            if (opts.team && Array.isArray(opts.team) && opts.team.length > 0) {
+                // Torre: construimos o bando completo do andar (1..10 pokemons)
+                const team = [];
+                for (const t of opts.team) {
+                    const pdata = await PokeAPI.ensurePokemon(t.pokemon_id);
+                    if (!pdata) continue;
+                    const pk = await createPokemon(pdata, t.pokemon_level, ivs, null, null, false);
+                    if (pk && pk.currentHp <= 0) pk.currentHp = pk.stats.hp;
+                    if (pk) {
+                        if (t.sprite_url && pk.spriteUrls) pk.spriteUrls.front = t.sprite_url;
+                        pk.isTower = true;
+                        team.push(pk);
+                    }
+                }
+                if (team.length === 0) {
+                    console.error('[PokeFury] Failed to build tower team');
+                    this._battleStarting = false;
+                    return;
+                }
+                this.enemyTeam = team;
+                pokemon = team[0];
+            } else {
+                pokemon = await createPokemon(pokemonData, level, ivs, null, null, isShiny);
+                if (!pokemon || pokemon.currentHp <= 0) {
+                    console.error('[PokeFury] Pokemon created with 0 HP, fixing...');
+                    pokemon.currentHp = pokemon.stats.hp;
+                }
+                // Force sprite URL from map entity if provided
+                if (spriteUrl && pokemon.spriteUrls) {
+                    pokemon.spriteUrls.front = spriteUrl;
+                }
+                this.enemyTeam = [pokemon];
             }
-
-            // Force sprite URL from map entity if provided
-            if (spriteUrl && pokemon.spriteUrls) {
-                pokemon.spriteUrls.front = spriteUrl;
-            }
-
-            this.enemyTeam = [pokemon];
 
             this._battleState = {
                 weather: null,
@@ -1826,7 +1862,10 @@ class PokeFuryGame {
                     if (isTeamFainted(this.enemyTeam)) {
                         await showBattleMessage('Você venceu a batalha!');
                         const isBoss = defender.isAlpha || defender.isRaidBoss || defender.isGymLeader;
-                        if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen) {
+                        if (this._inTower && this._towerFloor) {
+                            await this.tower?.saveProgress(this._towerFloor, true);
+                        }
+                        if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen && !this._inTower) {
                             const captured = await this.showCapturePrompt();
                             this.endBattle('win');
                             return;
@@ -1838,6 +1877,12 @@ class PokeFuryGame {
                         await showBattleMessage('Todos seus Pokémon desmaiaram...');
                         this.endBattle('lose');
                         return;
+                    }
+                    if (this._isTowerBattle && !isTeamFainted(this.enemyTeam)) {
+                        const nextEnemy = getFirstAlive(this.enemyTeam);
+                        if (nextEnemy && nextEnemy !== defender) {
+                            await this.switchToNextTowerEnemy(defender, playerPokemon);
+                        }
                     }
                     if (playerPokemon.fainted) await this.forceWildSwitch(playerPokemon, enemyPokemon);
                 }
@@ -1916,7 +1961,10 @@ class PokeFuryGame {
                 await showBattleMessage('Você venceu a batalha!');
                 const defeated = this.enemyTeam[0];
                 const isBoss = defeated?.isAlpha || defeated?.isRaidBoss || defeated?.isGymLeader;
-                if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen) {
+                if (this._inTower && this._towerFloor) {
+                    await this.tower?.saveProgress(this._towerFloor, true);
+                }
+                if (this.isWildBattle && this.enemyTeam.length === 1 && !isBoss && !this._capturePromptOpen && !this._inTower) {
                     await this.showCapturePrompt();
                 }
                 this.endBattle('win');
@@ -2324,6 +2372,34 @@ class PokeFuryGame {
         } catch (e) {}
     }
 
+    startTowerBattle(floorNumber, team) {
+        if (this._battleStarting || this._battleEnding || this.state === 'battle') return;
+        if (!team || team.length === 0) return;
+        this._towerFloor = floorNumber;
+        this._isTowerBattle = true;
+        if (this.showToast) setTimeout(() => this.showToast(`🏰 Torre — Andar ${floorNumber} (${team.length} Pokémon)`, 'info'), 400);
+        const first = team[0];
+        return this.startBattleWithPokemon(
+            first.pokemon_id,
+            first.pokemon_level,
+            first.sprite_url || null,
+            false,
+            { infiniteTower: true, perfectIVs: true, team, floor: floorNumber }
+        );
+    }
+
+    async switchToNextTowerEnemy(prevEnemy, playerActive) {
+        const next = getFirstAlive(this.enemyTeam);
+        if (!next || next === prevEnemy) return;
+        const pl = playerActive || getFirstAlive(this.playerTeam);
+        try { await this.playPVPExit('enemy', prevEnemy); } catch (e) {}
+        await preloadBattleSprites(pl, next);
+        drawBattleScene(this.ctx, this.canvas, pl, next, this.currentBattleBg, this.getBattleClipRect());
+        await this.playPVPEntrance('enemy', next);
+        updateBattleUI(this.playerTeam, this.enemyTeam);
+        this.updatePartyPanel();
+    }
+
     async endBattle(result) {
         if (this.state !== 'battle') return;
         if (this._battleEnding) return;
@@ -2567,6 +2643,18 @@ class PokeFuryGame {
                 }
             }
         }
+        if (this._isTowerBattle) {
+            this._isTowerBattle = false;
+            const twrFloor = this._towerFloor;
+            this._inTower = false;
+            this._towerFloor = null;
+            if (result === 'win' && this.tower) {
+                this.tower.onFloorCleared(twrFloor);
+            } else if (this.tower) {
+                this.tower.onTowerLeft();
+            }
+        }
+
         this._battleEnding = false;
         this._cityBattle = false;
     }
@@ -3748,7 +3836,7 @@ class PokeFuryGame {
             let healBtn = document.getElementById(btnId);
             const isPokemonCenter = this.currentMap && this.currentMap.name === 'Centro Pokemon';
             const hasHealAnywhere = window.boostsManager && window.boostsManager.isActive('center_anywhere');
-            const canHeal = isPokemonCenter || hasHealAnywhere;
+            const canHeal = (isPokemonCenter || hasHealAnywhere) && !this._inTower;
             if (canHeal) {
                 if (!healBtn || healBtn.parentElement !== list.parentElement) {
                     if (healBtn) healBtn.remove();

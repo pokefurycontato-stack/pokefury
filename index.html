@@ -1468,6 +1468,7 @@
                 <button id="cb-raid-zone-btn" title="Zona do Raid Boss (ranking lateral)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🔥 Zona Raid</button>
                 <button id="cb-gym-btn" title="Ginásios (zonas e teleportes por elemento)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🏟️ Ginásios</button>
                 <button id="cb-rank-btn" title="Rank (top 3 poder, iv e treinadores)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🏆 Rank</button>
+                <button id="cb-tower-btn" title="Torre Infinita (portal, spawn, npc, box rank)" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">🗼 Torre</button>
                 <button id="cb-preview-btn" title="Preview do jogador" style="padding:6px 10px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:16px;cursor:pointer;transition:background 0.2s;">👁️</button>
                 <button id="cb-save-btn" style="padding:6px 14px;border:none;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>
                 <button id="cb-close-btn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
@@ -1493,6 +1494,12 @@
             <div id="cb-rank-panel" style="display:none;width:220px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
                 <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Ranking</div>
                 <div id="cb-rank-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+            <!-- Sidebar de Torre Infinita -->
+            <div id="cb-tower-panel" style="display:none;width:260px;background:#161b22;border-right:1px solid #30363d;overflow-y:auto;padding:8px;">
+                <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;margin-bottom:8px;text-transform:uppercase;">Torre Infinita</div>
+                <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-bottom:8px;">Clique no canvas para colocar cada elemento:</div>
+                <div id="cb-tower-list" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
             <!-- Canvas do editor -->
             <div id="cb-canvas-wrap" style="flex:1;position:relative;overflow:hidden;background:#1a1a2e;">

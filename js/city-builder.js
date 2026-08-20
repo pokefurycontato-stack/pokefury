@@ -118,6 +118,14 @@ class CityBuilder {
         this.rankSpawns = [];
         this.activeRankPlace = null;
 
+        this.towerMode = false;
+        this.towerEntry = null;      // onde o jogador aparece (entrada na torre)
+        this.towerNpc = null;        // npc que manda à torre
+        this.towerWild = null;       // onde aparece o sprite do pokemon selvagem
+        this.towerRank = null;       // onde fica a box de rank (top 5)
+        this.towerExit = null;       // onde o jogador aparece ao sair da torre
+        this.activeTowerPlace = null; // 'npc' | 'wild' | 'rank' | 'entry' | 'exit'
+
         this.bindEvents();
     }
 
@@ -176,6 +184,8 @@ class CityBuilder {
         if (gymNpcBtn) gymNpcBtn.addEventListener('click', () => this.setGymNpcMode());
         const rankBtn = document.getElementById('cb-rank-btn');
         if (rankBtn) rankBtn.addEventListener('click', () => this.toggleRankMode());
+        const towerBtn = document.getElementById('cb-tower-btn');
+        if (towerBtn) towerBtn.addEventListener('click', () => this.toggleTowerMode());
         const addLayerBtn = document.getElementById('cb-add-layer-btn');
         if (addLayerBtn) addLayerBtn.addEventListener('click', () => this.addLayer());
 
@@ -227,6 +237,18 @@ class CityBuilder {
                     return;
                 }
                 return;
+            }
+            if (this.towerMode) {
+                if (e.key === 'Escape') { this.toggleTowerMode(); return; }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && this.activeTowerPlace) {
+                    e.preventDefault();
+                    const key = this.activeTowerPlace;
+                    const map = { npc: 'towerNpc', entry: 'towerEntry', wild: 'towerWild', rank: 'towerRank', exit: 'towerExit' };
+                    this[map[key]] = null;
+                    this.renderTowerList();
+                    this.render();
+                    return;
+                }
             }
             if (this.professorMode) {
                 if (e.key === 'Escape') { this.toggleProfessorMode(); return; }
@@ -1682,6 +1704,8 @@ toggleVendorMode() {
         this.raidBossMode = false;
         this.raidExitMode = false;
         this.raidZoneMode = false;
+        this.towerMode = false;
+        this.activeTowerPlace = null;
         this.selected = null;
         ['cb-collision-zone-btn','cb-teleport-btn','cb-npc-region-btn','cb-spawn-zone-btn','cb-battle-zone-btn','cb-spawn-point-btn','cb-raid-portal-btn','cb-raid-spawn-btn','cb-raid-boss-btn','cb-raid-exit-btn','cb-raid-zone-btn'].forEach(id => {
             const b = document.getElementById(id);
@@ -1937,6 +1961,86 @@ toggleVendorMode() {
         this.render();
     }
 
+    // ======================= TORRE INFINITA =======================
+    toggleTowerMode() {
+        this._resetOtherModes();
+        this.towerMode = !this.towerMode;
+        if (this.towerMode) { this.rankMode = false; this.gymMode = false; }
+        const btn = document.getElementById('cb-tower-btn');
+        if (btn) btn.style.background = this.towerMode ? '#e94560' : 'rgba(255,255,255,0.15)';
+        const assetsPanel = document.getElementById('cb-assets-panel');
+        const gymPanel = document.getElementById('cb-gym-panel');
+        const rankPanel = document.getElementById('cb-rank-panel');
+        const towerPanel = document.getElementById('cb-tower-panel');
+        if (this.towerMode) {
+            if (assetsPanel) assetsPanel.style.display = 'none';
+            if (gymPanel) gymPanel.style.display = 'none';
+            if (rankPanel) rankPanel.style.display = 'none';
+            if (towerPanel) towerPanel.style.display = 'block';
+            this.renderTowerList();
+        } else {
+            if (assetsPanel) assetsPanel.style.display = 'block';
+            if (towerPanel) towerPanel.style.display = 'none';
+            this.activeTowerPlace = null;
+        }
+        this.canvas.style.cursor = this.towerMode ? 'crosshair' : 'default';
+        this.render();
+    }
+
+    renderTowerList() {
+        const list = document.getElementById('cb-tower-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const sections = [
+            { key: 'npc', label: 'NPC da Torre (mandar à torre)', icon: '👤', placed: !!this.towerNpc },
+            { key: 'entry', label: 'Portal de entrada (onde aparece o jogador)', icon: '🌀', placed: !!this.towerEntry },
+            { key: 'exit', label: 'Portal de saída (onde volta ao saír da torre)', icon: '🚪', placed: !!this.towerExit },
+            { key: 'wild', label: 'Spawn do Pokémon selvagem', icon: '🐾', placed: !!this.towerWild },
+            { key: 'rank', label: 'Box de Rank (top 5)', icon: '🏆', placed: !!this.towerRank }
+        ];
+        for (const sec of sections) {
+            const row = document.createElement('div');
+            row.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.06);padding:4px 0;';
+            const btn = document.createElement('button');
+            btn.textContent = `${sec.icon} ${sec.label}`;
+            const isActive = this.activeTowerPlace === sec.key;
+            btn.style.cssText = `width:100%;text-align:left;padding:7px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff;background:${isActive ? '#e94560' : (sec.placed ? '#22c55e' : 'rgba(255,255,255,0.08)')};`;
+            btn.onclick = () => {
+                this.activeTowerPlace = (this.activeTowerPlace === sec.key ? null : sec.key);
+                this.renderTowerList();
+            };
+            row.appendChild(btn);
+            if (sec.placed) {
+                const coord = document.createElement('div');
+                coord.style.cssText = 'color:rgba(255,255,255,0.4);font-size:10px;';
+                const p = this[sec.key === 'npc' ? 'towerNpc' : sec.key === 'entry' ? 'towerEntry' : sec.key === 'exit' ? 'towerExit' : sec.key === 'wild' ? 'towerWild' : 'towerRank'];
+                coord.textContent = `X:${p.pos_x} Y:${p.pos_y} — clique numa zona para mover, Delete para remover`;
+                row.appendChild(coord);
+            }
+            list.appendChild(row);
+        }
+        const hint = document.createElement('div');
+        hint.textContent = 'Seleccione um elemento e clique no mapa para posicionarlo.';
+        hint.style.cssText = 'color:rgba(255,255,255,0.4);font-size:10px;line-height:1.4;margin-top:8px;';
+        list.appendChild(hint);
+    }
+
+    onTowerMouseDown(e) {
+        if (!this.activeTowerPlace) return;
+        const w = this.screenToWorld(e.clientX, e.clientY);
+        const key = this.activeTowerPlace;
+        const map = {
+            npc: 'towerNpc',
+            entry: 'towerEntry',
+            exit: 'towerExit',
+            wild: 'towerWild',
+            rank: 'towerRank'
+        };
+        this[map[key]] = { pos_x: Math.round(w.x), pos_y: Math.round(w.y) };
+        this.renderTowerList();
+        this.render();
+    }
+
     async loadPlayerSkin(game) {
         let url = null;
         try {
@@ -2123,6 +2227,7 @@ toggleVendorMode() {
         if (this.raidZoneMode) { this.onRaidZoneMouseDown(e); return; }
         if (this.gymMode) { this.onGymMouseDown(e); return; }
         if (this.rankMode) { this.onRankMouseDown(e); return; }
+        if (this.towerMode) { this.onTowerMouseDown(e); return; }
         if (this.nurseMode) { this.onNurseMouseDown(e); return; }
         if (this.professorMode) { this.onProfessorMouseDown(e); return; }
         if (this.narratorMode) { this.onNarratorMouseDown(e); return; }
@@ -2565,6 +2670,26 @@ toggleVendorMode() {
                 const { data: rk } = await window.db.from('city_rank_spawns').select('*');
                 if (rk) this.rankSpawns = rk.map(r => ({ id: r.id, rank_type: r.rank_type, position: r.position, pos_x: r.pos_x, pos_y: r.pos_y }));
             } catch (e) {}
+            try {
+                const { data: tn } = await window.db.from('city_tower_npc').select('*').limit(1).maybeSingle();
+                if (tn) this.towerNpc = { id: tn.id, pos_x: tn.pos_x, pos_y: tn.pos_y };
+            } catch (e) {}
+            try {
+                const { data: te } = await window.db.from('city_tower_entry').select('*').limit(1).maybeSingle();
+                if (te) this.towerEntry = { id: te.id, pos_x: te.pos_x, pos_y: te.pos_y };
+            } catch (e) {}
+            try {
+                const { data: tw } = await window.db.from('city_tower_wild').select('*').limit(1).maybeSingle();
+                if (tw) this.towerWild = { id: tw.id, pos_x: tw.pos_x, pos_y: tw.pos_y };
+            } catch (e) {}
+            try {
+                const { data: tr } = await window.db.from('city_tower_rank').select('*').limit(1).maybeSingle();
+                if (tr) this.towerRank = { id: tr.id, pos_x: tr.pos_x, pos_y: tr.pos_y };
+            } catch (e) {}
+            try {
+                const { data: te } = await window.db.from('city_tower_exit').select('*').limit(1).maybeSingle();
+                if (te) this.towerExit = { id: te.id, pos_x: te.pos_x, pos_y: te.pos_y };
+            } catch (e) {}
 
             if (this.assets.length === 0) {
                 const backupKey = 'city_backup_' + (this.currentCityId || 'default');
@@ -2851,6 +2976,15 @@ toggleVendorMode() {
             await window.db.from('city_rank_spawns').delete().in('rank_type', ['power', 'iv', 'trainer']);
             for (const r of this.rankSpawns) {
                 await window.db.from('city_rank_spawns').insert({ rank_type: r.rank_type, position: r.position, pos_x: r.pos_x, pos_y: r.pos_y });
+            }
+
+            const towerTables = { towerNpc: 'city_tower_npc', towerEntry: 'city_tower_entry', towerExit: 'city_tower_exit', towerWild: 'city_tower_wild', towerRank: 'city_tower_rank' };
+            for (const key in towerTables) {
+                const p = this[key];
+                const tbl = towerTables[key];
+                if (p) {
+                    await window.db.from(tbl).upsert({ id: p.id || 1, pos_x: p.pos_x, pos_y: p.pos_y }, { onConflict: 'id' });
+                }
             }
 
             await deleteMissingRows('city_collision_zones', zoneIds, zonesToSave);
@@ -3367,6 +3501,28 @@ toggleVendorMode() {
                 ctx.textAlign = 'center';
                 ctx.fillText(`${rankLabels[r.rank_type]} ${r.position}º`, r.pos_x, r.pos_y - 12 / this.zoom);
             });
+        }
+
+        if (this.towerMode || this.towerNpc || this.towerEntry || this.towerWild || this.towerRank) {
+            const towerItems = [
+                { key: 'towerNpc', label: 'NPC Torre', color: '#22c55e' },
+                { key: 'towerEntry', label: 'Portal Torre', color: '#7b2ff7' },
+                { key: 'towerWild', label: 'Selvagem Torre', color: '#e94560' },
+                { key: 'towerRank', label: 'Rank Top 5', color: '#f59e0b' }
+            ];
+            for (const it of towerItems) {
+                const p = this[it.key];
+                if (!p) continue;
+                const isActive = this.activeTowerPlace === it.key;
+                ctx.fillStyle = isActive ? '#fff' : it.color;
+                ctx.beginPath();
+                ctx.arc(p.pos_x, p.pos_y, (isActive ? 12 : 9) / this.zoom, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${11 / this.zoom}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(it.label, p.pos_x, p.pos_y - 12 / this.zoom);
+            }
         }
 
         if (this.raidPortal) {
