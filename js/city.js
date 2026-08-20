@@ -2904,30 +2904,39 @@ class CityScreen {
     }
 
     async handleNpcInteraction(npc) {
+        // QUEST PRIORITARIA: se o jogador tem uma quest de "falar com" este NPC
+        // (com dialogo personalizado), mostramos a mensagem da quest ANTES da
+        // ação padrão do NPC (loja, curar, leilão, etc.). A quest se completa
+        // ao confirmar e, sequencialmente, se aplica a ação padrão.
+        const questDialogue = await this.checkNpcQuestDialogue(npc);
         if (npc.npc_type === 'professor') {
+            if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.interactWithProfessor(npc);
         }
         if (npc.npc_type === 'nurse') {
-            const questDialogue = await this.checkNpcQuestDialogue(npc);
             if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.interactWithNurse(npc);
         }
         if (npc.npc_type === 'narrator') {
+            if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.interactWithNarrator(npc);
         }
         if (npc.npc_type === 'vendor') {
+            if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.interactWithVendor(npc);
         }
         if (npc.npc_type === 'banker') {
+            if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.interactWithBanker(npc);
         }
         if (npc.npc_type === 'gerente_safari') {
+            if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.showSafariTeleportMenu();
         }
         if (npc.npc_type === 'pc') {
+            if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.interactWithPc(npc);
         }
-        const questDialogue = await this.checkNpcQuestDialogue(npc);
         if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
         this.showNpcDialogue(npc);
     }
