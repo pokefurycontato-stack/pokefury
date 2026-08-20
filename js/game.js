@@ -8522,7 +8522,7 @@ openEventsPanel() {
         const point = this.getPVPBattlePoint(side);
         const direction = side === 'player' ? -1 : 1;
         const spriteUrl = side === 'player'
-            ? (pokemon.spriteUrls?.back || pokemon.spriteUrls?.front || '')
+            ? (pokemon.spriteUrls?.back || pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official || '')
             : (pokemon.spriteUrls?.front || pokemon.spriteUrls?.home || pokemon.spriteUrls?.official || '');
         if (sprite) sprite.style.opacity = '0';
 
