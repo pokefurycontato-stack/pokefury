@@ -4229,54 +4229,78 @@ if (this._professorOriginalOrder) {
         document.body.appendChild(overlay);
 
         const teamList = popup.querySelector('#equip-team-list');
-        team.forEach((p, i) => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
-            const isSameItem = p.heldItemId === item.id;
-            const heldLabel = isSameItem
-                ? 'Este item está equipado neste pokemon'
-                : (p.heldItemId ? '📦 ' + (p.held_item_name || 'Item equipado') : 'Sem item');
-            row.innerHTML = `
-                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
-                    <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
-                    <div style="font-size:9px;color:${isSameItem ? '#4ade80' : 'rgba(255,255,255,0.4)'};">${heldLabel}</div>
-                </div>
-            `;
-            row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
-            row.addEventListener('mouseleave', () => row.style.background = 'transparent');
-            row.addEventListener('click', async () => {
-                const result = await window.GameData.equipItem(p.dbId || p.id, item.id);
-                if (result && result.ok) {
-                    p.heldItemId = item.id;
-                    p.held_item_name = item.name;
-                    if (result.swappedFrom) {
-                        // Remove o item do pokemon antigo localmente
-                        this.playerTeam.forEach(tp => {
-                            if (tp.name === result.swappedFrom || (tp.pokemon_name === result.swappedFrom)) {
-                                tp.heldItemId = null;
-                                tp.held_item_name = null;
-                            }
-                        });
-                        const msg = `Item trocado de ${result.swappedFrom} para ${p.name}!`;
-                        if (typeof this.showToast === 'function') this.showToast(msg, 'success');
-                        else alert(msg);
+
+        // Renderiza a lista de Pokémon do time reagindo ao estado atual (tempo real)
+        const renderTeamList = () => {
+            teamList.innerHTML = '';
+            (this.playerTeam || []).forEach(p => {
+                if (!p) return;
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;transition:background 0.2s;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;';
+                const isSameItem = p.heldItemId === item.id;
+                const heldLabel = isSameItem
+                    ? 'Este item está equipado neste pokemon (clique para remover)'
+                    : (p.heldItemId ? '📦 ' + (p.held_item_name || 'Item equipado') : 'Sem item');
+                row.innerHTML = `
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);overflow:hidden;flex-shrink:0;">
+                        <img src="${p.spriteUrls?.front || p.spriteUrls?.home || ''}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:11px;font-weight:700;color:#fff;">${p.name} <span style="color:rgba(255,255,255,0.4);font-weight:400;">Lv.${p.level}</span></div>
+                        <div style="font-size:9px;color:${isSameItem ? '#4ade80' : 'rgba(255,255,255,0.4)'};">${heldLabel}</div>
+                    </div>
+                `;
+                row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.06)');
+                row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+                row.addEventListener('click', async () => {
+                    // Se o Pokémon já estiver com ESTE item equipado => desequipa
+                    if (p.heldItemId === item.id) {
+                        const uneq = await window.GameData.unequipItem(p.dbId || p.id);
+                        if (uneq && uneq.ok) {
+                            p.heldItemId = null;
+                            p.held_item_name = null;
+                            if (typeof this.showToast === 'function') this.showToast(`${item.name} removido de ${p.name}!`, 'success');
+                            else alert(`${item.name} removido de ${p.name}!`);
+                        } else {
+                            if (typeof this.showToast === 'function') this.showToast('Erro ao remover item!', 'error');
+                            else alert('Erro ao remover item!');
+                        }
                     } else {
-                        if (typeof this.showToast === 'function') this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
-                        else alert(`${item.name} equipado em ${p.name}!`);
+                        // Caso contrário, equipa (troca de outro Pokémon se necessário)
+                        const result = await window.GameData.equipItem(p.dbId || p.id, item.id);
+                        if (result && result.ok) {
+                            p.heldItemId = item.id;
+                            p.held_item_name = item.name;
+                            if (result.swappedFromId) {
+                                // Remove localmente o item do Pokémon de onde foi movido (por id, não por nome)
+                                this.playerTeam.forEach(tp => {
+                                    if (tp && (tp.dbId === result.swappedFromId || (tp.id !== undefined && String(tp.id) === String(result.swappedFromId)))) {
+                                        tp.heldItemId = null;
+                                        tp.held_item_name = null;
+                                    }
+                                });
+                                const msg = `Item trocado de ${result.swappedFrom} para ${p.name}!`;
+                                if (typeof this.showToast === 'function') this.showToast(msg, 'success');
+                                else alert(msg);
+                            } else {
+                                if (typeof this.showToast === 'function') this.showToast(`${item.name} equipado em ${p.name}!`, 'success');
+                                else alert(`${item.name} equipado em ${p.name}!`);
+                            }
+                        } else {
+                            if (typeof this.showToast === 'function') this.showToast('Erro ao equipar item!', 'error');
+                            else alert('Erro ao equipar item!');
+                        }
                     }
-                } else {
-                    if (typeof this.showToast === 'function') this.showToast('Erro ao equipar item!', 'error');
-                    else alert('Erro ao equipar item!');
-                }
-                overlay.remove();
-                this.updatePartyPanel();
-                this.renderMochila();
+                    // Re-render em tempo real destacando o item no lugar certo (não fecha o popup)
+                    renderTeamList();
+                    this.updatePartyPanel();
+                    this.renderMochila();
+                });
+                teamList.appendChild(row);
             });
-            teamList.appendChild(row);
-        });
+        };
+
+        renderTeamList();
 
         popup.querySelector('#equip-cancel').addEventListener('click', () => overlay.remove());
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });

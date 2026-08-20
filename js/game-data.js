@@ -105,9 +105,34 @@ const GameData = {
                 return { ok: false };
             }
             if (data && data.error) return { ok: false };
-            return { ok: data?.success === true, swappedFrom: data?.swapped_from || null };
+            return {
+                ok: data?.success === true,
+                used: data?.unequipped === true,
+                swappedFrom: data?.swapped_from || null,
+                swappedFromId: data?.swapped_from_id || null,
+                targetId: data?.target_id || null
+            };
         } catch (e) {
             console.error('[GameData] equipItem exception:', e);
+            return { ok: false };
+        }
+    },
+
+    // Desequipa o item do pokemon (volta para o inventário)
+    async unequipItem(pokemonId) {
+        try {
+            const { data, error } = await window.db.rpc('safe_unequip_item', {
+                p_character_id: this.currentCharacterId,
+                p_pokemon_id: pokemonId
+            });
+            if (error) {
+                console.error('[GameData] unequipItem error:', error.message, error.code);
+                return { ok: false };
+            }
+            if (data && data.error) return { ok: false };
+            return { ok: data?.success === true, wasHeld: data?.was_held === true };
+        } catch (e) {
+            console.error('[GameData] unequipItem exception:', e);
             return { ok: false };
         }
     },
