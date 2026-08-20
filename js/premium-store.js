@@ -289,12 +289,13 @@ class PremiumStore {
                 if (ok) {
                     this._showToast(`${product.name} ativado com sucesso!`, 'success');
                     // Refresh game UI
-                    if (window.game) {
-                        if (window.game.updateVipBadge) window.game.updateVipBadge();
-                        if (window.game.updateBoostsDisplay) window.game.updateBoostsDisplay();
-                        if (window.game.updateAfkProfessorCheck) {
-                            window.game.updateAfkProfessorCheck();
-                            window.game.updateAfkProfessorCheck('city-');
+                    const _game = window.pokefury || window.game;
+                    if (_game) {
+                        if (_game.updateVipBadge) _game.updateVipBadge();
+                        if (_game.updateBoostsDisplay) _game.updateBoostsDisplay();
+                        if (_game.updateAfkProfessorCheck) {
+                            _game.updateAfkProfessorCheck();
+                            _game.updateAfkProfessorCheck('city-');
                         }
                     }
             } else {

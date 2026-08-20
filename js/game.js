@@ -5056,8 +5056,12 @@ openEventsPanel() {
     updateAfkProfessorCheck(prefix = '') {
         const wrap = document.getElementById(prefix + 'afk-professor-wrap');
         if (!wrap) return;
-        const active = window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
-        wrap.style.display = active ? 'block' : 'none';
+        const check = document.getElementById(prefix + 'afk-professor-check');
+        const active = !!(window.boostsManager && window.boostsManager.isActive('professor_acompanhante'));
+        wrap.style.display = 'block';
+        if (check) check.disabled = !active;
+        const locked = wrap.querySelector('.afk-professor-locked');
+        if (locked) locked.style.display = active ? 'none' : 'block';
     }
 
     setupAfkPanel(prefix = '') {
