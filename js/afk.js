@@ -9,6 +9,7 @@ export class AFKManager {
         this.autoHeal = false;
         this.autoCapture = false;
         this.autoHealTeam = false;
+        this.professorMode = false;
         this.healThreshold = 40;
         this.healPotionId = null;
         this.captureRarities = {};
@@ -618,5 +619,41 @@ export class AFKManager {
 
     async setTypeChart(chart) {
         this._typeChart = chart;
+    }
+
+    // Professor Acompanhante: escolhe o Pokémon vivo do time que tem a maior
+    // vantagem de tipo ofensiva contra os tipos do inimigo (efetividade > 1).
+    pickProfessorCounter(enemyTypes) {
+        const team = this.game.playerTeam;
+        if (!team || !enemyTypes || enemyTypes.length === 0) return null;
+        const alive = team.filter(p => !p.fainted && p.currentHp > 0 && p.moves && p.moves.length > 0);
+        if (alive.length <= 1) return null;
+        const chart = this._typeChart;
+        if (!chart) return null;
+
+        const effectiveness = (poke) => {
+            let best = 0;
+            for (const move of poke.moves) {
+                if (!move || !move.power || move.power <= 0 || move.category === 'status' || !move.type) continue;
+                let eff = 1;
+                for (const dt of enemyTypes) {
+                    const row = chart[move.type];
+                    if (row && row[dt] != null) eff *= row[dt];
+                }
+                if (eff > best) best = eff;
+            }
+            return best;
+        };
+
+        let best = null;
+        let bestScore = 1.01;
+        for (const p of alive) {
+            const s = effectiveness(p);
+            if (s > bestScore) {
+                bestScore = s;
+                best = p;
+            }
+        }
+        return best;
     }
 }

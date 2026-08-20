@@ -19,7 +19,7 @@ import { Chat } from './chat.js';
 window.Chat = Chat;
 import { BattleAnimations } from './battle-animations.js';
 import { EventManager } from './events.js';
-import { AFKManager } from './afk.js';
+import { AFKManager } from './afk.js?v=20260819w';
 import { TypeEffects } from './type-effects.js';
 import { getMoveEffect } from './battle-mechanics.js';
 import { FriendsSystem } from './friends.js';
@@ -540,6 +540,10 @@ class PokeFuryGame {
             const text = bm.getRemainingText('exp_trainer');
             tags.push(`<span class="boost-tag exp-trainer">EXP Trein. <span class="boost-timer">${text}</span></span>`);
         }
+        if (bm.isActive('professor_acompanhante')) {
+            const text = bm.getRemainingText('professor_acompanhante');
+            tags.push(`<span class="boost-tag exp-trainer">Professor <span class="boost-timer">${text}</span></span>`);
+        }
 
         container.innerHTML = tags.join('');
     }
@@ -898,7 +902,12 @@ class PokeFuryGame {
             const isNew = team.length === 0;
 
             if (isNew) {
-                await this.saveTeam();
+if (this._professorOriginalOrder) {
+            this.playerTeam = this._professorOriginalOrder;
+            this._professorOriginalOrder = null;
+        }
+
+        await this.saveTeam();
                 await Promise.all([
                     window.GameData.addItem(1, 5),
                     window.GameData.addItem(10, 10)
@@ -1164,6 +1173,27 @@ class PokeFuryGame {
                     pokemon.spriteUrls.front = spriteUrl;
                 }
                 this.enemyTeam = [pokemon];
+            }
+
+            // Professor Acompanhante: o auto farm envia primeiro o Pokémon com
+            // vantagem de tipo contra o inimigo (sem alterar a ordem salva).
+            this._professorOriginalOrder = null;
+            const profAfk = this.afkManager;
+            if (profAfk && profAfk.running && profAfk.professorMode
+                && window.boostsManager && window.boostsManager.isActive('professor_acompanhante')
+                && !opts.infiniteTower && !this._isTowerBattle && !this._inRaidBossBattle && !this._isInGym) {
+                const enemyTypes = ((this.enemyTeam[0] && this.enemyTeam[0].types) || []).filter(Boolean);
+                if (enemyTypes.length) {
+                    const counter = profAfk.pickProfessorCounter(enemyTypes);
+                    if (counter) {
+                        const idx = this.playerTeam.indexOf(counter);
+                        if (idx > 0) {
+                            this._professorOriginalOrder = this.playerTeam.slice();
+                            const [moved] = this.playerTeam.splice(idx, 1);
+                            this.playerTeam.unshift(moved);
+                        }
+                    }
+                }
             }
 
             this._battleState = {
@@ -5023,6 +5053,13 @@ openEventsPanel() {
         this.setupDonatePokemonForm();
     }
 
+    updateAfkProfessorCheck(prefix = '') {
+        const wrap = document.getElementById(prefix + 'afk-professor-wrap');
+        if (!wrap) return;
+        const active = window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
+        wrap.style.display = active ? 'block' : 'none';
+    }
+
     setupAfkPanel(prefix = '') {
         const afk = this.afkManager;
         if (!afk) return;
@@ -5114,6 +5151,14 @@ openEventsPanel() {
             }
             healTeamCheck.addEventListener('change', () => {
                 afk.autoHealTeam = healTeamCheck.checked;
+            });
+        }
+
+        const professorCheck = document.getElementById(prefix + 'afk-professor-check');
+        if (professorCheck) {
+            this.updateAfkProfessorCheck(prefix);
+            professorCheck.addEventListener('change', () => {
+                afk.professorMode = professorCheck.checked;
             });
         }
 

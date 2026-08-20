@@ -279,7 +279,8 @@ class PremiumStore {
             'Centro Pokémon Portátil':      { type: 'center_anywhere', duration: 7 * 24 * 60 * 60 * 1000 },
             'Boost Shiny 24h':              { type: 'shiny_boost',     duration: 24 * 60 * 60 * 1000 },
             'Boost EXP Pokémon 24h':        { type: 'exp_pokemon',     duration: 24 * 60 * 60 * 1000 },
-            'Boost EXP Treinador 24h':      { type: 'exp_trainer',     duration: 24 * 60 * 60 * 1000 }
+            'Boost EXP Treinador 24h':      { type: 'exp_trainer',     duration: 24 * 60 * 60 * 1000 },
+            'Professor Acompanhante':       { type: 'professor_acompanhante', duration: 30 * 24 * 60 * 60 * 1000 }
         };
 
         const boost = boostMap[product.name];
@@ -291,6 +292,10 @@ class PremiumStore {
                     if (window.game) {
                         if (window.game.updateVipBadge) window.game.updateVipBadge();
                         if (window.game.updateBoostsDisplay) window.game.updateBoostsDisplay();
+                        if (window.game.updateAfkProfessorCheck) {
+                            window.game.updateAfkProfessorCheck();
+                            window.game.updateAfkProfessorCheck('city-');
+                        }
                     }
             } else {
                 // Refund diamonds on failure

@@ -33,10 +33,11 @@ const PROFILE_BOOST_LABELS = {
   'exp_pokemon': 'Boost de EXP de Pokémon',
   'exp_trainer': 'Boost de EXP de Personagem',
   'shiny_boost': 'Boost de Encontrar Shiny',
-  'legendary_boost': 'Boost de Encontrar Lendários'
+  'legendary_boost': 'Boost de Encontrar Lendários',
+  'professor_acompanhante': 'Professor Acompanhante'
 };
 
-const PROFILE_BOOST_ORDER = ['vip', 'center_anywhere', 'exp_pokemon', 'exp_trainer', 'shiny_boost', 'legendary_boost'];
+const PROFILE_BOOST_ORDER = ['vip', 'center_anywhere', 'exp_pokemon', 'exp_trainer', 'shiny_boost', 'legendary_boost', 'professor_acompanhante'];
 
 class ProfileScreen {
   constructor() {

@@ -510,6 +510,10 @@
                             <label class="afk-checkbox afk-heal-label"><input type="checkbox" id="afk-auto-heal-team"> Curar time completo após batalha</label>
                             <div class="afk-heal-hint">Cura todos os Pokémon se algum estiver ferido</div>
                         </div>
+                        <div id="afk-professor-wrap" class="afk-sub-option afk-heal-team" style="display:none">
+                            <label class="afk-checkbox afk-heal-label"><input type="checkbox" id="afk-professor-check"> Professor Acompanhante</label>
+                            <div class="afk-heal-hint">Envia primeiro o Pokémon com vantagem de tipo na batalha</div>
+                        </div>
                         <div class="afk-buttons">
                             <button id="afk-start-btn" class="afk-btn-start">INICIAR</button>
                             <button id="afk-stop-btn" class="afk-btn-stop hidden">PARAR</button>
@@ -863,9 +867,9 @@
     <script type="module" src="js/utils.js?v=20260816g"></script>
     <script type="module" src="js/battle.js?v=20260819v"></script>
 <script type="module" src="js/ui.js?v=20260819m"></script>
-<script type="module" src="js/game.js?v=20260819v"></script>
+<script type="module" src="js/game.js?v=20260819w"></script>
     <script type="module" src="js/security.js?v=20260816l"></script>
-    <script type="module" src="js/afk.js"></script>
+    <script type="module" src="js/afk.js?v=20260819w"></script>
     <script src="js/pvp-system.js"></script>
     <script type="module">
         import { PVPBattle } from './js/pvp-battle.js?v=20260819m';
@@ -1367,6 +1371,10 @@
                         <label class="afk-checkbox afk-heal-label"><input type="checkbox" id="city-afk-auto-heal-team"> Curar time completo após batalha</label>
                         <div class="afk-heal-hint">Cura todos os Pokémon se algum estiver ferido</div>
                     </div>
+                    <div id="city-afk-professor-wrap" class="afk-sub-option afk-heal-team" style="display:none">
+                        <label class="afk-checkbox afk-heal-label"><input type="checkbox" id="city-afk-professor-check"> Professor Acompanhante</label>
+                        <div class="afk-heal-hint">Envia primeiro o Pokémon com vantagem de tipo na batalha</div>
+                    </div>
                     <label class="afk-checkbox"><input type="checkbox" id="city-afk-auto-capture"> Captura automática</label>
                     <div id="city-afk-capture-options" class="afk-sub-option" style="display:none">
                         <div id="city-afk-rarity-list"></div>
@@ -1606,7 +1614,7 @@
             </div>
         </div>
     </div>
-    <script src="js/premium-store.js"></script>
+    <script src="js/premium-store.js?v=20260819w"></script>
     <script src="js/premium-admin.js"></script>
     <script src="js/gym-leaders-admin.js"></script>
     <script src="js/boosts.js"></script>
@@ -1617,7 +1625,7 @@
     <script src="js/city.js?v=20260819t"></script>
     <script src="js/professor-quests.js?v=20260815c"></script>
     <script src="js/city-builder.js?v=20260816j"></script>
-    <script src="js/profile.js?v=20260816a"></script>
+    <script src="js/profile.js?v=20260819w"></script>
     <script src="js/profile-admin.js?v=20260815a"></script>
     <script src="js/auction.js?v=1"></script>
     <script src="js/titles.js?v=20260816a"></script>
