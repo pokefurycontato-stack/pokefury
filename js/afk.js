@@ -635,8 +635,14 @@ export class AFKManager {
         this._typeChart = chart;
     }
 
-    // Professor Acompanhante: escolhe o Pokémon vivo do time que tem a maior
-    // vantagem de tipo ofensiva contra os tipos do inimigo (efetividade > 1).
+    // Professor Acompanhante: escolhe o Pokémon vivo do time que conseguirá
+    // causar o MAIOR dano ao inimigo, avaliando SEMPRE a tipagem COMPLETA dele.
+    //
+    // A efetividade aqui replica o cálculo real de dano (getEffectiveness em
+    // utils.js): multiplica a eficiência sobre TODOS os tipos de defesa do
+    // inimigo. Assim, se o 2º tipo do Pokémon for imune ou resistente ao
+    // golpe, isso é considerado — impedindo que o Professor envie um Pokémon
+    // cujos ataques não tenham efeito.
     pickProfessorCounter(enemyTypes) {
         const team = this.game.playerTeam;
         if (!team || !enemyTypes || enemyTypes.length === 0) return null;
@@ -645,43 +651,51 @@ export class AFKManager {
         const chart = this._typeChart;
         if (!chart) return null;
 
-        const typeEffectiveness = (poke) => {
-            let best = 1;
-            for (const pt of (poke.types || [])) {
-                let eff = 1;
-                for (const dt of enemyTypes) {
-                    const row = chart[pt];
-                    if (row && row[dt] != null) eff *= row[dt];
-                }
-                if (eff > best) best = eff;
+        // Efetividade de um tipo de ataque contra TODOS os tipos de defesa
+        // do inimigo (multiplicado), igual ao jogo.
+        const effectiveness = (attackType) => {
+            let eff = 1;
+            const row = chart[attackType];
+            if (!row) return 0;
+            for (const dt of enemyTypes) {
+                if (row[dt] !== undefined) eff *= row[dt];
             }
-            return best;
+            return eff;
         };
 
-        const moveEffectiveness = (poke) => {
-            let best = 1;
+        // Melhor efetividade considerando também o STAB (mesmo tipo do Pokémon).
+        const bestMoveScore = (poke) => {
+            let best = 0;
             for (const move of poke.moves) {
                 if (!move || !move.power || move.power <= 0 || move.category === 'status' || !move.type) continue;
-                let eff = 1;
-                for (const dt of enemyTypes) {
-                    const row = chart[move.type];
-                    if (row && row[dt] != null) eff *= row[dt];
-                }
-                if (eff > best) best = eff;
+                const eff = effectiveness(move.type);
+                const stab = (poke.types || []).includes(move.type) ? 1.5 : 1;
+                const score = eff * stab;
+                if (score > best) best = score;
             }
             return best;
         };
 
         let best = null;
-        let bestType = 1.01;
-        let bestMove = 0;
+        let bestScore = 0;
+        // Desempate: resistência do próprio Pokémon (tipos dele contra o inimigo)
+        // e potência bruta do golpe, para evitar empates divididos.
+        let bestDefense = 0;
+        let bestPower = 0;
         for (const p of alive) {
-            const t = typeEffectiveness(p);
-            if (t < bestType) continue;
-            const m = moveEffectiveness(p);
-            if (t > bestType || (t === bestType && m > bestMove)) {
-                bestType = t;
-                bestMove = m;
+            const score = bestMoveScore(p);
+            if (score <= 0) continue; // sem NENHUM golpe eficaz -> nem candidato
+            const defense = (p.types || [])
+                .map(t => effectiveness(t) > 1 ? effectiveness(t) : 1 / Math.max(0.1, effectiveness(t)))
+                .reduce((a, b) => a * b, 1);
+            const power = (p.moves || []).reduce((memo, m) =>
+                (m && m.power && m.power > memo) ? m.power : memo, 0);
+            if (score > bestScore
+                || (score === bestScore && power > bestPower)
+                || (score === bestScore && power === bestPower && defense > bestDefense)) {
+                bestScore = score;
+                bestPower = power;
+                bestDefense = defense;
                 best = p;
             }
         }
