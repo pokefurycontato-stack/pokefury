@@ -360,6 +360,16 @@ class PokeFuryGame {
             });
         }
 
+        // Pressionar ESC com o Auto Farm ativo => para o farm (mesmo efeito do botão PARAR)
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            if (!this.afkManager || !this.afkManager.running) return;
+            this.afkManager.stop();
+            ['afk-stop-btn', 'city-afk-stop-btn'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn && !btn.classList.contains('hidden')) btn.click();
+            });
+        });
     }
 
     async preloadStarters() {
