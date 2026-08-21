@@ -1463,8 +1463,16 @@ class CityScreen {
             if (this.wildPokemonCooldown <= 0) {
                 const pd = Math.hypot(this.playerX - p.pos_x, this.playerY - p.pos_y);
                 if (pd < 38) {
-                    this.wildPokemonCooldown = 1;
-                    this.triggerVisiblePokemonBattle(p);
+                    if (!p.encounter || !p.encounter.pokemon_id) {
+                        console.warn('[City] Wild Pokemon sem encounter:', p.pos_x, p.pos_y, p.encounter);
+                    } else if (window.pokefury?._battleStarting || window.pokefury?._battleEnding) {
+                        console.warn('[City] Battle blocked _battleStarting=' + window.pokefury._battleStarting + ' _battleEnding=' + window.pokefury._battleEnding);
+                    } else if (window.pokefury?.state === 'battle') {
+                        console.warn('[City] Already in battle');
+                    } else {
+                        this.wildPokemonCooldown = 1;
+                        this.triggerVisiblePokemonBattle(p);
+                    }
                 }
             }
         }
