@@ -119,15 +119,12 @@ export class AFKManager {
         if (!city.currentBattleZone) return;
         if (city.playerMoving) return;
 
-        // Em segundo plano, verifica e inicia batalha manualmente (rAF pausado)
-        if (document.hidden) {
-            const nearby = city.checkNearbyBattleTrigger();
-            if (nearby) {
-                this._cityPath = null;
-                this._cityTargetId = null;
-                city.triggerVisiblePokemonBattle(nearby);
-                return;
-            }
+        const nearby = city.checkNearbyBattleTrigger();
+        if (nearby) {
+            this._cityPath = null;
+            this._cityTargetId = null;
+            city.triggerVisiblePokemonBattle(nearby);
+            return;
         }
 
         const playerPokemon = getFirstAlive(this.game.playerTeam);
@@ -186,10 +183,13 @@ export class AFKManager {
         } else {
             const dx = nearest.pos_x - city.playerX;
             const dy = nearest.pos_y - city.playerY;
-            let fallbackDir = null;
-            if (Math.abs(dx) > Math.abs(dy)) fallbackDir = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
-            else fallbackDir = dy > 0 ? 'ArrowDown' : 'ArrowUp';
-            this._moveCity(fallbackDir);
+            const dist = Math.hypot(dx, dy);
+            if (dist > 38) {
+                let fallbackDir = null;
+                if (Math.abs(dx) > Math.abs(dy)) fallbackDir = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+                else fallbackDir = dy > 0 ? 'ArrowDown' : 'ArrowUp';
+                this._moveCity(fallbackDir);
+            }
         }
     }
 
