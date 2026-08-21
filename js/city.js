@@ -1476,6 +1476,15 @@ class CityScreen {
                 }
             }
         }
+        if (this.wildPokemonCooldown <= 0 && window.pokefury?.state === 'overworld') {
+            const nearActive = this.wildPokemon.filter(wp => wp.active);
+            for (const wp of nearActive) {
+                const d = Math.hypot(this.playerX - wp.pos_x, this.playerY - wp.pos_y);
+                if (d < 80) {
+                    console.log('[City] Near wp: pos=(' + wp.pos_x + ',' + wp.pos_y + ') dist=' + d.toFixed(1) + ' encounter=' + !!wp.encounter + ' active=' + wp.active);
+                }
+            }
+        }
     }
 
     // Verificação de batalha para auto farm em segundo plano (sem rAF)
