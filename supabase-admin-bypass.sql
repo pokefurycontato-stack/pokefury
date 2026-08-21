@@ -11,7 +11,7 @@ CREATE POLICY "pokemonteam_select" ON pokemon_team
     user_id = auth.uid()
     OR EXISTS (
       SELECT 1 FROM profiles
-      WHERE profiles.user_id = auth.uid()
+      WHERE profiles.id = auth.uid()
         AND profiles.is_admin = true
     )
   );
@@ -31,7 +31,7 @@ CREATE POLICY "boosts_select" ON character_boosts
     character_id IN (SELECT id FROM game_saves WHERE user_id = auth.uid())
     OR EXISTS (
       SELECT 1 FROM profiles
-      WHERE profiles.user_id = auth.uid()
+      WHERE profiles.id = auth.uid()
         AND profiles.is_admin = true
     )
   );

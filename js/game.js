@@ -2179,68 +2179,55 @@ if (this._professorOriginalOrder) {
     showCapturePrompt() {
         if (this._capturePromptOpen) return Promise.resolve(false);
         this._capturePromptOpen = true;
+        const MAX_CAPTURE_ATTEMPTS = 3;
 
         return new Promise(async (resolve) => {
             const cleanup = () => {
                 this._capturePromptOpen = false;
-                const overlay = document.getElementById('capture-prompt-overlay');
-                if (overlay) overlay.remove();
+                const el = document.getElementById('capture-prompt-overlay');
+                if (el) el.remove();
             };
 
-            const timeout = setTimeout(() => { cleanup(); resolve(false); }, 15000);
+            const timeout = setTimeout(() => { cleanup(); resolve(false); }, 30000);
 
             const enemyPokemon = this.enemyTeam[0];
             if (!enemyPokemon || enemyPokemon.currentHp > 0) { clearTimeout(timeout); cleanup(); resolve(false); return; }
 
             if (this.afkManager && this.afkManager.running) {
                 if (!this.afkManager.autoCapture) {
-                    clearTimeout(timeout);
-                    cleanup();
-                    resolve(false);
-                    return;
+                    clearTimeout(timeout); cleanup(); resolve(false); return;
                 }
                 const isShiny = enemyPokemon.isShiny;
                 const rarity = enemyPokemon.rarity || 'common';
-
-                // Shiny tem prioridade absoluta sobre a raridade (lógica centralizada no AFKManager)
                 const captureConfig = this.afkManager.getCaptureConfigForPokemon(enemyPokemon);
-
                 if (!captureConfig || !captureConfig.ballId) {
                     const label = isShiny ? 'Shiny' : rarity;
                     await showBattleMessage(`${enemyPokemon.name} (${label}) não está nas raridades configuradas. Pulando captura...`);
-                    resolve(false);
-                    return;
+                    resolve(false); return;
                 }
-                const items = await window.GameData.getInventory();
-                const ballInv = items.find(inv => inv.items && inv.items.id === captureConfig.ballId && inv.quantity > 0);
-                if (!ballInv) {
-                    await showBattleMessage(`Pokébola configurada não disponível. Pulando captura...`);
-                    resolve(false);
-                    return;
+                let afkCaught = false;
+                for (let a = 0; a < MAX_CAPTURE_ATTEMPTS && !afkCaught; a++) {
+                    const items = await window.GameData.getInventory();
+                    const ballInv = items.find(inv => inv.items && inv.items.id === captureConfig.ballId && inv.quantity > 0);
+                    if (!ballInv) { await showBattleMessage('Pokébola não disponível.'); break; }
+                    afkCaught = await this.tryCaptureWithBall(enemyPokemon, ballInv.items);
                 }
-                const label = isShiny ? 'Shiny' : rarity;
-                await showBattleMessage(`Auto-capturando ${enemyPokemon.name} (${label}) com ${ballInv.items.name}!`);
-                const caught = await this.tryCaptureWithBall(enemyPokemon, ballInv.items);
-                resolve(caught);
+                clearTimeout(timeout); cleanup(); resolve(afkCaught);
                 return;
             }
 
             const inventory = await window.GameData.getInventory();
             const balls = inventory.filter(inv => inv.quantity > 0 && inv.items && inv.items.category === 'pokeball');
-
             if (balls.length === 0) {
                 await showBattleMessage('Você não tem nenhuma Pokébola!');
-                resolve(false);
-                return;
+                clearTimeout(timeout); cleanup(); resolve(false); return;
             }
 
             const overlay = document.createElement('div');
             overlay.id = 'capture-prompt-overlay';
             overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
-
             const popup = document.createElement('div');
             popup.style.cssText = 'background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.4);border-radius:16px;padding:24px 28px;max-width:360px;width:90%;text-align:center;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(233,69,96,0.2);';
-
             const spriteUrl = enemyPokemon.spriteUrls?.front || enemyPokemon.spriteUrl || '';
             popup.innerHTML = `
                 <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Pokémon derrotado!</div>
@@ -2255,52 +2242,67 @@ if (this._professorOriginalOrder) {
                     <button id="cap-no" style="padding:10px 28px;border:1px solid rgba(255,255,255,0.2);border-radius:10px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;transition:transform 0.15s">Não</button>
                 </div>
             `;
-
             overlay.appendChild(popup);
             document.body.appendChild(overlay);
-
             popup.querySelectorAll('button').forEach(b => {
                 b.onmouseenter = () => { b.style.transform = 'scale(1.05)'; };
                 b.onmouseleave = () => { b.style.transform = 'scale(1)'; };
             });
 
             document.getElementById('cap-yes').onclick = () => {
-                clearTimeout(timeout);
                 overlay.remove();
                 this._capturePromptOpen = false;
-                this.showPokeballSelection().then(captured => resolve(captured));
+                this._startCaptureAttempts(MAX_CAPTURE_ATTEMPTS, timeout, resolve);
             };
             document.getElementById('cap-no').onclick = () => {
-                clearTimeout(timeout);
-                overlay.remove();
+                clearTimeout(timeout); overlay.remove();
                 this._capturePromptOpen = false;
                 resolve(false);
             };
         });
     }
 
-    showPokeballSelection() {
+    async _startCaptureAttempts(maxAttempts, outerTimeout, resolve) {
+        const enemyPokemon = this.enemyTeam[0];
+        if (!enemyPokemon) { clearTimeout(outerTimeout); resolve(false); return; }
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const captured = await this._showBallSelectionWithRetry(attempt, maxAttempts);
+            if (captured) {
+                clearTimeout(outerTimeout);
+                resolve(true);
+                return;
+            }
+            if (attempt < maxAttempts) {
+                const retry = await this._showRetryPrompt(attempt, maxAttempts);
+                if (!retry) break;
+            }
+        }
+        clearTimeout(outerTimeout);
+        await showBattleMessage(`${enemyPokemon.name} não foi capturado.`);
+        resolve(false);
+    }
+
+    _showBallSelectionWithRetry(attempt, maxAttempts) {
         return new Promise(async (resolve) => {
             const enemyPokemon = this.enemyTeam[0];
             if (!enemyPokemon) { resolve(false); return; }
 
             const inventory = await window.GameData.getInventory();
             const balls = inventory.filter(inv => inv.items && inv.items.category === 'pokeball' && inv.quantity > 0);
-
             if (balls.length === 0) {
                 await showBattleMessage('Você não tem nenhuma Pokébola!');
-                resolve(false);
-                return;
+                resolve(false); return;
             }
 
             const overlay = document.createElement('div');
             overlay.id = 'capture-ball-overlay';
             overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
-
             const popup = document.createElement('div');
             popup.style.cssText = 'background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.4);border-radius:16px;padding:24px 28px;max-width:380px;width:90%;text-align:center;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(233,69,96,0.2);';
 
-            let html = `<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">Escolha uma Pokébola</div>`;
+            let html = `<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Escolha uma Pokébola</div>`;
+            html += `<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:12px">Tentativa <b style="color:#e94560">${attempt}/${maxAttempts}</b></div>`;
             html += `<div style="display:flex;flex-direction:column;gap:8px">`;
 
             for (const inv of balls) {
@@ -2341,6 +2343,42 @@ if (this._professorOriginalOrder) {
                 overlay.remove();
                 resolve(false);
             };
+        });
+    }
+
+    _showRetryPrompt(attempt, maxAttempts) {
+        return new Promise((resolve) => {
+            const enemyPokemon = this.enemyTeam[0];
+            if (!enemyPokemon) { resolve(false); return; }
+
+            const overlay = document.createElement('div');
+            overlay.id = 'capture-prompt-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
+            const popup = document.createElement('div');
+            popup.style.cssText = 'background:rgba(15,20,35,0.95);border:1px solid rgba(233,69,96,0.4);border-radius:16px;padding:24px 28px;max-width:360px;width:90%;text-align:center;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(233,69,96,0.2);';
+            const spriteUrl = enemyPokemon.spriteUrls?.front || enemyPokemon.spriteUrl || '';
+            popup.innerHTML = `
+                <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-bottom:12px">
+                    <span style="color:#f87171">&#10005;</span> ${enemyPokemon.name} não foi capturado!
+                </div>
+                <div style="display:flex;justify-content:center;margin:10px 0">
+                    <img src="${spriteUrl}" style="width:64px;height:64px;image-rendering:pixelated;filter:drop-shadow(0 0 8px rgba(233,69,96,0.4))" onerror="this.style.display='none'">
+                </div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px">Tentativa ${attempt}/${maxAttempts}</div>
+                <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-bottom:16px">Gostaria de tentar novamente?</div>
+                <div style="display:flex;gap:10px;justify-content:center">
+                    <button id="retry-yes" style="padding:10px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#e94560,#c23152);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:transform 0.15s">Sim (${attempt+1}/${maxAttempts})</button>
+                    <button id="retry-no" style="padding:10px 24px;border:1px solid rgba(255,255,255,0.2);border-radius:10px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:14px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;transition:transform 0.15s">Não</button>
+                </div>
+            `;
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+            popup.querySelectorAll('button').forEach(b => {
+                b.onmouseenter = () => { b.style.transform = 'scale(1.05)'; };
+                b.onmouseleave = () => { b.style.transform = 'scale(1)'; };
+            });
+            document.getElementById('retry-yes').onclick = () => { overlay.remove(); resolve(true); };
+            document.getElementById('retry-no').onclick = () => { overlay.remove(); resolve(false); };
         });
     }
 
