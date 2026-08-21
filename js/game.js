@@ -1133,12 +1133,38 @@ if (this._professorOriginalOrder) {
                 : (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(pokemonData.id) : spriteUrl);
             const finalSprite = animUrl || spriteUrl || pokemonData.spriteUrls?.front || '';
 
-            const overlay = document.createElement('div');
-            overlay.id = 'pre-battle-overlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s;backdrop-filter:blur(4px);';
-
-            const popup = document.createElement('div');
-            popup.style.cssText = 'background:rgba(12,15,30,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:0;max-width:720px;width:92%;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,0.5),0 0 20px rgba(233,69,96,0.15);overflow:hidden;max-height:85vh;';
+            const renderTeamList = () => {
+                let html = '';
+                const team = this.playerTeam || [];
+                for (let i = 0; i < team.length; i++) {
+                    const p = team[i];
+                    const pSprite = p.spriteUrls?.front || p.spriteUrl || '';
+                    const hpPct = p.stats?.hp ? Math.round((p.currentHp / p.stats.hp) * 100) : 100;
+                    const hpColor = hpPct > 50 ? '#4caf50' : hpPct > 20 ? '#ff9800' : '#f44336';
+                    const fainted = p.fainted || p.currentHp <= 0;
+                    const opacity = fainted ? '0.4' : '1';
+                    html += `
+                        <div class="pre-battle-pokemon-card" draggable="true" data-index="${i}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,0.08);border-radius:10px;background:rgba(255,255,255,0.03);cursor:grab;transition:all 0.15s;opacity:${opacity}">
+                            <div style="font-size:11px;color:rgba(255,255,255,0.3);font-weight:700;min-width:18px;text-align:center;user-select:none">${i + 1}</div>
+                            <img src="${pSprite}" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0" onerror="this.style.display='none'">
+                            <div style="flex:1;min-width:0">
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                                    <span style="color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+                                    <span style="color:rgba(255,255,255,0.4);font-size:10px;white-space:nowrap">Lv${p.level}</span>
+                                    ${fainted ? '<span style="color:#f44336;font-size:9px;font-weight:700">FAINTED</span>' : ''}
+                                </div>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden">
+                                        <div style="height:100%;width:${hpPct}%;background:${hpColor};border-radius:3px;transition:width 0.3s"></div>
+                                    </div>
+                                    <span style="color:rgba(255,255,255,0.4);font-size:9px;white-space:nowrap">${p.currentHp}/${p.stats?.hp}</span>
+                                </div>
+                            </div>
+                            <div style="color:rgba(255,255,255,0.15);font-size:16px;cursor:grab;user-select:none">⠿</div>
+                        </div>`;
+                }
+                return html;
+            };
 
             let typesHtml = '';
             for (const t of types) {
@@ -1146,35 +1172,12 @@ if (this._professorOriginalOrder) {
                 typesHtml += `<span style="display:inline-block;padding:3px 12px;border-radius:20px;background:${color};color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${t}</span>`;
             }
 
-            let teamHtml = '';
-            const team = this.playerTeam || [];
-            for (let i = 0; i < team.length; i++) {
-                const p = team[i];
-                const pSprite = p.spriteUrls?.front || p.spriteUrl || '';
-                const hpPct = p.stats?.hp ? Math.round((p.currentHp / p.stats.hp) * 100) : 100;
-                const hpColor = hpPct > 50 ? '#4caf50' : hpPct > 20 ? '#ff9800' : '#f44336';
-                const fainted = p.fainted || p.currentHp <= 0;
-                const opacity = fainted ? '0.4' : '1';
-                teamHtml += `
-                    <div class="pre-battle-pokemon-card" draggable="true" data-index="${i}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,0.08);border-radius:10px;background:rgba(255,255,255,0.03);cursor:grab;transition:all 0.15s;opacity:${opacity}">
-                        <div style="font-size:11px;color:rgba(255,255,255,0.3);font-weight:700;min-width:18px;text-align:center;user-select:none">${i + 1}</div>
-                        <img src="${pSprite}" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0" onerror="this.style.display='none'">
-                        <div style="flex:1;min-width:0">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-                                <span style="color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
-                                <span style="color:rgba(255,255,255,0.4);font-size:10px;white-space:nowrap">Lv${p.level}</span>
-                                ${fainted ? '<span style="color:#f44336;font-size:9px;font-weight:700">FAINTED</span>' : ''}
-                            </div>
-                            <div style="display:flex;align-items:center;gap:6px">
-                                <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden">
-                                    <div style="height:100%;width:${hpPct}%;background:${hpColor};border-radius:3px;transition:width 0.3s"></div>
-                                </div>
-                                <span style="color:rgba(255,255,255,0.4);font-size:9px;white-space:nowrap">${p.currentHp}/${p.stats?.hp}</span>
-                            </div>
-                        </div>
-                        <div style="color:rgba(255,255,255,0.15);font-size:16px;cursor:grab;user-select:none">⠿</div>
-                    </div>`;
-            }
+            const overlay = document.createElement('div');
+            overlay.id = 'pre-battle-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s;backdrop-filter:blur(4px);';
+
+            const popup = document.createElement('div');
+            popup.style.cssText = 'background:rgba(12,15,30,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:0;max-width:720px;width:92%;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,0.5),0 0 20px rgba(233,69,96,0.15);overflow:hidden;max-height:85vh;';
 
             popup.innerHTML = `
                 <div style="display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,0.06)">
@@ -1189,7 +1192,7 @@ if (this._professorOriginalOrder) {
                             <div style="font-size:12px;color:rgba(255,255,255,0.5)">Modifique a ordem do seu time para esta batalha</div>
                         </div>
                         <div id="pre-battle-team-list" style="flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px;max-height:340px">
-                            ${teamHtml}
+                            ${renderTeamList()}
                         </div>
                     </div>
                 </div>
@@ -1204,6 +1207,10 @@ if (this._professorOriginalOrder) {
             if (btn) {
                 btn.onmouseenter = () => { btn.style.transform = 'scale(1.04)'; btn.style.boxShadow = '0 0 20px rgba(233,69,96,0.4)'; };
                 btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = 'none'; };
+                btn.onclick = () => {
+                    overlay.remove();
+                    resolve({ teamOrder: this.playerTeam.slice() });
+                };
             }
 
             const teamList = document.getElementById('pre-battle-team-list');
@@ -1256,16 +1263,8 @@ if (this._professorOriginalOrder) {
                     currentTeam.splice(dropIdx, 0, moved);
                     this.playerTeam = currentTeam;
 
-                    overlay.remove();
-                    this.showPreBattlePopup(pokemonId, spriteUrl, isShiny).then(resolve);
+                    teamList.innerHTML = renderTeamList();
                 });
-            }
-
-            if (btn) {
-                btn.onclick = () => {
-                    overlay.remove();
-                    resolve({ teamOrder: this.playerTeam.slice() });
-                };
             }
         });
     }
