@@ -1131,7 +1131,14 @@ if (this._professorOriginalOrder) {
             const animUrl = isShiny
                 ? (window.PokeAPI ? window.PokeAPI.getAnimatedFrontShinyUrl(pokemonData.id) : spriteUrl)
                 : (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(pokemonData.id) : spriteUrl);
-            const finalSprite = animUrl || spriteUrl || pokemonData.spriteUrls?.front || '';
+            let finalSprite = animUrl || spriteUrl || pokemonData.spriteUrls?.front || '';
+            try {
+                const resp = await fetch(finalSprite);
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    finalSprite = URL.createObjectURL(blob);
+                }
+            } catch(e) {}
 
             const renderTeamList = () => {
                 let html = '';
