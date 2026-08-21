@@ -115,6 +115,126 @@
         .error { color: #ff6b81; font-size: 13px; margin-top: 10px; }
         .denied { text-align: center; padding: 80px 20px; color: rgba(255,255,255,0.7); }
         .denied h2 { color: #ff6b81; margin-bottom: 12px; }
+
+        /* Player Detail Popup */
+        .pd-overlay {
+            position:fixed;inset:0;z-index:9999;
+            background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);
+            display:flex;align-items:center;justify-content:center;
+            animation:pdFadeIn .2s ease;
+        }
+        @keyframes pdFadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes pdSlideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .pd-card {
+            background:#12142a;border:1px solid rgba(255,255,255,0.15);
+            border-radius:16px;width:94%;max-width:680px;
+            max-height:90vh;overflow:hidden;
+            box-shadow:0 25px 60px rgba(0,0,0,0.6);
+            animation:pdSlideIn .25s ease;
+        }
+        .pd-head {
+            padding:18px 22px;display:flex;align-items:center;gap:16px;
+            background:linear-gradient(135deg,rgba(233,69,96,0.15),rgba(194,49,82,0.08));
+            border-bottom:1px solid rgba(255,255,255,0.08);position:relative;
+        }
+        .pd-head .pd-close {
+            position:absolute;top:12px;right:14px;background:none;border:none;
+            color:rgba(255,255,255,0.5);font-size:22px;cursor:pointer;
+            width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+            border-radius:8px;transition:all .15s;
+        }
+        .pd-head .pd-close:hover{background:rgba(255,255,255,0.1);color:#fff}
+        .pd-avatar {
+            width:60px;height:60px;border-radius:50%;object-fit:contain;
+            background:rgba(255,255,255,0.08);border:2px solid rgba(233,69,96,0.5);
+            flex-shrink:0;
+        }
+        .pd-avatar-fallback {
+            width:60px;height:60px;border-radius:50%;
+            background:linear-gradient(135deg,#e94560,#7c3aed);
+            display:flex;align-items:center;justify-content:center;
+            font-size:26px;font-weight:900;color:#fff;flex-shrink:0;
+            border:2px solid rgba(233,69,96,0.5);
+        }
+        .pd-info-main h2{font-size:17px;font-weight:800;margin:0 0 2px}
+        .pd-info-main .pd-level{font-size:12px;color:#e94560;font-weight:700}
+        .pd-info-main .pd-sub{font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px}
+        .pd-body {
+            padding:18px 22px;overflow-y:auto;max-height:calc(90vh - 90px);
+        }
+        .pd-section{margin-bottom:16px}
+        .pd-section-title {
+            font-size:10px;font-weight:800;text-transform:uppercase;
+            letter-spacing:1px;color:rgba(255,255,255,0.45);margin-bottom:8px;
+            padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);
+            display:flex;align-items:center;gap:8px;
+        }
+        .pd-section-title .pd-live-dot {
+            width:6px;height:6px;border-radius:50%;background:#22c55e;
+            animation:pdPulse 2s infinite;
+        }
+        @keyframes pdPulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .pd-details-grid {
+            display:grid;grid-template-columns:1fr 1fr;gap:6px;
+        }
+        .pd-detail-item {
+            display:flex;justify-content:space-between;padding:5px 8px;
+            background:rgba(255,255,255,0.03);border-radius:6px;
+            border:1px solid rgba(255,255,255,0.05);
+        }
+        .pd-detail-item .pd-label{font-size:11px;color:rgba(255,255,255,0.4)}
+        .pd-detail-item .pd-value{font-size:11px;font-weight:700;color:#fff}
+        .pd-team-grid {
+            display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:8px;
+        }
+        .pd-team-slot {
+            background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+            border-radius:10px;padding:8px;text-align:center;position:relative;
+            transition:all .15s;
+        }
+        .pd-team-slot:hover{background:rgba(255,255,255,0.08);transform:translateY(-1px)}
+        .pd-team-slot img {
+            width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+        }
+        .pd-team-slot .pd-poke-name{font-size:10px;font-weight:700;margin-top:4px;color:#fff}
+        .pd-team-slot .pd-poke-level{font-size:9px;color:rgba(255,255,255,0.5)}
+        .pd-team-slot .pd-shiny-badge {
+            position:absolute;top:4px;right:4px;font-size:10px;
+        }
+        .pd-team-slot .pd-slot-num {
+            position:absolute;top:4px;left:5px;font-size:8px;font-weight:800;
+            color:rgba(255,255,255,0.25);
+        }
+        .pd-team-slot .pd-hp-bar {
+            width:100%;height:3px;background:rgba(255,255,255,0.1);
+            border-radius:2px;margin-top:3px;overflow:hidden;
+        }
+        .pd-team-slot .pd-hp-fill{height:100%;border-radius:2px;transition:width .3s}
+        .pd-boosts-list{display:flex;flex-wrap:wrap;gap:6px}
+        .pd-boost-badge {
+            padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;
+            background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#4ade80;
+            display:flex;align-items:center;gap:5px;
+        }
+        .pd-boost-badge .pd-boost-exp{font-size:9px;color:rgba(255,255,255,0.4);font-weight:400}
+        .pd-currencies-grid{display:flex;gap:10px;flex-wrap:wrap}
+        .pd-currency-card {
+            flex:1;min-width:100px;background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.08);border-radius:10px;
+            padding:12px;text-align:center;
+        }
+        .pd-currency-card .pd-cur-icon{font-size:22px;margin-bottom:4px}
+        .pd-currency-card .pd-cur-amount{font-size:16px;font-weight:900;color:#fff}
+        .pd-currency-card .pd-cur-label{font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px}
+        .pd-empty {
+            text-align:center;padding:16px;color:rgba(255,255,255,0.3);font-size:12px;
+            font-style:italic;
+        }
+        .pd-loading{text-align:center;padding:20px;color:rgba(255,255,255,0.4);font-size:12px}
+        .pd-loading::after{content:'';display:inline-block;width:14px;height:14px;
+            border:2px solid rgba(255,255,255,0.15);border-top-color:#e94560;
+            border-radius:50%;animation:pdSpin .6s linear infinite;margin-left:8px;vertical-align:middle;}
+        @keyframes pdSpin{to{transform:rotate(360deg)}}
     </style>
 </head>
 <body>
@@ -329,7 +449,7 @@
                     return `<tr>
                         <td>
                             <div style="display:flex;align-items:center;gap:10px;">
-                                <div style="width:32px;height:32px;border-radius:50%;background:${online ? 'linear-gradient(135deg,#e94560,#7c3aed)' : 'rgba(148,163,184,0.35)'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">${esc((p.player_name || '?').charAt(0).toUpperCase())}</div>
+                                <div onclick="showPlayerDetail('${p.user_id}', '${esc((p.player_name || '').replace(/'/g, "\\'"))}')" style="width:32px;height:32px;border-radius:50%;background:${online ? 'linear-gradient(135deg,#e94560,#7c3aed)' : 'rgba(148,163,184,0.35)'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;cursor:pointer;transition:all .2s;border:2px solid transparent;" onmouseover="this.style.borderColor='#e94560';this.style.transform='scale(1.12)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'" title="Ver detalhes de ${esc(p.player_name || '')}">${esc((p.player_name || '?').charAt(0).toUpperCase())}</div>
                                 <div>
                                     <div style="font-weight:700;color:#fff;">${esc(p.player_name || '—')}${statusBadge}</div>
                                     <div style="font-size:11px;color:rgba(255,255,255,0.4);">${esc(p.email || '—')}</div>
@@ -396,6 +516,7 @@
             panel.classList.toggle('hidden', showing);
             if (showing) {
                 if (onlineTimer) { clearInterval(onlineTimer); onlineTimer = null; }
+                closePlayerDetail();
             } else {
                 loadOnline();
                 loadTeleportsCache();
@@ -579,6 +700,149 @@
 
             loadEvents();
             setInterval(loadEvents, 5000);
+        }
+
+        /* ==================== Player Detail Popup ==================== */
+        let _pdTimer = null;
+        let _pdUserId = null;
+        let _pdCharId = null;
+        let _pdSprites = {};
+
+        function closePlayerDetail() {
+            if (_pdTimer) { clearInterval(_pdTimer); _pdTimer = null; }
+            _pdUserId = null; _pdCharId = null; _pdSprites = {};
+            const el = document.getElementById('pd-overlay');
+            if (el) el.remove();
+        }
+
+        async function showPlayerDetail(userId, playerName) {
+            closePlayerDetail();
+            _pdUserId = userId;
+            const overlay = document.createElement('div');
+            overlay.id = 'pd-overlay';
+            overlay.className = 'pd-overlay';
+            overlay.innerHTML = `<div class="pd-card" onclick="event.stopPropagation()">
+                <div class="pd-head">
+                    <div id="pd-avatar-box" class="pd-avatar-fallback">${esc((playerName || '?').charAt(0).toUpperCase())}</div>
+                    <div class="pd-info-main">
+                        <h2 id="pd-name">${esc(playerName || '...')}</h2>
+                        <div class="pd-level" id="pd-level">Carregando...</div>
+                    </div>
+                    <button class="pd-close" onclick="closePlayerDetail()" title="Fechar">&times;</button>
+                </div>
+                <div class="pd-body">
+                    <div class="pd-section">
+                        <div class="pd-section-title">Informações</div>
+                        <div id="pd-details" class="pd-details-grid"><div class="pd-loading">Carregando</div></div>
+                    </div>
+                    <div class="pd-section">
+                        <div class="pd-section-title"><span class="pd-live-dot"></span> Time Atual</div>
+                        <div id="pd-team"><div class="pd-loading">Carregando</div></div>
+                    </div>
+                    <div class="pd-section">
+                        <div class="pd-section-title">Benefícios Ativos</div>
+                        <div id="pd-boosts"><div class="pd-loading">Carregando</div></div>
+                    </div>
+                    <div class="pd-section">
+                        <div class="pd-section-title">Moedas</div>
+                        <div id="pd-currencies"><div class="pd-loading">Carregando</div></div>
+                    </div>
+                </div>
+            </div>`;
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) closePlayerDetail(); });
+            document.body.appendChild(overlay);
+            await fetchPlayerDetail();
+            _pdTimer = setInterval(fetchPlayerDetail, 5000);
+        }
+
+        function getPokemonSpriteUrl(pokemonId) {
+            if (_pdSprites[pokemonId]) return _pdSprites[pokemonId];
+            const padded = String(pokemonId).padStart(3, '0');
+            const url = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+            _pdSprites[pokemonId] = url;
+            return url;
+        }
+
+        async function fetchPlayerDetail() {
+            if (!_pdUserId) return;
+            try {
+                const [{ data: gs }, { data: team }, { data: boosts }, { data: cur }] = await Promise.all([
+                    window.db.from('game_saves').select('id,player_name,avatar_url,starter_pokemon,player_gender,trainer_level,created_at').eq('user_id', _pdUserId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+                    _pdCharId ? window.db.from('pokemon_team').select('pokemon_id,species,nickname,level,current_hp,is_shiny,is_mega,slot').eq('character_id', _pdCharId).order('slot') : { data: [] },
+                    _pdCharId ? window.db.from('character_boosts').select('boost_type,expires_at').eq('character_id', _pdCharId) : { data: [] },
+                    _pdCharId ? window.db.from('character_currencies').select('diamonds,gold,silver').eq('character_id', _pdCharId).maybeSingle() : { data: null }
+                ]);
+                if (gs) _pdCharId = gs.id;
+                renderPlayerDetail(gs, team || [], boosts || [], cur);
+            } catch (e) {
+                console.error('[PlayerDetail]', e);
+            }
+        }
+
+        const BOOST_LABELS = { vip: 'VIP', center_anywhere: 'Centro Portátil', shiny_boost: 'Shiny Boost', exp_pokemon: 'EXP Pokemon', exp_trainer: 'EXP Treinador', professor_acompanhante: 'Professor Acompanhante', legendary_boost: 'Lendário Boost' };
+
+        function renderPlayerDetail(gs, team, boosts, cur) {
+            const avatarBox = document.getElementById('pd-avatar-box');
+            const nameEl = document.getElementById('pd-name');
+            const levelEl = document.getElementById('pd-level');
+            const detailsEl = document.getElementById('pd-details');
+            const teamEl = document.getElementById('pd-team');
+            const boostsEl = document.getElementById('pd-boosts');
+            const currenciesEl = document.getElementById('pd-currencies');
+            if (!nameEl) return;
+
+            if (gs) {
+                nameEl.textContent = gs.player_name || '—';
+                levelEl.textContent = `Nv. ${gs.trainer_level || 1}`;
+                if (gs.avatar_url && avatarBox) {
+                    avatarBox.outerHTML = `<img id="pd-avatar-box" class="pd-avatar" src="${esc(gs.avatar_url)}" onerror="this.outerHTML='<div class=\\'pd-avatar-fallback\\'>${esc((gs.player_name || '?').charAt(0).toUpperCase())}</div>'">`;
+                }
+                const accDate = gs.created_at ? new Date(gs.created_at).toLocaleString('pt-BR') : '—';
+                detailsEl.innerHTML = `
+                    <div class="pd-detail-item"><span class="pd-label">Conta criada</span><span class="pd-value">${esc(accDate)}</span></div>
+                    <div class="pd-detail-item"><span class="pd-label">Gênero</span><span class="pd-value">${esc(gs.player_gender || '—')}</span></div>
+                    <div class="pd-detail-item"><span class="pd-label">Pokémon inicial</span><span class="pd-value" style="text-transform:capitalize">${esc(gs.starter_pokemon || '—')}</span></div>
+                    <div class="pd-detail-item"><span class="pd-label">Nível</span><span class="pd-value">${esc(gs.trainer_level || 1)}</span></div>`;
+            }
+
+            if (team.length > 0) {
+                teamEl.innerHTML = team.map(p => {
+                    const sprite = getPokemonSpriteUrl(p.pokemon_id);
+                    const hpPct = p.current_hp > 0 ? 100 : 0;
+                    const hpColor = p.current_hp > 0 ? '#4ade80' : '#ef4444';
+                    return `<div class="pd-team-slot">
+                        <span class="pd-slot-num">#${p.slot || '?'}</span>
+                        ${p.is_shiny ? '<span class="pd-shiny-badge">✨</span>' : ''}
+                        <img src="${esc(sprite)}" alt="${esc(p.species || p.nickname || '')}" loading="lazy">
+                        <div class="pd-poke-name">${esc(p.nickname || p.species || '—')}</div>
+                        <div class="pd-poke-level">Lv. ${esc(p.level || 1)}</div>
+                        <div class="pd-hp-bar"><div class="pd-hp-fill" style="width:${hpPct}%;background:${hpColor}"></div></div>
+                    </div>`;
+                }).join('');
+            } else {
+                teamEl.innerHTML = '<div class="pd-empty">Nenhum Pokémon no time</div>';
+            }
+
+            if (boosts.length > 0) {
+                const now = Date.now();
+                boostsEl.innerHTML = boosts.filter(b => new Date(b.expires_at) > now).map(b => {
+                    const label = BOOST_LABELS[b.boost_type] || b.boost_type;
+                    const exp = new Date(b.expires_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    return `<div class="pd-boost-badge">✅ ${esc(label)}<span class="pd-boost-exp">exp: ${esc(exp)}</span></div>`;
+                }).join('') || '<div class="pd-empty">Nenhum benefício ativo</div>';
+            } else {
+                boostsEl.innerHTML = '<div class="pd-empty">Nenhum benefício ativo</div>';
+            }
+
+            if (cur) {
+                currenciesEl.innerHTML = `<div class="pd-currencies-grid">
+                    <div class="pd-currency-card"><div class="pd-cur-icon">💎</div><div class="pd-cur-amount">${esc(cur.diamonds || 0)}</div><div class="pd-cur-label">Diamantes</div></div>
+                    <div class="pd-currency-card"><div class="pd-cur-icon" style="color:#eab308">🪙</div><div class="pd-cur-amount">${esc(cur.gold || 0)}</div><div class="pd-cur-label">Ouro</div></div>
+                    <div class="pd-currency-card"><div class="pd-cur-icon" style="color:#94a3b8">⚪</div><div class="pd-cur-amount">${esc(cur.silver || 0)}</div><div class="pd-cur-label">Prata</div></div>
+                </div>`;
+            } else {
+                currenciesEl.innerHTML = '<div class="pd-empty">Sem dados de moedas</div>';
+            }
         }
 
         (async function init() {
