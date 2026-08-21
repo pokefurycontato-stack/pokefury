@@ -1462,25 +1462,9 @@ class CityScreen {
             }
             if (this.wildPokemonCooldown <= 0) {
                 const pd = Math.hypot(this.playerX - p.pos_x, this.playerY - p.pos_y);
-                if (pd < 38) {
-                    if (!p.encounter || !p.encounter.pokemon_id) {
-                        console.warn('[City] Wild Pokemon sem encounter:', p.pos_x, p.pos_y, p.encounter);
-                    } else if (window.pokefury?._battleStarting || window.pokefury?._battleEnding) {
-                        console.warn('[City] Battle blocked _battleStarting=' + window.pokefury._battleStarting + ' _battleEnding=' + window.pokefury._battleEnding);
-                    } else if (window.pokefury?.state === 'battle') {
-                        console.warn('[City] Already in battle');
-                    } else {
-                        this.wildPokemonCooldown = 1;
-                        this.triggerVisiblePokemonBattle(p);
-                    }
-                }
-            }
-        }
-        if (this.wildPokemonCooldown <= 0 && window.pokefury?.state === 'overworld') {
-            for (const wp of this.wildPokemon) {
-                const d = Math.hypot(this.playerX - wp.pos_x, this.playerY - wp.pos_y);
-                if (d < 80) {
-                    console.log('[City] wp: pos=(' + wp.pos_x + ',' + wp.pos_y + ') dist=' + d.toFixed(1) + ' encounter=' + !!wp.encounter + ' active=' + wp.active + ' display=' + (wp._el ? wp._el.style.display : 'no-el'));
+                if (pd < 50) {
+                    this.wildPokemonCooldown = 1;
+                    this.triggerVisiblePokemonBattle(p);
                 }
             }
         }
@@ -1492,7 +1476,7 @@ class CityScreen {
         for (const p of this.wildPokemon) {
             if (!p.active) continue;
             const pd = Math.hypot(this.playerX - p.pos_x, this.playerY - p.pos_y);
-            if (pd < 38) {
+            if (pd < 50) {
                 this.wildPokemonCooldown = 1;
                 return p;
             }
