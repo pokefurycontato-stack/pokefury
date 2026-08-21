@@ -230,6 +230,14 @@
             text-align:center;padding:16px;color:rgba(255,255,255,0.3);font-size:12px;
             font-style:italic;
         }
+        .pd-chars-grid{display:flex;gap:12px;overflow-x:auto;padding:4px 0}
+        .pd-char-card{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border-radius:12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);cursor:pointer;transition:all .2s;min-width:80px;flex-shrink:0}
+        .pd-char-card:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2)}
+        .pd-char-card.active{background:rgba(233,69,96,0.12);border-color:#e94560}
+        .pd-char-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0}
+        .pd-char-avatar img{width:100%;height:100%;object-fit:cover}
+        .pd-char-name{font-size:11px;font-weight:700;color:#fff;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .pd-char-level{font-size:9px;color:rgba(255,255,255,0.4)}
         .pd-loading{text-align:center;padding:20px;color:rgba(255,255,255,0.4);font-size:12px}
         .pd-loading::after{content:'';display:inline-block;width:14px;height:14px;
             border:2px solid rgba(255,255,255,0.15);border-top-color:#e94560;
@@ -707,10 +715,13 @@
         let _pdUserId = null;
         let _pdCharId = null;
         let _pdSprites = {};
+        let _pdChars = [];
+        let _pdActiveIdx = 0;
 
         function closePlayerDetail() {
             if (_pdTimer) { clearInterval(_pdTimer); _pdTimer = null; }
             _pdUserId = null; _pdCharId = null; _pdSprites = {};
+            _pdChars = []; _pdActiveIdx = 0;
             const el = document.getElementById('pd-overlay');
             if (el) el.remove();
         }
@@ -731,6 +742,10 @@
                     <button class="pd-close" onclick="closePlayerDetail()" title="Fechar">&times;</button>
                 </div>
                 <div class="pd-body">
+                    <div class="pd-section">
+                        <div class="pd-section-title">Personagens</div>
+                        <div id="pd-chars"><div class="pd-loading">Carregando</div></div>
+                    </div>
                     <div class="pd-section">
                         <div class="pd-section-title">Informações</div>
                         <div id="pd-details" class="pd-details-grid"><div class="pd-loading">Carregando</div></div>
@@ -757,46 +772,80 @@
 
         function getPokemonSpriteUrl(pokemonId) {
             if (_pdSprites[pokemonId]) return _pdSprites[pokemonId];
-            const padded = String(pokemonId).padStart(3, '0');
             const url = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
             _pdSprites[pokemonId] = url;
             return url;
         }
 
+        const BOOST_LABELS = { vip: 'VIP', center_anywhere: 'Centro Portátil', shiny_boost: 'Shiny Boost', exp_pokemon: 'EXP Pokemon', exp_trainer: 'EXP Treinador', professor_acompanhante: 'Professor Acompanhante', legendary_boost: 'Lendário Boost' };
+
         async function fetchPlayerDetail() {
             if (!_pdUserId) return;
             try {
-                const [{ data: gs }, { data: team }, { data: boosts }, { data: cur }] = await Promise.all([
-                    window.db.from('game_saves').select('id,player_name,avatar_url,starter_pokemon,player_gender,trainer_level,created_at').eq('user_id', _pdUserId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-                    _pdCharId ? window.db.from('pokemon_team').select('pokemon_id,species,nickname,level,current_hp,is_shiny,is_mega,slot').eq('character_id', _pdCharId).order('slot') : { data: [] },
-                    _pdCharId ? window.db.from('character_boosts').select('boost_type,expires_at').eq('character_id', _pdCharId) : { data: [] },
-                    _pdCharId ? window.db.from('character_currencies').select('diamonds,gold,silver').eq('character_id', _pdCharId).maybeSingle() : { data: null }
+                if (_pdChars.length === 0) {
+                    const { data: chars } = await window.db.from('game_saves')
+                        .select('id,player_name,avatar_url,starter_pokemon,player_gender,trainer_level,created_at')
+                        .eq('user_id', _pdUserId).order('created_at', { ascending: false });
+                    if (!chars || chars.length === 0) return;
+                    _pdChars = chars;
+                    if (_pdActiveIdx >= chars.length) _pdActiveIdx = 0;
+                    _pdCharId = chars[_pdActiveIdx].id;
+                }
+
+                const charId = _pdCharId;
+                const [{ data: team }, { data: boosts }, { data: cur }] = await Promise.all([
+                    window.db.from('pokemon_team').select('pokemon_id,species,nickname,level,current_hp,is_shiny,is_mega,slot').eq('character_id', charId).order('slot'),
+                    window.db.from('character_boosts').select('boost_type,expires_at').eq('character_id', charId),
+                    window.db.from('character_currencies').select('diamonds,gold,silver').eq('character_id', charId).maybeSingle()
                 ]);
-                if (gs) _pdCharId = gs.id;
-                renderPlayerDetail(gs, team || [], boosts || [], cur);
+                renderPlayerDetail(_pdChars, _pdActiveIdx, team || [], boosts || [], cur);
             } catch (e) {
                 console.error('[PlayerDetail]', e);
             }
         }
 
-        const BOOST_LABELS = { vip: 'VIP', center_anywhere: 'Centro Portátil', shiny_boost: 'Shiny Boost', exp_pokemon: 'EXP Pokemon', exp_trainer: 'EXP Treinador', professor_acompanhante: 'Professor Acompanhante', legendary_boost: 'Lendário Boost' };
+        function selectPdChar(idx) {
+            _pdActiveIdx = idx;
+            _pdCharId = _pdChars[idx].id;
+            fetchPlayerDetail();
+        }
 
-        function renderPlayerDetail(gs, team, boosts, cur) {
+        function renderPlayerDetail(chars, activeIdx, team, boosts, cur) {
             const avatarBox = document.getElementById('pd-avatar-box');
             const nameEl = document.getElementById('pd-name');
             const levelEl = document.getElementById('pd-level');
+            const charsEl = document.getElementById('pd-chars');
             const detailsEl = document.getElementById('pd-details');
             const teamEl = document.getElementById('pd-team');
             const boostsEl = document.getElementById('pd-boosts');
             const currenciesEl = document.getElementById('pd-currencies');
             if (!nameEl) return;
 
+            const gs = chars[activeIdx];
+
+            nameEl.textContent = gs.player_name || '—';
+            levelEl.textContent = `Nv. ${gs.trainer_level || 1}`;
+            if (gs.avatar_url && avatarBox && !avatarBox.tagName) {
+                avatarBox.outerHTML = `<img id="pd-avatar-box" class="pd-avatar" src="${esc(gs.avatar_url)}" onerror="this.outerHTML='<div class=\\'pd-avatar-fallback\\'>${esc((gs.player_name || '?').charAt(0).toUpperCase())}</div>'">`;
+            } else if (gs.avatar_url && avatarBox && avatarBox.tagName === 'DIV') {
+                avatarBox.outerHTML = `<img id="pd-avatar-box" class="pd-avatar" src="${esc(gs.avatar_url)}" onerror="this.outerHTML='<div class=\\'pd-avatar-fallback\\'>${esc((gs.player_name || '?').charAt(0).toUpperCase())}</div>'">`;
+            }
+
+            if (charsEl) {
+                charsEl.innerHTML = chars.map((c, i) => {
+                    const active = i === activeIdx;
+                    const letter = (c.player_name || '?').charAt(0).toUpperCase();
+                    return `<div class="pd-char-card${active ? ' active' : ''}" onclick="selectPdChar(${i})">
+                        <div class="pd-char-avatar" style="background:${active ? 'linear-gradient(135deg,#e94560,#7c3aed)' : 'rgba(148,163,184,0.25)'};border:2px solid ${active ? '#e94560' : 'rgba(255,255,255,0.1)'};">
+                            ${c.avatar_url ? `<img src="${esc(c.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;">${esc(letter)}</div>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;">${esc(letter)}</div>`}
+                        </div>
+                        <div class="pd-char-name">${esc(c.player_name || '—')}</div>
+                        <div class="pd-char-level">Nv. ${esc(c.trainer_level || 1)}</div>
+                    </div>`;
+                }).join('');
+            }
+
             if (gs) {
-                nameEl.textContent = gs.player_name || '—';
-                levelEl.textContent = `Nv. ${gs.trainer_level || 1}`;
-                if (gs.avatar_url && avatarBox) {
-                    avatarBox.outerHTML = `<img id="pd-avatar-box" class="pd-avatar" src="${esc(gs.avatar_url)}" onerror="this.outerHTML='<div class=\\'pd-avatar-fallback\\'>${esc((gs.player_name || '?').charAt(0).toUpperCase())}</div>'">`;
-                }
                 const accDate = gs.created_at ? new Date(gs.created_at).toLocaleString('pt-BR') : '—';
                 detailsEl.innerHTML = `
                     <div class="pd-detail-item"><span class="pd-label">Conta criada</span><span class="pd-value">${esc(accDate)}</span></div>
@@ -825,11 +874,16 @@
 
             if (boosts.length > 0) {
                 const now = Date.now();
-                boostsEl.innerHTML = boosts.filter(b => new Date(b.expires_at) > now).map(b => {
-                    const label = BOOST_LABELS[b.boost_type] || b.boost_type;
-                    const exp = new Date(b.expires_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-                    return `<div class="pd-boost-badge">✅ ${esc(label)}<span class="pd-boost-exp">exp: ${esc(exp)}</span></div>`;
-                }).join('') || '<div class="pd-empty">Nenhum benefício ativo</div>';
+                const active = boosts.filter(b => new Date(b.expires_at) > now);
+                if (active.length > 0) {
+                    boostsEl.innerHTML = active.map(b => {
+                        const label = BOOST_LABELS[b.boost_type] || b.boost_type;
+                        const exp = new Date(b.expires_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        return `<div class="pd-boost-badge">✅ ${esc(label)}<span class="pd-boost-exp">expira: ${esc(exp)}</span></div>`;
+                    }).join('');
+                } else {
+                    boostsEl.innerHTML = '<div class="pd-empty">Nenhum benefício ativo</div>';
+                }
             } else {
                 boostsEl.innerHTML = '<div class="pd-empty">Nenhum benefício ativo</div>';
             }
