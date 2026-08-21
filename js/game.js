@@ -1131,14 +1131,7 @@ if (this._professorOriginalOrder) {
             const animUrl = isShiny
                 ? (window.PokeAPI ? window.PokeAPI.getAnimatedFrontShinyUrl(pokemonData.id) : spriteUrl)
                 : (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(pokemonData.id) : spriteUrl);
-            let finalSprite = animUrl || spriteUrl || pokemonData.spriteUrls?.front || '';
-            try {
-                const resp = await fetch(finalSprite);
-                if (resp.ok) {
-                    const blob = await resp.blob();
-                    finalSprite = URL.createObjectURL(blob);
-                }
-            } catch(e) {}
+            const finalSprite = animUrl || spriteUrl || pokemonData.spriteUrls?.front || '';
 
             const renderTeamList = () => {
                 let html = '';
@@ -1181,7 +1174,7 @@ if (this._professorOriginalOrder) {
 
             const overlay = document.createElement('div');
             overlay.id = 'pre-battle-overlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10001;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s;backdrop-filter:blur(4px);';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:center;justify-content:center;isolation:isolate;';
 
             const popup = document.createElement('div');
             popup.style.cssText = 'background:rgba(12,15,30,0.97);border:1px solid rgba(233,69,96,0.3);border-radius:16px;padding:0;max-width:720px;width:92%;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,0.5),0 0 20px rgba(233,69,96,0.15);overflow:hidden;max-height:85vh;';

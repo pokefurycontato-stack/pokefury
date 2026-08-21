@@ -1575,7 +1575,7 @@ class CityScreen {
     async triggerVisiblePokemonBattle(p) {
         if (!p || !p.encounter) return;
         const game = window.pokefury;
-        if (!game || game.state === 'battle' || game._battleStarting) return;
+        if (!game || game.state === 'battle' || game._battleStarting || game._preBattlePopupOpen) return;
         const encounter = p.encounter;
         const pokemonId = encounter.pokemon_id || encounter.pokemon_name;
         const spriteUrl = p.spriteUrl || (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(encounter.pokemon_id) : null) || null;
@@ -1591,11 +1591,18 @@ class CityScreen {
             && window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
 
         if (isManual && !isProfessor && !game._inTower && !game._isGymBattle && !game._inRaidBossBattle) {
-            const result = await game.showPreBattlePopup(pokemonId, spriteUrl, !!p.isShiny);
-            if (result && result.teamOrder) {
-                game._preBattleOriginalOrder = game.playerTeam.slice();
-                game.playerTeam = result.teamOrder;
+            game._preBattlePopupOpen = true;
+            try {
+                const result = await game.showPreBattlePopup(pokemonId, spriteUrl, !!p.isShiny);
+                if (result && result.teamOrder) {
+                    game._preBattleOriginalOrder = game.playerTeam.slice();
+                    game.playerTeam = result.teamOrder;
+                }
+            } catch(e) {
+                game._preBattlePopupOpen = false;
+                return;
             }
+            game._preBattlePopupOpen = false;
         }
 
         await game.startBattleWithPokemon(pokemonId, level, spriteUrl, !!p.isShiny, { rarity: encounter.rarity });
