@@ -5215,7 +5215,7 @@ openEventsPanel() {
             row.innerHTML = `
                 <input type="checkbox" id="${boxId}" style="accent-color:#e94560;width:12px;height:12px;">
                 <label for="${boxId}" style="font-size:10px;font-weight:600;flex:1;cursor:pointer;color:#fff;">${r.label}</label>
-                <select class="afk-rarity-ball" data-rarity="${r.key}" style="display:none;width:90px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#fff;font-size:9px;padding:2px 3px;font-family:Inter;">
+                <select class="afk-rarity-ball" data-rarity="${r.key}" style="display:none;width:90px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#000;font-size:9px;padding:2px 3px;font-family:Inter;">
                     <option value="">Selecione</option>
                 </select>
             `;

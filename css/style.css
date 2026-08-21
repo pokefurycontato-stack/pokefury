@@ -2245,6 +2245,11 @@ body {
     background: #1a1a2e;
     color: #fff;
 }
+#afk-panel .afk-rarity-ball option,
+.afk-rarity-ball option {
+    background: #fff;
+    color: #000;
+}
 #afk-panel select option:hover,
 #afk-panel select option:checked {
     background: #e94560;
