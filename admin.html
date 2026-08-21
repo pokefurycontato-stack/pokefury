@@ -771,10 +771,24 @@
         }
 
         function getPokemonSpriteUrl(pokemonId) {
-            if (_pdSprites[pokemonId]) return _pdSprites[pokemonId];
-            const url = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
-            _pdSprites[pokemonId] = url;
-            return url;
+            return _pdSprites[pokemonId] || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${Math.min(pokemonId, 1025)}.png`;
+        }
+
+        async function prefetchSprites(pokemonIds) {
+            const toFetch = [...new Set(pokemonIds.filter(id => id && !_pdSprites[id]))];
+            if (toFetch.length === 0) return;
+            try {
+                const { data } = await window.db.from('pokemon')
+                    .select('id,sprite_official,sprite_home,sprite_front')
+                    .in('id', toFetch);
+                if (data) {
+                    for (const p of data) {
+                        _pdSprites[p.id] = p.sprite_official || p.sprite_home || p.sprite_front || null;
+                    }
+                }
+            } catch (e) {
+                console.warn('[PlayerDetail] sprite prefetch error', e);
+            }
         }
 
         const BOOST_LABELS = { vip: 'VIP', center_anywhere: 'Centro Portátil', shiny_boost: 'Shiny Boost', exp_pokemon: 'EXP Pokemon', exp_trainer: 'EXP Treinador', professor_acompanhante: 'Professor Acompanhante', legendary_boost: 'Lendário Boost' };
@@ -798,7 +812,13 @@
                     window.db.from('character_boosts').select('boost_type,expires_at').eq('character_id', charId),
                     window.db.from('character_currencies').select('diamonds,gold,silver').eq('character_id', charId).maybeSingle()
                 ]);
-                renderPlayerDetail(_pdChars, _pdActiveIdx, team || [], boosts || [], cur);
+
+                const teamData = team || [];
+                if (teamData.length > 0) {
+                    await prefetchSprites(teamData.map(p => p.pokemon_id));
+                }
+
+                renderPlayerDetail(_pdChars, _pdActiveIdx, teamData, boosts || [], cur);
             } catch (e) {
                 console.error('[PlayerDetail]', e);
             }
