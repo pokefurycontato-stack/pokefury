@@ -29,6 +29,10 @@ export class AFKManager {
         if (this.running) return;
         this.running = true;
         this._state = 'idle';
+        this._wasInBattle = false;
+        this._cityPath = null;
+        this._cityTargetId = null;
+        this._cityFoughtPositions = [];
         this._homeMap = this.game.currentMap;
         if (this.game.overworld2d) {
             this._homePlayerX = this.game.overworld2d.player.x;
@@ -46,6 +50,10 @@ export class AFKManager {
         this._walkPath = [];
         this._visitingCenter = false;
         this._centerStep = 0;
+        this._wasInBattle = false;
+        this._cityPath = null;
+        this._cityTargetId = null;
+        this._cityFoughtPositions = [];
         if (this._loopTimer) { clearTimeout(this._loopTimer); this._loopTimer = null; }
         if (this.game && typeof this.game.updateAutoFarmStatus === 'function') {
             this.game.updateAutoFarmStatus(false);
