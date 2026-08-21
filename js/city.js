@@ -1585,6 +1585,19 @@ class CityScreen {
         if (game.afkManager && game.afkManager._recordCityFight) {
             game.afkManager._recordCityFight(p.pos_x, p.pos_y);
         }
+
+        const isManual = !(game.afkManager && game.afkManager.running);
+        const isProfessor = game.afkManager && game.afkManager.professorMode
+            && window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
+
+        if (isManual && !isProfessor && !game._inTower && !game._isGymBattle && !game._inRaidBossBattle) {
+            const result = await game.showPreBattlePopup(pokemonId, spriteUrl, !!p.isShiny);
+            if (result && result.teamOrder) {
+                game._preBattleOriginalOrder = game.playerTeam.slice();
+                game.playerTeam = result.teamOrder;
+            }
+        }
+
         await game.startBattleWithPokemon(pokemonId, level, spriteUrl, !!p.isShiny, { rarity: encounter.rarity });
         if (game.state === 'battle') {
             p.active = false;
