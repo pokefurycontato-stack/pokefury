@@ -1128,17 +1128,26 @@ if (this._professorOriginalOrder) {
 
             const name = pokemonData.name || pokemonId;
             const types = (pokemonData.types || []).filter(Boolean);
+            const staticEnemySprite = isShiny
+                ? (pokemonData.spriteUrls?.frontShiny || pokemonData.spriteUrls?.front || '')
+                : (pokemonData.spriteUrls?.front || '');
             const animUrl = isShiny
                 ? (window.PokeAPI ? window.PokeAPI.getAnimatedFrontShinyUrl(pokemonData.id) : spriteUrl)
                 : (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(pokemonData.id) : spriteUrl);
-            const finalSprite = animUrl || spriteUrl || pokemonData.spriteUrls?.front || '';
+            const finalSprite = animUrl || spriteUrl || staticEnemySprite;
 
             const renderTeamList = () => {
                 let html = '';
                 const team = this.playerTeam || [];
                 for (let i = 0; i < team.length; i++) {
                     const p = team[i];
-                    const pSprite = p.spriteUrls?.front || p.spriteUrl || '';
+                    const staticSprite = p.spriteUrls?.front || p.spriteUrl || '';
+                    let pSprite = staticSprite;
+                    if (window.PokeAPI && p.id) {
+                        pSprite = (p.isShiny || p.shiny)
+                            ? (window.PokeAPI.getAnimatedFrontShinyUrl(p.id) || staticSprite)
+                            : (window.PokeAPI.getAnimatedFrontUrl(p.id) || staticSprite);
+                    }
                     const hpPct = p.stats?.hp ? Math.round((p.currentHp / p.stats.hp) * 100) : 100;
                     const hpColor = hpPct > 50 ? '#4caf50' : hpPct > 20 ? '#ff9800' : '#f44336';
                     const fainted = p.fainted || p.currentHp <= 0;
@@ -1146,7 +1155,7 @@ if (this._professorOriginalOrder) {
                     html += `
                         <div class="pre-battle-pokemon-card" draggable="true" data-index="${i}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,0.08);border-radius:10px;background:rgba(255,255,255,0.03);cursor:grab;transition:all 0.15s;opacity:${opacity}">
                             <div style="font-size:11px;color:rgba(255,255,255,0.3);font-weight:700;min-width:18px;text-align:center;user-select:none">${i + 1}</div>
-                            <img src="${pSprite}" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0" onerror="this.style.display='none'">
+                            <img src="${pSprite}" data-fallback="${staticSprite}" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">
                             <div style="flex:1;min-width:0">
                                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
                                     <span style="color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
@@ -1182,7 +1191,7 @@ if (this._professorOriginalOrder) {
             popup.innerHTML = `
                 <div style="display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,0.06)">
                     <div style="flex:0 0 42%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;background:rgba(233,69,96,0.04);border-right:1px solid rgba(255,255,255,0.06)">
-                        <img src="${finalSprite}" style="width:120px;height:120px;image-rendering:pixelated;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));margin-bottom:12px" onerror="this.style.display='none'">
+                        <img src="${finalSprite}" data-fallback="${staticEnemySprite}" style="width:120px;height:120px;image-rendering:pixelated;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));margin-bottom:12px" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">
                         <div style="font-size:18px;color:#fff;font-weight:800;margin-bottom:8px;text-align:center">${name}</div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">${typesHtml}</div>
                     </div>
