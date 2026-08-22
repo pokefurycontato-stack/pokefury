@@ -942,7 +942,14 @@ if (this._professorOriginalOrder) {
             this.ctx.clearRect(clip.x, clip.y, clip.w, clip.h);
         }
         const activePlayer = getFirstAlive(this.playerTeam) || this._lastBattlePlayer;
-        const activeEnemy = getFirstAlive(this.enemyTeam) || this._lastBattleEnemy;
+        let activeEnemy;
+        if (this._enemySwitching) {
+            activeEnemy = this._lastBattleEnemy;
+        } else if ((this._isTowerBattle || this._isGymBattle) && this._lastBattleEnemy && this.enemyTeam.includes(this._lastBattleEnemy)) {
+            activeEnemy = this._lastBattleEnemy;
+        } else {
+            activeEnemy = getFirstAlive(this.enemyTeam) || this._lastBattleEnemy;
+        }
         if (activePlayer && activeEnemy) {
             this._lastBattlePlayer = activePlayer;
             this._lastBattleEnemy = activeEnemy;
@@ -2772,34 +2779,39 @@ if (this._professorOriginalOrder) {
     async switchToNextTowerEnemy(prevEnemy, playerActive) {
         const next = getFirstAlive(this.enemyTeam);
         if (!next || next === prevEnemy) return null;
-        const pl = playerActive || getFirstAlive(this.playerTeam);
-        // 1) Mostra a barra de HP do inimigo derrotado em 0 e aguarda a animacao da barra
-        updateBattleUI(this.playerTeam, this.enemyTeam);
-        this.updatePartyPanel();
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // 2) Animacao de recolher o inimigo derrotado (pokebola)
-        try { await this.playPVPExit('enemy', prevEnemy); } catch (e) {}
-        await preloadBattleSprites(pl, next);
-        // 3) Campo vazio antes da entrada do proximo inimigo
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // Move o novo inimigo para o inicio do time para que a UI mostre o ativo
-        const idx = this.enemyTeam.indexOf(next);
-        if (idx > 0) {
-            this.enemyTeam.splice(idx, 1);
-            this.enemyTeam.unshift(next);
+        this._enemySwitching = true;
+        try {
+            const pl = playerActive || getFirstAlive(this.playerTeam);
+            // 1) Mostra a barra de HP do inimigo derrotado em 0 e aguarda a animacao da barra
+            updateBattleUI(this.playerTeam, this.enemyTeam);
+            this.updatePartyPanel();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // 2) Animacao de recolher o inimigo derrotado (pokebola)
+            try { await this.playPVPExit('enemy', prevEnemy); } catch (e) {}
+            await preloadBattleSprites(pl, next);
+            // 3) Campo vazio antes da entrada do proximo inimigo
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Move o novo inimigo para o inicio do time para que a UI mostre o ativo
+            const idx = this.enemyTeam.indexOf(next);
+            if (idx > 0) {
+                this.enemyTeam.splice(idx, 1);
+                this.enemyTeam.unshift(next);
+            }
+            drawBattleScene(this.ctx, this.canvas, pl, next, this.currentBattleBg, this.getBattleClipRect());
+            // 4) Animacao de entrada do novo inimigo (pokebola)
+            await this.playPVPEntrance('enemy', next);
+            // Professor Acompanhante: troca o pokemon do jogador para manter a vantagem de tipo
+            this._professorSwitchedPlayer = null;
+            if (pl && !pl.fainted && pl.currentHp > 0) {
+                try { this._professorSwitchedPlayer = await this.professorSwitchPlayer(next); } catch (e) {}
+            }
+            updateBattleUI(this.playerTeam, this.enemyTeam);
+            this.updatePartyPanel();
+            this._lastBattleEnemy = next;
+            return next;
+        } finally {
+            this._enemySwitching = false;
         }
-        drawBattleScene(this.ctx, this.canvas, pl, next, this.currentBattleBg, this.getBattleClipRect());
-        // 4) Animacao de entrada do novo inimigo (pokebola)
-        await this.playPVPEntrance('enemy', next);
-        // Professor Acompanhante: troca o pokemon do jogador para manter a vantagem de tipo
-        this._professorSwitchedPlayer = null;
-        if (pl && !pl.fainted && pl.currentHp > 0) {
-            try { this._professorSwitchedPlayer = await this.professorSwitchPlayer(next); } catch (e) {}
-        }
-        updateBattleUI(this.playerTeam, this.enemyTeam);
-        this.updatePartyPanel();
-        this._lastBattleEnemy = next;
-        return next;
     }
 
     async endBattle(result) {
