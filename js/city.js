@@ -1592,13 +1592,14 @@ class CityScreen {
 
         if (isManual && !isProfessor && !game._inTower && !game._isGymBattle && !game._inRaidBossBattle) {
             game._preBattlePopupOpen = true;
+            game._preBattleOriginalOrder = game.playerTeam.slice();
             try {
                 const result = await game.showPreBattlePopup(pokemonId, spriteUrl, !!p.isShiny);
                 if (result && result.teamOrder) {
-                    game._preBattleOriginalOrder = game.playerTeam.slice();
                     game.playerTeam = result.teamOrder;
                 }
             } catch(e) {
+                game._preBattleOriginalOrder = null;
                 game._preBattlePopupOpen = false;
                 return;
             }
