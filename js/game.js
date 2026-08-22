@@ -1178,8 +1178,6 @@ if (this._professorOriginalOrder) {
                 return `<div id="pre-battle-tabs" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">${tabs}</div>`;
             };
 
-            const firstEnemy = renderEnemyInfo(0);
-
             const renderTeamList = () => {
                 let html = '';
                 const team = this.playerTeam || [];
@@ -1219,11 +1217,7 @@ if (this._professorOriginalOrder) {
                 return html;
             };
 
-            let typesHtml = '';
-            for (const t of types) {
-                const color = (typeof TYPE_COLORS !== 'undefined' ? TYPE_COLORS : {})[t] || '#686868';
-                typesHtml += `<span style="display:inline-block;padding:3px 12px;border-radius:20px;background:${color};color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${t}</span>`;
-            }
+            const firstEnemy = renderEnemyInfo(0);
 
             const overlay = document.createElement('div');
             overlay.id = 'pre-battle-overlay';
