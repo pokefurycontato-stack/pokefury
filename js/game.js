@@ -1187,9 +1187,60 @@ if (this._professorOriginalOrder) {
                 return `<div id="pre-battle-tabs" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">${tabs}</div>`;
             };
 
+            const typeChartCache = await loadTypeEffectiveness();
+            const hasProfessor = !!(window.boostsManager && window.boostsManager.isActive('professor_acompanhante'));
+
+            const effectiveness = (attackType, targetTypes) => {
+                let eff = 1;
+                const row = typeChartCache[attackType];
+                if (!row) return 0;
+                for (const dt of targetTypes) {
+                    if (row[dt] !== undefined) eff *= row[dt];
+                }
+                return eff;
+            };
+
+            const scoreMatchup = (playerPoke, enemyTypesList) => {
+                if (!enemyTypesList || enemyTypesList.length === 0) return 2;
+                let bestOffense = 0;
+                for (const move of (playerPoke.moves || [])) {
+                    if (!move || !move.power || move.power <= 0 || !move.type) continue;
+                    const eff = effectiveness(move.type, enemyTypesList);
+                    if (eff > bestOffense) bestOffense = eff;
+                }
+                const pTypes = (playerPoke.types || []).filter(Boolean);
+                let defScore = 1;
+                for (const eType of enemyTypesList) {
+                    const eRow = typeChartCache[eType];
+                    if (!eRow) continue;
+                    for (const pType of pTypes) {
+                        if (eRow[pType] !== undefined && eRow[pType] > 1) defScore *= eRow[pType];
+                    }
+                }
+                return bestOffense / Math.max(0.25, defScore);
+            };
+
+            const getMatchupColor = (score) => {
+                if (score >= 1.5) return { border: '2px solid #4caf50', glow: '0 0 6px rgba(76,175,80,0.3)' };
+                if (score >= 0.6) return { border: '2px solid #ffc107', glow: '0 0 6px rgba(255,193,7,0.2)' };
+                return { border: '2px solid #f44336', glow: '0 0 6px rgba(244,67,54,0.2)' };
+            };
+
+            const getEnemyTypesForScore = () => {
+                const allTypes = [];
+                for (const e of enemies) {
+                    for (const t of (e.types || [])) {
+                        if (!allTypes.includes(t)) allTypes.push(t);
+                    }
+                }
+                return allTypes;
+            };
+
             const renderTeamList = () => {
                 let html = '';
                 const team = this.playerTeam || [];
+                const curEnemy = enemies[activeEnemyIdx];
+                const curEnemyTypes = curEnemy ? (curEnemy.types || []).filter(Boolean) : [];
                 for (let i = 0; i < team.length; i++) {
                     const p = team[i];
                     const staticSprite = p.spriteUrls?.front || p.spriteUrl || '';
@@ -1203,16 +1254,31 @@ if (this._professorOriginalOrder) {
                     const hpColor = hpPct > 50 ? '#4caf50' : hpPct > 20 ? '#ff9800' : '#f44336';
                     const fainted = p.fainted || p.currentHp <= 0;
                     const opacity = fainted ? '0.4' : '1';
+                    const pTypes = (p.types || []).filter(Boolean);
+                    let typesBadges = '';
+                    for (const t of pTypes) {
+                        const tColor = TYPE_COLORS[t] || '#686868';
+                        typesBadges += `<span style="display:inline-block;padding:1px 6px;border-radius:8px;background:${tColor};color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px">${t}</span>`;
+                    }
+                    let cardBorder = '1px solid rgba(255,255,255,0.08)';
+                    let cardGlow = 'none';
+                    if (!fainted && curEnemyTypes.length > 0) {
+                        const score = scoreMatchup(p, curEnemyTypes);
+                        const mc = getMatchupColor(score);
+                        cardBorder = mc.border;
+                        cardGlow = mc.glow;
+                    }
                     html += `
-                        <div class="pre-battle-pokemon-card" draggable="true" data-index="${i}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,0.08);border-radius:10px;background:rgba(255,255,255,0.03);cursor:grab;transition:all 0.15s;opacity:${opacity}">
+                        <div class="pre-battle-pokemon-card" draggable="true" data-index="${i}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:${cardBorder};border-radius:10px;background:rgba(255,255,255,0.03);box-shadow:${cardGlow};cursor:grab;transition:all 0.15s;opacity:${opacity}">
                             <div style="font-size:11px;color:rgba(255,255,255,0.3);font-weight:700;min-width:18px;text-align:center;user-select:none">${i + 1}</div>
                             <img src="${pSprite}" data-fallback="${staticSprite}" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">
                             <div style="flex:1;min-width:0">
-                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
                                     <span style="color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
                                     <span style="color:rgba(255,255,255,0.4);font-size:10px;white-space:nowrap">Lv${p.level}</span>
                                     ${fainted ? '<span style="color:#f44336;font-size:9px;font-weight:700">FAINTED</span>' : ''}
                                 </div>
+                                <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;flex-wrap:wrap">${typesBadges}</div>
                                 <div style="display:flex;align-items:center;gap:6px">
                                     <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden">
                                         <div style="height:100%;width:${hpPct}%;background:${hpColor};border-radius:3px;transition:width 0.3s"></div>
@@ -1254,7 +1320,8 @@ if (this._professorOriginalOrder) {
                         </div>
                     </div>
                 </div>
-                <div style="padding:14px 20px;display:flex;justify-content:center;border-top:1px solid rgba(255,255,255,0.06)">
+                <div style="padding:14px 20px;display:flex;flex-direction:column;gap:10px;align-items:center;border-top:1px solid rgba(255,255,255,0.06)">
+                    ${hasProfessor ? `<button id="pre-battle-professor-order" style="padding:10px 32px;border:1px solid rgba(76,175,80,0.5);border-radius:10px;background:rgba(76,175,80,0.1);color:#4caf50;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:all 0.15s;text-transform:uppercase;letter-spacing:0.5px">🤖 Ordem do time indicado pelo professor</button>` : ''}
                     <button id="pre-battle-start" style="padding:12px 48px;border:none;border-radius:10px;background:linear-gradient(135deg,#e94560,#c23152);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;transition:all 0.15s;text-transform:uppercase;letter-spacing:1px">⚔️ Iniciar Combate</button>
                 </div>`;
 
@@ -1285,6 +1352,8 @@ if (this._professorOriginalOrder) {
                         if (lvlEl) lvlEl.innerHTML = ei.level || '';
                         const typesEl = popup.querySelector('#pre-battle-enemy-types');
                         if (typesEl) typesEl.innerHTML = ei.types;
+                        const teamListEl = document.getElementById('pre-battle-team-list');
+                        if (teamListEl) teamListEl.innerHTML = renderTeamList();
                     });
                 }
             }
@@ -1296,6 +1365,25 @@ if (this._professorOriginalOrder) {
                 btn.onclick = () => {
                     overlay.remove();
                     resolve({ teamOrder: this.playerTeam.slice() });
+                };
+            }
+
+            const profBtn = document.getElementById('pre-battle-professor-order');
+            if (profBtn) {
+                profBtn.onmouseenter = () => { profBtn.style.transform = 'scale(1.04)'; profBtn.style.boxShadow = '0 0 15px rgba(76,175,80,0.3)'; };
+                profBtn.onmouseleave = () => { profBtn.style.transform = 'scale(1)'; profBtn.style.boxShadow = 'none'; };
+                profBtn.onclick = () => {
+                    const allEnemyTypes = getEnemyTypesForScore();
+                    if (allEnemyTypes.length === 0) return;
+                    const scored = this.playerTeam.map((p, idx) => ({
+                        pokemon: p,
+                        origIdx: idx,
+                        score: scoreMatchup(p, allEnemyTypes)
+                    }));
+                    scored.sort((a, b) => b.score - a.score);
+                    this.playerTeam = scored.map(s => s.pokemon);
+                    const teamListEl = document.getElementById('pre-battle-team-list');
+                    if (teamListEl) teamListEl.innerHTML = renderTeamList();
                 };
             }
 
