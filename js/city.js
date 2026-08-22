@@ -81,6 +81,11 @@ class CityScreen {
         this.npcs = [];
         this.nearestNpc = null;
         this.npcDialogueOpen = false;
+        this.nearFarmPlot = null;
+        this._inFarmZone = false;
+        this._farmNpcVisible = false;
+        this._farmPlots = [];
+        this._farmTimers = {};
         this.weatherParticles = [];
         this._weather = null;
         this._forcedWeather = null;
@@ -175,7 +180,9 @@ class CityScreen {
             }
             if (e.key === 'e' || e.key === 'E') {
                 if (this.npcDialogueOpen) return;
-                if (this.nearGymNpc) {
+                if (this.nearFarmPlot !== null && this.nearFarmPlot >= 0) {
+                    this.handleFarmPlotInteraction(this.nearFarmPlot);
+                } else if (this.nearGymNpc) {
                     this.showGymNpcDialogue();
                 } else if (this.inActiveGymZone) {
                     window.pokefury?.startGymLeaderBattleDirect();
@@ -2762,6 +2769,218 @@ class CityScreen {
         overlay.style.display = 'flex';
     }
 
+    interactWithFazendeiro(npc) {
+        const overlay = document.getElementById('city-npc-dialogue-overlay');
+        const msg = document.getElementById('city-npc-dialogue-msg');
+        const simBtn = document.getElementById('city-npc-dialogue-sim');
+        const naoBtn = document.getElementById('city-npc-dialogue-nao');
+        const okBtn = document.getElementById('city-npc-dialogue-ok');
+        const icon = document.getElementById('city-npc-dialogue-icon');
+        if (!overlay || !msg || !simBtn || !naoBtn) return;
+
+        if (icon) icon.textContent = '🌾';
+        if (okBtn) { okBtn.style.display = 'none'; okBtn.onclick = null; }
+        simBtn.style.display = '';
+        naoBtn.style.display = '';
+
+        const charName = this.myPlayer?.character_name || 'Treinador';
+        const isFarmNpc = npc.npc_role === 'farm';
+
+        if (isFarmNpc) {
+            msg.textContent = `Olá ${charName}\nGostaria de voltar para a cidade?`;
+            simBtn.onclick = () => {
+                this.closeNpcDialogue();
+                this.teleportToFazendeiro('city');
+            };
+        } else {
+            msg.textContent = `Olá ${charName}\nGostaria de ir para sua fazenda?`;
+            simBtn.onclick = () => {
+                this.closeNpcDialogue();
+                this.teleportToFazendeiro('farm');
+            };
+        }
+        naoBtn.onclick = () => this.closeNpcDialogue();
+
+        this.npcDialogueOpen = true;
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
+    }
+
+    async teleportToFazendeiro(target) {
+        const game = window.pokefury;
+        if (!game) return;
+        const role = target === 'farm' ? 'farm' : 'city';
+        try {
+            const { data } = await window.db.from('city_farm_npcs').select('*').eq('npc_role', role).limit(1);
+            if (data && data.length > 0) {
+                const npc = data[0];
+                this.playerX = npc.pos_x;
+                this.playerY = npc.pos_y + 70;
+                this.playerFromX = this.playerX;
+                this.playerFromY = this.playerY;
+                this.cameraX = this.playerX;
+                this.cameraY = this.playerY;
+                this.syncPosition();
+                this._snapFollowerBehind();
+            }
+        } catch (e) {
+            console.warn('[Farm] teleport error:', e);
+        }
+        if (target === 'farm') {
+            this._inFarmZone = true;
+            this._farmNpcVisible = true;
+            await this.loadFarmPlots();
+            if (game.showTransitionBanner) game.showTransitionBanner('Bem-vindo à sua fazenda!');
+        } else {
+            this._inFarmZone = false;
+            this._farmNpcVisible = false;
+            this._farmPlots = [];
+            if (game.showTransitionBanner) game.showTransitionBanner('De volta à cidade!');
+        }
+    }
+
+    async handleFarmPlotInteraction(plotIndex) {
+        const fm = window.farmManager;
+        if (!fm) return;
+        await fm.loadFarmData();
+        const ps = fm.getPlotStatus(plotIndex);
+        const overlay = document.getElementById('city-npc-dialogue-overlay');
+        const msg = document.getElementById('city-npc-dialogue-msg');
+        const simBtn = document.getElementById('city-npc-dialogue-sim');
+        const naoBtn = document.getElementById('city-npc-dialogue-nao');
+        const okBtn = document.getElementById('city-npc-dialogue-ok');
+        const icon = document.getElementById('city-npc-dialogue-icon');
+        if (!overlay || !msg || !simBtn || !naoBtn) return;
+
+        if (ps.status === 'empty') {
+            if (icon) icon.textContent = '🌱';
+            if (okBtn) { okBtn.style.display = 'none'; okBtn.onclick = null; }
+            simBtn.style.display = '';
+            naoBtn.style.display = '';
+            const FARM_COLORS = [
+                { id: 'vermelha', label: 'Vermelha' }, { id: 'branca', label: 'Branca' },
+                { id: 'verde', label: 'Verde' }, { id: 'azul', label: 'Azul' },
+                { id: 'preta', label: 'Preta' }, { id: 'marrom', label: 'Marrom' },
+                { id: 'rosa', label: 'Rosa' }, { id: 'laranja', label: 'Laranja' },
+                { id: 'roxa', label: 'Roxa' }, { id: 'ciano', label: 'Ciano' },
+                { id: 'cinza', label: 'Cinza' }, { id: 'amarela', label: 'Amarela' }
+            ];
+            const available = FARM_COLORS.filter(c => fm.isColorUnlocked(c.id));
+            if (available.length === 0) {
+                msg.textContent = 'Nenhuma cor desbloqueada ainda. Suba de nível na fazenda!';
+                simBtn.style.display = 'none';
+                naoBtn.style.display = 'none';
+                if (okBtn) { okBtn.style.display = ''; okBtn.onclick = () => this.closeNpcDialogue(); }
+                overlay.classList.remove('hidden');
+                overlay.style.display = 'flex';
+                return;
+            }
+            msg.textContent = 'Escolha qual berry plantar:';
+            simBtn.style.display = 'none';
+            naoBtn.style.display = 'none';
+            let listHtml = '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px">';
+            for (const c of available) {
+                const css = FARM_COLOR_CSS?.[c.id] || '#888';
+                listHtml += `<button data-farm-color="${c.id}" style="padding:6px 14px;border:2px solid ${css};border-radius:8px;background:rgba(255,255,255,0.05);color:${css};font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">${c.label}</button>`;
+            }
+            listHtml += '</div>';
+            msg.innerHTML = msg.textContent + listHtml;
+            msg.querySelectorAll('[data-farm-color]').forEach(btn => {
+                btn.onclick = async () => {
+                    const color = btn.dataset.farmColor;
+                    this.closeNpcDialogue();
+                    const result = await fm.plantBerry(plotIndex, color);
+                    if (result?.error) {
+                        if (window.pokefury?.showToast) window.pokefury.showToast(result.error, 'error');
+                    } else {
+                        if (window.pokefury?.showToast) window.pokefury.showToast(`Plantado! Pronto em ${fm.plots.find(p => p.plot_index === plotIndex)?.ready_at ? 'alguns minutos' : 'pouco tempo'}`, 'success');
+                    }
+                    await fm.loadFarmData();
+                };
+            });
+            overlay.classList.remove('hidden');
+            overlay.style.display = 'flex';
+        } else if (ps.status === 'ready') {
+            if (icon) icon.textContent = '🫐';
+            if (okBtn) { okBtn.style.display = 'none'; okBtn.onclick = null; }
+            simBtn.style.display = '';
+            naoBtn.style.display = '';
+            const tier = fm.getTierForColor(ps.color);
+            const tierNames = { 1: '1 unidade', 2: '5 unidades', 3: '10 unidades' };
+            const harvestCount = fm.getHarvestCountForColor(ps.color);
+            let tierMsg = '';
+            if (tier < 3) {
+                const nextAt = tier === 1 ? 30 : 100;
+                tierMsg = `\nColheitas: ${harvestCount}/${nextAt} para próximo estágio`;
+            } else {
+                tierMsg = `\nEstágio máximo de colheita!`;
+            }
+            msg.textContent = `Berry ${ps.color} pronta para colher!\nColheita atual: ${tierNames[tier] || '1 unidade'}${tierMsg}`;
+            simBtn.textContent = 'Colher';
+            naoBtn.textContent = 'Fechar';
+            this.npcDialogueOpen = true;
+            simBtn.onclick = async () => {
+                this.closeNpcDialogue();
+                const result = await fm.harvestBerry(plotIndex);
+                if (result?.error) {
+                    if (window.pokefury?.showToast) window.pokefury.showToast(result.error, 'error');
+                } else {
+                    const msg2 = `Colheita: +${result.amount} berry ${result.color} (+${result.xp} XP)`;
+                    if (window.pokefury?.showToast) window.pokefury.showToast(msg2, 'success');
+                    if (result.new_level > fm.getLevel()) {
+                        setTimeout(() => {
+                            if (window.pokefury?.showToast) window.pokefury.showToast(`🌱 Nível da fazenda subiu para ${result.new_level}!`, 'success');
+                        }, 1500);
+                    }
+                }
+                await fm.loadFarmData();
+            };
+            naoBtn.onclick = () => {
+                simBtn.textContent = 'Sim';
+                naoBtn.textContent = 'Não';
+                this.closeNpcDialogue();
+            };
+            overlay.classList.remove('hidden');
+            overlay.style.display = 'flex';
+        }
+    }
+
+    drawFarmPlot(ctx, fp, camX, camY) {
+        const fm = window.farmManager;
+        if (!fm) return;
+        const ps = fm.getPlotStatus(fp.plot_index);
+        let imgSrc = 'assets/fazenda/sembarry.png';
+        if (ps.status === 'growing') imgSrc = 'assets/fazenda/folhassembarry.png';
+        else if (ps.status === 'ready') imgSrc = 'assets/fazenda/barry' + ps.color + '.png';
+        let img = fp._img;
+        if (!img || img._src !== imgSrc) {
+            img = new Image();
+            img.src = imgSrc;
+            img._src = imgSrc;
+            fp._img = img;
+        }
+        if (!img.complete || !img.naturalWidth) return;
+        const sx = fp.pos_x - camX;
+        const sy = fp.pos_y - camY;
+        const size = (fp.scale || 1) * 64;
+        ctx.drawImage(img, sx - size / 2, sy - size / 2, size, size);
+    }
+
+    async loadFarmPlots() {
+        try {
+            const { data } = await window.db.from('city_farm_plots').select('*').order('plot_index');
+            this._farmPlots = (data || []).map(p => ({
+                plot_index: p.plot_index,
+                pos_x: p.pos_x,
+                pos_y: p.pos_y,
+                scale: p.scale || 1,
+                _img: null
+            }));
+        } catch (e) {
+            this._farmPlots = [];
+        }
+    }
+
     openPokemartFromVendor() {
         if (!window.openPokeMart) return;
         const cityEl = document.getElementById('city-screen');
@@ -3008,6 +3227,9 @@ class CityScreen {
         if (npc.npc_type === 'pc') {
             if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
             return this.interactWithPc(npc);
+        }
+        if (npc.npc_type === 'fazendeiro') {
+            return this.interactWithFazendeiro(npc);
         }
         if (questDialogue) return this.showQuestDialogue(npc, questDialogue);
         this.showNpcDialogue(npc);
@@ -3437,13 +3659,25 @@ class CityScreen {
         for (const n of this.npcs) {
             if (n.npc_type !== 'region_selector' && n.npc_type !== 'nurse' && n.npc_type !== 'professor'
                 && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'pc'
-                && n.npc_type !== 'banker' && n.npc_type !== 'gerente_safari') continue;
+                && n.npc_type !== 'banker' && n.npc_type !== 'gerente_safari'
+                && n.npc_type !== 'fazendeiro') continue;
             const cx = n.pos_x + n.width / 2;
             const cy = n.pos_y + n.height / 2;
             const dist = Math.sqrt((this.playerX - cx) ** 2 + (this.playerY - cy) ** 2);
             if (dist < 100) {
                 this.nearestNpc = n;
                 break;
+            }
+        }
+
+        this.nearFarmPlot = null;
+        if (this._inFarmZone && this._farmPlots && this._farmPlots.length > 0) {
+            for (const fp of this._farmPlots) {
+                const dist = Math.hypot(this.playerX - fp.pos_x, this.playerY - fp.pos_y);
+                if (dist < 80) {
+                    this.nearFarmPlot = fp.plot_index;
+                    break;
+                }
             }
         }
 
@@ -5477,7 +5711,7 @@ class CityScreen {
     }
 
     drawNpcSprite(ctx, n, camX, camY, cw, ch, shadowOffX, shadowOffY) {
-        if (n.npc_type !== 'nurse' && n.npc_type !== 'professor' && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'banker') return;
+        if (n.npc_type !== 'nurse' && n.npc_type !== 'professor' && n.npc_type !== 'narrator' && n.npc_type !== 'vendor' && n.npc_type !== 'banker' && n.npc_type !== 'fazendeiro') return;
         const sx = n.pos_x - camX;
         const sy = n.pos_y - camY;
         const ps = Math.round((n.width || 48) * 1.2);
@@ -5906,6 +6140,11 @@ class CityScreen {
             depthPool.push({ kind: 'npc', ref: n });
         });
         allPlayers.forEach(p => depthPool.push({ kind: 'player', ref: p }));
+        if (this._farmPlots && this._farmPlots.length > 0) {
+            for (const fp of this._farmPlots) {
+                depthPool.push({ kind: 'farmPlot', ref: fp });
+            }
+        }
         if (this._grassFronts && this._grassFronts.length > 0) {
             this._grassFronts.forEach(gf => depthPool.push({ kind: 'grassFront', ref: gf }));
         }
@@ -5921,6 +6160,8 @@ class CityScreen {
                 this.drawNpcSprite(dctx, e.ref, camX, camY, cw, ch, shadowOffX, shadowOffY);
             } else if (e.kind === 'grassFront') {
                 this._drawGrassFront(dctx, e.ref, camX, camY);
+            } else if (e.kind === 'farmPlot') {
+                this.drawFarmPlot(dctx, e.ref, camX, camY);
             } else {
                 this.drawPlayerSprite(dctx, e.ref, camX, camY, shadowOffX, shadowOffY, fScaleX, fScaleY, fOffX, fOffY, band);
             }
@@ -5981,6 +6222,39 @@ class CityScreen {
             topCtx.font = 'bold 11px Inter, sans-serif';
             topCtx.textAlign = 'center';
             topCtx.fillText(label, sx, sy + 1);
+        }
+
+        if (this.nearFarmPlot !== null && !this.npcDialogueOpen && this._farmPlots) {
+            const fp = this._farmPlots.find(f => f.plot_index === this.nearFarmPlot);
+            if (fp) {
+                const sx = fp.pos_x - camX;
+                const sy = fp.pos_y - camY - 20;
+                const fm = window.farmManager;
+                const ps = fm ? fm.getPlotStatus(this.nearFarmPlot) : { status: 'empty' };
+                const label = ps.status === 'empty' ? 'Aperte E para plantar' : (ps.status === 'ready' ? 'Aperte E para colher' : '...');
+                if (ps.status !== 'growing') {
+                    topCtx.fillStyle = ps.status === 'ready' ? 'rgba(34,197,94,0.9)' : 'rgba(245,158,11,0.9)';
+                    topCtx.beginPath();
+                    topCtx.roundRect(sx - 80, sy - 14, 160, 22, 6);
+                    topCtx.fill();
+                    topCtx.fillStyle = '#000';
+                    topCtx.font = 'bold 11px Inter, sans-serif';
+                    topCtx.textAlign = 'center';
+                    topCtx.fillText(label, sx, sy + 1);
+                } else if (ps.remainingMs > 0) {
+                    const mins = Math.floor(ps.remainingMs / 60000);
+                    const secs = Math.floor((ps.remainingMs % 60000) / 1000);
+                    const timerLabel = `⏱ ${mins}:${String(secs).padStart(2, '0')}`;
+                    topCtx.fillStyle = 'rgba(0,0,0,0.7)';
+                    topCtx.beginPath();
+                    topCtx.roundRect(sx - 40, sy - 14, 80, 22, 6);
+                    topCtx.fill();
+                    topCtx.fillStyle = '#ffc107';
+                    topCtx.font = 'bold 11px Inter, sans-serif';
+                    topCtx.textAlign = 'center';
+                    topCtx.fillText(timerLabel, sx, sy + 1);
+                }
+            }
         }
 
         if (this.nearRaidPortal && this.raidPortal) {

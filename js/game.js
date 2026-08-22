@@ -13,6 +13,7 @@ import {
 import { WeatherAnimations } from './weather-animations.js';
 import { Overworld2D } from './overworld.js?v=20260816b';
 import { MapEditor } from './map-editor.js';
+import { FarmManager } from './farm.js';
 import { RegionManager } from './region-manager.js';
 import { MapZoneEditor } from './zone-editor.js';
 import { Chat } from './chat.js';
@@ -732,6 +733,12 @@ class PokeFuryGame {
             this.setupAfkPanel('city-');
             const typeChart = await loadTypeEffectiveness();
             this.afkManager.setTypeChart(typeChart);
+        }
+
+        if (!this.farmManager) {
+            this.farmManager = new FarmManager(this);
+            window.farmManager = this.farmManager;
+            await this.farmManager.init();
         }
 
         if (!this.friends) {
@@ -4512,10 +4519,15 @@ if (this._professorOriginalOrder) {
             pocoes: ['medicine', 'battle_item'],
             pokebolas: ['pokeball'],
             itens: ['field', 'evolution_stone', 'held', 'mega_stone', 'held_item'],
-            tm_hm: ['tm_hm']
+            tm_hm: ['tm_hm'],
+            fazenda: ['fazenda']
         };
 
         const allowedCats = CATEGORY_MAP[this.mochilaCategory] || [];
+
+        if (this.mochilaCategory === 'fazenda') {
+            return this.renderMochilaFazenda(grid, empty, countEl, search);
+        }
 
         let filtered = inventory.filter(inv => {
             if (inv.quantity <= 0 || !inv.items) return false;
@@ -4600,6 +4612,62 @@ if (this._professorOriginalOrder) {
                 if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
             });
 
+            grid.appendChild(slot);
+        }
+    }
+
+    async renderMochilaFazenda(grid, empty, countEl, search) {
+        grid.innerHTML = '';
+        if (!window.farmManager) {
+            grid.style.display = 'none';
+            empty.style.display = 'block';
+            countEl.textContent = '0 itens';
+            return;
+        }
+        const fm = window.farmManager;
+        await fm.loadFarmData();
+        const FARM_COLORS = [
+            { id: 'vermelha', label: 'Vermelha' }, { id: 'branca', label: 'Branca' },
+            { id: 'verde', label: 'Verde' }, { id: 'azul', label: 'Azul' },
+            { id: 'preta', label: 'Preta' }, { id: 'marrom', label: 'Marrom' },
+            { id: 'rosa', label: 'Rosa' }, { id: 'laranja', label: 'Laranja' },
+            { id: 'roxa', label: 'Roxa' }, { id: 'ciano', label: 'Ciano' },
+            { id: 'cinza', label: 'Cinza' }, { id: 'amarela', label: 'Amarela' }
+        ];
+        const items = FARM_COLORS.map(c => ({
+            color: c.id,
+            label: c.label,
+            qty: fm.getInventoryForColor(c.id),
+            sprite: fm.getBerryIconUrl(c.id)
+        })).filter(i => i.qty > 0);
+
+        if (search) {
+            const s = search.toLowerCase();
+            const filtered = items.filter(i => i.label.toLowerCase().includes(s) || i.color.includes(s));
+            items.length = 0;
+            items.push(...filtered);
+        }
+
+        grid.style.display = items.length > 0 ? 'grid' : 'none';
+        empty.style.display = items.length > 0 ? 'none' : 'block';
+        countEl.textContent = `${items.length} berry${items.length !== 1 ? 'ies' : ''}`;
+
+        for (const item of items) {
+            const slot = document.createElement('div');
+            slot.className = 'mochila-slot';
+            const img = document.createElement('img');
+            img.src = item.sprite;
+            img.alt = item.label;
+            img.onerror = function() { this.style.display = 'none'; };
+            slot.appendChild(img);
+            const nameEl = document.createElement('div');
+            nameEl.className = 'slot-name';
+            nameEl.textContent = item.label;
+            slot.appendChild(nameEl);
+            const qtyEl = document.createElement('div');
+            qtyEl.className = 'slot-qty';
+            qtyEl.textContent = `x${item.qty}`;
+            slot.appendChild(qtyEl);
             grid.appendChild(slot);
         }
     }
