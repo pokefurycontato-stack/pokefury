@@ -1158,6 +1158,8 @@ if (this._professorOriginalOrder) {
                 }
                 const lvlHtml = e.level ? `<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px">Nv. ${e.level}</div>` : '';
                 return {
+                    spriteUrl: e.sprite,
+                    staticUrl: e.staticSprite,
                     sprite: `<img id="pre-battle-enemy-sprite" src="${e.sprite}" data-fallback="${e.staticSprite}" style="width:120px;height:120px;image-rendering:pixelated;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));margin-bottom:12px" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">`,
                     name: e.name,
                     types: typesHtml,
@@ -1269,7 +1271,7 @@ if (this._professorOriginalOrder) {
                             t.style.color = isActive ? '#e94560' : 'rgba(255,255,255,0.5)';
                         });
                         const spriteEl = popup.querySelector('#pre-battle-enemy-sprite');
-                        if (spriteEl) { spriteEl.src = ei.sprite; spriteEl.dataset.fallback = ei.staticSprite; }
+                        if (spriteEl) { spriteEl.src = ei.spriteUrl; spriteEl.dataset.fallback = ei.staticUrl; }
                         const nameEl = popup.querySelector('#pre-battle-enemy-name');
                         if (nameEl) nameEl.textContent = ei.name;
                         const lvlEl = popup.querySelector('#pre-battle-enemy-level');
