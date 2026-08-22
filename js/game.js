@@ -1121,20 +1121,64 @@ if (this._professorOriginalOrder) {
         this._turnLocked = false;
     }
 
-    showPreBattlePopup(pokemonId, spriteUrl, isShiny) {
+    showPreBattlePopup(pokemonId, spriteUrl, isShiny, opts = {}) {
         return new Promise(async (resolve) => {
-            const pokemonData = await PokeAPI.ensurePokemon(pokemonId);
-            if (!pokemonData) { resolve({ teamOrder: this.playerTeam.slice() }); return; }
+            const enemiesInput = opts.enemies || [{ pokemonId, spriteUrl, isShiny }];
+            const enemies = [];
+            for (const e of enemiesInput) {
+                const eid = typeof e === 'string' ? e : (e.pokemon_id || e.pokemonId || e.pokemon_name || e.name || pokemonId);
+                const eData = await PokeAPI.ensurePokemon(eid);
+                if (!eData) continue;
+                const eShiny = typeof e === 'object' ? (e.isShiny || e.shiny || false) : false;
+                const eStatic = eShiny
+                    ? (eData.spriteUrls?.frontShiny || eData.spriteUrls?.front || '')
+                    : (eData.spriteUrls?.front || '');
+                const eAnim = eShiny
+                    ? (window.PokeAPI ? window.PokeAPI.getAnimatedFrontShinyUrl(eData.id) : null)
+                    : (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(eData.id) : null);
+                const eSpriteUrl = typeof e === 'object' ? (e.sprite_url || e.spriteUrl || null) : null;
+                enemies.push({
+                    id: eData.id,
+                    name: eData.name || eid,
+                    types: (eData.types || []).filter(Boolean),
+                    sprite: eAnim || eSpriteUrl || eStatic,
+                    staticSprite: eStatic,
+                    level: (typeof e === 'object' ? (e.pokemon_level || e.level) : null) || null
+                });
+            }
+            if (enemies.length === 0) { resolve({ teamOrder: this.playerTeam.slice() }); return; }
 
-            const name = pokemonData.name || pokemonId;
-            const types = (pokemonData.types || []).filter(Boolean);
-            const staticEnemySprite = isShiny
-                ? (pokemonData.spriteUrls?.frontShiny || pokemonData.spriteUrls?.front || '')
-                : (pokemonData.spriteUrls?.front || '');
-            const animUrl = isShiny
-                ? (window.PokeAPI ? window.PokeAPI.getAnimatedFrontShinyUrl(pokemonData.id) : spriteUrl)
-                : (window.PokeAPI ? window.PokeAPI.getAnimatedFrontUrl(pokemonData.id) : spriteUrl);
-            const finalSprite = animUrl || spriteUrl || staticEnemySprite;
+            let activeEnemyIdx = 0;
+            const renderEnemyInfo = (idx) => {
+                const e = enemies[idx];
+                let typesHtml = '';
+                for (const t of e.types) {
+                    const color = (typeof TYPE_COLORS !== 'undefined' ? TYPE_COLORS : {})[t] || '#686868';
+                    typesHtml += `<span style="display:inline-block;padding:3px 12px;border-radius:20px;background:${color};color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${t}</span>`;
+                }
+                const lvlHtml = e.level ? `<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px">Nv. ${e.level}</div>` : '';
+                return {
+                    sprite: `<img id="pre-battle-enemy-sprite" src="${e.sprite}" data-fallback="${e.staticSprite}" style="width:120px;height:120px;image-rendering:pixelated;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));margin-bottom:12px" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">`,
+                    name: e.name,
+                    types: typesHtml,
+                    level: lvlHtml
+                };
+            };
+
+            const renderTabs = (activeIdx) => {
+                if (enemies.length <= 1) return '';
+                let tabs = '';
+                for (let i = 0; i < enemies.length; i++) {
+                    const isActive = i === activeIdx;
+                    const bg = isActive ? 'rgba(233,69,96,0.3)' : 'rgba(255,255,255,0.05)';
+                    const border = isActive ? '1px solid rgba(233,69,96,0.6)' : '1px solid rgba(255,255,255,0.1)';
+                    const color = isActive ? '#e94560' : 'rgba(255,255,255,0.5)';
+                    tabs += `<button class="pre-battle-tab" data-eidx="${i}" style="padding:5px 10px;border-radius:6px;background:${bg};border:${border};color:${color};font-size:10px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:all 0.15s">Pokémon ${i + 1}</button>`;
+                }
+                return `<div id="pre-battle-tabs" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">${tabs}</div>`;
+            };
+
+            const firstEnemy = renderEnemyInfo(0);
 
             const renderTeamList = () => {
                 let html = '';
@@ -1190,10 +1234,12 @@ if (this._professorOriginalOrder) {
 
             popup.innerHTML = `
                 <div style="display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,0.06)">
-                    <div style="flex:0 0 42%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;background:rgba(233,69,96,0.04);border-right:1px solid rgba(255,255,255,0.06)">
-                        <img src="${finalSprite}" data-fallback="${staticEnemySprite}" style="width:120px;height:120px;image-rendering:pixelated;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));margin-bottom:12px" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none'}">
-                        <div style="font-size:18px;color:#fff;font-weight:800;margin-bottom:8px;text-align:center">${name}</div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">${typesHtml}</div>
+                    <div id="pre-battle-enemy-side" style="flex:0 0 42%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;background:rgba(233,69,96,0.04);border-right:1px solid rgba(255,255,255,0.06)">
+                        ${renderTabs(0)}
+                        ${firstEnemy.sprite}
+                        <div id="pre-battle-enemy-name" style="font-size:18px;color:#fff;font-weight:800;margin-bottom:8px;text-align:center">${firstEnemy.name}</div>
+                        ${firstEnemy.level ? `<div id="pre-battle-enemy-level" style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px">Nv. ${firstEnemy.level}</div>` : '<div id="pre-battle-enemy-level"></div>'}
+                        <div id="pre-battle-enemy-types" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">${firstEnemy.types}</div>
                     </div>
                     <div style="flex:1;display:flex;flex-direction:column;min-width:0">
                         <div style="padding:14px 16px 8px;border-bottom:1px solid rgba(255,255,255,0.06)">
@@ -1211,6 +1257,34 @@ if (this._professorOriginalOrder) {
 
             overlay.appendChild(popup);
             document.body.appendChild(overlay);
+
+            if (enemies.length > 1) {
+                const tabsContainer = popup.querySelector('#pre-battle-tabs');
+                if (tabsContainer) {
+                    tabsContainer.addEventListener('click', (e) => {
+                        const tab = e.target.closest('.pre-battle-tab');
+                        if (!tab) return;
+                        const idx = parseInt(tab.dataset.eidx);
+                        if (idx === activeEnemyIdx || idx < 0 || idx >= enemies.length) return;
+                        activeEnemyIdx = idx;
+                        const ei = renderEnemyInfo(idx);
+                        tabsContainer.querySelectorAll('.pre-battle-tab').forEach((t, ti) => {
+                            const isActive = ti === idx;
+                            t.style.background = isActive ? 'rgba(233,69,96,0.3)' : 'rgba(255,255,255,0.05)';
+                            t.style.border = isActive ? '1px solid rgba(233,69,96,0.6)' : '1px solid rgba(255,255,255,0.1)';
+                            t.style.color = isActive ? '#e94560' : 'rgba(255,255,255,0.5)';
+                        });
+                        const spriteEl = popup.querySelector('#pre-battle-enemy-sprite');
+                        if (spriteEl) { spriteEl.src = ei.sprite; spriteEl.dataset.fallback = ei.staticSprite; }
+                        const nameEl = popup.querySelector('#pre-battle-enemy-name');
+                        if (nameEl) nameEl.textContent = ei.name;
+                        const lvlEl = popup.querySelector('#pre-battle-enemy-level');
+                        if (lvlEl) lvlEl.innerHTML = ei.level || '';
+                        const typesEl = popup.querySelector('#pre-battle-enemy-types');
+                        if (typesEl) typesEl.innerHTML = ei.types;
+                    });
+                }
+            }
 
             const btn = document.getElementById('pre-battle-start');
             if (btn) {
@@ -2624,12 +2698,33 @@ if (this._professorOriginalOrder) {
         } catch (e) {}
     }
 
-    startTowerBattle(floorNumber, team) {
+    async startTowerBattle(floorNumber, team) {
         if (this._battleStarting || this._battleEnding || this.state === 'battle') return;
         if (!team || team.length === 0) return;
         this._towerFloor = floorNumber;
         this._isTowerBattle = true;
         if (this.showToast) setTimeout(() => this.showToast(`🏰 Torre — Andar ${floorNumber} (${team.length} Pokémon)`, 'info'), 400);
+
+        const isAuto = this.afkManager && this.afkManager.running;
+        const isProf = isAuto && this.afkManager.professorMode
+            && window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
+        if (!isAuto && !isProf) {
+            this._preBattlePopupOpen = true;
+            try {
+                const result = await this.showPreBattlePopup(null, null, false, {
+                    enemies: team.map(t => ({ pokemon_id: t.pokemon_id, pokemon_level: t.pokemon_level, sprite_url: t.sprite_url }))
+                });
+                if (result && result.teamOrder) {
+                    this._preBattleOriginalOrder = this.playerTeam.slice();
+                    this.playerTeam = result.teamOrder;
+                }
+            } catch(e) {
+                this._preBattlePopupOpen = false;
+                return;
+            }
+            this._preBattlePopupOpen = false;
+        }
+
         const first = team[0];
         return this.startBattleWithPokemon(
             first.pokemon_id,
@@ -8220,18 +8315,48 @@ openEventsPanel() {
         const level = typeof firstPokemon === 'object' ? (firstPokemon.level || 20) : 20;
 
         const pokemonData = await PokeAPI.ensurePokemon(pokemonName);
-        if (pokemonData) {
-            this._currentBiome = null;
-            this._isGymBattle = true;
-            this._cityBattle = true;
-            await this.startBattleWithPokemon(
-                pokemonData.id,
-                level,
-                null,
-                true
-            );
-            if (this.enemyTeam[0]) this.enemyTeam[0].isGymLeader = true;
+        if (!pokemonData) return;
+
+        const isAuto = this.afkManager && this.afkManager.running;
+        const isProf = isAuto && this.afkManager.professorMode
+            && window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
+        if (!isAuto && !isProf) {
+            this._preBattlePopupOpen = true;
+            try {
+                const result = await this.showPreBattlePopup(null, null, false, {
+                    enemies: pokemonList.map(p => ({
+                        name: typeof p === 'string' ? p : (p.name || p.pokemon_name || p.pokemon_id),
+                        level: typeof p === 'object' ? p.level : null
+                    }))
+                });
+                if (result && result.teamOrder) {
+                    this._preBattleOriginalOrder = this.playerTeam.slice();
+                    this.playerTeam = result.teamOrder;
+                }
+            } catch(e) {
+                this._preBattlePopupOpen = false;
+                return;
+            }
+            this._preBattlePopupOpen = false;
         }
+
+        const gymTeam = pokemonList.map(p => ({
+            pokemon_id: typeof p === 'string' ? p : (p.name || p.pokemon_name || p.pokemon_id),
+            pokemon_level: typeof p === 'object' ? (p.level || level) : level,
+            sprite_url: null
+        }));
+
+        this._currentBiome = null;
+        this._isGymBattle = true;
+        this._cityBattle = true;
+        await this.startBattleWithPokemon(
+            pokemonData.id,
+            level,
+            null,
+            true,
+            { team: gymTeam.length > 1 ? gymTeam : undefined }
+        );
+        if (this.enemyTeam[0]) this.enemyTeam[0].isGymLeader = true;
     }
 
     // ============================================================
