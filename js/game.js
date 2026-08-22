@@ -2801,15 +2801,16 @@ if (this._professorOriginalOrder) {
             && window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
         if (!isAuto && !isProf) {
             this._preBattlePopupOpen = true;
+            this._preBattleOriginalOrder = this.playerTeam.slice();
             try {
                 const result = await this.showPreBattlePopup(null, null, false, {
                     enemies: team.map(t => ({ pokemon_id: t.pokemon_id, pokemon_level: t.pokemon_level, sprite_url: t.sprite_url }))
                 });
                 if (result && result.teamOrder) {
-                    this._preBattleOriginalOrder = this.playerTeam.slice();
                     this.playerTeam = result.teamOrder;
                 }
             } catch(e) {
+                this._preBattleOriginalOrder = null;
                 this._preBattlePopupOpen = false;
                 return;
             }
@@ -8418,6 +8419,7 @@ openEventsPanel() {
             && window.boostsManager && window.boostsManager.isActive('professor_acompanhante');
         if (!isAuto && !isProf) {
             this._preBattlePopupOpen = true;
+            this._preBattleOriginalOrder = this.playerTeam.slice();
             try {
                 const result = await this.showPreBattlePopup(null, null, false, {
                     enemies: pokemonList.map(p => ({
@@ -8426,10 +8428,10 @@ openEventsPanel() {
                     }))
                 });
                 if (result && result.teamOrder) {
-                    this._preBattleOriginalOrder = this.playerTeam.slice();
                     this.playerTeam = result.teamOrder;
                 }
             } catch(e) {
+                this._preBattleOriginalOrder = null;
                 this._preBattlePopupOpen = false;
                 return;
             }
