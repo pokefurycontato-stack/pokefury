@@ -2147,7 +2147,7 @@ if (this._professorOriginalOrder) {
                         this.endBattle('lose');
                         return;
                     }
-                    if (this._isTowerBattle && !isTeamFainted(this.enemyTeam)) {
+                    if ((this._isTowerBattle || this._isGymBattle) && !isTeamFainted(this.enemyTeam)) {
                         const switched = await this.towerSwitchEnemy(defender, playerPokemon);
                         if (switched) enemyPokemon = switched;
                         if (this._professorSwitchedPlayer) {
@@ -2178,7 +2178,7 @@ if (this._professorOriginalOrder) {
                         this.endBattle('lose');
                         return;
                     }
-                    if (pokemon === enemyPokemon && this._isTowerBattle) {
+                    if (pokemon === enemyPokemon && (this._isTowerBattle || this._isGymBattle)) {
                         const switched = await this.towerSwitchEnemy(pokemon, playerPokemon);
                         if (switched) enemyPokemon = switched;
                         if (this._professorSwitchedPlayer) {
@@ -2210,7 +2210,7 @@ if (this._professorOriginalOrder) {
                         this.endBattle('lose');
                         return;
                     }
-                    if (pokemon === enemyPokemon && this._isTowerBattle) {
+                    if (pokemon === enemyPokemon && (this._isTowerBattle || this._isGymBattle)) {
                         const switched = await this.towerSwitchEnemy(pokemon, playerPokemon);
                         if (switched) enemyPokemon = switched;
                         if (this._professorSwitchedPlayer) {
@@ -2732,7 +2732,7 @@ if (this._professorOriginalOrder) {
     }
 
     async towerSwitchEnemy(prevEnemy, playerActive) {
-        if (!this._isTowerBattle || isTeamFainted(this.enemyTeam)) return null;
+        if ((!this._isTowerBattle && !this._isGymBattle) || isTeamFainted(this.enemyTeam)) return null;
         const next = getFirstAlive(this.enemyTeam);
         if (!next || next === prevEnemy) return null;
         return await this.switchToNextTowerEnemy(prevEnemy, playerActive);
@@ -8353,6 +8353,7 @@ openEventsPanel() {
             { team: gymTeam.length > 1 ? gymTeam : undefined }
         );
         if (this.enemyTeam[0]) this.enemyTeam[0].isGymLeader = true;
+        for (const ep of this.enemyTeam) ep.isGymLeader = true;
     }
 
     // ============================================================
